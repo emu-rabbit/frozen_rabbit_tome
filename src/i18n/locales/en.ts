@@ -32,7 +32,13 @@ export default {
       ja: 'Japanese',
       cn: 'Simplified Chinese'
     },
-    aboutTitle: 'About Project',
-    aboutDesc: 'This is "Frozen Rabbit Tome", a specialized optimizer for FFXIV gatherers.'
+    aboutTitle: 'About This Project',
+    aboutDesc: 'This is "Frozen Rabbit Tome", a toolkit designed for FFXIV gatherers.'
+  },
+  welcomeModal: {
+    title: 'Welcome to Tome',
+    subtitle: 'Before you begin, please select your preferred language',
+    description: 'This will set the interface language for the entire Tome. You can change this anytime in "Settings".',
+    confirm: 'Start with this language'
   }
 }

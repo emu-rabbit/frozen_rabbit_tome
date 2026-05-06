@@ -33,6 +33,12 @@ export default {
       cn: '简体中文'
     },
     aboutTitle: '关于本项目',
-    aboutDesc: '这是“冷冻兔肉的大地秘籍”，专为 FFXIV 采集玩家设计的工具箱。'
+    aboutDesc: '这是“冷冻兔肉的秘籍”，专为 FFXIV 采集玩家设计的工具箱。'
+  },
+  welcomeModal: {
+    title: '欢迎来到秘籍',
+    subtitle: '在你开始之前，请先选择你偏好的语言',
+    description: '这将由调整整个秘籍的界面语言。你之后随时可以在“设置”中更改。',
+    confirm: '就用这个语言开始吧！'
   }
 }

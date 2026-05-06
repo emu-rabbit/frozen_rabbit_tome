@@ -33,6 +33,12 @@ export default {
       cn: '简体中文'
     },
     aboutTitle: '關於本專案',
-    aboutDesc: '這是「冷凍兔肉的大地秘笈」，專為 FFXIV 採集玩家設計的工具箱。'
+    aboutDesc: '這是「冷凍兔肉的秘笈」，專為 FFXIV 採集玩家設計的工具箱。'
+  },
+  welcomeModal: {
+    title: '歡迎來到秘笈',
+    subtitle: '在你開始之前，請先選擇你偏好的語言',
+    description: '這將會調整整個秘笈的介面語言。你之後隨時可以在「設定」中更改。',
+    confirm: '就用這個語言開始吧！'
   }
 }
