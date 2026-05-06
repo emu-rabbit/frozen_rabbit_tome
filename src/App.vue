@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
+import LanguageModal from './components/LanguageModal.vue';
 import { useSettings } from './composables/useSettings';
 
 const { locale, t } = useI18n();
@@ -29,6 +30,7 @@ watch(language, () => {
 </script>
 
 <template>
+  <LanguageModal />
   <div class="flex h-screen w-screen bg-soft-green-50 dark:bg-slate-950 overflow-hidden text-slate-800 dark:text-slate-100 font-sans relative">
     
     <!-- Mobile Header -->

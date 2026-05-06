@@ -75,16 +75,6 @@ const langOptions = [
           </div>
       </div>
 
-      <!-- 關於 -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
-          <div class="flex flex-col gap-4">
-              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
-                <i class="pi pi-info-circle text-xl"></i>
-                <label class="font-bold text-lg">{{ $t('settings.aboutTitle') }}</label>
-              </div>
-              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.aboutDesc') }}</p>
-          </div>
-      </div>
     </div>
   </div>
 </template>
