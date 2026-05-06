@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
-import BottomNav from './components/BottomNav.vue';
 import LanguageModal from './components/LanguageModal.vue';
 import { useSettings } from './composables/useSettings';
 
@@ -60,14 +59,14 @@ watch(language, () => {
 
     <!-- Sidebar -->
     <aside 
-      class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 z-[70] lg:relative lg:w-64 lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-in-out flex shadow-2xl lg:shadow-none"
+      class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 z-[70] lg:relative lg:w-72 lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-in-out flex shadow-2xl lg:shadow-none"
       :class="isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <Sidebar @close-mobile="isMobileMenuOpen = false" />
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-y-auto relative pt-16 pb-20 lg:pt-0 lg:pb-0 scroll-smooth">
+    <main class="flex-1 flex flex-col overflow-y-auto relative pt-16 pb-12 lg:pt-0 lg:pb-0 scroll-smooth">
       <!-- Background Decoration -->
       <div class="fixed top-0 right-0 w-full max-w-[500px] aspect-square bg-gradient-to-br from-soft-green-200/40 via-transparent to-transparent dark:from-soft-green-900/20 rounded-bl-full opacity-60 -z-10 blur-[100px] pointer-events-none"></div>
       <div class="fixed bottom-0 left-0 w-full max-w-[300px] aspect-square bg-gradient-to-tr from-lime-green-100/30 via-transparent to-transparent dark:from-lime-green-900/10 rounded-tr-full opacity-40 -z-10 blur-[80px] pointer-events-none"></div>
@@ -81,8 +80,7 @@ watch(language, () => {
       </div>
     </main>
 
-    <!-- Mobile Bottom Navigation -->
-    <BottomNav />
+
   </div>
 </template>
 
