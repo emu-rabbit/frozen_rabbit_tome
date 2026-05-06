@@ -62,3 +62,8 @@ html.dark .p-dropdown-item.p-highlight {
   background-color: rgba(45, 106, 90, 0.4) !important;
   color: #52a890 !important;
 }
+
+/* Specific for settings lang toggle */
+.settings-lang-toggle.p-selectbutton .p-button {
+  @apply py-3 px-4 transition-all duration-300 !important;
+}

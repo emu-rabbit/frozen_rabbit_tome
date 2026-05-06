@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router';
 
 const route = useRoute();
 const version = '0.1.0';
-const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tips';
+const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tome';
 
 defineEmits(['close-mobile']);
 </script>
@@ -14,9 +14,9 @@ defineEmits(['close-mobile']);
     <div class="p-6 pb-2">
       <h1 class="text-lg font-bold text-soft-green-800 dark:text-soft-green-500 flex items-center gap-2 leading-tight">
         <img src="/assets/logo.png" class="w-8 h-8 rounded-lg shadow-sm" alt="Logo" />
-        冷凍兔肉的大地秘笈
+        {{ $t('app.title') }}
       </h1>
-      <p class="text-xs text-soft-green-600 dark:text-soft-green-600 mt-2">FFXIV 採集規劃與數據管理工具</p>
+      <p class="text-xs text-soft-green-600 dark:text-soft-green-600 mt-2">{{ $t('app.subtitle') }}</p>
     </div>
 
     <!-- Main Navigation -->
@@ -28,11 +28,9 @@ defineEmits(['close-mobile']);
         :class="route.path === '/' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
       >
         <i class="pi pi-pencil shrink-0"></i>
-        <span class="leading-tight">建立秘笈</span>
+        <span class="leading-tight">{{ $t('nav.createGuide') }}</span>
       </router-link>
 
-      <!-- 未來可擴充其他導航項 -->
-      
       <div class="mt-auto"></div>
     </nav>
     
@@ -47,7 +45,7 @@ defineEmits(['close-mobile']);
           :class="route.path === '/settings' ? 'bg-soft-green-100 dark:bg-soft-green-950 text-soft-green-800 dark:text-soft-green-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
         >
           <i class="pi pi-cog text-base"></i>
-          <span>設定頁面</span>
+          <span>{{ $t('nav.settings') }}</span>
         </router-link>
 
         <!-- External Links -->
@@ -58,7 +56,7 @@ defineEmits(['close-mobile']);
             class="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-200 transition-all duration-300"
           >
             <i class="pi pi-github text-xs opacity-70"></i>
-            <span class="text-[11px] font-bold tracking-tight">GitHub 專案</span>
+            <span class="text-[11px] font-bold tracking-tight">{{ $t('nav.github') }}</span>
           </a>
         </div>
       </div>

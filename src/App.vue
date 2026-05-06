@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
+import { useSettings } from './composables/useSettings';
 
+const { locale } = useI18n();
 const isMobileMenuOpen = ref(false);
-const isDarkMode = ref(true); // 預設開啟深色模式
+const { isDarkMode, language } = useSettings();
+
+// 同步語系
+watch(language, (newLang) => {
+  locale.value = newLang;
+}, { immediate: true });
 
 // 同步深色模式
 watch(isDarkMode, (newVal) => {
@@ -22,7 +30,7 @@ watch(isDarkMode, (newVal) => {
     <header class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-soft-green-100 dark:border-slate-800/50 flex items-center justify-between px-6 z-50">
       <div class="flex items-center gap-2">
         <img src="/assets/logo.png" class="w-8 h-8 rounded-lg shadow-sm" alt="Logo" />
-        <span class="font-bold text-soft-green-800 dark:text-soft-green-500 tracking-tight">冷凍兔肉的大地秘笈</span>
+        <span class="font-bold text-soft-green-800 dark:text-soft-green-500 tracking-tight">{{ $t('app.title') }}</span>
       </div>
       <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="w-10 h-10 rounded-xl bg-soft-green-50 dark:bg-slate-800 text-soft-green-600 dark:text-soft-green-400 flex items-center justify-center border border-soft-green-100 dark:border-slate-700 active:scale-95 transition-all">
         <i class="pi" :class="isMobileMenuOpen ? 'pi-times' : 'pi-bars'"></i>

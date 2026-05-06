@@ -1,35 +1,95 @@
-<template>
-  <div class="max-w-2xl">
-    <div class="mb-8">
-      <h2 class="text-3xl font-bold mb-2 text-soft-green">設定</h2>
-      <p class="text-white/60">自定義您的工具體驗與偏好設定。</p>
-    </div>
+<script setup lang="ts">
+import { useSettings } from '../composables/useSettings';
+import SelectButton from 'primevue/selectbutton';
+import { useI18n } from 'vue-i18n';
 
-    <div class="space-y-6">
-      <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-        <h3 class="text-lg font-medium mb-4 flex items-center gap-2">
-          <i class="pi pi-user text-soft-green"></i>
-          個人設定
-        </h3>
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <span>顯示角色名稱</span>
-            <div class="w-10 h-6 bg-soft-green/20 rounded-full relative cursor-pointer">
-              <div class="absolute left-1 top-1 w-4 h-4 bg-soft-green rounded-full"></div>
-            </div>
+const { isDarkMode, language } = useSettings();
+const { t } = useI18n();
+
+const langOptions = [
+  { label: t('settings.langOptions.tw'), value: 'tw' },
+  { label: t('settings.langOptions.cn'), value: 'cn' },
+  { label: t('settings.langOptions.en'), value: 'en' },
+  { label: t('settings.langOptions.ja'), value: 'ja' },
+];
+</script>
+
+<template>
+  <div class="px-4 py-8 md:p-8 max-w-4xl w-full mx-auto pb-24">
+    <header class="mb-6 md:mb-8">
+      <h2 class="text-2xl md:text-3xl font-bold text-soft-green-800 dark:text-soft-green-400 mb-2">{{ $t('settings.title') }}</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">{{ $t('settings.description') }}</p>
+    </header>
+
+    <div class="flex flex-col gap-6">
+      <!-- 外觀設定 -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
+                <i class="pi pi-palette text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.appearanceTitle') }}</label>
+              </div>
+
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.appearanceDesc') }}</p>
+
+              <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                  <div class="flex flex-col">
+                      <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('settings.darkMode') }}</span>
+                      <span class="text-xs text-slate-500 dark:text-slate-400">{{ $t('settings.darkModeDesc') }}</span>
+                  </div>
+                  <button 
+                    @click="isDarkMode = !isDarkMode" 
+                    class="w-14 h-8 rounded-full transition-all duration-300 relative"
+                    :class="isDarkMode ? 'bg-soft-green-500' : 'bg-slate-300 dark:bg-slate-700'"
+                  >
+                    <div 
+                        class="absolute top-1 w-6 h-6 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center overflow-hidden"
+                        :class="isDarkMode ? 'left-7' : 'left-1'"
+                    >
+                        <i :class="isDarkMode ? 'pi pi-moon text-soft-green-600' : 'pi pi-sun text-amber-500'" class="text-[10px]"></i>
+                    </div>
+                  </button>
+              </div>
           </div>
-        </div>
       </div>
 
-      <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-        <h3 class="text-lg font-medium mb-4 flex items-center gap-2">
-          <i class="pi pi-globe text-soft-green"></i>
-          語言與地區
-        </h3>
-        <div class="text-sm text-white/40">
-          目前預設：繁體中文 (Traditional Chinese)
-        </div>
+      <!-- 語言設定 -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
+                <i class="pi pi-language text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.language') }}</label>
+              </div>
+
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.languageDesc') }}</p>
+
+              <div class="overflow-x-auto no-scrollbar -mx-1 px-1">
+                  <SelectButton 
+                    v-model="language" 
+                    :options="langOptions" 
+                    optionLabel="label" 
+                    optionValue="value" 
+                    class="settings-lang-toggle whitespace-nowrap min-w-max"
+                  />
+              </div>
+          </div>
+      </div>
+
+      <!-- 關於 -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
+                <i class="pi pi-info-circle text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.aboutTitle') }}</label>
+              </div>
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.aboutDesc') }}</p>
+          </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>

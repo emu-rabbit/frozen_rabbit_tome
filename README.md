@@ -1,5 +1,5 @@
-# frozen_rabbit_tips
-A FF14 gathering web tool for skill optimizing
+# frozen_rabbit_tome
+A FF14 gathering web tool for rotation optimization (Tome)
 
 ## 🤖 Agent 協作規範
 本專案已配置專屬的 Agent 技能系統。
