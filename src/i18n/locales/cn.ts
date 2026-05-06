@@ -5,7 +5,9 @@ export default {
     description: 'FFXIV 大地使者技能推荐工具'
   },
   common: {
-    getStarted: '立即开始'
+    getStarted: '立即开始',
+    underConstruction: '本页面正在施工中',
+    comingSoon: 'COMING SOON'
   },
   nav: {
     createGuide: '建立秘籍',

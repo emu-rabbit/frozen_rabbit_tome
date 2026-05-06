@@ -8,11 +8,11 @@
     </div>
     
     <h2 class="text-3xl md:text-4xl font-black mb-4 text-slate-800 dark:text-white tracking-tight leading-tight uppercase">
-      本頁面正在施工中
+      {{ $t('common.underConstruction') }}
     </h2>
     
     <p class="text-slate-500 dark:text-slate-400 text-lg max-w-md leading-relaxed font-bold tracking-wider">
-      COMING SOON
+      {{ $t('common.comingSoon') }}
     </p>
 
     <div class="mt-12 h-1 w-24 bg-gradient-to-r from-transparent via-soft-green-500/50 to-transparent rounded-full"></div>

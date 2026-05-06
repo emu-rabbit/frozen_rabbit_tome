@@ -5,7 +5,9 @@ export default {
     description: 'FFXIV Gatherer Skill Recommendation Tool'
   },
   common: {
-    getStarted: 'Get Started'
+    getStarted: 'Get Started',
+    underConstruction: 'Under Construction',
+    comingSoon: 'COMING SOON'
   },
   nav: {
     createGuide: 'Create Tome',

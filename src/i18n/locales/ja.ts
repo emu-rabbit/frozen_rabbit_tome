@@ -5,7 +5,9 @@ export default {
     description: 'FFXIV ギャザラースキル推奨ツール'
   },
   common: {
-    getStarted: '今すぐ開始'
+    getStarted: '今すぐ始める',
+    underConstruction: 'このページは工事中です',
+    comingSoon: 'COMING SOON'
   },
   nav: {
     createGuide: '秘伝書を作成',
