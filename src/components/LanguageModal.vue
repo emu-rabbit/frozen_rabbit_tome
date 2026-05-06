@@ -17,11 +17,11 @@ const selectedLang = ref<string | null>(null);
 
 const handleSelect = (code: string) => {
   selectedLang.value = code;
+  language.value = code as any;
 };
 
 const confirmSelection = () => {
   if (selectedLang.value) {
-    language.value = selectedLang.value as any;
     initialized.value = true;
   }
 };
