@@ -19,7 +19,7 @@ export default {
   settings: {
     title: '設定',
     description: '秘伝書の体験と設定をカスタマイズします。',
-    appearanceTitle: '外觀スタイル',
+    appearanceTitle: '外観スタイル',
     appearanceDesc: 'インターフェースの表示方法を調整し、最適な読書体験を選択します。',
     darkMode: 'ダークモード',
     darkModeDesc: 'オンにすると背景が暗くなり、長時間の使用による目の疲れを軽減します。',

@@ -1,37 +1,37 @@
 export default {
   app: {
-    title: '冷凍兔肉的大地秘籍',
-    subtitle: 'FFXIV 採集規劃與數據管理工具'
+    title: '冷冻兔肉的大地秘籍',
+    subtitle: 'FFXIV 采集规划与数据管理工具'
   },
   nav: {
     createGuide: '建立秘籍',
-    settings: '設置頁面',
+    settings: '设置页面',
     github: 'GitHub 項目'
   },
   createGuide: {
     title: '建立新秘籍',
-    description: '開始規劃您的 FFXIV 採集路徑與資源配置。',
-    pathPlanning: '採集路線規劃',
-    pathPlanningDesc: '串接採集點，計算最優採集順序與時間分配。',
-    simulator: '產量模擬器',
-    simulatorDesc: '輸入屬性值，模擬技能循環並預測最終獲取數量。'
+    description: '开始规划您的 FFXIV 采集路径与资源配置。',
+    pathPlanning: '采集路线规划',
+    pathPlanningDesc: '串接采集点，计算最优采集顺序与时间分配。',
+    simulator: '产量模拟器',
+    simulatorDesc: '输入属性值，模拟技能循环并预测最终获取数量。'
   },
   settings: {
-    title: '設置',
-    description: '自定義您的工具體驗與偏好設置。',
-    appearanceTitle: '外觀風格',
-    appearanceDesc: '調整介面的顯示方式，選擇最適合您的閱讀體驗。',
-    darkMode: '黑暗模式',
-    darkModeDesc: '開啟後將切換為深色背景，減輕長時間使用的視覺疲勞。',
-    language: '語言設置',
-    languageDesc: '調整工坊的顯示語言。',
+    title: '设置',
+    description: '自定义您的工具体验与偏好设置。',
+    appearanceTitle: '外观风格',
+    appearanceDesc: '调整界面的显示方式，选择最适合您的阅读体验。',
+    darkMode: '深色模式',
+    darkModeDesc: '开启后将切换为深色背景，减轻长时间使用的视觉疲劳。',
+    language: '语言设置',
+    languageDesc: '调整工坊的显示语言。',
     langOptions: {
-      tw: '繁體中文',
+      tw: '繁体中文',
       en: 'English',
-      ja: '日本語',
+      ja: '日语',
       cn: '简体中文'
     },
-    aboutTitle: '關於本項目',
-    aboutDesc: '這是「冷凍兔肉的大地秘籍」，專為 FFXIV 採集玩家設計的工具箱。'
+    aboutTitle: '关于本项目',
+    aboutDesc: '这是“冷冻兔肉的大地秘籍”，专为 FFXIV 采集玩家设计的工具箱。'
   }
 }
