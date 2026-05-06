@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
+import BottomNav from './components/BottomNav.vue';
 import LanguageModal from './components/LanguageModal.vue';
 import { useSettings } from './composables/useSettings';
 
@@ -34,37 +35,44 @@ watch(language, () => {
   <div class="flex h-screen w-screen bg-soft-green-50 dark:bg-slate-950 overflow-hidden text-slate-800 dark:text-slate-100 font-sans relative">
     
     <!-- Mobile Header -->
-    <header class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-soft-green-100 dark:border-slate-800/50 flex items-center justify-between px-6 z-50">
+    <header class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-soft-green-100/50 dark:border-slate-800/50 flex items-center justify-between px-6 z-50">
       <div class="flex items-center gap-2">
-        <img src="/assets/logo.png" class="w-8 h-8 rounded-lg shadow-sm" alt="Logo" />
-        <span class="font-bold text-soft-green-800 dark:text-soft-green-500 tracking-tight">{{ $t('app.title') }}</span>
+        <div class="w-8 h-8">
+          <img src="/assets/logo.png" class="w-full h-full object-contain" alt="Logo" />
+        </div>
+        <div class="flex flex-col">
+          <span class="font-black text-soft-green-800 dark:text-soft-green-400 tracking-tight leading-none uppercase">{{ $t('app.title') }}</span>
+        </div>
       </div>
-      <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="w-10 h-10 rounded-xl bg-soft-green-50 dark:bg-slate-800 text-soft-green-600 dark:text-soft-green-400 flex items-center justify-center border border-soft-green-100 dark:border-slate-700 active:scale-95 transition-all">
+      
+      <!-- Logo as Menu Toggle on mobile (optional, but keep the bar for now) -->
+      <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="w-10 h-10 rounded-xl bg-soft-green-50/50 dark:bg-slate-800/50 text-soft-green-600 dark:text-soft-green-400 flex items-center justify-center border border-soft-green-100/50 dark:border-slate-700/50 active:scale-95 transition-all">
         <i class="pi" :class="isMobileMenuOpen ? 'pi-times' : 'pi-bars'"></i>
       </button>
     </header>
 
     <!-- Sidebar Overlay (Mobile) -->
     <div 
-      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
+      class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
       :class="isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
       @click="isMobileMenuOpen = false"
     ></div>
 
     <!-- Sidebar -->
     <aside 
-      class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 z-[70] lg:relative lg:w-72 lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-out flex shadow-2xl lg:shadow-none"
+      class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 z-[70] lg:relative lg:w-64 lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-in-out flex shadow-2xl lg:shadow-none"
       :class="isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <Sidebar @close-mobile="isMobileMenuOpen = false" />
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-y-auto relative pt-16 lg:pt-0">
+    <main class="flex-1 flex flex-col overflow-y-auto relative pt-16 pb-20 lg:pt-0 lg:pb-0 scroll-smooth">
       <!-- Background Decoration -->
-      <div class="absolute top-0 right-0 w-96 h-96 bg-lime-green-100 dark:bg-soft-green-900/20 rounded-bl-full opacity-50 -z-10 blur-3xl pointer-events-none"></div>
+      <div class="fixed top-0 right-0 w-full max-w-[500px] aspect-square bg-gradient-to-br from-soft-green-200/40 via-transparent to-transparent dark:from-soft-green-900/20 rounded-bl-full opacity-60 -z-10 blur-[100px] pointer-events-none"></div>
+      <div class="fixed bottom-0 left-0 w-full max-w-[300px] aspect-square bg-gradient-to-tr from-lime-green-100/30 via-transparent to-transparent dark:from-lime-green-900/10 rounded-tr-full opacity-40 -z-10 blur-[80px] pointer-events-none"></div>
 
-      <div class="p-8 lg:p-12">
+      <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
@@ -72,8 +80,12 @@ watch(language, () => {
         </router-view>
       </div>
     </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <BottomNav />
   </div>
 </template>
+
 
 <style>
 .fade-enter-active,

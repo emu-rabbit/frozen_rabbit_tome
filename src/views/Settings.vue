@@ -22,7 +22,7 @@ const langOptions = [
     </header>
 
     <div class="flex flex-col gap-6">
-      <!-- 外觀設定 -->
+      <!-- Appearance Settings -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
           <div class="flex flex-col gap-4">
               <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
@@ -53,7 +53,7 @@ const langOptions = [
           </div>
       </div>
 
-      <!-- 語言設定 -->
+      <!-- Language Settings -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
           <div class="flex flex-col gap-4">
               <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
@@ -69,12 +69,12 @@ const langOptions = [
                     :options="langOptions" 
                     optionLabel="label" 
                     optionValue="value" 
+                    aria-labelledby="basic" 
                     class="settings-lang-toggle whitespace-nowrap min-w-max"
                   />
               </div>
           </div>
       </div>
-
     </div>
   </div>
 </template>

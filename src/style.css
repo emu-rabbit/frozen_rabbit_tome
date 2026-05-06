@@ -3,21 +3,26 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --soft-green-primary: #52a890;
+  }
+
   body {
-    @apply bg-soft-green-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 antialiased font-sans m-0 p-0 h-screen w-screen overflow-hidden;
+    @apply bg-soft-green-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 antialiased m-0 p-0 h-screen w-screen overflow-hidden selection:bg-soft-green-200 selection:text-soft-green-900 dark:selection:bg-soft-green-900 dark:selection:text-soft-green-100;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     scrollbar-gutter: stable;
   }
 
   /* Global Scrollbar styling */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 dark:bg-slate-800 rounded-full border-4 border-transparent bg-clip-padding hover:bg-slate-400 dark:hover:bg-slate-700 transition-colors;
+    @apply bg-slate-300/50 dark:bg-slate-800/50 rounded-full hover:bg-soft-green-400 dark:hover:bg-soft-green-600 transition-colors;
   }
   
   /* Remove arrows from number inputs */
@@ -27,43 +32,72 @@
     margin: 0;
   }
   input[type="number"] {
-    -moz-appearance: textfield; /* Firefox */
+    -moz-appearance: textfield;
   }
 }
 
-/* Override PrimeVue dark backgrounds to be even deeper */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-800/50 shadow-xl;
+  }
+  
+  .glass-sm {
+    @apply bg-white/40 dark:bg-slate-900/40 backdrop-blur-lg border border-white/10 dark:border-slate-800/30;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-800 to-slate-500 dark:from-white dark:to-slate-400;
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Page Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* PrimeVue Overrides for Premium Feel */
 html.dark .p-autocomplete-panel,
 html.dark .p-select-overlay,
 html.dark .p-dropdown-panel {
-  background-color: #0f172a !important;
-  border-color: #1e293b !important;
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(16px);
+  border-color: rgba(30, 41, 59, 0.5) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
 }
 
 html.dark .p-autocomplete-option,
 html.dark .p-select-option,
 html.dark .p-dropdown-item {
   color: #cbd5e1 !important;
-  background-color: #0f172a !important;
+  background-color: transparent !important;
+  @apply rounded-lg mx-1 my-0.5 transition-all !important;
 }
 
 html.dark .p-autocomplete-option:hover,
-html.dark .p-autocomplete-option.p-focus,
-html.dark .p-select-option:hover,
-html.dark .p-select-option.p-focus,
-html.dark .p-dropdown-item:hover,
-html.dark .p-dropdown-item.p-focus {
-  background-color: #1e293b !important;
+html.dark .p-select-option:hover {
+  background-color: rgba(51, 65, 85, 0.5) !important;
   color: #52a890 !important;
 }
 
-html.dark .p-autocomplete-option.p-selected,
-html.dark .p-select-option.p-selected,
-html.dark .p-dropdown-item.p-highlight {
-  background-color: rgba(45, 106, 90, 0.4) !important;
-  color: #52a890 !important;
-}
-
-/* Specific for settings lang toggle */
 .settings-lang-toggle.p-selectbutton .p-button {
-  @apply py-3 px-4 transition-all duration-300 !important;
+  @apply py-3 px-6 rounded-xl border-0 bg-white dark:bg-slate-900 shadow-sm font-bold transition-all duration-300 !important;
 }
+
+.settings-lang-toggle.p-selectbutton .p-button.p-highlight {
+  @apply bg-soft-green-500 text-white shadow-lg shadow-soft-green-500/20 !important;
+}
+

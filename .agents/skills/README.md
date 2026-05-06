@@ -13,21 +13,21 @@
 以下為目前專案中已存在的技能檔案，供 Agent 快速索引：
 
 ### 1. 核心規範 (Core)
-- [語言政策 (language_policy.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/core/language_policy.md)：規定所有通訊與文件皆使用繁體中文.
-- [全域標準 (global_standards.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/core/global_standards.md)：定義專案基礎開發準則。
+- [語言政策 (language_policy.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/core/language_policy.md)：規定所有通訊與文件皆使用繁體中文.
+- [全域標準 (global_standards.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/core/global_standards.md)：定義專案基礎開發準則。
  
  ### 2. 專業標準 (Professional)
-- [開發標準 (development_standards.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/professional/development_standards.md)：具體的代碼風格與技術要求。
-- [UI/UX 標準 (ui_ux_standards.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/professional/ui_ux_standards.md)：介面設計美學與交互規範。
+- [開發標準 (development_standards.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/professional/development_standards.md)：具體的代碼風格與技術要求。
+- [UI/UX 標準 (ui_ux_standards.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/professional/ui_ux_standards.md)：介面設計美學與交互規範。
  
  ### 3. 業務知識 (Business)
-- [FFXIV 採集知識 (ffxiv_gathering_knowledge.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/business/ffxiv_gathering_knowledge.md)：遊戲內採集系統的背景資訊。
-- [採集數學公式 (gathering_math_formulas.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/business/gathering_math_formulas.md)：用於計算成功率與產量的核心算法。
+- [FFXIV 採集知識 (ffxiv_gathering_knowledge.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/business/ffxiv_gathering_knowledge.md)：遊戲內採集系統的背景資訊。
+- [採集數學公式 (gathering_math_formulas.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/business/gathering_math_formulas.md)：用於計算成功率與產量的核心算法。
  
  ### 4. 專案使命 (Mission)
-- [品牌識別 (brand_identity.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/mission/brand_identity.md)：定義 Frozen Rabbit 的視覺與人格設定。
-- [專案目標 (project_mission.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/mission/project_mission.md)：本專案的最終願景。
-- [參考專案 (reference_project.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/mission/reference_project.md)：與姊妹專案的連結與差異。
+- [品牌識別 (brand_identity.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/mission/brand_identity.md)：定義 Frozen Rabbit 的視覺與人格設定。
+- [專案目標 (project_mission.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/mission/project_mission.md)：本專案的最終願景。
+- [參考專案 (reference_project.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/mission/reference_project.md)：與姊妹專案的連結與差異。
 
 ## 核心規則
 - **自動遞迴搜尋**：Agent 在尋找技能時，必須主動搜尋 `.agents/skills/` 目錄下的所有子目錄。

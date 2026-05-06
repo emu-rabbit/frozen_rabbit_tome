@@ -4,6 +4,9 @@ export default {
     subtitle: '兔肉不私藏的好秘籍',
     description: 'FFXIV 大地使者技能推荐工具'
   },
+  common: {
+    getStarted: '立即开始'
+  },
   nav: {
     createGuide: '建立秘籍',
     settings: '设置页面',
@@ -15,21 +18,24 @@ export default {
     pathPlanning: '采集路线规划',
     pathPlanningDesc: '串接采集点，计算最优采集顺序与时间分配。',
     simulator: '产量模拟器',
-    simulatorDesc: '输入属性值，模拟技能循环并预测最终获取数量。'
+    simulatorDesc: '输入属性值，模拟技能循环并预测最终获取数量。',
+    tip: '点击上方卡片开始规划您的采集路径。'
   },
   settings: {
-    title: '设置',
-    description: '自定义您的工具体验与偏好设置。',
-    appearanceTitle: '外观风格',
-    appearanceDesc: '调整界面的显示方式，选择最适合您的阅读体验。',
+    title: '秘籍设置',
+    description: '调整秘籍的各项偏好设置',
+    appearanceTitle: '外观设置',
+    appearanceDesc: '调整秘籍的视觉风格',
     darkMode: '深色模式',
-    darkModeDesc: '开启后将切换为深色背景，减轻长时间使用的视觉疲劳。',
-    language: '语言设置',
-    languageDesc: '调整工坊的显示语言。',
+    darkModeDesc: '开启深色模式，适合在昏暗环境下使用',
+    language: '语言版本',
+    languageDesc: '本网站的显示语言，缺乏翻译的情况下将显示英文',
+    debugMode: '除错模式',
+    debugModeDesc: '开启后可于创建新笔记时复制站长推荐 JSON 格式',
     langOptions: {
-      tw: '繁体中文',
+      tw: '繁體中文',
       en: 'English',
-      ja: '日语',
+      ja: '日本語',
       cn: '简体中文'
     },
     aboutTitle: '关于本项目',

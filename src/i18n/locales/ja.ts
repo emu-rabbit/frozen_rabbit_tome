@@ -4,9 +4,12 @@ export default {
     subtitle: '兎肉のおすそ分け秘伝書',
     description: 'FFXIV ギャザラースキル推奨ツール'
   },
+  common: {
+    getStarted: '今すぐ開始'
+  },
   nav: {
     createGuide: '秘伝書を作成',
-    settings: '設定',
+    settings: '設定ページ',
     github: 'GitHub プロジェクト'
   },
   createGuide: {
@@ -15,22 +18,25 @@ export default {
     pathPlanning: '採集ルート計画',
     pathPlanningDesc: '採集ポイントを連結し、最適な採集順序と時間配分を計算します。',
     simulator: '獲得シミュレーター',
-    simulatorDesc: '属性値を入力し、スキル回しをシミュレートして最終的な獲得数を予測します。'
+    simulatorDesc: '属性値を入力し、スキル回しをシミュレートして最終的な獲得数を予測します。',
+    tip: '上のカードをクリックして、採集ルートの計画を開始してください。'
   },
   settings: {
-    title: '設定',
-    description: 'ツールの体験と設定をカスタマイズします。',
-    appearanceTitle: '外観スタイル',
-    appearanceDesc: 'インターフェースの表示方法を調整し、最適な読書体験を選択します。',
+    title: '秘伝書の設定',
+    description: '秘伝書の各種設定を調整します',
+    appearanceTitle: '外観設定',
+    appearanceDesc: '秘伝書の視覚スタイルを調整します',
     darkMode: 'ダークモード',
-    darkModeDesc: 'オンにするとダーク背景に切り替わり、長時間の使用による視覚疲労を軽減します。',
+    darkModeDesc: 'ダークモードを有効にします。暗い環境での使用に適しています',
     language: '言語設定',
-    languageDesc: 'ワークショップの表示言語を調整します。',
+    languageDesc: 'このサイトの表示言語です。翻訳がない場合は英語で表示されます',
+    debugMode: 'デバッグモード',
+    debugModeDesc: '有効にすると、新しいノートを作成する際に管理者推奨の JSON 形式をコピーできます',
     langOptions: {
-      tw: '繁体字中国語',
-      en: '英語',
+      tw: '繁體中文',
+      en: 'English',
       ja: '日本語',
-      cn: '簡体字中国語'
+      cn: '简体中文'
     },
     aboutTitle: 'このプロジェクトについて',
     aboutDesc: 'これは「冷凍兎肉の秘伝書」、FFXIV のギャザラー専用ツールボックスです。'
