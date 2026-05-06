@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
 import { useSettings } from './composables/useSettings';
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 const isMobileMenuOpen = ref(false);
 const { isDarkMode, language } = useSettings();
 
@@ -20,6 +20,11 @@ watch(isDarkMode, (newVal) => {
   } else {
     document.documentElement.classList.remove('dark');
   }
+}, { immediate: true });
+
+// 更新網頁標題
+watch(language, () => {
+  document.title = `${t('app.title')} | ${t('app.description')}`;
 }, { immediate: true });
 </script>
 

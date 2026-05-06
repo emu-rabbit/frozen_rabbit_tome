@@ -1,7 +1,8 @@
 export default {
   app: {
     title: 'Frozen Rabbit Tome',
-    subtitle: 'FFXIV Gathering Planning & Optimization Tome'
+    subtitle: "Rabbit's Shared Secret Tome",
+    description: 'FFXIV Gatherer Skill Recommendation Tool'
   },
   nav: {
     createGuide: 'Create Tome',

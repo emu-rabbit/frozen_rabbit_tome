@@ -1,12 +1,13 @@
 export default {
   app: {
-    title: '冷冻兔肉的大地秘籍',
-    subtitle: 'FFXIV 采集规划与数据管理工具'
+    title: '冷冻兔肉的秘籍',
+    subtitle: '兔肉不私藏的好秘籍',
+    description: 'FFXIV 大地使者技能推荐工具'
   },
   nav: {
     createGuide: '建立秘籍',
     settings: '设置页面',
-    github: 'GitHub 項目'
+    github: 'GitHub 项目'
   },
   createGuide: {
     title: '建立新秘籍',

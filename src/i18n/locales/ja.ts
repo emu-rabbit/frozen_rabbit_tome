@@ -1,7 +1,8 @@
 export default {
   app: {
     title: '冷凍兎肉の秘伝書',
-    subtitle: 'FFXIV 採集計画とスキル最適化秘伝書'
+    subtitle: '兎肉のおすそ分け秘伝書',
+    description: 'FFXIV ギャザラースキル推奨ツール'
   },
   nav: {
     createGuide: '秘伝書を作成',

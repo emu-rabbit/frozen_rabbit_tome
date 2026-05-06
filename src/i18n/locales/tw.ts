@@ -1,7 +1,8 @@
 export default {
   app: {
-    title: '冷凍兔肉的大地秘笈',
-    subtitle: 'FFXIV 採集規劃與數據管理工具'
+    title: '冷凍兔肉的秘笈',
+    subtitle: '兔肉不私藏的好秘笈',
+    description: 'FFXIV 大地使者技能推薦工具'
   },
   nav: {
     createGuide: '建立秘笈',
