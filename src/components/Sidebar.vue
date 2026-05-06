@@ -13,7 +13,10 @@ defineEmits(['close-mobile']);
     <!-- Header -->
     <div class="p-6 pb-2">
       <h1 class="text-lg font-bold text-soft-green-800 dark:text-soft-green-500 flex items-center gap-2 leading-tight">
-        <img src="/assets/logo.png" class="w-8 h-8 rounded-lg shadow-sm" alt="Logo" />
+        <picture>
+          <source srcset="/assets/logo.webp" type="image/webp" />
+          <img src="/assets/logo.png" class="w-8 h-8 rounded-lg shadow-sm" alt="Logo" />
+        </picture>
         {{ $t('app.title') }}
       </h1>
       <p class="text-xs text-soft-green-600 dark:text-soft-green-600 mt-2">{{ $t('app.subtitle') }}</p>

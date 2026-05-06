@@ -37,7 +37,10 @@ watch(language, () => {
     <header class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-soft-green-100/50 dark:border-slate-800/50 flex items-center justify-between px-6 z-50">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8">
-          <img src="/assets/logo.png" class="w-full h-full object-contain" alt="Logo" />
+          <picture>
+            <source srcset="/assets/logo.webp" type="image/webp" />
+            <img src="/assets/logo.png" class="w-full h-full object-contain" alt="Logo" />
+          </picture>
         </div>
         <div class="flex flex-col">
           <span class="font-black text-soft-green-800 dark:text-soft-green-400 tracking-tight leading-none uppercase">{{ $t('app.title') }}</span>

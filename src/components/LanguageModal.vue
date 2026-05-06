@@ -41,7 +41,10 @@ const confirmSelection = () => {
           <div class="absolute top-0 left-0 w-32 h-32 bg-lime-green-100 dark:bg-lime-green-900/20 rounded-full -translate-x-12 -translate-y-12 opacity-50 blur-2xl"></div>
           <div class="absolute bottom-0 right-0 w-32 h-32 bg-soft-green-200 dark:bg-soft-green-900/20 rounded-full translate-x-12 translate-y-12 opacity-50 blur-2xl"></div>
           
-          <img src="/assets/logo.png" class="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg mb-4 sm:mb-8 relative z-10 transform hover:rotate-6 transition-transform duration-500" alt="Logo" />
+          <picture>
+            <source srcset="/assets/logo.webp" type="image/webp" />
+            <img src="/assets/logo.png" class="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg mb-4 sm:mb-8 relative z-10 transform hover:rotate-6 transition-transform duration-500" alt="Logo" />
+          </picture>
           
           <h2 class="text-2xl sm:text-3xl font-black text-soft-green-900 dark:text-soft-green-400 mb-2 relative z-10">
             {{ t('welcomeModal.title') }}
