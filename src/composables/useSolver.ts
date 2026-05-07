@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { GatherableItem, PlayerStats } from '../types/game';
 import { useSettings } from './useSettings';
-import { getItemLevelData, getGatheringItemsData, getItemName } from '../services/gameData';
+import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading } from '../services/gameData';
 
 const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
 const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
@@ -18,7 +18,6 @@ const temporaryGp = ref(930);
 // 靜態資料快取
 const itemLevelData = ref<Record<string, any> | null>(null);
 const gatheringItemsData = ref<Record<string, any> | null>(null);
-const isDataLoading = ref(false);
 
 export function useSolver() {
   const { userStats } = useSettings();
@@ -36,6 +35,13 @@ export function useSolver() {
     itemLevelData.value = levels;
     gatheringItemsData.value = items;
   };
+
+  // 當靜態資料載入完成時，重新拉取一次
+  watch(isGameDataLoading, (loading) => {
+    if (!loading) {
+      fetchItemLevelData();
+    }
+  }, { immediate: true });
 
   const setSelectedItem = (item: GatherableItem) => {
     activeItem.value = item;
@@ -92,6 +98,7 @@ export function useSolver() {
     else if (score >= 64) rate = 72 + (score - 64) * 2;
     else if (score >= 46) rate = 60 + Math.floor(((score - 45) * 5) / 9);
     else if (score === 45) rate = 60;
+    else if (score === 44) rate = 58;
     else if (score >= 41) rate = 52 + (score - 40) * 2;
     else if (score >= 21) rate = Math.floor(20 + (score - 20) * 1.6);
     else if (score >= 11) rate = 2 + (score - 11) * 2;
@@ -136,7 +143,7 @@ export function useSolver() {
     activeItem,
     solverStats,
     temporaryGp,
-    isDataLoading,
+    isDataLoading: isGameDataLoading,
     fetchItemLevelData,
     setSelectedItem,
     syncFromSettings,

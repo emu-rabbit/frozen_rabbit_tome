@@ -337,7 +337,7 @@ function getUiState() {
   transition: all 0.2s !important;
 }
 
-:global(.dark) :deep(.search-input) {
+:global(.dark .search-input) {
   background: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
@@ -491,5 +491,13 @@ function getUiState() {
   font-size: 0.78rem;
   color: #94a3b8;
   padding: 0 4px 4px;
+}
+
+:global(.dark) .results-count {
+  color: #94a3b8;
+}
+
+:global(.dark) .state-text {
+  color: #94a3b8;
 }
 </style>

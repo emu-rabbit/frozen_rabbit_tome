@@ -23,9 +23,9 @@ function onImageError(e: Event) {
 </script>
 
 <template>
-  <div class="item-card" :id="`item-card-${props.item.itemId}`" @click="emit('select', props.item)">
+  <div class="item-card bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-[#52a890]" :id="`item-card-${props.item.itemId}`" @click="emit('select', props.item)">
     <!-- 圖示區 -->
-    <div class="item-icon-wrap">
+    <div class="item-icon-wrap bg-slate-100 dark:bg-slate-900">
       <img
         v-if="props.item.iconUrl"
         :src="props.item.iconUrl"
@@ -42,7 +42,7 @@ function onImageError(e: Event) {
     <!-- 資訊區 -->
     <div class="item-info">
       <div class="item-name-row">
-        <span class="item-name">{{ props.item.nameLocale }}</span>
+        <span class="item-name text-slate-800 dark:text-slate-100">{{ props.item.nameLocale }}</span>
         <span v-if="props.item.isFallback" class="item-no-translation">
           {{ $t('createGuide.noTranslation') }}
         </span>
@@ -78,19 +78,11 @@ function onImageError(e: Event) {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: white;
-  dark: background #1e293b; /* dark mode handled below */
-  border: 1px solid #e2e8f0;
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
-}
-
-:global(.dark) .item-card {
-  background: #1e293b;
-  border-color: #334155;
 }
 
 .item-card::before {
@@ -109,7 +101,6 @@ function onImageError(e: Event) {
 }
 
 :global(.dark) .item-card:hover {
-  border-color: #52a890;
   box-shadow: 0 4px 20px rgba(82, 168, 144, 0.2);
 }
 
@@ -124,14 +115,9 @@ function onImageError(e: Event) {
   height: 40px;
   border-radius: 8px;
   overflow: hidden;
-  background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-:global(.dark) .item-icon-wrap {
-  background: #0f172a;
 }
 
 .item-icon {
@@ -162,16 +148,11 @@ function onImageError(e: Event) {
 .item-name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1e293b;
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
-}
-
-:global(.dark) .item-name {
-  color: #f1f5f9;
 }
 
 .item-no-translation {

@@ -33,6 +33,8 @@ let itemInfoMap = new Map<number, { glv: number; jobType: 'miner' | 'botanist' }
 let rawItemLevels: Record<string, any> = {};
 /** gathering-items.json */
 let rawGatheringItems: Record<string, any> = {};
+/** gathering-search-index.json: itemId -> { types: number[] } */
+let rawGatheringSearchIndex: Record<string, { types: number[] }> = {};
 
 /** 當前已載入的語言 */
 export const currentLanguage = ref('');
@@ -58,7 +60,10 @@ function extractName(entry: any, lang: string): string {
   return '';
 }
 
-/** 解析 GatheringItem.csv 建立 ItemID -> {glv, jobType} 對照表 */
+/** 解析 GatheringItem.csv 建立 ItemID -> {glv, jobType} 對照表
+ *  職業分類優先使用 rawGatheringSearchIndex (Teamcraft)，
+ *  其次以 CSV 欄位 7 (GatheringType) 作為備援：0,1=採掘師；2,3=園藝師。
+ */
 async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv: number; jobType: 'miner' | 'botanist' }>> {
   const map = new Map<number, { glv: number; jobType: 'miner' | 'botanist' }>();
   const lines = csvText.split('\n');
@@ -72,15 +77,21 @@ async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv
     const glvId = parseInt(parts[4], 10);
     const typeId = parseInt(parts[7], 10);
 
-    if (!isNaN(itemId) && !isNaN(glvId)) {
-      let jobType: 'miner' | 'botanist' | null = null;
-      // 0,1 為採掘師；2,3 為園藝師
-      if (typeId === 0 || typeId === 1) jobType = 'miner';
-      else if (typeId === 2 || typeId === 3) jobType = 'botanist';
+    if (!isNaN(itemId) && !isNaN(glvId) && itemId > 0) {
+      // 優先從 gathering-search-index 判斷 (最可靠)
+      const searchEntry = rawGatheringSearchIndex[itemId.toString()];
+      let jobType: 'miner' | 'botanist';
 
-      if (jobType) {
-        map.set(itemId, { glv: glvId, jobType });
+      if (searchEntry && searchEntry.types && searchEntry.types.length > 0) {
+        // type 0=Mining, 1=Quarrying -> miner; 2=Logging, 3=Harvesting -> botanist
+        const firstType = searchEntry.types[0];
+        jobType = (firstType === 0 || firstType === 1) ? 'miner' : 'botanist';
+      } else {
+        // 備援：使用 CSV 的 GatheringType 欄位
+        jobType = (typeId === 0 || typeId === 1) ? 'miner' : 'botanist';
       }
+
+      map.set(itemId, { glv: glvId, jobType });
     }
   }
   return map;
@@ -95,9 +106,12 @@ async function loadStaticData(): Promise<void> {
   staticLoadPromise = (async () => {
     try {
       console.log('[GameData] Loading static assets...');
-      const [iconsRes, csvRes, itemLevelRes, gatheringItemsRes] = await Promise.all([
+
+      // 第一階段：先載入 search index 與其他靜態資源（並行）
+      const [iconsRes, csvRes, searchIndexRes, itemLevelRes, gatheringItemsRes] = await Promise.all([
         fetch(ICONS_URL),
         fetch(XIVAPI_CSV_URL),
+        fetch(`${BASE_URL}/gathering-search-index.json`),
         fetch(`${BASE_URL}/item-level.json`),
         fetch(`${BASE_URL}/gathering-items.json`)
       ]);
@@ -105,9 +119,17 @@ async function loadStaticData(): Promise<void> {
       if (!iconsRes.ok) throw new Error(`[GameData] item-icons.json failed: ${iconsRes.status}`);
       rawIcons = await iconsRes.json();
 
+      // 第二階段：必須先解析 search index，才能正確分類 CSV 中的職業
+      if (searchIndexRes.ok) {
+        rawGatheringSearchIndex = await searchIndexRes.json();
+        console.log(`[GameData] gathering-search-index loaded, ${Object.keys(rawGatheringSearchIndex).length} entries`);
+      }
+
+      // 現在 rawGatheringSearchIndex 已就緒，可以解析 CSV
       if (csvRes.ok) {
         const csvText = await csvRes.text();
         itemInfoMap = await parseGatheringItemCsv(csvText);
+        console.log(`[GameData] itemInfoMap built: ${itemInfoMap.size} items`);
       }
 
       if (itemLevelRes.ok) {
@@ -226,7 +248,7 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
 
   if (results.length === 0) return [];
 
-  // 提取 itemId 準備向 XIVAPI 批次查詢 IsCollectable 屬性
+  // 提取 itemId 準備向 XIVAPI 批次查詢 IsCollectable 與 GatheringType
   const itemIds = results.map(r => r.itemId).join(',');
   const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
 
