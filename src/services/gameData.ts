@@ -157,18 +157,18 @@ export async function loadGameData(lang: string): Promise<void> {
 }
 
 /**
- * 原始搜尋：不包含任何排除邏輯。
- * 直接對全量物品進行名稱匹配。
+ * 搜尋採掘師/園藝師可採集的物品。
+ * 以 GatheringItem.csv 的物品清單為範圍，確保只有這兩個職業能採集到的物品才會出現在結果中。
  */
 export function searchGatherables(query: string): GatherableItem[] {
   const q = query.trim().toLowerCase();
-  if (!q) return [];
+  if (!q || itemGlvMap.size === 0) return [];
 
   const results: GatherableItem[] = [];
-  
-  // 以英文清單為基準進行全量遍歷（原始狀態）
-  for (const itemIdStr of Object.keys(rawEnglishNames)) {
-    const itemId = parseInt(itemIdStr, 10);
+
+  // 以 GatheringItem.csv 的 ItemID 清單為遍歷基準（僅採掘師/園藝師的採集物）
+  for (const [itemId, glv] of itemGlvMap) {
+    const itemIdStr = itemId.toString();
     const targetEntry = rawTargetNames[itemIdStr];
     const enEntry = rawEnglishNames[itemIdStr];
 
@@ -190,7 +190,7 @@ export function searchGatherables(query: string): GatherableItem[] {
         itemId,
         nameLocale,
         nameEn,
-        glv: itemGlvMap.get(itemId) ?? 0,
+        glv,
         iconUrl: iconPath ? `https://xivapi.com${iconPath}` : '',
         isFallback: !localeRaw && !!enRaw,
       });
