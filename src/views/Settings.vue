@@ -32,14 +32,14 @@ const langOptions = [
 
               <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.appearanceDesc') }}</p>
 
-              <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+              <div class="flex items-center justify-between gap-1 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
                   <div class="flex flex-col">
                       <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('settings.darkMode') }}</span>
                       <span class="text-xs text-slate-500 dark:text-slate-400">{{ $t('settings.darkModeDesc') }}</span>
                   </div>
                   <button 
                     @click="isDarkMode = !isDarkMode" 
-                    class="w-14 h-8 rounded-full transition-all duration-300 relative"
+                    class="w-14 h-8 rounded-full transition-all duration-300 relative flex-shrink-0"
                     :class="isDarkMode ? 'bg-soft-green-500' : 'bg-slate-300 dark:bg-slate-700'"
                   >
                     <div 
