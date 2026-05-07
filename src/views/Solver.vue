@@ -22,7 +22,10 @@ const {
   itemRealLevel,
   displayName,
   temporaryGp,
-  nodeBonuses
+  nodeBonuses,
+  solve,
+  rotationResult,
+  isSolving
 } = useSolver();
 
 const { userStats } = useSettings();
@@ -214,7 +217,14 @@ function handleSync() {
           <i class="pi pi-gift text-amber-500"></i>
           {{ t('solver.nodeBonusesTitle') }}
         </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+              {{ t('solver.nodeBonuses.baseIntegrity') }}
+              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.times') }})</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.baseIntegrity" :min="1" :max="10" fluid class="w-full" />
+          </div>
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
               {{ t('solver.nodeBonuses.gatheringCount') }}
@@ -236,6 +246,66 @@ function handleSync() {
             </label>
             <InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid class="w-full" />
           </div>
+        </div>
+      </div>
+
+      <!-- 策略演算區 -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm animate-page-in" style="animation-delay: 0.2s;">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+          <div class="flex flex-col gap-1 text-center sm:text-left">
+            <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center sm:justify-start gap-2">
+              <i class="pi pi-bolt text-amber-500"></i>
+              最佳採集策略演算
+            </h3>
+            <p class="text-sm text-slate-500">基於當前 GP 與屬性，由背景 Worker 進行窮舉演算</p>
+          </div>
+          <Button 
+            label="開始演算" 
+            icon="pi pi-play" 
+            class="p-button-primary p-button-lg rounded-2xl px-8 shadow-md"
+            :loading="isSolving"
+            @click="solve"
+          />
+        </div>
+
+        <!-- 演算結果 -->
+        <div v-if="rotationResult" class="space-y-6">
+          <div class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">建議手法順序</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <template v-for="(action, index) in rotationResult.bestRotation" :key="index">
+                <span 
+                  class="px-4 py-2 rounded-xl text-sm font-bold shadow-sm"
+                  :class="action === '採集' ? 'bg-white dark:bg-slate-800 text-slate-600 border border-slate-200 dark:border-slate-700' : 'bg-soft-green-500 text-white'"
+                >
+                  {{ action }}
+                </span>
+                <i v-if="index < rotationResult.bestRotation.length - 1" class="pi pi-angle-right text-slate-300"></i>
+              </template>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800/30 flex flex-col items-center justify-center">
+              <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">預估總產量 (EV)</span>
+              <span class="text-2xl font-black text-emerald-700 dark:text-emerald-300">{{ rotationResult.expectedYield }}</span>
+            </div>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col items-center justify-center">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">演算耗時</span>
+              <span class="text-2xl font-black text-slate-600 dark:text-slate-400">{{ rotationResult.calculationTime }}<span class="text-xs ml-1">ms</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 初始狀態或計算中 -->
+        <div v-else-if="isSolving" class="py-12 flex flex-col items-center justify-center gap-4 text-slate-400">
+          <i class="pi pi-spin pi-spinner text-4xl"></i>
+          <p class="font-medium animate-pulse">正在為您尋找最優解...</p>
+        </div>
+        
+        <div v-else class="py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center gap-3 text-slate-400">
+          <i class="pi pi-calculator text-3xl opacity-20"></i>
+          <p class="text-sm">點擊上方按鈕開始計算最佳策略</p>
         </div>
       </div>
     </div>

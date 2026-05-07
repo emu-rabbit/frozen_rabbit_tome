@@ -63,6 +63,7 @@ export default {
     },
     nodeBonusesTitle: '採集ポイントボーナス',
     nodeBonuses: {
+      baseIntegrity: '採集場所の基礎耐久/回数',
       gatheringCount: '採集回数増加',
       yieldCount: '獲得数増加',
       extraRate: '特殊採集発生率増加'

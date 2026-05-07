@@ -19,8 +19,9 @@ export interface GatherableItem {
   isCollectable?: boolean;
   /** 採集職業類型 */
   jobType?: 'miner' | 'botanist';
-  /** 鑑別力需求 (PerceptionReq)，來自 GatheringItem.csv */
   perceptionReq?: number;
+  /** GatheringItem ID (用於關聯 GatheringPointBase) */
+  gatheringItemId?: number;
 }
 
 /** 玩家核心屬性數值 */
@@ -37,6 +38,8 @@ export interface PlayerStats {
 
 /** 採集點獎勵 (Node Bonuses) */
 export interface NodeBonuses {
+  /** 節點基礎耐久/採集次數 (Base Integrity) */
+  baseIntegrity: number;
   /** 採集次數增加 (Gathering Count Increase) */
   gatheringCount: number;
   /** 獲得數增加 (Yield Increase) */
@@ -51,4 +54,27 @@ export interface UserStats {
   miner: PlayerStats;
   /** 園藝師 */
   botanist: PlayerStats;
+}
+
+/** 採集動作類型 */
+export type GatheringAction = 'Gather' | 'BountifulYield' | 'KingsYield' | 'SolidReason' | 'WiseToTheWorld';
+
+/** 求解器請求 */
+export interface SolverRequest {
+  stats: PlayerStats;
+  baseValues: {
+    Gathering: number;
+    Perception: number;
+  };
+  itemLevel: number;
+  nodeBonuses: NodeBonuses;
+  temporaryGp: number;
+  jobType: 'miner' | 'botanist';
+}
+
+/** 求解器回應 */
+export interface SolverResponse {
+  bestRotation: string[];
+  expectedYield: number;
+  calculationTime: number;
 }

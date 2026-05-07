@@ -63,9 +63,10 @@ export default {
     },
     nodeBonusesTitle: 'Node Bonuses',
     nodeBonuses: {
-      gatheringCount: 'Gathering Count +',
-      yieldCount: 'Yield +',
-      extraRate: 'Extra Rate +'
+      baseIntegrity: 'Base Integrity',
+      gatheringCount: 'Gathering Count Increase',
+      yieldCount: 'Yield Increase',
+      extraRate: 'Extra Rate Increase'
     }
   },
   game: {

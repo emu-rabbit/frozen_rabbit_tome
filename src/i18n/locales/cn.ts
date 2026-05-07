@@ -63,6 +63,7 @@ export default {
     },
     nodeBonusesTitle: '采集点奖励',
     nodeBonuses: {
+      baseIntegrity: '节点基礎耐久/次数',
       gatheringCount: '采集次数增加',
       yieldCount: '获得数增加',
       extraRate: '额外率增加'

@@ -2,7 +2,9 @@ import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
 import { useSettings } from './useSettings';
-import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading } from '../services/gameData';
+import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
+import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
+import type { SolverRequest, SolverResponse } from '../types/game';
 
 const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
 const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
@@ -13,6 +15,7 @@ const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stat
 });
 
 const nodeBonuses = useLocalStorage<NodeBonuses>('frozen-rabbit-tome-node-bonuses', {
+  baseIntegrity: 4,
   gatheringCount: 0,
   yieldCount: 0,
   extraRate: 0
@@ -21,9 +24,12 @@ const nodeBonuses = useLocalStorage<NodeBonuses>('frozen-rabbit-tome-node-bonuse
 // 當前 GP 是暫時性的，不進入 localStorage
 const temporaryGp = ref(930);
 
-// 靜態資料快取
 const itemLevelData = ref<Record<string, any> | null>(null);
 const gatheringItemsData = ref<Record<string, any> | null>(null);
+
+// 求解器結果
+const rotationResult = ref<SolverResponse | null>(null);
+const isSolving = ref(false);
 
 export function useSolver() {
   const { userStats } = useSettings();
@@ -46,11 +52,22 @@ export function useSolver() {
   watch(isGameDataLoading, (loading) => {
     if (!loading) {
       fetchItemLevelData();
+      // 資料載入後，若已有選擇物品，則更新一次基礎次數
+      if (activeItem.value?.gatheringItemId) {
+        nodeBonuses.value.baseIntegrity = getItemBaseIntegrity(activeItem.value.gatheringItemId);
+      }
     }
   }, { immediate: true });
 
   const setSelectedItem = (item: GatherableItem) => {
     activeItem.value = item;
+    // 重設節點獎勵
+    nodeBonuses.value = {
+      baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
+      gatheringCount: 0,
+      yieldCount: 0,
+      extraRate: 0
+    };
     syncFromSettings();
   };
 
@@ -97,34 +114,13 @@ export function useSolver() {
     if (!baseGathering) return 0;
 
     const score = Math.floor((100 * solverStats.value.gathering) / baseGathering);
-    let rate = 0;
-
-    if (score >= 80) rate = 100;
-    else if (score >= 76) rate = 94 + (score - 75) * 1;
-    else if (score >= 64) rate = 72 + (score - 64) * 2;
-    else if (score >= 46) rate = 60 + Math.floor(((score - 45) * 5) / 9);
-    else if (score === 45) rate = 60;
-    else if (score === 44) rate = 58;
-    else if (score >= 41) rate = 52 + (score - 40) * 2;
-    else if (score >= 21) rate = Math.floor(20 + (score - 20) * 1.6);
-    else if (score >= 11) rate = 2 + (score - 11) * 2;
-    else if (score >= 1) rate = 1;
-    else rate = 0;
-
-    // 等級修正
-    const itemLv = itemRealLevel.value;
-    const playerLv = solverStats.value.level;
     
-    if (itemLv > 0 && rate > 0 && rate < 100) {
-      const diff = playerLv - itemLv;
-      if (diff > 0) {
-        rate += Math.min(5, diff);
-      } else if (diff < 0) {
-        rate += Math.max(-25, diff * 5);
-      }
-    }
-    
-    return Math.min(100, Math.max(0, rate));
+    return calculateSuccessRate(
+      solverStats.value.gathering,
+      baseGathering,
+      solverStats.value.level,
+      itemRealLevel.value
+    );
   });
 
   // 2. 獲得力加成率計算
@@ -133,16 +129,7 @@ export function useSolver() {
     const basePerception = baseValues.value.Perception;
     if (!basePerception) return 0;
 
-    const boonScore = Math.min(150, Math.floor((100 * solverStats.value.perception) / basePerception));
-    let rate = 0;
-
-    if (boonScore >= 100) rate = ((boonScore - 100) / 50) * 25 + 35;
-    else if (boonScore >= 80) rate = ((boonScore - 80) / 20) * 20 + 15;
-    else if (boonScore >= 70) rate = ((boonScore - 70) / 10) * 5 + 10;
-    else if (boonScore >= 60) rate = ((boonScore - 60) / 10) * 10;
-    else rate = 0;
-
-    return Math.min(60, Math.max(0, Math.floor(rate)));
+    return calculateBoonChance(solverStats.value.perception, basePerception);
   });
 
   // 3. 鑑別力門檻檢查
@@ -167,6 +154,41 @@ export function useSolver() {
     isPerceptionMet,
     baseValues,
     itemRealLevel,
-    displayName
+    displayName,
+    // 求解功能
+    solve: async () => {
+      if (!activeItem.value || !baseValues.value) return;
+      isSolving.value = true;
+      
+      const worker = new Worker(new URL('../workers/solver.worker.ts', import.meta.url), { type: 'module' });
+      
+      const request: SolverRequest = {
+        stats: { ...solverStats.value },
+        baseValues: {
+          Gathering: baseValues.value.Gathering,
+          Perception: baseValues.value.Perception
+        },
+        itemLevel: itemRealLevel.value,
+        nodeBonuses: { ...nodeBonuses.value },
+        temporaryGp: temporaryGp.value,
+        jobType: activeItem.value.jobType || 'miner'
+      };
+
+      worker.postMessage(request);
+      
+      worker.onmessage = (e: MessageEvent<SolverResponse>) => {
+        rotationResult.value = e.data;
+        isSolving.value = false;
+        worker.terminate();
+      };
+
+      worker.onerror = (err) => {
+        console.error('Worker error:', err);
+        isSolving.value = false;
+        worker.terminate();
+      };
+    },
+    rotationResult,
+    isSolving
   };
 }
