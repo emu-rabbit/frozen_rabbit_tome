@@ -61,12 +61,12 @@ export default {
       gatheringRate: 'Base Gathering Rate',
       boonRate: 'Base Boon Rate'
     },
-    nodeBonusesTitle: 'Node Bonuses',
+    nodeBonusesTitle: 'Node Values',
     nodeBonuses: {
-      baseIntegrity: 'Base Integrity',
-      gatheringCount: 'Gathering Count Increase',
-      yieldCount: 'Yield Increase',
-      extraRate: 'Extra Rate Increase'
+      baseIntegrity: 'BASE DURABILITY',
+      gatheringCount: 'Durability +',
+      yieldCount: 'Yield +',
+      extraRate: 'Extra Rate +',
     }
   },
   game: {

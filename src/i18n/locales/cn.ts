@@ -61,9 +61,9 @@ export default {
       gatheringRate: '基础采集成功率',
       boonRate: '基础额外采集率'
     },
-    nodeBonusesTitle: '采集点奖励',
+    nodeBonusesTitle: '采集点数值',
     nodeBonuses: {
-      baseIntegrity: '节点基礎耐久/次数',
+      baseIntegrity: '节点基礎耐久',
       gatheringCount: '采集次数增加',
       yieldCount: '获得数增加',
       extraRate: '额外率增加'

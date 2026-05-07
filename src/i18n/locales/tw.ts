@@ -63,9 +63,9 @@ export default {
       gatheringRate: '基礎採集成功率',
       boonRate: '基礎額外採集率'
     },
-    nodeBonusesTitle: '採集點獎勵',
+    nodeBonusesTitle: '採集點數值',
     nodeBonuses: {
-      baseIntegrity: '節點基礎耐久/次數',
+      baseIntegrity: '節點基礎耐久',
       gatheringCount: '採集次數增加',
       yieldCount: '獲得數增加',
       extraRate: '額外率增加'

@@ -7,7 +7,7 @@ import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import { useSettings } from '../composables/useSettings';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const {
   activeItem,
   solverStats,
@@ -217,34 +217,43 @@ function handleSync() {
           <i class="pi pi-gift text-amber-500"></i>
           {{ t('solver.nodeBonusesTitle') }}
         </h3>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
-              {{ t('solver.nodeBonuses.baseIntegrity') }}
-              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.times') }})</span>
-            </label>
-            <InputNumber v-model="nodeBonuses.baseIntegrity" :min="1" :max="10" fluid class="w-full" />
+        <div class="flex flex-col lg:flex-row gap-4">
+          <!-- 基礎數值顯示 -->
+          <div class="lg:w-1/4 flex flex-col">
+            <div class="h-full py-3 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col items-center justify-center text-center">
+              <span class="font-bold text-slate-400 uppercase tracking-widest mb-1" :class="locale === 'en' ? 'text-[10px]' : 'text-sm'">{{ t('solver.nodeBonuses.baseIntegrity') }}</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black text-slate-700 dark:text-slate-200">{{ nodeBonuses.baseIntegrity }}</span>
+                <span class="text-sm font-bold text-slate-400">{{ t('game.units.times') }}</span>
+              </div>
+            </div>
           </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
-              {{ t('solver.nodeBonuses.gatheringCount') }}
-              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.times') }})</span>
-            </label>
-            <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="w-full" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
-              {{ t('solver.nodeBonuses.yieldCount') }}
-              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.count') }})</span>
-            </label>
-            <InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid class="w-full" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
-              {{ t('solver.nodeBonuses.extraRate') }}
-              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.percent') }})</span>
-            </label>
-            <InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid class="w-full" />
+
+          <!-- 加成調整區 -->
+          <div class="lg:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+              <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2" :class="locale === 'en' ? 'text-xs' : 'text-sm'">
+                <span class="leading-tight">{{ t('solver.nodeBonuses.gatheringCount') }}</span>
+                <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ml-2">{{ t('game.units.times') }}</span>
+              </label>
+              <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
+            </div>
+
+            <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+              <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2" :class="locale === 'en' ? 'text-xs' : 'text-sm'">
+                <span class="leading-tight">{{ t('solver.nodeBonuses.yieldCount') }}</span>
+                <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ml-2">{{ t('game.units.count') }}</span>
+              </label>
+              <InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid class="p-inputtext-sm mt-auto" />
+            </div>
+
+            <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+              <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2" :class="locale === 'en' ? 'text-xs' : 'text-sm'">
+                <span class="leading-tight">{{ t('solver.nodeBonuses.extraRate') }}</span>
+                <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ml-2">{{ t('game.units.percent') }}</span>
+              </label>
+              <InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid class="p-inputtext-sm mt-auto" />
+            </div>
           </div>
         </div>
       </div>

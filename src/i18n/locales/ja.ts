@@ -59,11 +59,11 @@ export default {
     syncSuccess: 'ステータスをグローバル設定に同期しました',
     results: {
       gatheringRate: '基本採集成功率',
-      boonRate: '基本獲得力ボーナス発生率'
+      boonRate: '基本ボーナス発生率'
     },
-    nodeBonusesTitle: '採集ポイントボーナス',
+    nodeBonusesTitle: '採集ポイントの数値',
     nodeBonuses: {
-      baseIntegrity: '採集場所の基礎耐久/回数',
+      baseIntegrity: '採集場所の基礎耐久',
       gatheringCount: '採集回数増加',
       yieldCount: '獲得数増加',
       extraRate: '特殊採集発生率増加'
