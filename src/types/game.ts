@@ -19,6 +19,8 @@ export interface GatherableItem {
   isCollectable?: boolean;
   /** 採集職業類型 */
   jobType?: 'miner' | 'botanist';
+  /** 鑑別力需求 (PerceptionReq)，來自 GatheringItem.csv */
+  perceptionReq?: number;
 }
 
 /** 玩家核心屬性數值 */

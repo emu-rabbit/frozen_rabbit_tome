@@ -27,8 +27,8 @@ let rawEnglishNames: Record<string, any> = {};
 let rawTargetNames: Record<string, any> = {};
 /** item-icons.json */
 let rawIcons: Record<string, string> = {};
-/** ItemID -> {Glv, JobType} */
-let itemInfoMap = new Map<number, { glv: number; jobType: 'miner' | 'botanist' }>();
+/** ItemID -> {Glv, JobType, PerceptionReq} */
+let itemInfoMap = new Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number }>();
 /** item-level.json */
 let rawItemLevels: Record<string, any> = {};
 /** gathering-items.json */
@@ -64,8 +64,8 @@ function extractName(entry: any, lang: string): string {
  *  職業分類優先使用 rawGatheringSearchIndex (Teamcraft)，
  *  其次以 CSV 欄位 7 (GatheringType) 作為備援：0,1=採掘師；2,3=園藝師。
  */
-async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv: number; jobType: 'miner' | 'botanist' }>> {
-  const map = new Map<number, { glv: number; jobType: 'miner' | 'botanist' }>();
+async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number }>> {
+  const map = new Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number }>();
   const lines = csvText.split('\n');
   // 跳過前 3 行標頭
   for (let i = 3; i < lines.length; i++) {
@@ -75,6 +75,7 @@ async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv
     if (parts.length < 8) continue;
     const itemId = parseInt(parts[3], 10);
     const glvId = parseInt(parts[4], 10);
+    const perceptionReq = parseInt(parts[5], 10) || 0;
     const typeId = parseInt(parts[7], 10);
 
     if (!isNaN(itemId) && !isNaN(glvId) && itemId > 0) {
@@ -91,7 +92,7 @@ async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv
         jobType = (typeId === 0 || typeId === 1) ? 'miner' : 'botanist';
       }
 
-      map.set(itemId, { glv: glvId, jobType });
+      map.set(itemId, { glv: glvId, jobType, perceptionReq });
     }
   }
   return map;
@@ -238,6 +239,7 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
         nameEn,
         glv: info.glv,
         jobType: info.jobType,
+        perceptionReq: info.perceptionReq,
         iconUrl: iconPath ? `https://xivapi.com${iconPath}` : '',
         isFallback: !localeRaw && !!enRaw,
       });

@@ -16,6 +16,7 @@ const {
   saveToSettings,
   successRate,
   boonChance,
+  isPerceptionMet,
   baseValues,
   syncFromSettings,
   itemRealLevel,
@@ -77,24 +78,35 @@ function handleSync() {
     <!-- === 求解器主畫面 === -->
     <div v-else class="space-y-6 animate-page-in">
       <!-- 物品標題卡 -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-6">
-        <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
-          <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" class="w-12 h-12 pixelated" />
-          <i v-else class="pi pi-box text-2xl text-slate-400"></i>
-        </div>
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="text-xs font-bold px-2 py-0.5 bg-emerald-500 text-white rounded-md uppercase tracking-wider">
-              {{ t(`game.jobs.${activeItem.jobType}`) }}
-            </span>
-            <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
-              GLV {{ activeItem.glv }}
-            </span>
-            <span v-if="itemRealLevel > 0" class="text-xs font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
-              Lv {{ itemRealLevel }}
-            </span>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-6">
+          <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
+            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" class="w-12 h-12 pixelated" />
+            <i v-else class="pi pi-box text-2xl text-slate-400"></i>
           </div>
-          <h1 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{{ displayName }}</h1>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs font-bold px-2 py-0.5 bg-emerald-500 text-white rounded-md uppercase tracking-wider">
+                {{ t(`game.jobs.${activeItem.jobType}`) }}
+              </span>
+              <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
+                GLV {{ activeItem.glv }}
+              </span>
+              <span v-if="itemRealLevel > 0" class="text-xs font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
+                Lv {{ itemRealLevel }}
+              </span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{{ displayName }}</h1>
+          </div>
+        </div>
+
+        <!-- 鑑別力不足警告 -->
+        <div v-if="!isPerceptionMet" class="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl animate-shake">
+          <i class="pi pi-exclamation-circle text-red-500 text-lg"></i>
+          <div class="flex flex-col">
+            <span class="text-red-600 dark:text-red-400 font-bold text-sm">鑑別力不達標，無法採集</span>
+            <span class="text-red-500/80 dark:text-red-400/60 text-[10px]">最低需求: {{ activeItem.perceptionReq }}</span>
+          </div>
         </div>
       </div>
 
@@ -157,11 +169,14 @@ function handleSync() {
             </div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('solver.results.gatheringRate') }}</p>
             <div class="flex items-baseline gap-1 relative z-10">
-              <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ successRate }}</span>
-              <span class="text-xl font-bold text-slate-400">%</span>
+              <template v-if="isPerceptionMet">
+                <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ successRate }}</span>
+                <span class="text-xl font-bold text-slate-400">%</span>
+              </template>
+              <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">未知</span>
             </div>
             <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
-              <div class="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full transition-all duration-500 rounded-full" :style="{ width: `${successRate}%` }"></div>
+              <div class="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full transition-all duration-500 rounded-full" :style="{ width: isPerceptionMet ? `${successRate}%` : '0%' }"></div>
             </div>
           </div>
 
@@ -172,11 +187,14 @@ function handleSync() {
             </div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('solver.results.boonRate') }}</p>
             <div class="flex items-baseline gap-1 relative z-10">
-              <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ boonChance }}</span>
-              <span class="text-xl font-bold text-slate-400">%</span>
+              <template v-if="isPerceptionMet">
+                <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ boonChance }}</span>
+                <span class="text-xl font-bold text-slate-400">%</span>
+              </template>
+              <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">未知</span>
             </div>
             <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
-              <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-full transition-all duration-500 rounded-full" :style="{ width: `${(boonChance / 60) * 100}%` }"></div>
+              <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-full transition-all duration-500 rounded-full" :style="{ width: isPerceptionMet ? `${(boonChance / 60) * 100}%` : '0%' }"></div>
             </div>
             <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">MAX 60%</p>
           </div>
@@ -203,5 +221,14 @@ function handleSync() {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
 }
 </style>

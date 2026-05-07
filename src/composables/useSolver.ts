@@ -139,6 +139,13 @@ export function useSolver() {
     return Math.min(60, Math.max(0, Math.floor(rate)));
   });
 
+  // 3. 鑑別力門檻檢查
+  const isPerceptionMet = computed(() => {
+    if (!activeItem.value) return true;
+    const req = activeItem.value.perceptionReq || 0;
+    return solverStats.value.perception >= req;
+  });
+
   return {
     activeItem,
     solverStats,
@@ -150,6 +157,7 @@ export function useSolver() {
     saveToSettings,
     successRate,
     boonChance,
+    isPerceptionMet,
     baseValues,
     itemRealLevel,
     displayName
