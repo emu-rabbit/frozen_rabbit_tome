@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'Settings' });
 import { useSettings } from '../composables/useSettings';
 import SelectButton from 'primevue/selectbutton';
 import InputNumber from 'primevue/inputnumber';

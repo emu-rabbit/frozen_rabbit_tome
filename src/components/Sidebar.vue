@@ -34,6 +34,16 @@ defineEmits(['close-mobile']);
         <span class="leading-tight">{{ $t('nav.createGuide') }}</span>
       </router-link>
 
+      <router-link 
+        to="/solver" 
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-bold"
+        :class="route.path === '/solver' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-calculator shrink-0"></i>
+        <span class="leading-tight">{{ $t('nav.solver') }}</span>
+      </router-link>
+
       <div class="mt-auto"></div>
     </nav>
     

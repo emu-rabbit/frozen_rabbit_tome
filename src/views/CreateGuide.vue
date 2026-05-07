@@ -12,8 +12,17 @@ import {
   currentLanguage,
 } from '../services/gameData';
 import type { GatherableItem } from '../types/game';
+import { useRouter } from 'vue-router';
+import { useSolver } from '../composables/useSolver';
 
 const { t } = useI18n();
+const router = useRouter();
+const { setSelectedItem } = useSolver();
+
+function handleItemSelect(item: GatherableItem) {
+  setSelectedItem(item);
+  router.push('/solver');
+}
 
 // === 搜尋狀態 ===
 // 使用 module-level ref（而非 reactive 物件）讓 KeepAlive 能保留狀態。
@@ -202,6 +211,7 @@ function getUiState() {
             v-for="item in searchResults"
             :key="item.itemId"
             :item="item"
+            @select="handleItemSelect"
           />
         </div>
       </transition>

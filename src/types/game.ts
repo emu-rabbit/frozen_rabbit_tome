@@ -17,6 +17,8 @@ export interface GatherableItem {
   isFallback: boolean;
   /** 是否為收藏品系統物品（由 XIVAPI 動態判定） */
   isCollectable?: boolean;
+  /** 採集職業類型 */
+  jobType?: 'miner' | 'botanist';
 }
 
 /** 玩家核心屬性數值 */

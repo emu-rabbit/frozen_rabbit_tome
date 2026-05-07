@@ -9,6 +9,10 @@ interface Props {
 const props = defineProps<Props>();
 const isFavorite = ref(false);
 
+const emit = defineEmits<{
+  (e: 'select', item: GatherableItem): void;
+}>();
+
 function toggleFavorite() {
   isFavorite.value = !isFavorite.value;
 }
@@ -19,7 +23,7 @@ function onImageError(e: Event) {
 </script>
 
 <template>
-  <div class="item-card" :id="`item-card-${props.item.itemId}`">
+  <div class="item-card" :id="`item-card-${props.item.itemId}`" @click="emit('select', props.item)">
     <!-- 圖示區 -->
     <div class="item-icon-wrap">
       <img

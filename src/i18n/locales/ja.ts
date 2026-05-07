@@ -7,6 +7,7 @@ export default {
   common: {},
   nav: {
     createGuide: '秘伝書を作成',
+    solver: '秘伝書ソルバー',
     settings: '設定ページ',
     github: 'GitHub プロジェクト'
   },
@@ -43,7 +44,23 @@ export default {
     aboutTitle: 'このプロジェクトについて',
     aboutDesc: '「冷凍兔肉の秘伝書」は、FFXIV の採集プレイヤー向けに設計されたツールボックスです。',
     statsTitle: 'ステータス設定',
-    statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。'
+    statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。',
+  },
+  solver: {
+    title: '秘伝書ソルバー',
+    statsTitle: '現在の採集環境ステータス',
+    currentGp: '現在 GP',
+    maxGp: '最大 GP (装備上限)',
+    noItemTitle: 'アイテム未選択',
+    noItemDesc: '「秘伝書を作成」から採集アイテムを検索して選擇してください。',
+    goToCreate: '作成ページへ',
+    collectableWarning: '収集品システムは現在開発中です',
+    syncToSettings: '設定に保存',
+    syncSuccess: 'ステータスをグローバル設定に同期しました',
+    results: {
+      gatheringRate: '基礎採集成功率',
+      boonRate: '基礎獲得力加成率'
+    }
   },
   game: {
     jobs: {

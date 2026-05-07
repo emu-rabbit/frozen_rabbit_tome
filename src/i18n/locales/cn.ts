@@ -7,6 +7,7 @@ export default {
   common: {},
   nav: {
     createGuide: '建立秘籍',
+    solver: '秘籍求解器',
     settings: '设置页面',
     github: 'GitHub 项目'
   },
@@ -43,7 +44,23 @@ export default {
     aboutTitle: '关于本项目',
     aboutDesc: '这是"冷冻兔肉的秘籍"，专为 FFXIV 采集玩家设计的工具箱。',
     statsTitle: '玩家装备数值',
-    statsDesc: '请填入你在游戏中真实的装备数值，以便获得更精确的演算建议。'
+    statsDesc: '请填入你在游戏中真实的装备数值，以便获得更精确的演算建议。',
+  },
+  solver: {
+    title: '秘籍求解器',
+    statsTitle: '当前采集环境数值',
+    currentGp: '当前 GP',
+    maxGp: '最大 GP (装备上限)',
+    noItemTitle: '未选择物品',
+    noItemDesc: '请先通过「建立秘籍」搜寻并选择一个采集物品。',
+    goToCreate: '前往建立秘籍',
+    collectableWarning: '收藏品系统仍在施工中',
+    syncToSettings: '同步回设置页',
+    syncSuccess: '数值已同步至全域设定',
+    results: {
+      gatheringRate: '基础采集成功率',
+      boonRate: '基础额外采集率'
+    }
   },
   game: {
     jobs: {

@@ -9,6 +9,7 @@ export default {
   },
   nav: {
     createGuide: '建立秘笈',
+    solver: '秘笈求解器',
     settings: '設定頁面',
     github: 'GitHub 專案'
   },
@@ -44,8 +45,24 @@ export default {
     },
     aboutTitle: '關於本專案',
     aboutDesc: '這是「冷凍兔肉的秘笈」，專為 FFXIV 採集玩家設計的工具箱。',
-    statsTitle: '玩家裝備數值',
-    statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。'
+    statsTitle: '採集玩家數值',
+    statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。',
+  },
+  solver: {
+    title: '秘笈求解器',
+    statsTitle: '當前採集玩家數值',
+    currentGp: '當前 GP',
+    maxGp: '最大 GP (裝備上限)',
+    noItemTitle: '未選擇物品',
+    noItemDesc: '請先透過「建立秘笈」搜尋並選擇一個採集物品。',
+    goToCreate: '前往建立秘笈',
+    collectableWarning: '收藏品系統仍在施工中',
+    syncToSettings: '同步回設定頁',
+    syncSuccess: '數值已同步至全域設定',
+    results: {
+      gatheringRate: '基礎採集成功率',
+      boonRate: '基礎額外採集率'
+    }
   },
   game: {
     jobs: {

@@ -85,7 +85,7 @@ watch(language, () => {
       <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-            <KeepAlive include="CreateGuide">
+            <KeepAlive include="CreateGuide,Solver,Settings">
               <component :is="Component" />
             </KeepAlive>
           </transition>

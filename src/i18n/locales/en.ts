@@ -7,6 +7,7 @@ export default {
   common: {},
   nav: {
     createGuide: 'Create Tome',
+    solver: 'Tome Solver',
     settings: 'Settings',
     github: 'GitHub Project'
   },
@@ -43,7 +44,23 @@ export default {
     aboutTitle: 'About Project',
     aboutDesc: 'Frozen Rabbit Tome is a specialized toolkit for FFXIV gatherers.',
     statsTitle: 'Player Equipment Stats',
-    statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.'
+    statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.',
+  },
+  solver: {
+    title: 'Tome Solver',
+    statsTitle: 'Current Gathering Stats',
+    currentGp: 'Current GP',
+    maxGp: 'Max GP (Equipment Cap)',
+    noItemTitle: 'No Item Selected',
+    noItemDesc: 'Please search and select an item via "Create Tome" first.',
+    goToCreate: 'Go to Create Tome',
+    collectableWarning: 'Collectable system is under construction',
+    syncToSettings: 'Sync to Settings',
+    syncSuccess: 'Stats synced to global settings',
+    results: {
+      gatheringRate: 'Base Success Rate',
+      boonRate: 'Base Boon Chance'
+    }
   },
   game: {
     jobs: {

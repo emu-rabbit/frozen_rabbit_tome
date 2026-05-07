@@ -27,8 +27,12 @@ let rawEnglishNames: Record<string, any> = {};
 let rawTargetNames: Record<string, any> = {};
 /** item-icons.json */
 let rawIcons: Record<string, string> = {};
-/** ItemID -> Glv */
-let itemGlvMap = new Map<number, number>();
+/** ItemID -> {Glv, JobType} */
+let itemInfoMap = new Map<number, { glv: number; jobType: 'miner' | 'botanist' }>();
+/** item-level.json */
+let rawItemLevels: Record<string, any> = {};
+/** gathering-items.json */
+let rawGatheringItems: Record<string, any> = {};
 
 /** 當前已載入的語言 */
 export const currentLanguage = ref('');
@@ -54,20 +58,29 @@ function extractName(entry: any, lang: string): string {
   return '';
 }
 
-/** 解析 GatheringItem.csv 建立 ItemID -> Glv 對照表 */
-async function parseGatheringItemCsv(csvText: string): Promise<Map<number, number>> {
-  const map = new Map<number, number>();
+/** 解析 GatheringItem.csv 建立 ItemID -> {glv, jobType} 對照表 */
+async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv: number; jobType: 'miner' | 'botanist' }>> {
+  const map = new Map<number, { glv: number; jobType: 'miner' | 'botanist' }>();
   const lines = csvText.split('\n');
   // 跳過前 3 行標頭
   for (let i = 3; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     const parts = line.split(',');
-    if (parts.length < 5) continue;
+    if (parts.length < 8) continue;
     const itemId = parseInt(parts[3], 10);
     const glvId = parseInt(parts[4], 10);
+    const typeId = parseInt(parts[7], 10);
+
     if (!isNaN(itemId) && !isNaN(glvId)) {
-      map.set(itemId, glvId);
+      let jobType: 'miner' | 'botanist' | null = null;
+      // 0,1 為採掘師；2,3 為園藝師
+      if (typeId === 0 || typeId === 1) jobType = 'miner';
+      else if (typeId === 2 || typeId === 3) jobType = 'botanist';
+
+      if (jobType) {
+        map.set(itemId, { glv: glvId, jobType });
+      }
     }
   }
   return map;
@@ -81,10 +94,12 @@ async function loadStaticData(): Promise<void> {
 
   staticLoadPromise = (async () => {
     try {
-      console.log('[GameData] Loading icons...');
-      const [iconsRes, csvRes] = await Promise.all([
+      console.log('[GameData] Loading static assets...');
+      const [iconsRes, csvRes, itemLevelRes, gatheringItemsRes] = await Promise.all([
         fetch(ICONS_URL),
-        fetch(XIVAPI_CSV_URL)
+        fetch(XIVAPI_CSV_URL),
+        fetch(`${BASE_URL}/item-level.json`),
+        fetch(`${BASE_URL}/gathering-items.json`)
       ]);
 
       if (!iconsRes.ok) throw new Error(`[GameData] item-icons.json failed: ${iconsRes.status}`);
@@ -92,7 +107,15 @@ async function loadStaticData(): Promise<void> {
 
       if (csvRes.ok) {
         const csvText = await csvRes.text();
-        itemGlvMap = await parseGatheringItemCsv(csvText);
+        itemInfoMap = await parseGatheringItemCsv(csvText);
+      }
+
+      if (itemLevelRes.ok) {
+        rawItemLevels = await itemLevelRes.json();
+      }
+
+      if (gatheringItemsRes.ok) {
+        rawGatheringItems = await gatheringItemsRes.json();
       }
 
       staticDataLoaded = true;
@@ -163,12 +186,12 @@ export async function loadGameData(lang: string): Promise<void> {
  */
 export async function searchGatherables(query: string): Promise<GatherableItem[]> {
   const q = query.trim().toLowerCase();
-  if (!q || itemGlvMap.size === 0) return [];
+  if (!q || itemInfoMap.size === 0) return [];
 
   const results: GatherableItem[] = [];
 
   // 以 GatheringItem.csv 的 ItemID 清單為遍歷基準（僅採掘師/園藝師的採集物）
-  for (const [itemId, glv] of itemGlvMap) {
+  for (const [itemId, info] of itemInfoMap) {
     const itemIdStr = itemId.toString();
     const targetEntry = rawTargetNames[itemIdStr];
     const enEntry = rawEnglishNames[itemIdStr];
@@ -191,7 +214,8 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
         itemId,
         nameLocale,
         nameEn,
-        glv,
+        glv: info.glv,
+        jobType: info.jobType,
         iconUrl: iconPath ? `https://xivapi.com${iconPath}` : '',
         isFallback: !localeRaw && !!enRaw,
       });
@@ -205,14 +229,14 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
   // 提取 itemId 準備向 XIVAPI 批次查詢 IsCollectable 屬性
   const itemIds = results.map(r => r.itemId).join(',');
   const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
-  
+
   if (!resp.ok) {
     throw new Error(`[GameData] XIVAPI batch query failed: ${resp.status}`);
   }
 
   const data = await resp.json();
   const collectableMap = new Map<number, boolean>();
-  
+
   if (data.Results) {
     for (const item of data.Results) {
       if (item.ID && item.IsCollectable !== undefined) {
@@ -238,4 +262,14 @@ export function getItemName(itemId: number): string {
 export function getItemIcon(itemId: number): string {
   const path = rawIcons[itemId.toString()];
   return path ? `https://xivapi.com${path}` : '';
+}
+
+/** 獲取採集成功率所需的基礎值對照表 (RAM Cache) */
+export function getItemLevelData() {
+  return rawItemLevels;
+}
+
+/** 獲取採集物品等級對照表 (RAM Cache) */
+export function getGatheringItemsData() {
+  return rawGatheringItems;
 }
