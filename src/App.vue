@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
 import LanguageModal from './components/LanguageModal.vue';
 import { useSettings } from './composables/useSettings';
+import { loadGameData } from './services/gameData';
 
 const { locale, t } = useI18n();
 const isMobileMenuOpen = ref(false);
@@ -12,7 +13,14 @@ const { isDarkMode, language } = useSettings();
 // 同步語系
 watch(language, (newLang) => {
   locale.value = newLang;
+  // 語言切換時同步更新遊戲資料語系字典（背景執行）
+  loadGameData(newLang);
 }, { immediate: true });
+
+// App 啟動時立即在背景預載靜態資料
+onMounted(() => {
+  loadGameData(language.value);
+});
 
 // 同步深色模式
 watch(isDarkMode, (newVal) => {
@@ -77,7 +85,9 @@ watch(language, () => {
       <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" />
+            <KeepAlive include="CreateGuide">
+              <component :is="Component" />
+            </KeepAlive>
           </transition>
         </router-view>
       </div>

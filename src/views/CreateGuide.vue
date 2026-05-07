@@ -1,60 +1,391 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, onActivated } from 'vue';
 import { watchDebounced } from '@vueuse/core';
+import { useI18n } from 'vue-i18n';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
+import GatheringItemCard from '../components/GatheringItemCard.vue';
+import {
+  searchGatherables,
+  isGameDataLoading,
+  currentLanguage,
+} from '../services/gameData';
+import type { GatherableItem } from '../types/game';
 
+const { t } = useI18n();
+
+// === 搜尋狀態 ===
+// 使用 module-level ref（而非 reactive 物件）讓 KeepAlive 能保留狀態。
+// 即使 KeepAlive 未生效（例如路由配置變動），這些 ref 也會常駐於記憶體中。
 const searchQuery = ref('');
+const searchResults = ref<GatherableItem[]>([]);
+const hasSearched = ref(false);
+/** 記錄上次執行搜尋時的語言，用於 onActivated 比對是否需要重搜 */
+let lastSearchedLang = '';
 
+function doSearch(query: string) {
+  hasSearched.value = true;
+  lastSearchedLang = currentLanguage.value;
+  searchResults.value = searchGatherables(query);
+}
+
+// Debounced 搜尋 — 使用者輸入後 450ms 執行
 watchDebounced(
   searchQuery,
-  (newValue) => {
-    console.log('Searching for:', newValue);
-    // TODO: Implement search logic in the next stage
-  },
-  { debounce: 500 }
+  (query) => doSearch(query),
+  { debounce: 450 }
 );
+
+// === 語言切換：自動重新搜尋以更新顯示名稱 ===
+// 監聽 gameData service 的 currentLanguage ref：
+// 語言切換且字典載入完成後，立即重算搜尋結果（更新顯示名稱）
+watch(currentLanguage, (newLang) => {
+  if (searchQuery.value.trim()) {
+    lastSearchedLang = newLang;
+    searchResults.value = searchGatherables(searchQuery.value);
+  }
+});
+
+// === KeepAlive 回來時的語言檢查 ===
+// 使用者在設定頁修改語言後返回時，若語言已變動則重新搜尋
+// 這是雙重保障：watch(currentLanguage) 在同頁面有效，onActivated 覆蓋跨頁面情境
+onActivated(() => {
+  if (
+    searchQuery.value.trim() &&
+    currentLanguage.value &&
+    currentLanguage.value !== lastSearchedLang
+  ) {
+    lastSearchedLang = currentLanguage.value;
+    searchResults.value = searchGatherables(searchQuery.value);
+  }
+});
+
+function clearSearch() {
+  searchQuery.value = '';
+  hasSearched.value = false;
+  searchResults.value = [];
+  lastSearchedLang = '';
+}
+
+// 搜尋 UI 狀態機
+function getUiState() {
+  if (isGameDataLoading.value) return 'loading';
+  if (!hasSearched.value || !searchQuery.value.trim()) return 'idle';
+  if (searchResults.value.length === 0) return 'empty';
+  return 'results';
+}
 </script>
 
 <template>
-  <div class="px-4 py-8 md:p-8 max-w-4xl w-full mx-auto pb-24">
-    <header class="mb-6 md:mb-8 transition-all duration-700">
-      <h2 class="text-2xl md:text-3xl font-bold text-soft-green-800 dark:text-soft-green-400 mb-2">
-        {{ $t('createGuide.title') }}
-      </h2>
-      <p class="text-slate-500 dark:text-slate-400 text-sm">
-        {{ $t('createGuide.subtitle') }}
-      </p>
+  <div class="create-guide-page">
+    <!-- === Header === -->
+    <header class="page-header">
+      <div class="header-content">
+        <h2 class="page-title">{{ t('createGuide.title') }}</h2>
+        <p class="page-subtitle">{{ t('createGuide.subtitle') }}</p>
+        <div class="data-scope-badge">
+          <i class="pi pi-info-circle"></i>
+          <span>{{ t('createGuide.dataScope') }}</span>
+        </div>
+      </div>
     </header>
 
-    <div class="transition-all duration-700 delay-100">
-      <IconField>
-        <InputIcon class="pi pi-search text-slate-400" />
-        <InputText 
-          v-model="searchQuery" 
-          :placeholder="$t('createGuide.searchPlaceholder')" 
-          class="w-full !py-4 !px-12 !rounded-2xl !bg-white dark:!bg-slate-900 !border-soft-green-100 dark:!border-slate-800 shadow-sm focus:!ring-soft-green-500/20 transition-shadow hover:shadow-md"
+    <!-- === 搜尋列 === -->
+    <div class="search-section">
+      <IconField class="search-field">
+        <InputIcon>
+          <i v-if="isGameDataLoading" class="pi pi-spin pi-spinner search-spinner"></i>
+          <i v-else class="pi pi-search search-icon"></i>
+        </InputIcon>
+        <InputText
+          id="item-search-input"
+          v-model="searchQuery"
+          :placeholder="isGameDataLoading ? t('createGuide.loading') : t('createGuide.searchPlaceholder')"
+          :disabled="isGameDataLoading"
+          class="search-input"
+          autocomplete="off"
         />
+        <InputIcon v-if="searchQuery" style="cursor:pointer" @click="clearSearch">
+          <i class="pi pi-times clear-icon"></i>
+        </InputIcon>
       </IconField>
+    </div>
+
+    <!-- === 結果區域 === -->
+    <div class="results-section">
+
+      <!-- 載入中 -->
+      <transition name="state-fade" mode="out-in">
+        <div v-if="getUiState() === 'loading'" key="loading" class="state-container">
+          <div class="loading-animation">
+            <div class="loading-orb"></div>
+            <div class="loading-orb delay-1"></div>
+            <div class="loading-orb delay-2"></div>
+          </div>
+          <p class="state-text">{{ t('createGuide.loading') }}</p>
+        </div>
+
+        <!-- 初始狀態（未搜尋） -->
+        <div v-else-if="getUiState() === 'idle'" key="idle" class="state-container">
+          <div class="idle-icon">
+            <i class="pi pi-search"></i>
+          </div>
+          <p class="state-text">{{ t('createGuide.typeToSearch') }}</p>
+        </div>
+
+        <!-- 無結果 -->
+        <div v-else-if="getUiState() === 'empty'" key="empty" class="state-container">
+          <div class="empty-icon">
+            <i class="pi pi-inbox"></i>
+          </div>
+          <p class="state-text">{{ t('createGuide.noResults') }}</p>
+        </div>
+
+        <!-- 搜尋結果 -->
+        <div v-else key="results" class="results-grid">
+          <div class="results-count">
+            <span>{{ searchResults.length }}{{ searchResults.length >= 50 ? '+' : '' }} 筆結果</span>
+          </div>
+          <GatheringItemCard
+            v-for="item in searchResults"
+            :key="item.itemId"
+            :item="item"
+          />
+        </div>
+      </transition>
+
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Standard animation classes if Tailwind plugins aren't available, but we'll stick to clean transitions */
-.transition-all {
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.create-guide-page {
+  padding: 2rem 1.5rem;
+  max-width: 860px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: pageIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+@media (min-width: 768px) {
+  .create-guide-page {
+    padding: 2.5rem 2rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* === Header === */
+.page-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1e5a4a;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+:global(.dark) .page-title {
+  color: #52a890;
+}
+
+@media (min-width: 768px) {
+  .page-title { font-size: 2.1rem; }
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 0.85rem 0;
+}
+
+:global(.dark) .page-subtitle {
+  color: #94a3b8;
+}
+
+.data-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(82, 168, 144, 0.1);
+  border: 1px solid rgba(82, 168, 144, 0.25);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: #3d8b75;
+  align-self: flex-start;
+}
+
+:global(.dark) .data-scope-badge {
+  background: rgba(82, 168, 144, 0.12);
+  border-color: rgba(82, 168, 144, 0.3);
+  color: #52a890;
+}
+
+.data-scope-badge .pi {
+  font-size: 0.78rem;
+}
+
+/* === 搜尋列 === */
+.search-section {
+  position: relative;
+}
+
+.search-field {
+  width: 100%;
+}
+
+.search-spinner,
+.search-icon {
+  color: #52a890;
+}
+
+.search-icon {
+  color: #94a3b8;
+}
+
+.clear-icon {
+  color: #94a3b8;
+  transition: color 0.15s;
+}
+
+.clear-icon:hover {
+  color: #64748b;
+}
+
+:deep(.search-input) {
+  width: 100% !important;
+  padding: 1rem 3rem !important;
+  border-radius: 16px !important;
+  background: white !important;
+  border: 1.5px solid #e2e8f0 !important;
+  font-size: 1rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s !important;
+}
+
+:global(.dark) :deep(.search-input) {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+:deep(.search-input:focus) {
+  border-color: #52a890 !important;
+  box-shadow: 0 0 0 4px rgba(82, 168, 144, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+:deep(.search-input:disabled) {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+/* === 狀態切換動畫 === */
+.state-fade-enter-active,
+.state-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.state-fade-enter-from,
+.state-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* === 結果區域 === */
+.results-section {
+  flex: 1;
+}
+
+/* 狀態容器（loading/idle/empty） */
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+}
+
+.state-text {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  text-align: center;
+  margin: 0;
+}
+
+/* Loading 動畫球 */
+.loading-animation {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.loading-orb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #52a890;
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+.loading-orb.delay-1 { animation-delay: 0.2s; }
+.loading-orb.delay-2 { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Idle/Empty 圖示 */
+.idle-icon,
+.empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.idle-icon {
+  background: rgba(82, 168, 144, 0.1);
+  color: #52a890;
+}
+
+.empty-icon {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+:global(.dark) .empty-icon {
+  background: #1e293b;
+  color: #64748b;
+}
+
+/* === 搜尋結果 === */
+.results-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.results-count {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  padding: 0 4px 4px;
 }
 </style>
