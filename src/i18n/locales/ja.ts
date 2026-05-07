@@ -13,7 +13,7 @@ export default {
   createGuide: {
     title: '採集アイテムの選択',
     subtitle: '名前で検索できます。見つからない場合は英語での検索をお試しください',
-    dataScope: '採掘師と園芸師の採集アイテムのみを表示します。漁師と魚類は含まれません。',
+    dataScope: '採掘師と園芸師の採集アイテムのみを表示します。',
     searchPlaceholder: 'アイテム名を入力',
     loading: 'データ読み込み中、しばらくお待ちください…',
     noResults: '該当するアイテムが見つかりません。英語で検索してみてください。',
@@ -21,7 +21,9 @@ export default {
     glv: 'Glv',
     noTranslation: '(公式翻訳なし)',
     collectableSystem: '収集品システム',
-    regularSystem: '通常採集系統'
+    regularSystem: '通常採集系統',
+    apiError: 'XIVAPIから収集品データを取得できませんでした。ネットワーク接続を確認するか、後でもう一度お試しください。',
+    retrySearch: '再検索'
   },
   settings: {
     title: '秘伝書の設定',

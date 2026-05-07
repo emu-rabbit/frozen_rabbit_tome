@@ -22,19 +22,26 @@ const searchQuery = ref('');
 const searchResults = ref<GatherableItem[]>([]);
 const hasSearched = ref(false);
 const isSearching = ref(false);
+const apiError = ref(false);
 /** 記錄上次執行搜尋時的語言，用於 onActivated 比對是否需要重搜 */
 let lastSearchedLang = '';
 
 async function doSearch(query: string) {
   if (!query.trim()) {
     searchResults.value = [];
+    apiError.value = false;
     return;
   }
   isSearching.value = true;
   hasSearched.value = true;
+  apiError.value = false;
   lastSearchedLang = currentLanguage.value;
   try {
     searchResults.value = await searchGatherables(query);
+  } catch (err) {
+    console.error('[CreateGuide] Search failed:', err);
+    apiError.value = true;
+    searchResults.value = [];
   } finally {
     isSearching.value = false;
   }
@@ -54,8 +61,13 @@ watch(currentLanguage, async (newLang) => {
   if (searchQuery.value.trim()) {
     lastSearchedLang = newLang;
     isSearching.value = true;
+    apiError.value = false;
     try {
       searchResults.value = await searchGatherables(searchQuery.value);
+    } catch (err) {
+      console.error('[CreateGuide] Search failed on language change:', err);
+      apiError.value = true;
+      searchResults.value = [];
     } finally {
       isSearching.value = false;
     }
@@ -73,8 +85,13 @@ onActivated(async () => {
   ) {
     lastSearchedLang = currentLanguage.value;
     isSearching.value = true;
+    apiError.value = false;
     try {
       searchResults.value = await searchGatherables(searchQuery.value);
+    } catch (err) {
+      console.error('[CreateGuide] Search failed on activated:', err);
+      apiError.value = true;
+      searchResults.value = [];
     } finally {
       isSearching.value = false;
     }
@@ -84,12 +101,15 @@ onActivated(async () => {
 function clearSearch() {
   searchQuery.value = '';
   hasSearched.value = false;
+  isSearching.value = false;
+  apiError.value = false;
   searchResults.value = [];
   lastSearchedLang = '';
 }
 
 // 搜尋 UI 狀態機
 function getUiState() {
+  if (apiError.value) return 'error';
   if (isGameDataLoading.value || isSearching.value) return 'loading';
   if (!hasSearched.value || !searchQuery.value.trim()) return 'idle';
   if (searchResults.value.length === 0) return 'empty';
@@ -160,6 +180,17 @@ function getUiState() {
             <i class="pi pi-inbox"></i>
           </div>
           <p class="state-text">{{ t('createGuide.noResults') }}</p>
+        </div>
+
+        <!-- 錯誤狀態 -->
+        <div v-else-if="getUiState() === 'error'" key="error" class="state-container error-state">
+          <div class="error-icon">
+            <i class="pi pi-exclamation-triangle"></i>
+          </div>
+          <p class="state-text error-text">{{ t('createGuide.apiError') }}</p>
+          <button class="retry-btn" @click="doSearch(searchQuery)">
+            <i class="pi pi-refresh"></i> {{ t('createGuide.retrySearch') }}
+          </button>
         </div>
 
         <!-- 搜尋結果 -->
@@ -394,6 +425,49 @@ function getUiState() {
 :global(.dark) .empty-icon {
   background: #1e293b;
   color: #64748b;
+}
+
+/* Error 狀態 */
+.error-state {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.error-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.error-text {
+  color: #ef4444;
+  line-height: 1.5;
+}
+
+.retry-btn {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  background: #52a890;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover {
+  background: #3d8b75;
 }
 
 /* === 搜尋結果 === */

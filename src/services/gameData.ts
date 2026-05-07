@@ -204,26 +204,25 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
 
   // 提取 itemId 準備向 XIVAPI 批次查詢 IsCollectable 屬性
   const itemIds = results.map(r => r.itemId).join(',');
-  try {
-    const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
-    if (resp.ok) {
-      const data = await resp.json();
-      const collectableMap = new Map<number, boolean>();
-      if (data.Results) {
-        for (const item of data.Results) {
-          if (item.ID && item.IsCollectable !== undefined) {
-            collectableMap.set(item.ID, item.IsCollectable === 1);
-          }
-        }
+  const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
+  
+  if (!resp.ok) {
+    throw new Error(`[GameData] XIVAPI batch query failed: ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  const collectableMap = new Map<number, boolean>();
+  
+  if (data.Results) {
+    for (const item of data.Results) {
+      if (item.ID && item.IsCollectable !== undefined) {
+        collectableMap.set(item.ID, item.IsCollectable === 1);
       }
-      for (const r of results) {
-        r.isCollectable = collectableMap.get(r.itemId) ?? false;
-      }
-    } else {
-      console.warn(`[GameData] XIVAPI batch query failed: ${resp.status}`);
     }
-  } catch (err) {
-    console.error('[GameData] Failed to query IsCollectable from XIVAPI:', err);
+  }
+
+  for (const r of results) {
+    r.isCollectable = collectableMap.get(r.itemId) ?? false;
   }
 
   return results;

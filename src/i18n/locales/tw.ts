@@ -15,7 +15,7 @@ export default {
   createGuide: {
     title: '選擇待採集的物品',
     subtitle: '可輸入名稱搜尋，倘若搜尋不到可以嘗試使用英文',
-    dataScope: '僅顯示「採礦工」與「園藝工」可採集的物品，不包含漁師與漁獲',
+    dataScope: '僅顯示「採掘師」與「園藝師」可採集的物品',
     searchPlaceholder: '輸入物品名稱',
     loading: '資料載入中，請稍候…',
     noResults: '未找到相符的物品，請嘗試使用英文搜尋',
@@ -23,7 +23,9 @@ export default {
     glv: 'Glv',
     noTranslation: '(無官方翻譯)',
     collectableSystem: '收藏品系統',
-    regularSystem: '一般採集系統'
+    regularSystem: '一般採集系統',
+    apiError: '無法連接至 XIVAPI 獲取收藏品資料。請檢查網路連線或稍後再試。',
+    retrySearch: '重試搜尋'
   },
   settings: {
     title: '秘笈設定',

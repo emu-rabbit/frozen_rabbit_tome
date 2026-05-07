@@ -13,7 +13,7 @@ export default {
   createGuide: {
     title: 'Select Item to Gather',
     subtitle: 'Search by name, or try English if not found',
-    dataScope: 'Only Miner & Botanist items are shown. Fisher items and fish are excluded.',
+    dataScope: 'Only Miner & Botanist items are shown.',
     searchPlaceholder: 'Enter item name',
     loading: 'Loading data, please wait…',
     noResults: 'No items found. Try searching in English.',
@@ -21,7 +21,9 @@ export default {
     glv: 'Glv',
     noTranslation: '(No official translation)',
     collectableSystem: 'Collectable',
-    regularSystem: 'Regular'
+    regularSystem: 'Regular',
+    apiError: 'Unable to connect to XIVAPI for collectable data. Please check your network or try again later.',
+    retrySearch: 'Retry Search'
   },
   settings: {
     title: 'Tome Settings',
