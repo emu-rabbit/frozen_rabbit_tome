@@ -5,9 +5,7 @@ export default {
     description: 'FFXIV 大地使者技能推薦工具'
   },
   common: {
-    getStarted: '立即開始',
-    underConstruction: '本頁面正在施工中',
-    comingSoon: 'COMING SOON'
+    getStarted: '立即開始'
   },
   nav: {
     createGuide: '建立秘笈',
@@ -15,13 +13,9 @@ export default {
     github: 'GitHub 專案'
   },
   createGuide: {
-    title: '建立新秘笈',
-    description: '開始規劃您的 FFXIV 採集路徑與資源配置。',
-    pathPlanning: '採集路線規劃',
-    pathPlanningDesc: '串接採集點，計算最優採集順序與時間分配。',
-    simulator: '產量模擬器',
-    simulatorDesc: '輸入屬性值，模擬技能循環並預測最終獲取數量。',
-    tip: '點擊上方卡片開始規劃您的採集路徑。'
+    title: '選擇待採集的物品',
+    subtitle: '你可以輸入名稱搜尋，倘若搜尋不到可以嘗試使用英文',
+    searchPlaceholder: '輸入物品名稱'
   },
   settings: {
     title: '秘笈設定',
@@ -32,8 +26,6 @@ export default {
     darkModeDesc: '開啟深色模式，適合在昏暗環境下使用',
     language: '語言版本',
     languageDesc: '本網站的顯示語言，缺乏翻譯的情況下將顯示英文',
-    debugMode: '除錯模式',
-    debugModeDesc: '開啟後可於創建新筆記時複製站長推薦 JSON 格式',
     langOptions: {
       tw: '繁體中文',
       en: 'English',

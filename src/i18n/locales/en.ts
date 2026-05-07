@@ -1,52 +1,42 @@
 export default {
   app: {
     title: 'Frozen Rabbit Tome',
-    subtitle: "Rabbit's Shared Secret Tome",
-    description: 'FFXIV Gatherer Skill Recommendation Tool'
+    subtitle: 'Secret gathering tips from the rabbit',
+    description: 'FFXIV Gatherer skill recommendation tool'
   },
-  common: {
-    getStarted: 'Get Started',
-    underConstruction: 'Under Construction',
-    comingSoon: 'COMING SOON'
-  },
+  common: {},
   nav: {
     createGuide: 'Create Tome',
     settings: 'Settings',
     github: 'GitHub Project'
   },
   createGuide: {
-    title: 'Create New Tome',
-    description: 'Start planning your FFXIV gathering path and resource allocation.',
-    pathPlanning: 'Gathering Path Planning',
-    pathPlanningDesc: 'Connect gathering nodes, calculate optimal sequence and time allocation.',
-    simulator: 'Yield Simulator',
-    simulatorDesc: 'Input stats to simulate skill rotations and predict final yield.',
-    tip: 'Click a card above to start planning your gathering path.'
+    title: 'Select Item to Gather',
+    subtitle: 'Search by name, or try English if not found.',
+    searchPlaceholder: 'Enter item name'
   },
   settings: {
     title: 'Tome Settings',
-    description: 'Adjust various preferences for your Tome',
-    appearanceTitle: 'Appearance Settings',
-    appearanceDesc: 'Adjust the visual style of your Tome',
+    description: 'Adjust your tome preferences',
+    appearanceTitle: 'Appearance',
+    appearanceDesc: 'Customize visual style',
     darkMode: 'Dark Mode',
-    darkModeDesc: 'Enable dark mode for use in low-light environments',
+    darkModeDesc: 'Enable dark mode for low-light environments',
     language: 'Language',
-    languageDesc: 'Interface language, defaults to English if translation is missing',
-    debugMode: 'Debug Mode',
-    debugModeDesc: 'Enable to copy administrator recommended JSON format when creating new notes',
+    languageDesc: 'Interface language (English fallback)',
     langOptions: {
       tw: '繁體中文',
       en: 'English',
       ja: '日本語',
       cn: '简体中文'
     },
-    aboutTitle: 'About This Project',
-    aboutDesc: 'This is "Frozen Rabbit Tome", a toolkit designed for FFXIV gatherers.'
+    aboutTitle: 'About Project',
+    aboutDesc: 'Frozen Rabbit Tome is a specialized toolkit for FFXIV gatherers.'
   },
   welcomeModal: {
-    title: 'Welcome to Tome',
-    subtitle: 'Before you begin, please select your preferred language',
-    description: 'This will adjust the interface language for the entire Tome. You can change this anytime in "Settings".',
+    title: 'Welcome to the Tome',
+    subtitle: 'Please select your preferred language',
+    description: 'This will adjust the entire interface language. You can change it anytime in Settings.',
     confirm: 'Start with this language'
   }
 }
