@@ -51,6 +51,7 @@ export default {
       botanist: '园艺工'
     },
     stats: {
+      level: '等级',
       gathering: '获得力',
       perception: '鉴别力',
       gp: 'GP'

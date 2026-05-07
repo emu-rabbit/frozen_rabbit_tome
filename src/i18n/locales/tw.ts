@@ -53,6 +53,7 @@ export default {
       botanist: '園藝師'
     },
     stats: {
+      level: '等級',
       gathering: '獲得力',
       perception: '鑑別力',
       gp: 'GP'

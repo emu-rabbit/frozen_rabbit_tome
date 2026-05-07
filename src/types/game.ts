@@ -21,6 +21,8 @@ export interface GatherableItem {
 
 /** 玩家核心屬性數值 */
 export interface PlayerStats {
+  /** 等級 (Level) */
+  level: number;
   /** 獲得力 (Gathering) */
   gathering: number;
   /** 鑑別力 (Perception) */

@@ -96,6 +96,10 @@ const langOptions = [
                       </div>
                       <div class="grid grid-cols-1 gap-3">
                           <div class="flex flex-col gap-1">
+                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.level') }}</label>
+                              <InputNumber v-model="userStats.miner.level" :min="1" :max="100" :useGrouping="false" class="w-full" />
+                          </div>
+                          <div class="flex flex-col gap-1">
                               <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.gathering') }}</label>
                               <InputNumber v-model="userStats.miner.gathering" :min="0" :useGrouping="false" class="w-full" />
                           </div>
@@ -117,6 +121,10 @@ const langOptions = [
                           <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('game.jobs.botanist') }}</span>
                       </div>
                       <div class="grid grid-cols-1 gap-3">
+                          <div class="flex flex-col gap-1">
+                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.level') }}</label>
+                              <InputNumber v-model="userStats.botanist.level" :min="1" :max="100" :useGrouping="false" class="w-full" />
+                          </div>
                           <div class="flex flex-col gap-1">
                               <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.gathering') }}</label>
                               <InputNumber v-model="userStats.botanist.gathering" :min="0" :useGrouping="false" class="w-full" />

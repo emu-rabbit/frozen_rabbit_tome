@@ -51,6 +51,7 @@ export default {
       botanist: 'Botanist'
     },
     stats: {
+      level: 'Level',
       gathering: 'Gathering',
       perception: 'Perception',
       gp: 'GP'
