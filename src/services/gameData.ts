@@ -159,8 +159,9 @@ export async function loadGameData(lang: string): Promise<void> {
 /**
  * 搜尋採掘師/園藝師可採集的物品。
  * 以 GatheringItem.csv 的物品清單為範圍，確保只有這兩個職業能採集到的物品才會出現在結果中。
+ * 在本地找出匹配結果後，會向 XIVAPI 批次查詢 IsCollectable 屬性。
  */
-export function searchGatherables(query: string): GatherableItem[] {
+export async function searchGatherables(query: string): Promise<GatherableItem[]> {
   const q = query.trim().toLowerCase();
   if (!q || itemGlvMap.size === 0) return [];
 
@@ -197,6 +198,32 @@ export function searchGatherables(query: string): GatherableItem[] {
     }
 
     if (results.length >= 50) break;
+  }
+
+  if (results.length === 0) return [];
+
+  // 提取 itemId 準備向 XIVAPI 批次查詢 IsCollectable 屬性
+  const itemIds = results.map(r => r.itemId).join(',');
+  try {
+    const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
+    if (resp.ok) {
+      const data = await resp.json();
+      const collectableMap = new Map<number, boolean>();
+      if (data.Results) {
+        for (const item of data.Results) {
+          if (item.ID && item.IsCollectable !== undefined) {
+            collectableMap.set(item.ID, item.IsCollectable === 1);
+          }
+        }
+      }
+      for (const r of results) {
+        r.isCollectable = collectableMap.get(r.itemId) ?? false;
+      }
+    } else {
+      console.warn(`[GameData] XIVAPI batch query failed: ${resp.status}`);
+    }
+  } catch (err) {
+    console.error('[GameData] Failed to query IsCollectable from XIVAPI:', err);
   }
 
   return results;

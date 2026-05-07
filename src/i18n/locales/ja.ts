@@ -13,13 +13,15 @@ export default {
   createGuide: {
     title: '採集アイテムの選択',
     subtitle: '名前で検索できます。見つからない場合は英語での検索をお試しください',
-    dataScope: '採掘師・園芸師のみ対応。漁師アイテムおよびコレクタブルは除外されます。',
+    dataScope: '採掘師と園芸師の採集アイテムのみを表示します。漁師と魚類は含まれません。',
     searchPlaceholder: 'アイテム名を入力',
     loading: 'データ読み込み中、しばらくお待ちください…',
     noResults: '該当するアイテムが見つかりません。英語で検索してみてください。',
     typeToSearch: 'アイテム名を入力して検索',
     glv: 'Glv',
-    noTranslation: '(公式翻訳なし)'
+    noTranslation: '(公式翻訳なし)',
+    collectableSystem: '収集品システム',
+    regularSystem: '通常採集系統'
   },
   settings: {
     title: '秘伝書の設定',

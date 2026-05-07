@@ -21,13 +21,23 @@ const { t } = useI18n();
 const searchQuery = ref('');
 const searchResults = ref<GatherableItem[]>([]);
 const hasSearched = ref(false);
+const isSearching = ref(false);
 /** 記錄上次執行搜尋時的語言，用於 onActivated 比對是否需要重搜 */
 let lastSearchedLang = '';
 
-function doSearch(query: string) {
+async function doSearch(query: string) {
+  if (!query.trim()) {
+    searchResults.value = [];
+    return;
+  }
+  isSearching.value = true;
   hasSearched.value = true;
   lastSearchedLang = currentLanguage.value;
-  searchResults.value = searchGatherables(query);
+  try {
+    searchResults.value = await searchGatherables(query);
+  } finally {
+    isSearching.value = false;
+  }
 }
 
 // Debounced 搜尋 — 使用者輸入後 450ms 執行
@@ -40,24 +50,34 @@ watchDebounced(
 // === 語言切換：自動重新搜尋以更新顯示名稱 ===
 // 監聽 gameData service 的 currentLanguage ref：
 // 語言切換且字典載入完成後，立即重算搜尋結果（更新顯示名稱）
-watch(currentLanguage, (newLang) => {
+watch(currentLanguage, async (newLang) => {
   if (searchQuery.value.trim()) {
     lastSearchedLang = newLang;
-    searchResults.value = searchGatherables(searchQuery.value);
+    isSearching.value = true;
+    try {
+      searchResults.value = await searchGatherables(searchQuery.value);
+    } finally {
+      isSearching.value = false;
+    }
   }
 });
 
 // === KeepAlive 回來時的語言檢查 ===
 // 使用者在設定頁修改語言後返回時，若語言已變動則重新搜尋
 // 這是雙重保障：watch(currentLanguage) 在同頁面有效，onActivated 覆蓋跨頁面情境
-onActivated(() => {
+onActivated(async () => {
   if (
     searchQuery.value.trim() &&
     currentLanguage.value &&
     currentLanguage.value !== lastSearchedLang
   ) {
     lastSearchedLang = currentLanguage.value;
-    searchResults.value = searchGatherables(searchQuery.value);
+    isSearching.value = true;
+    try {
+      searchResults.value = await searchGatherables(searchQuery.value);
+    } finally {
+      isSearching.value = false;
+    }
   }
 });
 
@@ -70,7 +90,7 @@ function clearSearch() {
 
 // 搜尋 UI 狀態機
 function getUiState() {
-  if (isGameDataLoading.value) return 'loading';
+  if (isGameDataLoading.value || isSearching.value) return 'loading';
   if (!hasSearched.value || !searchQuery.value.trim()) return 'idle';
   if (searchResults.value.length === 0) return 'empty';
   return 'results';

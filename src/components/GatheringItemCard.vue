@@ -45,6 +45,14 @@ function onImageError(e: Event) {
       </div>
       <div class="item-meta">
         <span class="item-glv-badge">{{ $t('createGuide.glv') }} {{ props.item.glv }}</span>
+        <span v-if="props.item.isCollectable" class="item-collectable-badge">
+          <i class="pi pi-box"></i>
+          {{ $t('createGuide.collectableSystem') }}
+        </span>
+        <span v-else class="item-regular-badge">
+          <i class="pi pi-compass"></i>
+          {{ $t('createGuide.regularSystem') }}
+        </span>
       </div>
     </div>
 
@@ -186,6 +194,40 @@ function onImageError(e: Event) {
   background: linear-gradient(135deg, #52a890, #3d8b75);
   color: white;
   letter-spacing: 0.02em;
+}
+
+.item-collectable-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  letter-spacing: 0.02em;
+}
+
+.item-collectable-badge .pi {
+  font-size: 0.65rem;
+}
+
+.item-regular-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  letter-spacing: 0.02em;
+}
+
+.item-regular-badge .pi {
+  font-size: 0.65rem;
 }
 
 /* 收藏按鈕 */

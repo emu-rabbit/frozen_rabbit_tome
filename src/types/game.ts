@@ -15,4 +15,6 @@ export interface GatherableItem {
   iconUrl: string;
   /** 是否缺乏本地語系翻譯（顯示英文 fallback 時為 true） */
   isFallback: boolean;
+  /** 是否為收藏品系統物品（由 XIVAPI 動態判定） */
+  isCollectable?: boolean;
 }

@@ -15,13 +15,15 @@ export default {
   createGuide: {
     title: '選擇待採集的物品',
     subtitle: '可輸入名稱搜尋，倘若搜尋不到可以嘗試使用英文',
-    dataScope: '僅顯示「採礦工」與「園藝工」可採集的物品，不包含漁師及任何收藏品',
+    dataScope: '僅顯示「採礦工」與「園藝工」可採集的物品，不包含漁師與漁獲',
     searchPlaceholder: '輸入物品名稱',
     loading: '資料載入中，請稍候…',
     noResults: '未找到相符的物品，請嘗試使用英文搜尋',
     typeToSearch: '請輸入物品名稱開始搜尋',
     glv: 'Glv',
-    noTranslation: '(無官方翻譯)'
+    noTranslation: '(無官方翻譯)',
+    collectableSystem: '收藏品系統',
+    regularSystem: '一般採集系統'
   },
   settings: {
     title: '秘笈設定',

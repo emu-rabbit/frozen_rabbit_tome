@@ -13,13 +13,15 @@ export default {
   createGuide: {
     title: 'Select Item to Gather',
     subtitle: 'Search by name, or try English if not found',
-    dataScope: 'Only Miner & Botanist items are shown. Fisher items and collectables are excluded.',
+    dataScope: 'Only Miner & Botanist items are shown. Fisher items and fish are excluded.',
     searchPlaceholder: 'Enter item name',
     loading: 'Loading data, please wait…',
     noResults: 'No items found. Try searching in English.',
     typeToSearch: 'Type an item name to search',
     glv: 'Glv',
-    noTranslation: '(No official translation)'
+    noTranslation: '(No official translation)',
+    collectableSystem: 'Collectable',
+    regularSystem: 'Regular'
   },
   settings: {
     title: 'Tome Settings',
