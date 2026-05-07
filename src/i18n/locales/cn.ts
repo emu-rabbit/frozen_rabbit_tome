@@ -55,7 +55,7 @@ export default {
     noItemDesc: '请先通过「建立秘籍」搜寻并选择一个采集物品。',
     goToCreate: '前往建立秘籍',
     collectableWarning: '收藏品系统仍在施工中',
-    syncToSettings: '同步{job}数值回设置',
+    syncToSettings: '回写{job}设置',
     syncSuccess: '数值已同步至全域设定',
     results: {
       gatheringRate: '基础采集成功率',

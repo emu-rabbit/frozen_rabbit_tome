@@ -55,7 +55,7 @@ export default {
     noItemDesc: 'Please search and select an item via "Create Tome" first.',
     goToCreate: 'Go to Create Tome',
     collectableWarning: 'Collectable system is under construction',
-    syncToSettings: 'Sync {job} Stats to Settings',
+    syncToSettings: 'Sync {job} Settings',
     syncSuccess: 'Stats synced to global settings',
     results: {
       gatheringRate: 'Base Success Rate',
