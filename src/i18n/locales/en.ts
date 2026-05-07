@@ -41,7 +41,20 @@ export default {
       cn: '简体中文'
     },
     aboutTitle: 'About Project',
-    aboutDesc: 'Frozen Rabbit Tome is a specialized toolkit for FFXIV gatherers.'
+    aboutDesc: 'Frozen Rabbit Tome is a specialized toolkit for FFXIV gatherers.',
+    statsTitle: 'Player Equipment Stats',
+    statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.'
+  },
+  game: {
+    jobs: {
+      miner: 'Miner',
+      botanist: 'Botanist'
+    },
+    stats: {
+      gathering: 'Gathering',
+      perception: 'Perception',
+      gp: 'GP'
+    }
   },
   welcomeModal: {
     title: 'Welcome to the Tome',

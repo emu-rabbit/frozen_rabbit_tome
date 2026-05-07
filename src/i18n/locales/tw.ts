@@ -43,7 +43,20 @@ export default {
       cn: '简体中文'
     },
     aboutTitle: '關於本專案',
-    aboutDesc: '這是「冷凍兔肉的秘笈」，專為 FFXIV 採集玩家設計的工具箱。'
+    aboutDesc: '這是「冷凍兔肉的秘笈」，專為 FFXIV 採集玩家設計的工具箱。',
+    statsTitle: '玩家裝備數值',
+    statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。'
+  },
+  game: {
+    jobs: {
+      miner: '採掘師',
+      botanist: '園藝師'
+    },
+    stats: {
+      gathering: '獲得力',
+      perception: '鑑別力',
+      gp: 'GP'
+    }
   },
   welcomeModal: {
     title: '歡迎來到秘笈',

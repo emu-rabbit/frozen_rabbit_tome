@@ -18,3 +18,21 @@ export interface GatherableItem {
   /** 是否為收藏品系統物品（由 XIVAPI 動態判定） */
   isCollectable?: boolean;
 }
+
+/** 玩家核心屬性數值 */
+export interface PlayerStats {
+  /** 獲得力 (Gathering) */
+  gathering: number;
+  /** 鑑別力 (Perception) */
+  perception: number;
+  /** 採集力 (GP) */
+  gp: number;
+}
+
+/** 使用者各職業的裝備數值狀態 */
+export interface UserStats {
+  /** 採掘師 */
+  miner: PlayerStats;
+  /** 園藝師 */
+  botanist: PlayerStats;
+}

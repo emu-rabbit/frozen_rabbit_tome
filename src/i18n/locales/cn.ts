@@ -41,7 +41,20 @@ export default {
       cn: '简体中文'
     },
     aboutTitle: '关于本项目',
-    aboutDesc: '这是"冷冻兔肉的秘籍"，专为 FFXIV 采集玩家设计的工具箱。'
+    aboutDesc: '这是"冷冻兔肉的秘籍"，专为 FFXIV 采集玩家设计的工具箱。',
+    statsTitle: '玩家装备数值',
+    statsDesc: '请填入你在游戏中真实的装备数值，以便获得更精确的演算建议。'
+  },
+  game: {
+    jobs: {
+      miner: '采矿工',
+      botanist: '园艺工'
+    },
+    stats: {
+      gathering: '获得力',
+      perception: '鉴别力',
+      gp: 'GP'
+    }
   },
   welcomeModal: {
     title: '欢迎来到秘籍',

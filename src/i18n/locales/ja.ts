@@ -41,7 +41,20 @@ export default {
       cn: '简体中文'
     },
     aboutTitle: 'このプロジェクトについて',
-    aboutDesc: '「冷凍兔肉の秘伝書」は、FFXIV の採集プレイヤー向けに設計されたツールボックスです。'
+    aboutDesc: '「冷凍兔肉の秘伝書」は、FFXIV の採集プレイヤー向けに設計されたツールボックスです。',
+    statsTitle: 'ステータス設定',
+    statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。'
+  },
+  game: {
+    jobs: {
+      miner: '採掘師',
+      botanist: '園芸師'
+    },
+    stats: {
+      gathering: '獲得力',
+      perception: '識質力',
+      gp: 'GP'
+    }
   },
   welcomeModal: {
     title: '秘伝書へようこそ',
