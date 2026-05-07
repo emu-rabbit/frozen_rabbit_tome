@@ -35,6 +35,16 @@ export interface PlayerStats {
   gp: number;
 }
 
+/** 採集點獎勵 (Node Bonuses) */
+export interface NodeBonuses {
+  /** 採集次數增加 (Gathering Count Increase) */
+  gatheringCount: number;
+  /** 獲得數增加 (Yield Increase) */
+  yieldCount: number;
+  /** 額外率增加 (Extra Rate Increase) */
+  extraRate: number;
+}
+
 /** 使用者各職業的裝備數值狀態 */
 export interface UserStats {
   /** 採掘師 */

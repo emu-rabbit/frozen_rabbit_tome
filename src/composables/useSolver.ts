@@ -1,6 +1,6 @@
 import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { GatherableItem, PlayerStats } from '../types/game';
+import type { GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
 import { useSettings } from './useSettings';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading } from '../services/gameData';
 
@@ -10,6 +10,12 @@ const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stat
   gathering: 5345,
   perception: 5137,
   gp: 930
+});
+
+const nodeBonuses = useLocalStorage<NodeBonuses>('frozen-rabbit-tome-node-bonuses', {
+  gatheringCount: 0,
+  yieldCount: 0,
+  extraRate: 0
 });
 
 // 當前 GP 是暫時性的，不進入 localStorage
@@ -149,6 +155,7 @@ export function useSolver() {
   return {
     activeItem,
     solverStats,
+    nodeBonuses,
     temporaryGp,
     isDataLoading: isGameDataLoading,
     fetchItemLevelData,

@@ -58,8 +58,14 @@ export default {
     syncToSettings: 'Sync {job} Settings',
     syncSuccess: 'Stats synced to global settings',
     results: {
-      gatheringRate: 'Base Success Rate',
-      boonRate: 'Base Boon Chance'
+      gatheringRate: 'Base Gathering Rate',
+      boonRate: 'Base Boon Rate'
+    },
+    nodeBonusesTitle: 'Node Bonuses',
+    nodeBonuses: {
+      gatheringCount: 'Gathering Count +',
+      yieldCount: 'Yield +',
+      extraRate: 'Extra Rate +'
     }
   },
   game: {
@@ -72,6 +78,11 @@ export default {
       gathering: 'Gathering',
       perception: 'Perception',
       gp: 'GP'
+    },
+    units: {
+      times: 'Time(s)',
+      count: 'Piece(s)',
+      percent: '%'
     }
   },
   welcomeModal: {

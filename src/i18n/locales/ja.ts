@@ -58,8 +58,14 @@ export default {
     syncToSettings: '{job}設定を同期',
     syncSuccess: 'ステータスをグローバル設定に同期しました',
     results: {
-      gatheringRate: '基礎採集成功率',
-      boonRate: '基礎獲得力加成率'
+      gatheringRate: '基本採集成功率',
+      boonRate: '基本獲得力ボーナス発生率'
+    },
+    nodeBonusesTitle: '採集ポイントボーナス',
+    nodeBonuses: {
+      gatheringCount: '採集回数増加',
+      yieldCount: '獲得数増加',
+      extraRate: '特殊採集発生率増加'
     }
   },
   game: {
@@ -70,8 +76,13 @@ export default {
     stats: {
       level: 'レベル',
       gathering: '獲得力',
-      perception: '識質力',
+      perception: '技術力',
       gp: 'GP'
+    },
+    units: {
+      times: '回',
+      count: '個',
+      percent: '%'
     }
   },
   welcomeModal: {

@@ -21,7 +21,8 @@ const {
   syncFromSettings,
   itemRealLevel,
   displayName,
-  temporaryGp
+  temporaryGp,
+  nodeBonuses
 } = useSolver();
 
 const { userStats } = useSettings();
@@ -203,6 +204,37 @@ function handleSync() {
               ></div>
             </div>
             <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">MAX 60%</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 採集點獎勵區 -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm animate-page-in" style="animation-delay: 0.1s;">
+        <h3 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-6">
+          <i class="pi pi-gift text-amber-500"></i>
+          {{ t('solver.nodeBonusesTitle') }}
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+              {{ t('solver.nodeBonuses.gatheringCount') }}
+              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.times') }})</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="w-full" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+              {{ t('solver.nodeBonuses.yieldCount') }}
+              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.count') }})</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid class="w-full" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+              {{ t('solver.nodeBonuses.extraRate') }}
+              <span class="text-slate-300 dark:text-slate-600 font-medium">({{ t('game.units.percent') }})</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid class="w-full" />
           </div>
         </div>
       </div>

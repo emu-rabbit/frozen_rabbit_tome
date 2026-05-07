@@ -60,6 +60,12 @@ export default {
     results: {
       gatheringRate: '基础采集成功率',
       boonRate: '基础额外采集率'
+    },
+    nodeBonusesTitle: '采集点奖励',
+    nodeBonuses: {
+      gatheringCount: '采集次数增加',
+      yieldCount: '获得数增加',
+      extraRate: '额外率增加'
     }
   },
   game: {
@@ -72,6 +78,11 @@ export default {
       gathering: '获得力',
       perception: '鉴别力',
       gp: 'GP'
+    },
+    units: {
+      times: '次',
+      count: '个',
+      percent: '%'
     }
   },
   welcomeModal: {
