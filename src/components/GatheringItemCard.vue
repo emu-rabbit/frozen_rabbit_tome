@@ -76,9 +76,9 @@ function onImageError(e: Event) {
 .item-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 18px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
@@ -111,9 +111,9 @@ function onImageError(e: Event) {
 /* 圖示 */
 .item-icon-wrap {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -121,15 +121,15 @@ function onImageError(e: Event) {
 }
 
 .item-icon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   image-rendering: pixelated; /* 遊戲像素圖清晰渲染 */
 }
 
 .item-icon-placeholder {
   color: #94a3b8;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 /* 資訊區 */
@@ -146,13 +146,13 @@ function onImageError(e: Event) {
 }
 
 .item-name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  max-width: 320px;
 }
 
 .item-no-translation {
@@ -165,33 +165,36 @@ function onImageError(e: Event) {
 .item-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 }
 
 .item-glv-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   background: linear-gradient(135deg, #52a890, #3d8b75);
   color: white;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .item-collectable-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: white;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .item-collectable-badge .pi {
@@ -202,13 +205,14 @@ function onImageError(e: Event) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .item-regular-badge .pi {

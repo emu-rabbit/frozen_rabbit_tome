@@ -203,16 +203,18 @@ function getUiState() {
         </div>
 
         <!-- 搜尋結果 -->
-        <div v-else key="results" class="results-grid">
+        <div v-else key="results">
           <div class="results-count">
             <span>{{ searchResults.length }}{{ searchResults.length >= 50 ? '+' : '' }} 筆結果</span>
           </div>
-          <GatheringItemCard
-            v-for="item in searchResults"
-            :key="item.itemId"
-            :item="item"
-            @select="handleItemSelect"
-          />
+          <div class="results-grid">
+            <GatheringItemCard
+              v-for="item in searchResults"
+              :key="item.itemId"
+              :item="item"
+              @select="handleItemSelect"
+            />
+          </div>
         </div>
       </transition>
 
@@ -472,9 +474,15 @@ function getUiState() {
 
 /* === 搜尋結果 === */
 .results-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 1024px) {
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .results-count {
