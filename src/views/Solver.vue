@@ -79,14 +79,14 @@ function handleSync() {
     <div v-else class="space-y-6 animate-page-in">
       <!-- 物品標題卡 -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center gap-6">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-4 sm:gap-6 text-center sm:text-left">
           <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
             <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" class="w-12 h-12 pixelated" />
             <i v-else class="pi pi-box text-2xl text-slate-400"></i>
           </div>
           <div class="flex-1">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-xs font-bold px-2 py-0.5 bg-emerald-500 text-white rounded-md uppercase tracking-wider">
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+              <span class="text-xs font-bold px-2 py-0.5 bg-soft-green-500 text-white rounded-md uppercase tracking-wider">
                 {{ t(`game.jobs.${activeItem.jobType}`) }}
               </span>
               <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
@@ -114,22 +114,22 @@ function handleSync() {
         <!-- 數值調整區 -->
         <div class="md:col-span-2">
           <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
               <h3 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <i class="pi pi-user-edit text-emerald-500"></i>
+                <i class="pi pi-user-edit text-soft-green-500"></i>
                 {{ t('solver.statsTitle') }}
               </h3>
               <Button 
                 icon="pi pi-save" 
-                :label="t('solver.syncToSettings')" 
+                :label="t('solver.syncToSettings', { job: t(`game.jobs.${activeItem.jobType}`) })" 
                 class="p-button-text p-button-sm text-xs" 
                 @click="handleSync"
               />
             </div>
             
-            <div class="grid grid-cols-2 gap-x-6 gap-y-4 flex-1">
-              <!-- 第一排：等級 (滿寬) -->
-              <div class="col-span-2 flex flex-col gap-1.5">
+            <div class="flex flex-col sm:grid sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
+              <!-- 第一排：等級 (手機版滿寬，桌面版跨兩欄) -->
+              <div class="sm:col-span-2 flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.level') }}</label>
                 <InputNumber v-model="solverStats.level" :min="1" :max="100" class="w-full" fluid />
               </div>
@@ -146,14 +146,14 @@ function handleSync() {
 
               <!-- 第三排：當前 GP 與 最大 GP -->
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex flex-wrap items-center justify-between gap-1">
                   <span>{{ t('solver.currentGp') }}</span>
                   <span class="text-[10px] text-amber-600">MAX: {{ solverStats.gp }}</span>
                 </label>
                 <InputNumber v-model="temporaryGp" :min="0" :max="solverStats.gp" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.maxGp') }}</label>
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider truncate" :title="t('solver.maxGp')">{{ t('solver.maxGp') }}</label>
                 <InputNumber v-model="solverStats.gp" :min="0" class="w-full" fluid />
               </div>
             </div>
@@ -165,7 +165,7 @@ function handleSync() {
           <!-- 成功率卡片 -->
           <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group flex-1 flex flex-col justify-center">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <i class="pi pi-check-circle text-6xl text-emerald-500"></i>
+              <i class="pi pi-check-circle text-6xl text-soft-green-500"></i>
             </div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('solver.results.gatheringRate') }}</p>
             <div class="flex items-baseline gap-1 relative z-10">
@@ -175,8 +175,11 @@ function handleSync() {
               </template>
               <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">未知</span>
             </div>
-            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
-              <div class="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full transition-all duration-500 rounded-full" :style="{ width: isPerceptionMet ? `${successRate}%` : '0%' }"></div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
+              <div 
+                class="h-full rounded-full" 
+                :style="`width: ${isPerceptionMet ? successRate : 0}%; background-color: #52a890;`"
+              ></div>
             </div>
           </div>
 
@@ -193,8 +196,11 @@ function handleSync() {
               </template>
               <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">未知</span>
             </div>
-            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
-              <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-full transition-all duration-500 rounded-full" :style="{ width: isPerceptionMet ? `${(boonChance / 60) * 100}%` : '0%' }"></div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
+              <div 
+                class="h-full rounded-full" 
+                :style="`width: ${isPerceptionMet ? (boonChance / 60 * 100).toFixed(1) : 0}%; background-color: #f59e0b;`"
+              ></div>
             </div>
             <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">MAX 60%</p>
           </div>

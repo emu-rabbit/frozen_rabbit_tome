@@ -55,7 +55,7 @@ export default {
     noItemDesc: '「秘伝書を作成」から採集アイテムを検索して選擇してください。',
     goToCreate: '作成ページへ',
     collectableWarning: '収集品システムは現在開発中です',
-    syncToSettings: '設定に保存',
+    syncToSettings: '{job}のステータスを設定に同期',
     syncSuccess: 'ステータスをグローバル設定に同期しました',
     results: {
       gatheringRate: '基礎採集成功率',

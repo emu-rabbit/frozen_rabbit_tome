@@ -57,7 +57,7 @@ export default {
     noItemDesc: '請先透過「建立秘笈」搜尋並選擇一個採集物品。',
     goToCreate: '前往建立秘笈',
     collectableWarning: '收藏品系統仍在施工中',
-    syncToSettings: '同步回設定頁',
+    syncToSettings: '同步{job}數值回設定',
     syncSuccess: '數值已同步至全域設定',
     results: {
       gatheringRate: '基礎採集成功率',
