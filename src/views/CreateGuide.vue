@@ -131,8 +131,8 @@ function getUiState() {
     <!-- === Header === -->
     <header class="page-header">
       <div class="header-content">
-        <h2 class="page-title">{{ t('createGuide.title') }}</h2>
-        <p class="page-subtitle">{{ t('createGuide.subtitle') }}</p>
+        <h2 class="page-title text-soft-green-800 dark:text-soft-green-400">{{ t('createGuide.title') }}</h2>
+        <p class="page-subtitle text-slate-500 dark:text-slate-400">{{ t('createGuide.subtitle') }}</p>
         <div class="data-scope-badge">
           <i class="pi pi-info-circle"></i>
           <span>{{ t('createGuide.dataScope') }}</span>
@@ -252,14 +252,9 @@ function getUiState() {
 .page-title {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #1e5a4a;
   margin: 0 0 0.35rem 0;
   line-height: 1.2;
   letter-spacing: -0.02em;
-}
-
-:global(.dark) .page-title {
-  color: #52a890;
 }
 
 @media (min-width: 768px) {
@@ -268,12 +263,7 @@ function getUiState() {
 
 .page-subtitle {
   font-size: 0.9rem;
-  color: #64748b;
   margin: 0 0 0.85rem 0;
-}
-
-:global(.dark) .page-subtitle {
-  color: #94a3b8;
 }
 
 .data-scope-badge {
