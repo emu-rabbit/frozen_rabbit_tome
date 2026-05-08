@@ -264,7 +264,7 @@ function handleSync() {
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex flex-wrap items-center justify-between gap-1">
                   <span>{{ t('solver.currentGp') }}</span>
-                  <span class="text-[10px] text-amber-600">MAX: {{ effectiveStats.gp }}</span>
+                  <span class="text-[10px] text-amber-600">{{ t('solver.effectiveMaxGp') }}: {{ effectiveStats.gp }}</span>
                 </label>
                 <InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" class="w-full" fluid />
               </div>
@@ -381,7 +381,7 @@ function handleSync() {
               <i class="pi pi-bolt text-amber-500"></i>
               最佳採集策略演算
             </h3>
-            <p class="text-sm text-slate-500">基於當前 GP 與屬性，由背景 Worker 進行窮舉演算</p>
+            <p class="text-sm text-slate-500">基於演算開始 GP 與屬性，由背景 Worker 進行窮舉演算</p>
           </div>
           <Button 
             label="開始演算" 

@@ -49,8 +49,9 @@ export default {
   solver: {
     title: 'Tome Solver',
     statsTitle: 'Current Gathering Stats',
-    currentGp: 'Current GP',
-    maxGp: 'Max GP (Equipment Cap)',
+    currentGp: 'Starting GP',
+    effectiveMaxGp: 'Full GP after food',
+    maxGp: 'Equipment Max GP',
     noItemTitle: 'No Item Selected',
     noItemDesc: 'Please search and select an item via "Create Tome" first.',
     goToCreate: 'Go to Create Tome',

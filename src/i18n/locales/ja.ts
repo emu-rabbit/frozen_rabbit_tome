@@ -49,8 +49,9 @@ export default {
   solver: {
     title: '秘伝書ソルバー',
     statsTitle: '現在の採集環境ステータス',
-    currentGp: '現在 GP',
-    maxGp: '最大 GP (装備上限)',
+    currentGp: '開始時 GP',
+    effectiveMaxGp: '食事込み満タン GP',
+    maxGp: '装備最大 GP',
     noItemTitle: 'アイテム未選択',
     noItemDesc: '「秘伝書を作成」から採集アイテムを検索して選擇してください。',
     goToCreate: '作成ページへ',

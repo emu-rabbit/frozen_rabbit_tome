@@ -51,8 +51,9 @@ export default {
   solver: {
     title: '秘笈求解器',
     statsTitle: '當前採集玩家數值',
-    currentGp: '當前 GP',
-    maxGp: '最大 GP (裝備上限)',
+    currentGp: '演算開始 GP',
+    effectiveMaxGp: '食物後滿 GP',
+    maxGp: '裝備最大 GP',
     noItemTitle: '未選擇物品',
     noItemDesc: '請先透過「建立秘笈」搜尋並選擇一個採集物品。',
     goToCreate: '前往建立秘笈',

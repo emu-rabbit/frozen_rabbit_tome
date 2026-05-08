@@ -106,8 +106,8 @@ export function useSolver() {
     const job = activeItem.value.jobType || 'miner';
     const stats = userStats.value[job];
     solverStats.value = { ...stats };
-    // 同步時將臨時 GP 設為最大 GP
-    temporaryGp.value = stats.gp;
+    // 同步時以食物套用後的滿 GP 作為預設規劃情境
+    temporaryGp.value = effectiveStats.value.gp;
   };
 
   const saveToSettings = () => {
@@ -177,11 +177,15 @@ export function useSolver() {
     return effectiveStats.value.perception >= req;
   });
 
-  watch(() => effectiveStats.value.gp, (maxGp) => {
-    if (temporaryGp.value > maxGp) {
+  watch(() => effectiveStats.value.gp, (maxGp, previousMaxGp) => {
+    const wasPlanningWithFullGp = previousMaxGp === undefined
+      ? temporaryGp.value >= solverStats.value.gp
+      : temporaryGp.value === previousMaxGp;
+
+    if (wasPlanningWithFullGp || temporaryGp.value > maxGp) {
       temporaryGp.value = maxGp;
     }
-  });
+  }, { immediate: true });
 
   watch([solverStats, nodeBonuses, temporaryGp, selectedFood], () => {
     invalidateSolveResult();

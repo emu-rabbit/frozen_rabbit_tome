@@ -49,8 +49,9 @@ export default {
   solver: {
     title: '秘籍求解器',
     statsTitle: '当前采集环境数值',
-    currentGp: '当前 GP',
-    maxGp: '最大 GP (装备上限)',
+    currentGp: '演算开始 GP',
+    effectiveMaxGp: '食物后满 GP',
+    maxGp: '装备最大 GP',
     noItemTitle: '未选择物品',
     noItemDesc: '请先通过「建立秘籍」搜寻并选择一个采集物品。',
     goToCreate: '前往建立秘籍',
