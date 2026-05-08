@@ -262,6 +262,10 @@ export function getItemName(itemId: number): string {
   return extractName(rawTargetNames[idStr], currentLanguage.value) || extractName(rawEnglishNames[idStr], 'en') || `Item #${itemId}`;
 }
 
+export function getItemEnglishName(itemId: number): string {
+  return extractName(rawEnglishNames[itemId.toString()], 'en') || '';
+}
+
 export function getItemIcon(itemId: number): string {
   const path = rawIcons[itemId.toString()];
   return path ? `https://xivapi.com${path}` : '';

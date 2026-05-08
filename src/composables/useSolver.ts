@@ -1,8 +1,9 @@
 import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
+import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
 import { useSettings } from './useSettings';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
+import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse } from '../types/game';
 
@@ -12,6 +13,11 @@ const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stat
   gathering: 5345,
   perception: 5137,
   gp: 930
+});
+
+const selectedFood = useLocalStorage<FoodSelection>('frozen-rabbit-tome-selected-food', {
+  foodId: null,
+  quality: 'hq'
 });
 
 const nodeBonuses = useLocalStorage<NodeBonuses>('frozen-rabbit-tome-node-bonuses', {
@@ -68,6 +74,14 @@ export function useSolver() {
     isSolving.value = false;
   };
 
+  const invalidateSolveResult = () => {
+    if (isSolving.value) {
+      cancelActiveSolve();
+    }
+
+    rotationResult.value = null;
+  };
+
   const setSelectedItem = (item: GatherableItem) => {
     const isDifferentItem = activeItem.value?.itemId !== item.itemId;
 
@@ -109,6 +123,16 @@ export function useSolver() {
     return getItemName(activeItem.value.itemId);
   });
 
+  const selectedFoodItem = computed(() => getGatheringFood(selectedFood.value.foodId));
+
+  const foodBonus = computed(() => calculateFoodBonus(
+    solverStats.value,
+    selectedFoodItem.value,
+    selectedFood.value.quality
+  ));
+
+  const effectiveStats = computed(() => applyFoodBonus(solverStats.value, foodBonus.value));
+
   // 基礎值查詢
   const baseValues = computed(() => {
     if (!activeItem.value || !itemLevelData.value) return null;
@@ -129,12 +153,10 @@ export function useSolver() {
     const baseGathering = baseValues.value.Gathering;
     if (!baseGathering) return 0;
 
-    const score = Math.floor((100 * solverStats.value.gathering) / baseGathering);
-    
     return calculateSuccessRate(
-      solverStats.value.gathering,
+      effectiveStats.value.gathering,
       baseGathering,
-      solverStats.value.level,
+      effectiveStats.value.level,
       itemRealLevel.value
     );
   });
@@ -145,19 +167,33 @@ export function useSolver() {
     const basePerception = baseValues.value.Perception;
     if (!basePerception) return 0;
 
-    return calculateBoonChance(solverStats.value.perception, basePerception);
+    return calculateBoonChance(effectiveStats.value.perception, basePerception);
   });
 
   // 3. 鑑別力門檻檢查
   const isPerceptionMet = computed(() => {
     if (!activeItem.value) return true;
     const req = activeItem.value.perceptionReq || 0;
-    return solverStats.value.perception >= req;
+    return effectiveStats.value.perception >= req;
   });
+
+  watch(() => effectiveStats.value.gp, (maxGp) => {
+    if (temporaryGp.value > maxGp) {
+      temporaryGp.value = maxGp;
+    }
+  });
+
+  watch([solverStats, nodeBonuses, temporaryGp, selectedFood], () => {
+    invalidateSolveResult();
+  }, { deep: true });
 
   return {
     activeItem,
     solverStats,
+    selectedFood,
+    selectedFoodItem,
+    foodBonus,
+    effectiveStats,
     nodeBonuses,
     temporaryGp,
     isDataLoading: isGameDataLoading,
@@ -182,14 +218,14 @@ export function useSolver() {
       activeWorker = worker;
       
       const request: SolverRequest = {
-        stats: { ...solverStats.value },
+        stats: { ...effectiveStats.value },
         baseValues: {
           Gathering: baseValues.value.Gathering,
           Perception: baseValues.value.Perception
         },
         itemLevel: itemRealLevel.value,
         nodeBonuses: { ...nodeBonuses.value },
-        temporaryGp: temporaryGp.value,
+        temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
         jobType: activeItem.value.jobType || 'miner'
       };
 

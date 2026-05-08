@@ -36,6 +36,37 @@ export interface PlayerStats {
   gp: number;
 }
 
+export type FoodStat = 'gathering' | 'perception' | 'gp';
+export type FoodQuality = 'nq' | 'hq';
+
+export interface FoodBonusValue {
+  value: number;
+  max: number;
+}
+
+export interface FoodBonus {
+  nq: FoodBonusValue;
+  hq: FoodBonusValue;
+}
+
+export interface GatheringFood {
+  id: number;
+  levelItem: number;
+  levelEquip: number;
+  bonuses: Partial<Record<'Gathering' | 'Perception' | 'GP', FoodBonus>>;
+}
+
+export interface FoodSelection {
+  foodId: number | null;
+  quality: FoodQuality;
+}
+
+export interface AppliedFoodBonus {
+  gathering: number;
+  perception: number;
+  gp: number;
+}
+
 /** 採集點獎勵 (Node Bonuses) */
 export interface NodeBonuses {
   /** 節點基礎耐久/採集次數 (Base Integrity) */

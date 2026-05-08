@@ -1,0 +1,1448 @@
+[
+  {
+    "id": 46254,
+    "levelItem": 750,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 150
+        },
+        "hq": {
+          "value": 7,
+          "max": 188
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 77
+        },
+        "hq": {
+          "value": 3,
+          "max": 97
+        }
+      }
+    }
+  },
+  {
+    "id": 44843,
+    "levelItem": 720,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 72
+        },
+        "hq": {
+          "value": 3,
+          "max": 91
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 140
+        },
+        "hq": {
+          "value": 7,
+          "max": 176
+        }
+      }
+    }
+  },
+  {
+    "id": 44103,
+    "levelItem": 684,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 125
+        },
+        "hq": {
+          "value": 7,
+          "max": 157
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 8,
+          "max": 25
+        },
+        "hq": {
+          "value": 10,
+          "max": 32
+        }
+      }
+    }
+  },
+  {
+    "id": 44078,
+    "levelItem": 670,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 64
+        },
+        "hq": {
+          "value": 3,
+          "max": 80
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 23,
+          "max": 46
+        },
+        "hq": {
+          "value": 29,
+          "max": 58
+        }
+      }
+    }
+  },
+  {
+    "id": 44099,
+    "levelItem": 657,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 120
+        },
+        "hq": {
+          "value": 7,
+          "max": 151
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 62
+        },
+        "hq": {
+          "value": 3,
+          "max": 78
+        }
+      }
+    }
+  },
+  {
+    "id": 38930,
+    "levelItem": 620,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 109
+        },
+        "hq": {
+          "value": 7,
+          "max": 136
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 4,
+          "max": 25
+        },
+        "hq": {
+          "value": 5,
+          "max": 31
+        }
+      }
+    }
+  },
+  {
+    "id": 37283,
+    "levelItem": 590,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 51
+        },
+        "hq": {
+          "value": 3,
+          "max": 64
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 99
+        },
+        "hq": {
+          "value": 7,
+          "max": 124
+        }
+      }
+    }
+  },
+  {
+    "id": 36061,
+    "levelItem": 554,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 81
+        },
+        "hq": {
+          "value": 7,
+          "max": 101
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 8,
+          "max": 24
+        },
+        "hq": {
+          "value": 10,
+          "max": 30
+        }
+      }
+    }
+  },
+  {
+    "id": 36054,
+    "levelItem": 540,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 48
+        },
+        "hq": {
+          "value": 3,
+          "max": 60
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 23,
+          "max": 44
+        },
+        "hq": {
+          "value": 29,
+          "max": 55
+        }
+      }
+    }
+  },
+  {
+    "id": 36047,
+    "levelItem": 527,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 76
+        },
+        "hq": {
+          "value": 7,
+          "max": 95
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 39
+        },
+        "hq": {
+          "value": 3,
+          "max": 49
+        }
+      }
+    }
+  },
+  {
+    "id": 30481,
+    "levelItem": 490,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 38
+        },
+        "hq": {
+          "value": 3,
+          "max": 47
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 23,
+          "max": 44
+        },
+        "hq": {
+          "value": 29,
+          "max": 55
+        }
+      }
+    }
+  },
+  {
+    "id": 28721,
+    "levelItem": 460,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 34
+        },
+        "hq": {
+          "value": 3,
+          "max": 42
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 74
+        },
+        "hq": {
+          "value": 7,
+          "max": 93
+        }
+      }
+    }
+  },
+  {
+    "id": 27878,
+    "levelItem": 418,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 62
+        },
+        "hq": {
+          "value": 7,
+          "max": 77
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 22
+        },
+        "hq": {
+          "value": 8,
+          "max": 28
+        }
+      }
+    }
+  },
+  {
+    "id": 27870,
+    "levelItem": 412,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 30
+        },
+        "hq": {
+          "value": 3,
+          "max": 38
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 23,
+          "max": 40
+        },
+        "hq": {
+          "value": 29,
+          "max": 50
+        }
+      }
+    }
+  },
+  {
+    "id": 27865,
+    "levelItem": 406,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 61
+        },
+        "hq": {
+          "value": 7,
+          "max": 76
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 30
+        },
+        "hq": {
+          "value": 3,
+          "max": 38
+        }
+      }
+    }
+  },
+  {
+    "id": 23185,
+    "levelItem": 320,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 54
+        },
+        "hq": {
+          "value": 7,
+          "max": 68
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 3,
+          "max": 17
+        },
+        "hq": {
+          "value": 4,
+          "max": 21
+        }
+      }
+    }
+  },
+  {
+    "id": 19830,
+    "levelItem": 290,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 18
+        },
+        "hq": {
+          "value": 3,
+          "max": 23
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 46
+        },
+        "hq": {
+          "value": 7,
+          "max": 58
+        }
+      }
+    }
+  },
+  {
+    "id": 19839,
+    "levelItem": 279,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 46
+        },
+        "hq": {
+          "value": 7,
+          "max": 57
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 18
+        },
+        "hq": {
+          "value": 3,
+          "max": 23
+        }
+      }
+    }
+  },
+  {
+    "id": 19831,
+    "levelItem": 276,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 18
+        },
+        "hq": {
+          "value": 3,
+          "max": 23
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 34
+        },
+        "hq": {
+          "value": 7,
+          "max": 42
+        }
+      }
+    }
+  },
+  {
+    "id": 19838,
+    "levelItem": 265,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 45
+        },
+        "hq": {
+          "value": 7,
+          "max": 56
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 3,
+          "max": 17
+        },
+        "hq": {
+          "value": 4,
+          "max": 21
+        }
+      }
+    }
+  },
+  {
+    "id": 15651,
+    "levelItem": 220,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 5,
+          "max": 27
+        },
+        "hq": {
+          "value": 6,
+          "max": 34
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 5,
+          "max": 27
+        },
+        "hq": {
+          "value": 6,
+          "max": 34
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 10
+        },
+        "hq": {
+          "value": 2,
+          "max": 13
+        }
+      }
+    }
+  },
+  {
+    "id": 14140,
+    "levelItem": 210,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 14
+        },
+        "hq": {
+          "value": 3,
+          "max": 17
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 34
+        },
+        "hq": {
+          "value": 7,
+          "max": 43
+        }
+      }
+    }
+  },
+  {
+    "id": 12870,
+    "levelItem": 160,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 30
+        },
+        "hq": {
+          "value": 7,
+          "max": 37
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 3,
+          "max": 15
+        },
+        "hq": {
+          "value": 4,
+          "max": 19
+        }
+      }
+    }
+  },
+  {
+    "id": 12868,
+    "levelItem": 150,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 11
+        },
+        "hq": {
+          "value": 3,
+          "max": 14
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 30
+        },
+        "hq": {
+          "value": 7,
+          "max": 38
+        }
+      }
+    }
+  },
+  {
+    "id": 12869,
+    "levelItem": 139,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 10
+        },
+        "hq": {
+          "value": 3,
+          "max": 13
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 29
+        },
+        "hq": {
+          "value": 7,
+          "max": 36
+        }
+      }
+    }
+  },
+  {
+    "id": 12867,
+    "levelItem": 133,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 26
+        },
+        "hq": {
+          "value": 7,
+          "max": 32
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 10
+        },
+        "hq": {
+          "value": 3,
+          "max": 13
+        }
+      }
+    }
+  },
+  {
+    "id": 12866,
+    "levelItem": 125,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 26
+        },
+        "hq": {
+          "value": 7,
+          "max": 32
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 3,
+          "max": 13
+        },
+        "hq": {
+          "value": 4,
+          "max": 16
+        }
+      }
+    }
+  },
+  {
+    "id": 10146,
+    "levelItem": 110,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 24
+        },
+        "hq": {
+          "value": 7,
+          "max": 30
+        }
+      }
+    }
+  },
+  {
+    "id": 9334,
+    "levelItem": 90,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 22
+        },
+        "hq": {
+          "value": 7,
+          "max": 28
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 10
+        },
+        "hq": {
+          "value": 3,
+          "max": 12
+        }
+      }
+    }
+  },
+  {
+    "id": 7575,
+    "levelItem": 70,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 19
+        },
+        "hq": {
+          "value": 7,
+          "max": 24
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 8
+        },
+        "hq": {
+          "value": 3,
+          "max": 10
+        }
+      }
+    }
+  },
+  {
+    "id": 4714,
+    "levelItem": 55,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 15
+        },
+        "hq": {
+          "value": 7,
+          "max": 19
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 6
+        },
+        "hq": {
+          "value": 3,
+          "max": 8
+        }
+      }
+    }
+  },
+  {
+    "id": 4688,
+    "levelItem": 55,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 15
+        },
+        "hq": {
+          "value": 7,
+          "max": 19
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 10
+        },
+        "hq": {
+          "value": 3,
+          "max": 12
+        }
+      }
+    }
+  },
+  {
+    "id": 4679,
+    "levelItem": 55,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 6
+        },
+        "hq": {
+          "value": 3,
+          "max": 8
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 24
+        },
+        "hq": {
+          "value": 7,
+          "max": 31
+        }
+      }
+    }
+  },
+  {
+    "id": 4715,
+    "levelItem": 50,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 14
+        },
+        "hq": {
+          "value": 7,
+          "max": 17
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 6
+        },
+        "hq": {
+          "value": 3,
+          "max": 7
+        }
+      }
+    }
+  },
+  {
+    "id": 4713,
+    "levelItem": 50,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 14
+        },
+        "hq": {
+          "value": 7,
+          "max": 17
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 10
+        },
+        "hq": {
+          "value": 3,
+          "max": 12
+        }
+      }
+    }
+  },
+  {
+    "id": 4678,
+    "levelItem": 50,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 6
+        },
+        "hq": {
+          "value": 3,
+          "max": 7
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 24
+        },
+        "hq": {
+          "value": 7,
+          "max": 30
+        }
+      }
+    }
+  },
+  {
+    "id": 4687,
+    "levelItem": 39,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 5
+        },
+        "hq": {
+          "value": 3,
+          "max": 6
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 13
+        },
+        "hq": {
+          "value": 7,
+          "max": 16
+        }
+      }
+    }
+  },
+  {
+    "id": 4677,
+    "levelItem": 37,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 5
+        },
+        "hq": {
+          "value": 3,
+          "max": 6
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 23
+        },
+        "hq": {
+          "value": 7,
+          "max": 29
+        }
+      }
+    }
+  },
+  {
+    "id": 4686,
+    "levelItem": 35,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 11
+        },
+        "hq": {
+          "value": 7,
+          "max": 14
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 9
+        },
+        "hq": {
+          "value": 3,
+          "max": 11
+        }
+      }
+    }
+  },
+  {
+    "id": 4712,
+    "levelItem": 32,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 10
+        },
+        "hq": {
+          "value": 7,
+          "max": 12
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 9
+        },
+        "hq": {
+          "value": 3,
+          "max": 11
+        }
+      }
+    }
+  },
+  {
+    "id": 4685,
+    "levelItem": 30,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 10
+        },
+        "hq": {
+          "value": 7,
+          "max": 12
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 9
+        },
+        "hq": {
+          "value": 3,
+          "max": 11
+        }
+      }
+    }
+  },
+  {
+    "id": 4676,
+    "levelItem": 28,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 3
+        },
+        "hq": {
+          "value": 3,
+          "max": 4
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 22
+        },
+        "hq": {
+          "value": 7,
+          "max": 27
+        }
+      }
+    }
+  },
+  {
+    "id": 4711,
+    "levelItem": 25,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 9
+        },
+        "hq": {
+          "value": 7,
+          "max": 11
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 3
+        },
+        "hq": {
+          "value": 3,
+          "max": 4
+        }
+      }
+    }
+  },
+  {
+    "id": 4710,
+    "levelItem": 22,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 8
+        },
+        "hq": {
+          "value": 7,
+          "max": 10
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 3
+        },
+        "hq": {
+          "value": 3,
+          "max": 4
+        }
+      }
+    }
+  },
+  {
+    "id": 4684,
+    "levelItem": 22,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 3
+        },
+        "hq": {
+          "value": 3,
+          "max": 4
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 8
+        },
+        "hq": {
+          "value": 7,
+          "max": 10
+        }
+      }
+    }
+  },
+  {
+    "id": 4675,
+    "levelItem": 20,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 3
+        },
+        "hq": {
+          "value": 3,
+          "max": 4
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 21
+        },
+        "hq": {
+          "value": 7,
+          "max": 26
+        }
+      }
+    }
+  },
+  {
+    "id": 4709,
+    "levelItem": 17,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 7
+        },
+        "hq": {
+          "value": 7,
+          "max": 9
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 8
+        },
+        "hq": {
+          "value": 3,
+          "max": 10
+        }
+      }
+    }
+  },
+  {
+    "id": 4683,
+    "levelItem": 16,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 2
+        },
+        "hq": {
+          "value": 3,
+          "max": 3
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 6
+        },
+        "hq": {
+          "value": 7,
+          "max": 8
+        }
+      }
+    }
+  },
+  {
+    "id": 4674,
+    "levelItem": 16,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 2
+        },
+        "hq": {
+          "value": 3,
+          "max": 3
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 20
+        },
+        "hq": {
+          "value": 7,
+          "max": 25
+        }
+      }
+    }
+  },
+  {
+    "id": 4682,
+    "levelItem": 13,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 6
+        },
+        "hq": {
+          "value": 7,
+          "max": 7
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 2,
+          "max": 8
+        },
+        "hq": {
+          "value": 3,
+          "max": 10
+        }
+      }
+    }
+  },
+  {
+    "id": 4708,
+    "levelItem": 10,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 6,
+          "max": 6
+        },
+        "hq": {
+          "value": 7,
+          "max": 7
+        }
+      },
+      "Perception": {
+        "nq": {
+          "value": 2,
+          "max": 2
+        },
+        "hq": {
+          "value": 3,
+          "max": 3
+        }
+      }
+    }
+  },
+  {
+    "id": 4681,
+    "levelItem": 10,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 6,
+          "max": 6
+        },
+        "hq": {
+          "value": 7,
+          "max": 7
+        }
+      }
+    }
+  },
+  {
+    "id": 4680,
+    "levelItem": 9,
+    "levelEquip": 1,
+    "bonuses": {
+      "Perception": {
+        "nq": {
+          "value": 5
+        },
+        "hq": {
+          "value": 6
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 19
+        },
+        "hq": {
+          "value": 7,
+          "max": 24
+        }
+      }
+    }
+  },
+  {
+    "id": 4673,
+    "levelItem": 9,
+    "levelEquip": 1,
+    "bonuses": {
+      "Gathering": {
+        "nq": {
+          "value": 2,
+          "max": 2
+        },
+        "hq": {
+          "value": 3,
+          "max": 3
+        }
+      },
+      "GP": {
+        "nq": {
+          "value": 6,
+          "max": 19
+        },
+        "hq": {
+          "value": 7,
+          "max": 24
+        }
+      }
+    }
+  }
+]

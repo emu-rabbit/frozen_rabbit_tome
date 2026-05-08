@@ -57,6 +57,13 @@ export default {
     collectableWarning: '收藏品系统仍在施工中',
     syncToSettings: '回写{job}设置',
     syncSuccess: '数值已同步至全域设定',
+    food: {
+      label: '食物',
+      placeholder: '搜索食物',
+      nq: 'NQ',
+      hq: 'HQ',
+      max: '上限'
+    },
     results: {
       gatheringRate: '基础采集成功率',
       boonRate: '基础额外采集率'

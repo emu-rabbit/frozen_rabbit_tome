@@ -57,6 +57,13 @@ export default {
     collectableWarning: 'Collectable system is under construction',
     syncToSettings: 'Sync {job} Settings',
     syncSuccess: 'Stats synced to global settings',
+    food: {
+      label: 'Food',
+      placeholder: 'Search food',
+      nq: 'NQ',
+      hq: 'HQ',
+      max: 'max'
+    },
     results: {
       gatheringRate: 'Base Gathering Rate',
       boonRate: 'Base Boon Rate'

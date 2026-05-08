@@ -1,9 +1,13 @@
 <script setup lang="ts">
 defineOptions({ name: 'Solver' });
-import { onMounted, watch, onActivated } from 'vue';
+import { computed, onMounted, ref, watch, onActivated } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSolver } from '../composables/useSolver';
+import { GATHERING_FOODS } from '../services/foodData';
+import { getItemEnglishName, getItemName } from '../services/gameData';
+import type { FoodQuality, GatheringFood } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import { useSettings } from '../composables/useSettings';
 
@@ -11,6 +15,10 @@ const { t, locale } = useI18n();
 const {
   activeItem,
   solverStats,
+  selectedFood,
+  selectedFoodItem,
+  foodBonus,
+  effectiveStats,
   isDataLoading,
   fetchItemLevelData,
   saveToSettings,
@@ -29,6 +37,72 @@ const {
 } = useSolver();
 
 const { userStats } = useSettings();
+type FoodOption = {
+  food: GatheringFood;
+  quality: FoodQuality;
+  label: string;
+  searchText: string;
+};
+const foodSuggestions = ref<FoodOption[]>([]);
+
+const selectedFoodModel = computed<FoodOption | null>({
+  get: () => selectedFoodItem.value ? toFoodOption(selectedFoodItem.value, selectedFood.value.quality) : null,
+  set: (option) => {
+    selectedFood.value.foodId = option?.food.id ?? null;
+    if (option) {
+      selectedFood.value.quality = option.quality;
+    }
+  }
+});
+
+function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
+  const localizedName = foodName(food);
+  const englishName = foodEnglishName(food);
+  const qualityLabel = t(`solver.food.${quality}`);
+
+  return {
+    food,
+    quality,
+    label: `${localizedName} ${qualityLabel}`,
+    searchText: [localizedName, englishName, food.id.toString()].join(' ').toLowerCase()
+  };
+}
+
+function foodName(food: GatheringFood) {
+  return getItemName(food.id);
+}
+
+function foodEnglishName(food: GatheringFood) {
+  return getItemEnglishName(food.id);
+}
+
+function foodSummary(food: GatheringFood, quality = selectedFood.value.quality) {
+  return Object.entries(food.bonuses)
+    .map(([stat, bonus]) => {
+      const value = bonus[quality];
+      return `${t(`game.stats.${foodStatKey(stat)}`)} +${value.value}% (${t('solver.food.max')} ${value.max})`;
+    })
+    .join(' / ');
+}
+
+function foodStatKey(stat: string) {
+  if (stat === 'Gathering') return 'gathering';
+  if (stat === 'Perception') return 'perception';
+  return 'gp';
+}
+
+function searchFoods(event: { query: string }) {
+  const query = event.query.trim().toLowerCase();
+  const allOptions = GATHERING_FOODS.flatMap((food) => [
+    toFoodOption(food, 'hq'),
+    toFoodOption(food, 'nq')
+  ]);
+  const matchedOptions = query
+    ? allOptions.filter((option) => option.searchText.includes(query))
+    : allOptions;
+
+  foodSuggestions.value = matchedOptions.slice(0, 40);
+}
 
 onMounted(() => {
   fetchItemLevelData();
@@ -132,19 +206,57 @@ function handleSync() {
             </div>
             
             <div class="flex flex-col sm:grid sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
-              <!-- 第一排：等級 (手機版滿寬，桌面版跨兩欄) -->
-              <div class="sm:col-span-2 flex flex-col gap-1.5">
+              <!-- 第一排：等級與食物 -->
+              <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.level') }}</label>
                 <InputNumber v-model="solverStats.level" :min="1" :max="100" class="w-full" fluid />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.food.label') }}</label>
+                <AutoComplete
+                  v-model="selectedFoodModel"
+                  :suggestions="foodSuggestions"
+                  optionLabel="label"
+                  :placeholder="t('solver.food.placeholder')"
+                  forceSelection
+                  dropdown
+                  showClear
+                  class="w-full"
+                  inputClass="w-full"
+                  @complete="searchFoods"
+                >
+                  <template #option="{ option }">
+                    <div class="flex items-start gap-3 min-w-0 w-full">
+                      <span
+                        class="px-2 py-0.5 rounded-md text-[11px] font-black flex-shrink-0"
+                        :class="option.quality === 'hq'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+                          : 'bg-soft-green-100 text-soft-green-700 dark:bg-soft-green-900/40 dark:text-soft-green-200'"
+                      >
+                        {{ t(`solver.food.${option.quality}`) }}
+                      </span>
+                      <div class="flex flex-col min-w-0">
+                        <span class="font-semibold text-sm text-slate-700 dark:text-slate-100 truncate">{{ foodName(option.food) }}</span>
+                        <span class="text-[11px] text-slate-400 truncate">{{ foodSummary(option.food, option.quality) }}</span>
+                      </div>
+                    </div>
+                  </template>
+                </AutoComplete>
               </div>
 
               <!-- 第二排：獲得力 與 鑑別力 -->
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.gathering') }}</label>
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2">
+                  <span>{{ t('game.stats.gathering') }}</span>
+                  <span v-if="foodBonus.gathering > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.gathering }} = {{ effectiveStats.gathering }}</span>
+                </label>
                 <InputNumber v-model="solverStats.gathering" :min="0" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.perception') }}</label>
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2">
+                  <span>{{ t('game.stats.perception') }}</span>
+                  <span v-if="foodBonus.perception > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.perception }} = {{ effectiveStats.perception }}</span>
+                </label>
                 <InputNumber v-model="solverStats.perception" :min="0" class="w-full" fluid />
               </div>
 
@@ -152,12 +264,15 @@ function handleSync() {
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex flex-wrap items-center justify-between gap-1">
                   <span>{{ t('solver.currentGp') }}</span>
-                  <span class="text-[10px] text-amber-600">MAX: {{ solverStats.gp }}</span>
+                  <span class="text-[10px] text-amber-600">MAX: {{ effectiveStats.gp }}</span>
                 </label>
-                <InputNumber v-model="temporaryGp" :min="0" :max="solverStats.gp" class="w-full" fluid />
+                <InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider truncate" :title="t('solver.maxGp')">{{ t('solver.maxGp') }}</label>
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2" :title="t('solver.maxGp')">
+                  <span class="truncate">{{ t('solver.maxGp') }}</span>
+                  <span v-if="foodBonus.gp > 0" class="text-soft-green-600 dark:text-soft-green-300 flex-shrink-0">+{{ foodBonus.gp }} = {{ effectiveStats.gp }}</span>
+                </label>
                 <InputNumber v-model="solverStats.gp" :min="0" class="w-full" fluid />
               </div>
             </div>
@@ -324,6 +439,9 @@ function handleSync() {
 <style scoped>
 .pixelated {
   image-rendering: pixelated;
+}
+:deep(.p-autocomplete) {
+  width: 100%;
 }
 .animate-page-in {
   animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);

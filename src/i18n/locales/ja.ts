@@ -57,6 +57,13 @@ export default {
     collectableWarning: '収集品システムは現在開発中です',
     syncToSettings: '{job}設定を同期',
     syncSuccess: 'ステータスをグローバル設定に同期しました',
+    food: {
+      label: '食事',
+      placeholder: '食事を検索',
+      nq: 'NQ',
+      hq: 'HQ',
+      max: '上限'
+    },
     results: {
       gatheringRate: '基本採集成功率',
       boonRate: '基本ボーナス発生率'
