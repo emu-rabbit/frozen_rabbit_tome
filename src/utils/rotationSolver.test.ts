@@ -140,4 +140,31 @@ describe('solveGatheringRotation', () => {
     expect(giftIndex).toBeGreaterThanOrEqual(0);
     expect(tidingsIndex).toBe(giftIndex + 1);
   });
+
+  it('等價時會優先施放全域技能，再施放下一次採集技能', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 800,
+        perception: 1000,
+        gp: 400
+      },
+      nodeBonuses: {
+        baseIntegrity: 10,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 400,
+      jobType: 'botanist'
+    }));
+
+    const giftIndex = result.bestRotation.indexOf('沃土的饋贈II');
+    const tidingsIndex = result.bestRotation.indexOf('諾菲卡福音');
+    const bountifulIndex = result.bestRotation.indexOf('豐收II');
+
+    expect(giftIndex).toBeGreaterThanOrEqual(0);
+    expect(tidingsIndex).toBe(giftIndex + 1);
+    expect(bountifulIndex).toBeGreaterThan(tidingsIndex);
+  });
 });

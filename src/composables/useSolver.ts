@@ -30,6 +30,8 @@ const gatheringItemsData = ref<Record<string, any> | null>(null);
 // 求解器結果
 const rotationResult = ref<SolverResponse | null>(null);
 const isSolving = ref(false);
+let activeWorker: Worker | null = null;
+let solveVersion = 0;
 
 export function useSolver() {
   const { userStats } = useSettings();
@@ -59,7 +61,21 @@ export function useSolver() {
     }
   }, { immediate: true });
 
+  const cancelActiveSolve = () => {
+    solveVersion += 1;
+    activeWorker?.terminate();
+    activeWorker = null;
+    isSolving.value = false;
+  };
+
   const setSelectedItem = (item: GatherableItem) => {
+    const isDifferentItem = activeItem.value?.itemId !== item.itemId;
+
+    if (isDifferentItem) {
+      cancelActiveSolve();
+      rotationResult.value = null;
+    }
+
     activeItem.value = item;
     // 重設節點獎勵
     nodeBonuses.value = {
@@ -158,9 +174,12 @@ export function useSolver() {
     // 求解功能
     solve: async () => {
       if (!activeItem.value || !baseValues.value) return;
+      cancelActiveSolve();
       isSolving.value = true;
+      const currentSolveVersion = solveVersion;
       
       const worker = new Worker(new URL('../workers/solver.worker.ts', import.meta.url), { type: 'module' });
+      activeWorker = worker;
       
       const request: SolverRequest = {
         stats: { ...solverStats.value },
@@ -177,14 +196,26 @@ export function useSolver() {
       worker.postMessage(request);
       
       worker.onmessage = (e: MessageEvent<SolverResponse>) => {
+        if (currentSolveVersion !== solveVersion || activeWorker !== worker) {
+          worker.terminate();
+          return;
+        }
+
         rotationResult.value = e.data;
         isSolving.value = false;
+        activeWorker = null;
         worker.terminate();
       };
 
       worker.onerror = (err) => {
+        if (currentSolveVersion !== solveVersion || activeWorker !== worker) {
+          worker.terminate();
+          return;
+        }
+
         console.error('Worker error:', err);
         isSolving.value = false;
+        activeWorker = null;
         worker.terminate();
       };
     },

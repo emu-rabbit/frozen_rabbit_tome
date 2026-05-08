@@ -299,6 +299,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     const effectiveFirstGatherIndex = firstGatherIndex === -1 ? rotation.length : firstGatherIndex;
 
     score += effectiveFirstGatherIndex;
+    score += wholeNodeBeforeNextOnlyScore(rotation);
 
     for (const nextOnlyAction of [names.clearVision, names.bountifulI, names.bountifulII]) {
       const index = rotation.indexOf(nextOnlyAction);
@@ -311,6 +312,31 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     score += comboPreferenceScore(rotation);
 
     return score;
+  }
+
+  function wholeNodeBeforeNextOnlyScore(rotation: string[]): number {
+    const nextOnlyActions = [names.clearVision, names.bountifulI, names.bountifulII];
+    const firstNextOnlyIndex = rotation.findIndex((action) => nextOnlyActions.includes(action));
+
+    if (firstNextOnlyIndex === -1) return 0;
+
+    const wholeNodeActions = [
+      names.successI,
+      names.successII,
+      names.successIII,
+      names.giftI,
+      names.giftII,
+      names.kingI,
+      names.kingII,
+      names.tidings
+    ];
+
+    return wholeNodeActions.reduce((score, actionName) => {
+      const index = rotation.indexOf(actionName);
+      if (index === -1) return score;
+
+      return index < firstNextOnlyIndex ? score + 1000 : score - 1000;
+    }, 0);
   }
 
   function comboPreferenceScore(rotation: string[]): number {
