@@ -10,7 +10,24 @@ export default {
       gatherCount: 'Gather {count} time(s)',
       conditionalGatherCount: 'If Wise procs, gather {count} time(s)',
       finalGather: 'Gather until depleted',
-      finalConditionalGather: 'If Wise procs, gather until depleted'
+      finalConditionalGather: 'If Wise procs, gather until depleted',
+      continueAfterSeconds: '{message}. The macro will continue in {seconds}s'
+    },
+    preview: {
+      kicker: 'FFXIV Gathering Macro',
+      title: 'Preview Gathering Macro',
+      close: 'Close macro preview',
+      singleTitle: 'Macro Content',
+      partTitle: 'Macro #{index}',
+      singleSummary: 'This macro has {lines} line(s) and can be copied into the game.',
+      splitSummary: 'This macro has {lines} line(s), split into {count} macros for the 15-line game limit.',
+      lineCount: '{count} / 15 lines',
+      copySingle: 'Copy Macro',
+      copyPart: 'Copy #{index}',
+      copyStates: {
+        copied: 'Copied',
+        failed: 'Copy failed'
+      }
     }
   },
   nav: {
@@ -92,7 +109,7 @@ export default {
     strategy: {
       title: 'Recommended Rotation',
       description: 'Solves the highest expected-yield rotation from your current values.',
-      copyMacro: 'Copy Macro',
+      copyMacro: 'Preview Macro',
       copyMacroStates: {
         copied: 'Copied',
         partial: 'Copied first 15 lines',
@@ -131,7 +148,7 @@ export default {
     },
     actions: {
       edit: 'Edit',
-      copyMacro: 'Copy Macro',
+      copyMacro: 'Preview Macro',
       copyMacroStates: {
         copied: 'Copied',
         partial: 'Copied first 15 lines',

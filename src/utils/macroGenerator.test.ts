@@ -17,7 +17,7 @@ describe('macroGenerator', () => {
       '農夫之智'
     ], defaultSettings);
 
-    expect(result.lines).toContain('/e 請採集 2 次 <se.6> <wait.10>');
+    expect(result.lines).toContain('/e 請採集 2 次，10 秒後巨集將繼續 <se.6> <wait.10>');
     expect(result.isComplete).toBe(true);
   });
 
@@ -80,18 +80,20 @@ describe('macroGenerator', () => {
       '農夫之智',
       '採集(理智觸發)'
     ], defaultSettings, {
-      formatGatherPrompt: ({ count, isFinalRun, hasConditionalGather }) => {
+      formatGatherPrompt: ({ count, isFinalRun, hasConditionalGather, waitSeconds }) => {
         if (isFinalRun) return 'Gather until depleted';
-        if (hasConditionalGather) return `If Wise procs, gather ${count} time(s)`;
-        return `Gather ${count} time(s)`;
+        const message = hasConditionalGather
+          ? `If Wise procs, gather ${count} time(s)`
+          : `Gather ${count} time(s)`;
+        return `${message}. The macro will continue in ${waitSeconds}s`;
       }
     });
 
-    expect(result.lines).toContain('/e Gather 2 time(s) <se.6> <wait.10>');
+    expect(result.lines).toContain('/e Gather 2 time(s). The macro will continue in 10s <se.6> <wait.10>');
     expect(result.lines.at(-1)).toBe('/e Gather until depleted <se.6>');
   });
 
-  it('不輸出超過遊戲巨集 15 行限制', () => {
+  it('超過遊戲巨集 15 行限制時會保留分段內容', () => {
     const result = buildGatheringMacro([
       '敏銳視野',
       '明晰視野',
@@ -112,6 +114,10 @@ describe('macroGenerator', () => {
     ], defaultSettings);
 
     expect(result.lines).toHaveLength(15);
+    expect(result.parts).toHaveLength(2);
+    expect(result.parts[0].lines).toHaveLength(15);
+    expect(result.parts[1].lines.length).toBeGreaterThan(0);
+    expect(result.fullLines).toHaveLength(17);
     expect(result.isComplete).toBe(false);
     expect(result.omittedLineCount).toBeGreaterThan(0);
   });

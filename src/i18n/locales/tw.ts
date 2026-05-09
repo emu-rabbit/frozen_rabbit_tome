@@ -12,7 +12,24 @@ export default {
       gatherCount: '請採集 {count} 次',
       conditionalGatherCount: '若理智同興觸發，請採集 {count} 次',
       finalGather: '請採集到底',
-      finalConditionalGather: '若理智同興觸發，請採集到底'
+      finalConditionalGather: '若理智同興觸發，請採集到底',
+      continueAfterSeconds: '{message}，{seconds} 秒後巨集將繼續'
+    },
+    preview: {
+      kicker: 'FFXIV 採集巨集',
+      title: '預覽採集巨集',
+      close: '關閉巨集預覽',
+      singleTitle: '巨集內容',
+      partTitle: '巨集 #{index}',
+      singleSummary: '這份巨集共 {lines} 行，可直接複製到遊戲中。',
+      splitSummary: '這份巨集共 {lines} 行，已依遊戲 15 行限制拆成 {count} 份。',
+      lineCount: '{count} / 15 行',
+      copySingle: '複製巨集',
+      copyPart: '複製 #{index}',
+      copyStates: {
+        copied: '已複製',
+        failed: '複製失敗'
+      }
     }
   },
   nav: {
@@ -94,7 +111,7 @@ export default {
     strategy: {
       title: '建議採集手法',
       description: '依照目前數值，演算出期望產量最高的手法',
-      copyMacro: '複製巨集',
+      copyMacro: '預覽巨集',
       copyMacroStates: {
         copied: '已複製',
         partial: '已複製前 15 行',
@@ -133,7 +150,7 @@ export default {
     },
     actions: {
       edit: '編輯',
-      copyMacro: '複製巨集',
+      copyMacro: '預覽巨集',
       copyMacroStates: {
         copied: '已複製',
         partial: '已複製前 15 行',

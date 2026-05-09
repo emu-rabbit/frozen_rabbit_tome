@@ -10,7 +10,24 @@ export default {
       gatherCount: '请采集 {count} 次',
       conditionalGatherCount: '若理智同兴触发，请采集 {count} 次',
       finalGather: '请采集到底',
-      finalConditionalGather: '若理智同兴触发，请采集到底'
+      finalConditionalGather: '若理智同兴触发，请采集到底',
+      continueAfterSeconds: '{message}，{seconds} 秒后宏将继续'
+    },
+    preview: {
+      kicker: 'FFXIV 采集宏',
+      title: '预览采集宏',
+      close: '关闭宏预览',
+      singleTitle: '宏内容',
+      partTitle: '宏 #{index}',
+      singleSummary: '这份宏共 {lines} 行，可直接复制到游戏中。',
+      splitSummary: '这份宏共 {lines} 行，已依游戏 15 行限制拆成 {count} 份。',
+      lineCount: '{count} / 15 行',
+      copySingle: '复制宏',
+      copyPart: '复制 #{index}',
+      copyStates: {
+        copied: '已复制',
+        failed: '复制失败'
+      }
     }
   },
   nav: {
@@ -92,7 +109,7 @@ export default {
     strategy: {
       title: '推荐采集手法',
       description: '依照目前数值，演算出期望产量最高的手法',
-      copyMacro: '复制宏',
+      copyMacro: '预览宏',
       copyMacroStates: {
         copied: '已复制',
         partial: '已复制前 15 行',
@@ -131,7 +148,7 @@ export default {
     },
     actions: {
       edit: '编辑',
-      copyMacro: '复制宏',
+      copyMacro: '预览宏',
       copyMacroStates: {
         copied: '已复制',
         partial: '已复制前 15 行',

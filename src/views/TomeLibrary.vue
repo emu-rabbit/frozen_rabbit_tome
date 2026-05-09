@@ -1,21 +1,21 @@
 <script setup lang="ts">
 defineOptions({ name: 'TomeLibrary' });
 
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import type { StoredTome, StoredTomeRotationStep } from '../types/game';
-import { buildGatheringMacroFromStoredRotation } from '../utils/macroGenerator';
-import { copyTextToClipboard } from '../utils/clipboard';
+import { buildGatheringMacroFromStoredRotation, type MacroBuildResult } from '../utils/macroGenerator';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -23,10 +23,8 @@ const { tomes, deleteTome } = useTomeLibrary();
 const { loadTomeForEditing } = useSolver();
 const { macroSettings } = useSettings();
 const searchQuery = ref('');
-const copiedTomeId = ref<string | null>(null);
-const partialTomeId = ref<string | null>(null);
-const failedTomeId = ref<string | null>(null);
-let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
+const isMacroPreviewOpen = ref(false);
+const macroPreview = ref<MacroBuildResult | null>(null);
 
 const filteredTomes = computed(() => {
   currentLanguage.value;
@@ -87,63 +85,41 @@ function handleEdit(tome: StoredTome) {
   router.push('/solver');
 }
 
-async function handleCopyMacro(tome: StoredTome) {
-  const macro = buildGatheringMacroFromStoredRotation(tome.rotation, macroSettings.value, {
+function handlePreviewMacro(tome: StoredTome) {
+  macroPreview.value = buildGatheringMacroFromStoredRotation(tome.rotation, macroSettings.value, {
     resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
     formatGatherPrompt: formatMacroGatherPrompt
   });
-  const copied = await copyTextToClipboard(macro.text);
-
-  copiedTomeId.value = copied && macro.isComplete ? tome.id : null;
-  partialTomeId.value = copied && !macro.isComplete ? tome.id : null;
-  failedTomeId.value = copied ? null : tome.id;
-
-  if (copyTimer) {
-    window.clearTimeout(copyTimer);
-  }
-
-  copyTimer = window.setTimeout(() => {
-    copiedTomeId.value = null;
-    partialTomeId.value = null;
-    failedTomeId.value = null;
-    copyTimer = null;
-  }, 2200);
+  isMacroPreviewOpen.value = true;
 }
 
 function formatMacroGatherPrompt(context: {
   count: number;
   hasConditionalGather: boolean;
   isFinalRun: boolean;
+  waitSeconds: number | null;
 }) {
   if (context.isFinalRun) {
     return t('macro.prompts.finalGather');
   }
 
-  return context.hasConditionalGather
+  const gatherMessage = context.hasConditionalGather
     ? t('macro.prompts.conditionalGatherCount', { count: context.count })
     : t('macro.prompts.gatherCount', { count: context.count });
+
+  return t('macro.prompts.continueAfterSeconds', {
+    message: gatherMessage,
+    seconds: context.waitSeconds ?? 0
+  });
 }
 
-function copyMacroLabel(tome: StoredTome) {
-  if (copiedTomeId.value === tome.id) return t('tomeLibrary.actions.copyMacroStates.copied');
-  if (partialTomeId.value === tome.id) return t('tomeLibrary.actions.copyMacroStates.partial');
-  if (failedTomeId.value === tome.id) return t('tomeLibrary.actions.copyMacroStates.failed');
-
+function copyMacroLabel() {
   return t('tomeLibrary.actions.copyMacro');
 }
 
-function copyMacroIcon(tome: StoredTome) {
-  if (failedTomeId.value === tome.id) return 'pi pi-exclamation-triangle';
-  if (copiedTomeId.value === tome.id || partialTomeId.value === tome.id) return 'pi pi-check';
-
-  return 'pi pi-copy';
+function copyMacroIcon() {
+  return 'pi pi-file-edit';
 }
-
-onBeforeUnmount(() => {
-  if (copyTimer) {
-    window.clearTimeout(copyTimer);
-  }
-});
 </script>
 
 <template>
@@ -247,11 +223,10 @@ onBeforeUnmount(() => {
               @click="handleEdit(tome)"
             />
             <Button
-              :icon="copyMacroIcon(tome)"
-              :label="copyMacroLabel(tome)"
+              :icon="copyMacroIcon()"
+              :label="copyMacroLabel()"
               class="p-button-sm p-button-text library-action"
-              :class="{ 'is-copy-success': copiedTomeId === tome.id, 'is-copy-partial': partialTomeId === tome.id, 'is-copy-failed': failedTomeId === tome.id }"
-              @click="handleCopyMacro(tome)"
+              @click="handlePreviewMacro(tome)"
             />
             <Button
               icon="pi pi-trash"
@@ -263,6 +238,8 @@ onBeforeUnmount(() => {
         </div>
       </article>
     </div>
+
+    <MacroPreviewDialog v-model="isMacroPreviewOpen" :macro="macroPreview" />
   </div>
 </template>
 
@@ -561,31 +538,6 @@ onBeforeUnmount(() => {
 :deep(.library-action) {
   min-height: 2rem;
 }
-:deep(.library-action.is-copy-success) {
-  color: #15803d;
-  background: rgb(220 252 231 / 0.75);
-}
-:global(html.dark .library-action.is-copy-success) {
-  color: #bbf7d0;
-  background: rgb(20 83 45 / 0.22);
-}
-:deep(.library-action.is-copy-partial) {
-  color: #b45309;
-  background: rgb(254 243 199 / 0.8);
-}
-:global(html.dark .library-action.is-copy-partial) {
-  color: #fde68a;
-  background: rgb(120 53 15 / 0.26);
-}
-:deep(.library-action.is-copy-failed) {
-  color: #b91c1c;
-  background: rgb(254 226 226 / 0.8);
-}
-:global(html.dark .library-action.is-copy-failed) {
-  color: #fecaca;
-  background: rgb(127 29 29 / 0.25);
-}
-
 .empty-state {
   display: flex;
   flex-direction: column;

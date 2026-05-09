@@ -41,8 +41,17 @@ const ACTION_IDS_BY_NAME = Object.fromEntries(
 export interface MacroBuildResult {
   text: string;
   lines: string[];
+  fullText: string;
+  fullLines: string[];
+  parts: MacroPart[];
   isComplete: boolean;
   omittedLineCount: number;
+}
+
+export interface MacroPart {
+  index: number;
+  text: string;
+  lines: string[];
 }
 
 export type MacroActionNameResolver = (actionName: string, actionId: number | null) => string;
@@ -50,6 +59,7 @@ export type MacroGatherPromptFormatter = (context: {
   count: number;
   hasConditionalGather: boolean;
   isFinalRun: boolean;
+  waitSeconds: number | null;
 }) => string;
 
 export interface MacroBuildOptions {
@@ -131,9 +141,27 @@ function buildMacroFromSteps(
   return {
     text: limitedLines.join('\n'),
     lines: limitedLines,
+    fullText: lines.join('\n'),
+    fullLines: lines,
+    parts: chunkMacroLines(lines),
     isComplete: lines.length <= MACRO_LINE_LIMIT,
     omittedLineCount: Math.max(0, lines.length - MACRO_LINE_LIMIT)
   };
+}
+
+function chunkMacroLines(lines: string[]): MacroPart[] {
+  const parts: MacroPart[] = [];
+
+  for (let index = 0; index < lines.length; index += MACRO_LINE_LIMIT) {
+    const partLines = lines.slice(index, index + MACRO_LINE_LIMIT);
+    parts.push({
+      index: parts.length + 1,
+      text: partLines.join('\n'),
+      lines: partLines
+    });
+  }
+
+  return parts;
 }
 
 function normalizeSettings(settings: MacroSettings): MacroSettings {
@@ -178,25 +206,33 @@ function buildGatherPromptLine(
   settings: MacroSettings,
   formatGatherPrompt: MacroGatherPromptFormatter | undefined
 ) {
+  const waitSeconds = isFinalRun ? null : calculateGatherWait(count, settings);
   const message = formatGatherPrompt
-    ? formatGatherPrompt({ count, hasConditionalGather, isFinalRun })
-    : defaultGatherPromptMessage(count, hasConditionalGather, isFinalRun);
+    ? formatGatherPrompt({ count, hasConditionalGather, isFinalRun, waitSeconds })
+    : defaultGatherPromptMessage(count, hasConditionalGather, isFinalRun, waitSeconds);
 
   if (isFinalRun) {
     return `/e ${message} <se.${DEFAULT_SOUND_EFFECT}>`;
   }
 
-  return `/e ${message} <se.${DEFAULT_SOUND_EFFECT}> <wait.${calculateGatherWait(count, settings)}>`;
+  return `/e ${message} <se.${DEFAULT_SOUND_EFFECT}> <wait.${waitSeconds}>`;
 }
 
-function defaultGatherPromptMessage(count: number, hasConditionalGather: boolean, isFinalRun: boolean) {
+function defaultGatherPromptMessage(
+  count: number,
+  hasConditionalGather: boolean,
+  isFinalRun: boolean,
+  waitSeconds: number | null
+) {
   if (isFinalRun) {
     return '請採集到底';
   }
 
-  return hasConditionalGather
+  const gatherMessage = hasConditionalGather
     ? `若理智同興觸發，請採集 ${count} 次`
     : `請採集 ${count} 次`;
+
+  return `${gatherMessage}，${waitSeconds} 秒後巨集將繼續`;
 }
 
 function calculateGatherWait(count: number, settings: MacroSettings) {

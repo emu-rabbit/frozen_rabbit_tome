@@ -10,7 +10,24 @@ export default {
       gatherCount: '{count} 回採集してください',
       conditionalGatherCount: '理知興起が発動したら {count} 回採集してください',
       finalGather: '最後まで採集してください',
-      finalConditionalGather: '理知興起が発動したら最後まで採集してください'
+      finalConditionalGather: '理知興起が発動したら最後まで採集してください',
+      continueAfterSeconds: '{message}。{seconds} 秒後にマクロが続行します'
+    },
+    preview: {
+      kicker: 'FFXIV 採集マクロ',
+      title: '採集マクロのプレビュー',
+      close: 'マクロプレビューを閉じる',
+      singleTitle: 'マクロ内容',
+      partTitle: 'マクロ #{index}',
+      singleSummary: 'このマクロは {lines} 行です。そのままゲーム内へコピーできます。',
+      splitSummary: 'このマクロは {lines} 行です。ゲーム内の 15 行制限に合わせて {count} 個に分割しました。',
+      lineCount: '{count} / 15 行',
+      copySingle: 'マクロをコピー',
+      copyPart: '#{index} をコピー',
+      copyStates: {
+        copied: 'コピー済み',
+        failed: 'コピー失敗'
+      }
     }
   },
   nav: {
@@ -92,7 +109,7 @@ export default {
     strategy: {
       title: 'おすすめ採集手順',
       description: '現在の数値から期待獲得数が最大の手順を計算します。',
-      copyMacro: 'マクロをコピー',
+      copyMacro: 'マクロを確認',
       copyMacroStates: {
         copied: 'コピーしました',
         partial: '先頭 15 行をコピー',
@@ -131,7 +148,7 @@ export default {
     },
     actions: {
       edit: '編集',
-      copyMacro: 'マクロをコピー',
+      copyMacro: 'マクロを確認',
       copyMacroStates: {
         copied: 'コピーしました',
         partial: '先頭 15 行をコピー',
