@@ -14,7 +14,12 @@ interface SearchState {
   integrity: number;
   hasGathered: boolean;
   successBonus: number;
+  successIActive: boolean;
+  successIIActive: boolean;
+  successIIIActive: boolean;
   boonBonus: number;
+  giftIActive: boolean;
+  giftIIActive: boolean;
   allYieldBonus: number;
   tidings: boolean;
   nextSuccessBonus: number;
@@ -67,7 +72,12 @@ function buildMemoKey(state: SearchState): string {
     state.integrity,
     state.hasGathered ? 1 : 0,
     state.successBonus,
+    state.successIActive ? 1 : 0,
+    state.successIIActive ? 1 : 0,
+    state.successIIIActive ? 1 : 0,
     state.boonBonus,
+    state.giftIActive ? 1 : 0,
+    state.giftIIActive ? 1 : 0,
     state.allYieldBonus,
     state.tidings ? 1 : 0,
     state.nextSuccessBonus,
@@ -157,11 +167,19 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     const actions: ActionOption[] = [];
     const wholeNodeBuffAllowed = !state.hasGathered;
 
-    if (wholeNodeBuffAllowed && canRaiseSuccess && state.successBonus === 0) {
+    if (
+      wholeNodeBuffAllowed &&
+      canRaiseSuccess &&
+      baseSuccessRate + state.successBonus < SUCCESS_CAP
+    ) {
       addSuccessActions(actions, state);
     }
 
-    if (wholeNodeBuffAllowed && canRaiseBoon && state.boonBonus === 0) {
+    if (
+      wholeNodeBuffAllowed &&
+      canRaiseBoon &&
+      baseBoonChance + nodeBonuses.extraRate + state.boonBonus < BOON_CAP
+    ) {
       addBoonActions(actions, state);
     }
 
@@ -211,26 +229,41 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   function addSuccessActions(actions: ActionOption[], state: SearchState) {
-    if (stats.level >= 10 && state.gp >= 250) {
-      actions.push(setBuffAction(names.successIII, 10, 250, { successBonus: 50 }));
+    if (stats.level >= 10 && state.gp >= 250 && !state.successIIIActive) {
+      actions.push(setBuffAction(names.successIII, 10, 250, {
+        successBonus: state.successBonus + 50,
+        successIIIActive: true
+      }));
     }
 
-    if (stats.level >= 5 && state.gp >= 100) {
-      actions.push(setBuffAction(names.successII, 11, 100, { successBonus: 15 }));
+    if (stats.level >= 5 && state.gp >= 100 && !state.successIIActive) {
+      actions.push(setBuffAction(names.successII, 11, 100, {
+        successBonus: state.successBonus + 15,
+        successIIActive: true
+      }));
     }
 
-    if (stats.level >= 4 && state.gp >= 50) {
-      actions.push(setBuffAction(names.successI, 12, 50, { successBonus: 5 }));
+    if (stats.level >= 4 && state.gp >= 50 && !state.successIActive) {
+      actions.push(setBuffAction(names.successI, 12, 50, {
+        successBonus: state.successBonus + 5,
+        successIActive: true
+      }));
     }
   }
 
   function addBoonActions(actions: ActionOption[], state: SearchState) {
-    if (stats.level >= 50 && state.gp >= 100) {
-      actions.push(setBuffAction(names.giftII, 20, 100, { boonBonus: 30 }));
+    if (stats.level >= 50 && state.gp >= 100 && !state.giftIIActive) {
+      actions.push(setBuffAction(names.giftII, 20, 100, {
+        boonBonus: state.boonBonus + 30,
+        giftIIActive: true
+      }));
     }
 
-    if (stats.level >= 15 && state.gp >= 50) {
-      actions.push(setBuffAction(names.giftI, 21, 50, { boonBonus: 10 }));
+    if (stats.level >= 15 && state.gp >= 50 && !state.giftIActive) {
+      actions.push(setBuffAction(names.giftI, 21, 50, {
+        boonBonus: state.boonBonus + 10,
+        giftIActive: true
+      }));
     }
   }
 
@@ -429,12 +462,17 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   function comboPreferenceScore(rotation: string[]): number {
-    const giftIndex = rotation.findIndex((action) => action === names.giftI || action === names.giftII);
+    const giftIndexes = rotation
+      .map((action, index) => action === names.giftI || action === names.giftII ? index : -1)
+      .filter((index) => index !== -1);
     const tidingsIndex = rotation.indexOf(names.tidings);
 
-    if (giftIndex === -1 || tidingsIndex === -1) return 0;
-    if (tidingsIndex === giftIndex + 1) return 500;
-    if (giftIndex < tidingsIndex) return 100;
+    if (giftIndexes.length === 0 || tidingsIndex === -1) return 0;
+
+    const lastGiftIndex = giftIndexes[giftIndexes.length - 1];
+
+    if (tidingsIndex === lastGiftIndex + 1) return 500;
+    if (lastGiftIndex < tidingsIndex) return 100;
 
     return -100;
   }
@@ -444,7 +482,12 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     integrity: maxIntegrity,
     hasGathered: false,
     successBonus: 0,
+    successIActive: false,
+    successIIActive: false,
+    successIIIActive: false,
     boonBonus: 0,
+    giftIActive: false,
+    giftIIActive: false,
     allYieldBonus: 0,
     tidings: false,
     nextSuccessBonus: 0,

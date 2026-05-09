@@ -28,22 +28,30 @@ function createRequest(overrides: Partial<SolverRequest> = {}): SolverRequest {
 }
 
 describe('solveGatheringRotation', () => {
-  it('不會疊加敏銳視野系列', () => {
+  it('會疊加不同階的敏銳視野系列，但不會重複同一技能', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {
-        level: 100,
-        gathering: 700,
+        level: 10,
+        gathering: 280,
         perception: 1000,
         gp: 400
+      },
+      itemLevel: 10,
+      nodeBonuses: {
+        baseIntegrity: 20,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
       },
       temporaryGp: 400
     }));
 
     const successBuffs = result.bestRotation.filter((action) => action.startsWith('敏銳視野'));
-    expect(successBuffs.length).toBeLessThanOrEqual(1);
+    expect(successBuffs).toEqual(expect.arrayContaining(['敏銳視野', '敏銳視野II', '敏銳視野III']));
+    expect(new Set(successBuffs).size).toBe(successBuffs.length);
   });
 
-  it('不會疊加富礦的饋贈 I 與 II', () => {
+  it('會疊加富礦的饋贈 I 與 II，但不會重複同一技能', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {
         level: 100,
@@ -51,11 +59,18 @@ describe('solveGatheringRotation', () => {
         perception: 800,
         gp: 150
       },
+      nodeBonuses: {
+        baseIntegrity: 20,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
       temporaryGp: 150
     }));
 
     const giftBuffs = result.bestRotation.filter((action) => action.startsWith('富礦的饋贈'));
-    expect(giftBuffs.length).toBeLessThanOrEqual(1);
+    expect(giftBuffs).toEqual(expect.arrayContaining(['富礦的饋贈I', '富礦的饋贈II']));
+    expect(new Set(giftBuffs).size).toBe(giftBuffs.length);
   });
 
   it('90 級以上會在耐久缺 2 點後把理智同興視為 0 GP 條件動作', () => {
@@ -136,11 +151,13 @@ describe('solveGatheringRotation', () => {
       temporaryGp: 300
     }));
 
-    const giftIndex = result.bestRotation.findIndex((action) => action.startsWith('富礦的饋贈'));
+    const giftIndexes = result.bestRotation
+      .map((action, index) => action.startsWith('富礦的饋贈') ? index : -1)
+      .filter((index) => index !== -1);
     const tidingsIndex = result.bestRotation.indexOf('納爾札爾福音');
 
-    expect(giftIndex).toBeGreaterThanOrEqual(0);
-    expect(tidingsIndex).toBe(giftIndex + 1);
+    expect(giftIndexes.length).toBeGreaterThan(0);
+    expect(tidingsIndex).toBe(giftIndexes[giftIndexes.length - 1] + 1);
   });
 
   it('等價時會優先施放全域技能，再施放下一次採集技能', () => {
@@ -161,12 +178,15 @@ describe('solveGatheringRotation', () => {
       jobType: 'botanist'
     }));
 
-    const giftIndex = result.bestRotation.indexOf('沃土的饋贈II');
     const tidingsIndex = result.bestRotation.indexOf('諾菲卡福音');
     const bountifulIndex = result.bestRotation.indexOf('豐收II');
 
-    expect(giftIndex).toBeGreaterThanOrEqual(0);
-    expect(tidingsIndex).toBe(giftIndex + 1);
+    const giftIndexes = result.bestRotation
+      .map((action, index) => action.startsWith('沃土的饋贈') ? index : -1)
+      .filter((index) => index !== -1);
+
+    expect(giftIndexes.length).toBeGreaterThan(0);
+    expect(tidingsIndex).toBe(giftIndexes[giftIndexes.length - 1] + 1);
     expect(bountifulIndex).toBeGreaterThan(tidingsIndex);
   });
 });
