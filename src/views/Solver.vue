@@ -80,8 +80,31 @@ const selectedFoodModel = computed<FoodOption | null>({
 const displayedRotationPlans = computed(() => rotationResult.value?.rotationPlans?.length
   ? rotationResult.value.rotationPlans
   : rotationResult.value
-    ? [{ kind: 'primary', rotation: rotationResult.value.bestRotation, expectedYield: rotationResult.value.expectedYield } as SolverRotationPlan]
+    ? [{
+        kind: 'primary',
+        rotation: rotationResult.value.bestRotation,
+        expectedYield: rotationResult.value.expectedYield,
+        minYield: rotationResult.value.minYield,
+        maxYield: rotationResult.value.maxYield
+      } as SolverRotationPlan]
     : []);
+
+const maxYieldDisplay = computed(() => {
+  if (!rotationResult.value?.revisit.enabled) return rotationResult.value?.maxYield ?? 0;
+
+  const plans = displayedRotationPlans.value;
+  if (plans.length === 1) {
+    return `${plans[0].maxYield}+${plans[0].maxYield}`;
+  }
+
+  const primaryPlan = plans.find((plan) => plan.kind === 'primary');
+  const revisitPlan = plans.find((plan) => plan.kind === 'revisit');
+  if (!primaryPlan || !revisitPlan) return rotationResult.value.maxYield;
+
+  return `${primaryPlan.maxYield}+${revisitPlan.maxYield}`;
+});
+
+const minYieldDisplay = computed(() => rotationResult.value?.minYield ?? 0);
 
 const hasUnsavedStats = computed(() => {
   const job = activeItem.value?.jobType;
@@ -597,14 +620,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.maxYield') }}</span>
               <div class="mt-1 flex items-end gap-1">
-                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ rotationResult.maxYield }}</span>
+                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ maxYieldDisplay }}</span>
                 <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ t('game.units.count') }}</span>
               </div>
             </div>
             <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.minYield') }}</span>
               <div class="mt-1 flex items-end gap-1">
-                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ rotationResult.minYield }}</span>
+                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ minYieldDisplay }}</span>
                 <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ t('game.units.count') }}</span>
               </div>
             </div>

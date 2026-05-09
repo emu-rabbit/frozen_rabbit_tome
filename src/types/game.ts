@@ -119,6 +119,8 @@ export interface SolverRotationPlan {
   kind: SolverRotationPlanKind;
   rotation: string[];
   expectedYield: number;
+  minYield: number;
+  maxYield: number;
 }
 
 export interface SolverRevisitInfo {

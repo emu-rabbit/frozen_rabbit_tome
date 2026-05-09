@@ -508,10 +508,28 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   const fullGpSummary = summarizeOutcomes(fullGpResult.outcomes);
   const expectedYield = initial.expectedYield + revisitChance * fullGpResult.expectedYield;
   const rotationPlans = isFullGp || !revisitEnabled
-    ? [{ kind: 'primary' as const, rotation: initial.rotation, expectedYield: initial.expectedYield }]
+    ? [{
+        kind: 'primary' as const,
+        rotation: initial.rotation,
+        expectedYield: initial.expectedYield,
+        minYield: initialSummary.minYield,
+        maxYield: initialSummary.maxYield
+      }]
     : [
-        { kind: 'primary' as const, rotation: initial.rotation, expectedYield: initial.expectedYield },
-        { kind: 'revisit' as const, rotation: fullGpResult.rotation, expectedYield: fullGpResult.expectedYield }
+        {
+          kind: 'primary' as const,
+          rotation: initial.rotation,
+          expectedYield: initial.expectedYield,
+          minYield: initialSummary.minYield,
+          maxYield: initialSummary.maxYield
+        },
+        {
+          kind: 'revisit' as const,
+          rotation: fullGpResult.rotation,
+          expectedYield: fullGpResult.expectedYield,
+          minYield: fullGpSummary.minYield,
+          maxYield: fullGpSummary.maxYield
+        }
       ];
 
   return {
