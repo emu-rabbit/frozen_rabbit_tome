@@ -77,6 +77,21 @@ export default {
       gatheringCount: '採集次數增加',
       yieldCount: '獲得數增加',
       extraRate: '額外率增加'
+    },
+    strategy: {
+      title: '建議採集手法',
+      description: '依照目前數值，演算出期望產量最高的手法',
+      copyMacro: '複製巨集',
+      saveTome: '儲存秘笈',
+      solve: '求解',
+      expectedYield: '期望總產量',
+      maxYield: '最高產量',
+      minYield: '最低產量',
+      rotationOrder: '手法順序',
+      empty: '點擊上方按鈕開始計算建議手法',
+      gatherAction: '採集',
+      conditionalSuffix: '（若觸發）',
+      conditionalGatherSuffix: '（同興觸發）'
     }
   },
   game: {

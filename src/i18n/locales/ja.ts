@@ -75,6 +75,21 @@ export default {
       gatheringCount: '採集回数増加',
       yieldCount: '獲得数増加',
       extraRate: '特殊採集発生率増加'
+    },
+    strategy: {
+      title: 'おすすめ採集手順',
+      description: '現在の数値から期待獲得数が最大の手順を計算します。',
+      copyMacro: 'マクロをコピー',
+      saveTome: '秘伝書を保存',
+      solve: '計算',
+      expectedYield: '期待総獲得数',
+      maxYield: '最大獲得数',
+      minYield: '最小獲得数',
+      rotationOrder: '手順',
+      empty: '上のボタンを押しておすすめ手順を計算します',
+      gatherAction: '採集',
+      conditionalSuffix: '（発動時）',
+      conditionalGatherSuffix: '（理知発動）'
     }
   },
   game: {

@@ -17,15 +17,27 @@ const DICT_URLS: Record<string, string> = {
 
 const ENGLISH_URL = `${BASE_URL}/items.json`;
 const ICONS_URL = `${BASE_URL}/item-icons.json`;
+const ACTIONS_URL = `${BASE_URL}/actions.json`;
+const ACTION_ICONS_URL = `${BASE_URL}/action-icons.json`;
 const XIVAPI_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringItem.csv';
 const GATHERING_POINT_BASE_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPointBase.csv';
 const GATHERING_POINT_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPoint.csv';
+const ACTION_DICT_URLS: Record<string, string> = {
+  tw: `${BASE_URL}/tw/tw-actions.json`,
+  zh: `${BASE_URL}/zh/zh-actions.json`,
+  cn: `${BASE_URL}/zh/zh-actions.json`,
+  en: ACTIONS_URL,
+  ja: ACTIONS_URL,
+};
 
 // ─── Module-level Singleton Cache ──────────────────────────────────────────
 
 let rawEnglishNames: Record<string, any> = {};
 let rawTargetNames: Record<string, any> = {};
+let rawEnglishActionNames: Record<string, any> = {};
+let rawTargetActionNames: Record<string, any> = {};
 let rawIcons: Record<string, string> = {};
+let rawActionIcons: Record<string, string | number | { icon?: string | number; Icon?: string | number }> = {};
 let itemInfoMap = new Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number; gatheringItemId: number }>();
 let rawItemLevels: Record<string, any> = {};
 let rawGatheringItems: Record<string, any> = {};
@@ -39,6 +51,11 @@ let staticDataLoaded = false;
 let staticLoadPromise: Promise<void> | null = null;
 let langLoadPromise: Promise<void> | null = null;
 export const isGameDataLoading = ref(false);
+
+const SOLVER_ACTION_IDS = new Set([
+  215, 218, 220, 222, 224, 232, 235, 237, 239, 241, 272, 273, 294, 295, 4072, 4073, 4086, 4087,
+  21177, 21178, 21203, 21204, 25589, 25590, 26521
+]);
 
 // ─── 輔助解析函數 ────────────────────────────────────────────────────────────
 
@@ -55,6 +72,32 @@ function extractName(entry: any, lang: string): string {
 function cleanInt(val: string): number {
   if (!val) return 0;
   return parseInt(val.replace(/"/g, '').trim(), 10) || 0;
+}
+
+function actionLangKey(lang: string): string {
+  if (lang === 'cn') return 'zh';
+  return lang;
+}
+
+function pickActionEntries(actions: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(actions).filter(([actionId]) => SOLVER_ACTION_IDS.has(Number(actionId)))
+  );
+}
+
+function iconIdToPath(iconId: number): string {
+  const filename = iconId.toString().padStart(6, '0');
+  const folder = `${filename.slice(0, 3)}000`;
+  return `/i/${folder}/${filename}.png`;
+}
+
+function resolveIconPath(icon: string | number | { icon?: string | number; Icon?: string | number } | undefined): string {
+  const iconValue = typeof icon === 'object' ? icon.icon ?? icon.Icon : icon;
+  if (typeof iconValue === 'number') return iconIdToPath(iconValue);
+  if (typeof iconValue !== 'string') return '';
+  if (iconValue.startsWith('/i/')) return iconValue;
+  const iconId = Number(iconValue);
+  return Number.isFinite(iconId) ? iconIdToPath(iconId) : iconValue;
 }
 
 /** 1. 解析 GatheringItem.csv (ItemID -> GatheringItemID) */
@@ -142,8 +185,9 @@ async function loadStaticData(): Promise<void> {
   staticLoadPromise = (async () => {
     try {
       console.log('[GameData] Loading assets and tracing CSV path...');
-      const [iconsRes, gItemRes, gPointRes, gPointBaseRes, searchRes, levelRes, gItemsJsonRes] = await Promise.all([
+      const [iconsRes, actionIconsRes, gItemRes, gPointRes, gPointBaseRes, searchRes, levelRes, gItemsJsonRes] = await Promise.all([
         fetch(ICONS_URL),
+        fetch(ACTION_ICONS_URL),
         fetch(XIVAPI_CSV_URL),
         fetch(GATHERING_POINT_CSV_URL),
         fetch(GATHERING_POINT_BASE_CSV_URL),
@@ -153,6 +197,12 @@ async function loadStaticData(): Promise<void> {
       ]);
 
       if (iconsRes.ok) rawIcons = await iconsRes.json();
+      if (actionIconsRes.ok) {
+        const actionIcons = await actionIconsRes.json();
+        rawActionIcons = Object.fromEntries(
+          Object.entries(actionIcons).filter(([actionId]) => SOLVER_ACTION_IDS.has(Number(actionId)))
+        ) as typeof rawActionIcons;
+      }
       if (searchRes.ok) rawGatheringSearchIndex = await searchRes.json();
       if (levelRes.ok) rawItemLevels = await levelRes.json();
       if (gItemsJsonRes.ok) rawGatheringItems = await gItemsJsonRes.json();
@@ -195,11 +245,25 @@ async function loadLangData(lang: string): Promise<void> {
   langLoadPromise = (async () => {
     try {
       const dictUrl = DICT_URLS[lang] || DICT_URLS.tw;
+      const actionDictUrl = ACTION_DICT_URLS[lang] || ACTION_DICT_URLS.tw;
       const needsEnglish = lang !== 'en' && Object.keys(rawEnglishNames).length === 0;
-      const results = await Promise.all([fetch(dictUrl), ...(needsEnglish ? [fetch(ENGLISH_URL)] : [])]);
+      const needsEnglishActions = Object.keys(rawEnglishActionNames).length === 0;
+      const results = await Promise.all([
+        fetch(dictUrl),
+        fetch(actionDictUrl),
+        ...(needsEnglish ? [fetch(ENGLISH_URL)] : []),
+        ...(needsEnglishActions ? [fetch(ACTIONS_URL)] : [])
+      ]);
       if (results[0].ok) rawTargetNames = await results[0].json();
-      if (needsEnglish && results[1]?.ok) rawEnglishNames = await results[1].json();
+      if (results[1].ok) rawTargetActionNames = pickActionEntries(await results[1].json());
+      const englishResultIndex = 2;
+      const englishActionsResultIndex = englishResultIndex + (needsEnglish ? 1 : 0);
+      if (needsEnglish && results[englishResultIndex]?.ok) rawEnglishNames = await results[englishResultIndex].json();
       else if (lang === 'en') rawEnglishNames = rawTargetNames;
+      if (needsEnglishActions && results[englishActionsResultIndex]?.ok) {
+        rawEnglishActionNames = pickActionEntries(await results[englishActionsResultIndex].json());
+      }
+      if (lang === 'en') rawEnglishActionNames = rawTargetActionNames;
       currentLanguage.value = lang;
     } finally {
       langLoadPromise = null;
@@ -269,6 +333,19 @@ export function getItemEnglishName(itemId: number): string {
 export function getItemIcon(itemId: number): string {
   const path = rawIcons[itemId.toString()];
   return path ? `https://xivapi.com${path}` : '';
+}
+
+export function getActionIcon(actionId: number): string {
+  const path = resolveIconPath(rawActionIcons[actionId.toString()]);
+  return path ? `https://xivapi.com${path}` : '';
+}
+
+export function getActionName(actionId: number): string {
+  const id = actionId.toString();
+  const lang = actionLangKey(currentLanguage.value);
+  const targetName = extractName(rawTargetActionNames[id], lang);
+  const englishName = extractName(rawEnglishActionNames[id], 'en');
+  return targetName || englishName || `Action #${actionId}`;
 }
 
 export function getItemLevelData() { return rawItemLevels; }

@@ -6,6 +6,7 @@ type JobType = SolverRequest['jobType'];
 interface SolverResult {
   expectedYield: number;
   rotation: string[];
+  outcomes: Map<number, number>;
 }
 
 interface SearchState {
@@ -29,6 +30,9 @@ interface ActionOption {
 const BOON_CAP = 100;
 const SUCCESS_CAP = 100;
 const EV_EPSILON = 0.0000001;
+const GATHER_ACTION = '採集';
+const WISE_TO_THE_WORLD_ACTION = '理智同興(若觸發)';
+const WISE_PROC_GATHER_ACTION = '採集(理智觸發)';
 
 function actionNames(jobType: JobType) {
   const isMiner = jobType === 'miner';
@@ -91,7 +95,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
 
   function solve(state: SearchState): SolverResult {
     if (state.integrity <= 0) {
-      return { expectedYield: 0, rotation: [] };
+      return { expectedYield: 0, rotation: [], outcomes: new Map([[0, 1]]) };
     }
 
     const memoKey = buildMemoKey(state);
@@ -105,7 +109,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       const result = action.apply(state, solve);
       const candidate = {
         expectedYield: result.expectedYield,
-        rotation: [action.name, ...result.rotation]
+        rotation: [action.name, ...result.rotation],
+        outcomes: result.outcomes
       };
 
       if (isPreferredResult(candidate, best)) {
@@ -128,7 +133,6 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     ) / 100;
     const baseYield = 1 + nodeBonuses.yieldCount + state.allYieldBonus + state.nextYieldBonus;
     const boonYield = 1 + (state.tidings ? 1 : 0);
-    const currentYield = successRate * (baseYield + boonChance * boonYield);
     const next = solve({
       ...state,
       gp: Math.min(stats.gp, state.gp + gatherGp),
@@ -137,10 +141,15 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       nextSuccessBonus: 0,
       nextYieldBonus: 0
     });
+    const outcomes = new Map<number, number>();
+    addShiftedOutcomes(outcomes, next.outcomes, 0, 1 - successRate);
+    addShiftedOutcomes(outcomes, next.outcomes, baseYield, successRate * (1 - boonChance));
+    addShiftedOutcomes(outcomes, next.outcomes, baseYield + boonYield, successRate * boonChance);
 
     return {
-      expectedYield: currentYield + next.expectedYield,
-      rotation: ['採集', ...next.rotation]
+      expectedYield: expectedValue(outcomes),
+      rotation: [GATHER_ACTION, ...next.rotation],
+      outcomes
     };
   }
 
@@ -245,11 +254,20 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
             ...afterRestore,
             integrity: afterRestore.integrity + 1
           });
-          const preferredBranch = proc.expectedYield >= noProc.expectedYield ? proc : noProc;
+          const preferredBranch = proc.expectedYield >= noProc.expectedYield
+            ? {
+                ...proc,
+                rotation: markWiseProcGathers(proc.rotation, countGatherActions(proc.rotation) - countGatherActions(noProc.rotation))
+              }
+            : noProc;
 
           return {
             expectedYield: noProc.expectedYield * 0.5 + proc.expectedYield * 0.5,
-            rotation: ['理智同興(若觸發)', ...preferredBranch.rotation]
+            rotation: [WISE_TO_THE_WORLD_ACTION, ...preferredBranch.rotation],
+            outcomes: mergeWeightedOutcomes([
+              { outcomes: noProc.outcomes, weight: 0.5 },
+              { outcomes: proc.outcomes, weight: 0.5 }
+            ])
           };
         }
       });
@@ -293,9 +311,80 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return rotationPreferenceScore(candidate.rotation) > rotationPreferenceScore(current.rotation);
   }
 
+  function addShiftedOutcomes(
+    target: Map<number, number>,
+    source: Map<number, number>,
+    yieldDelta: number,
+    probability: number
+  ) {
+    if (probability <= 0) return;
+
+    source.forEach((sourceProbability, totalYield) => {
+      const nextYield = totalYield + yieldDelta;
+      target.set(nextYield, (target.get(nextYield) ?? 0) + sourceProbability * probability);
+    });
+  }
+
+  function mergeWeightedOutcomes(parts: Array<{ outcomes: Map<number, number>; weight: number }>) {
+    const outcomes = new Map<number, number>();
+
+    parts.forEach((part) => {
+      part.outcomes.forEach((probability, totalYield) => {
+        outcomes.set(totalYield, (outcomes.get(totalYield) ?? 0) + probability * part.weight);
+      });
+    });
+
+    return outcomes;
+  }
+
+  function expectedValue(outcomes: Map<number, number>): number {
+    let total = 0;
+    outcomes.forEach((probability, totalYield) => {
+      total += totalYield * probability;
+    });
+    return total;
+  }
+
+  function summarizeOutcomes(outcomes: Map<number, number>) {
+    const yields = [...outcomes.keys()].sort((a, b) => a - b);
+    const minYield = yields[0] ?? 0;
+    const maxYield = yields[yields.length - 1] ?? 0;
+
+    return {
+      minYield,
+      maxYield,
+      minYieldChance: Number(((outcomes.get(minYield) ?? 0) * 100).toFixed(2)),
+      maxYieldChance: Number(((outcomes.get(maxYield) ?? 0) * 100).toFixed(2))
+    };
+  }
+
+  function countGatherActions(rotation: string[]): number {
+    return rotation.filter(isGatherAction).length;
+  }
+
+  function isGatherAction(action: string): boolean {
+    return action.startsWith(GATHER_ACTION);
+  }
+
+  function markWiseProcGathers(rotation: string[], extraGatherCount: number): string[] {
+    if (extraGatherCount <= 0) return rotation;
+
+    let remaining = extraGatherCount;
+    const markedRotation = [...rotation];
+
+    for (let index = markedRotation.length - 1; index >= 0 && remaining > 0; index -= 1) {
+      if (markedRotation[index] !== GATHER_ACTION) continue;
+
+      markedRotation[index] = WISE_PROC_GATHER_ACTION;
+      remaining -= 1;
+    }
+
+    return markedRotation;
+  }
+
   function rotationPreferenceScore(rotation: string[]): number {
     let score = 0;
-    const firstGatherIndex = rotation.indexOf('採集');
+    const firstGatherIndex = rotation.findIndex(isGatherAction);
     const effectiveFirstGatherIndex = firstGatherIndex === -1 ? rotation.length : firstGatherIndex;
 
     score += effectiveFirstGatherIndex;
@@ -361,10 +450,12 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     nextSuccessBonus: 0,
     nextYieldBonus: 0
   });
+  const outcomeSummary = summarizeOutcomes(initial.outcomes);
 
   return {
     bestRotation: initial.rotation,
     expectedYield: Number(initial.expectedYield.toFixed(2)),
+    ...outcomeSummary,
     calculationTime: 0
   };
 }

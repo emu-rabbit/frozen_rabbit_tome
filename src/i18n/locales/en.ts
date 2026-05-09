@@ -75,6 +75,21 @@ export default {
       gatheringCount: 'Durability +',
       yieldCount: 'Yield +',
       extraRate: 'Extra Rate +',
+    },
+    strategy: {
+      title: 'Recommended Rotation',
+      description: 'Solves the highest expected-yield rotation from your current values.',
+      copyMacro: 'Copy Macro',
+      saveTome: 'Save Tome',
+      solve: 'Solve It',
+      expectedYield: 'Expected Yield',
+      maxYield: 'Maximum Yield',
+      minYield: 'Minimum Yield',
+      rotationOrder: 'Rotation Order',
+      empty: 'Click the button above to calculate a recommended rotation',
+      gatherAction: 'Gather',
+      conditionalSuffix: ' (if triggered)',
+      conditionalGatherSuffix: ' (Wise proc)'
     }
   },
   game: {

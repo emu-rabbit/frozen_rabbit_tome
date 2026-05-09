@@ -107,5 +107,9 @@ export interface SolverRequest {
 export interface SolverResponse {
   bestRotation: string[];
   expectedYield: number;
+  minYield: number;
+  maxYield: number;
+  minYieldChance: number;
+  maxYieldChance: number;
   calculationTime: number;
 }

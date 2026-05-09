@@ -77,9 +77,11 @@ describe('solveGatheringRotation', () => {
 
     const restoreIndex = result.bestRotation.indexOf('石工之理');
     const wiseIndex = result.bestRotation.indexOf('理智同興(若觸發)');
+    const wiseProcGatherIndex = result.bestRotation.indexOf('採集(理智觸發)');
 
     expect(restoreIndex).toBeGreaterThan(1);
     expect(wiseIndex).toBe(restoreIndex + 1);
+    expect(wiseProcGatherIndex).toBeGreaterThan(wiseIndex);
   });
 
   it('莫非王土系列只會選擇一種整點獲得量加成', () => {

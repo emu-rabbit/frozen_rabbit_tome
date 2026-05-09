@@ -8,6 +8,10 @@ self.onmessage = (e: MessageEvent<SolverRequest>) => {
   self.postMessage({
     bestRotation: result.bestRotation,
     expectedYield: Number(result.expectedYield.toFixed(2)),
+    minYield: result.minYield,
+    maxYield: result.maxYield,
+    minYieldChance: result.minYieldChance,
+    maxYieldChance: result.maxYieldChance,
     calculationTime: Math.floor(performance.now() - startTime)
   } as SolverResponse);
 };

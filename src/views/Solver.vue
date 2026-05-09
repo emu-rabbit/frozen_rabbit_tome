@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { useSolver } from '../composables/useSolver';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getItemEnglishName, getItemName } from '../services/gameData';
+import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import type { FoodQuality, GatheringFood } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
@@ -121,6 +122,23 @@ watch(userStats, () => {
 function handleSync() {
   saveToSettings();
   // 這裡可以加入提示
+}
+
+function actionIcon(action: string) {
+  return getRotationActionIcon(action, activeItem.value?.iconUrl ?? '');
+}
+
+function actionName(action: string) {
+  return getRotationActionName(
+    action,
+    t('solver.strategy.gatherAction'),
+    t('solver.strategy.conditionalSuffix'),
+    t('solver.strategy.conditionalGatherSuffix')
+  );
+}
+
+function formatChance(value: number) {
+  return `${value.toFixed(2)}%`;
 }
 </script>
 
@@ -374,49 +392,81 @@ function handleSync() {
       </div>
 
       <!-- 策略演算區 -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm animate-page-in" style="animation-delay: 0.2s;">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm animate-page-in overflow-hidden" style="animation-delay: 0.2s;">
+        <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5 mb-8">
           <div class="flex flex-col gap-1 text-center sm:text-left">
             <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center sm:justify-start gap-2">
               <i class="pi pi-bolt text-amber-500"></i>
-              最佳採集策略演算
+              {{ t('solver.strategy.title') }}
             </h3>
-            <p class="text-sm text-slate-500">基於演算開始 GP 與屬性，由背景 Worker 進行窮舉演算</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('solver.strategy.description') }}</p>
           </div>
-          <Button 
-            label="開始演算" 
-            icon="pi pi-play" 
-            class="p-button-primary p-button-lg rounded-2xl px-8 shadow-md"
-            :loading="isSolving"
-            @click="solve"
-          />
+          <div class="solver-action-bar">
+            <Button
+              :label="t('solver.strategy.copyMacro')"
+              icon="pi pi-copy"
+              class="solver-action-button p-button-outlined rounded-xl"
+              disabled
+            />
+            <Button
+              :label="t('solver.strategy.saveTome')"
+              icon="pi pi-bookmark"
+              class="solver-action-button p-button-outlined rounded-xl"
+              disabled
+            />
+            <Button
+              :label="t('solver.strategy.solve')"
+              icon="pi pi-play"
+              class="solver-action-button p-button-primary rounded-xl shadow-md"
+              :loading="isSolving"
+              @click="solve"
+            />
+          </div>
         </div>
 
         <!-- 演算結果 -->
         <div v-if="rotationResult" class="space-y-6">
-          <div class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">建議手法順序</p>
-            <div class="flex flex-wrap items-center gap-2">
-              <template v-for="(action, index) in rotationResult.bestRotation" :key="index">
-                <span 
-                  class="px-4 py-2 rounded-xl text-sm font-bold shadow-sm"
-                  :class="action === '採集' ? 'bg-white dark:bg-slate-800 text-slate-600 border border-slate-200 dark:border-slate-700' : 'bg-soft-green-500 text-white'"
-                >
-                  {{ action }}
-                </span>
-                <i v-if="index < rotationResult.bestRotation.length - 1" class="pi pi-angle-right text-slate-300"></i>
-              </template>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-4 bg-soft-green-50 dark:bg-soft-green-900/20 rounded-xl border border-soft-green-100 dark:border-soft-green-800/40">
+              <span class="text-xs font-bold text-soft-green-700 dark:text-soft-green-300 uppercase tracking-widest">{{ t('solver.strategy.expectedYield') }}</span>
+              <div class="mt-1 flex items-end gap-1">
+                <span class="text-3xl font-black text-soft-green-800 dark:text-soft-green-200">{{ rotationResult.expectedYield }}</span>
+                <span class="pb-1 text-xs font-bold text-soft-green-600 dark:text-soft-green-300">{{ t('game.units.count') }}</span>
+              </div>
+            </div>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.maxYield') }}</span>
+              <div class="mt-1 flex items-end justify-between gap-3">
+                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ rotationResult.maxYield }}</span>
+                <span class="pb-1 text-xs font-bold text-amber-600 dark:text-amber-300">{{ formatChance(rotationResult.maxYieldChance) }}</span>
+              </div>
+            </div>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.minYield') }}</span>
+              <div class="mt-1 flex items-end justify-between gap-3">
+                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ rotationResult.minYield }}</span>
+                <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ formatChance(rotationResult.minYieldChance) }}</span>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div class="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800/30 flex flex-col items-center justify-center">
-              <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">預估總產量 (EV)</span>
-              <span class="text-2xl font-black text-emerald-700 dark:text-emerald-300">{{ rotationResult.expectedYield }}</span>
-            </div>
-            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col items-center justify-center">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">演算耗時</span>
-              <span class="text-2xl font-black text-slate-600 dark:text-slate-400">{{ rotationResult.calculationTime }}<span class="text-xs ml-1">ms</span></span>
+          <div class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{{ t('solver.strategy.rotationOrder') }}</p>
+            <div class="flex flex-wrap items-center gap-2.5">
+              <template v-for="(action, index) in rotationResult.bestRotation" :key="index">
+                <span
+                  class="rotation-step"
+                  :class="action.startsWith('採集') ? 'rotation-step-gather' : 'rotation-step-action'"
+                  :title="actionName(action)"
+                >
+                  <span class="rotation-icon-wrap">
+                    <img v-if="actionIcon(action)" :src="actionIcon(action)" class="rotation-icon" :alt="actionName(action)" />
+                    <i v-else class="pi pi-sparkles text-sm"></i>
+                  </span>
+                  <span class="rotation-label">{{ actionName(action) }}</span>
+                </span>
+                <i v-if="index < rotationResult.bestRotation.length - 1" class="pi pi-angle-right text-slate-300"></i>
+              </template>
             </div>
           </div>
         </div>
@@ -429,7 +479,7 @@ function handleSync() {
         
         <div v-else class="py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center gap-3 text-slate-400">
           <i class="pi pi-calculator text-3xl opacity-20"></i>
-          <p class="text-sm">點擊上方按鈕開始計算最佳策略</p>
+          <p class="text-sm">{{ t('solver.strategy.empty') }}</p>
         </div>
       </div>
     </div>
@@ -442,6 +492,86 @@ function handleSync() {
 }
 :deep(.p-autocomplete) {
   width: 100%;
+}
+.solver-action-bar {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+@media (min-width: 640px) {
+  .solver-action-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .solver-action-bar {
+    width: min(100%, 30rem);
+  }
+}
+:deep(.solver-action-button) {
+  width: 100%;
+  min-height: 42px;
+  justify-content: center;
+  white-space: normal;
+}
+:deep(.solver-action-button .p-button-label) {
+  flex: 0 1 auto;
+  line-height: 1.15;
+}
+.rotation-step {
+  min-height: 44px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.1;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+.rotation-step-action {
+  background: #52a890;
+  color: white;
+}
+.rotation-step-gather {
+  background: white;
+  color: rgb(71 85 105);
+  border: 1px solid rgb(226 232 240);
+}
+:global(.dark) .rotation-step-gather {
+  background: rgb(15 23 42);
+  color: rgb(203 213 225);
+  border-color: rgb(51 65 85);
+}
+.rotation-icon-wrap {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.22);
+}
+.rotation-step-gather .rotation-icon-wrap {
+  background: rgb(241 245 249);
+}
+:global(.dark) .rotation-step-gather .rotation-icon-wrap {
+  background: rgb(30 41 59);
+}
+.rotation-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+.rotation-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .animate-page-in {
   animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);

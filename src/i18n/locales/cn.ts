@@ -75,6 +75,21 @@ export default {
       gatheringCount: '采集次数增加',
       yieldCount: '获得数增加',
       extraRate: '额外率增加'
+    },
+    strategy: {
+      title: '推荐采集手法',
+      description: '依照目前数值，演算出期望产量最高的手法',
+      copyMacro: '复制宏',
+      saveTome: '保存秘籍',
+      solve: '求解',
+      expectedYield: '期望总产量',
+      maxYield: '最高产量',
+      minYield: '最低产量',
+      rotationOrder: '手法顺序',
+      empty: '点击上方按钮开始计算推荐手法',
+      gatherAction: '采集',
+      conditionalSuffix: '（若触发）',
+      conditionalGatherSuffix: '（同兴触发）'
     }
   },
   game: {
