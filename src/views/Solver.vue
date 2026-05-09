@@ -52,13 +52,9 @@ let settingsSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
   en: {
-    copyMacro: ['Copy', 'Macro'],
-    saveTome: ['Save', 'Tome'],
     solve: ['Solve It']
   },
   ja: {
-    copyMacro: ['マクロを', 'コピー'],
-    saveTome: ['秘伝書を', '保存'],
     solve: ['計算']
   }
 };
@@ -207,6 +203,10 @@ function strategyActionLabel(key: StrategyActionKey) {
 }
 
 function strategyActionLabelLines(key: StrategyActionKey) {
+  if (key !== 'solve') {
+    return [strategyActionLabel(key)];
+  }
+
   return strategyActionLineBreaks[locale.value]?.[key] ?? [strategyActionLabel(key)];
 }
 </script>
@@ -477,27 +477,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             </h3>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('solver.strategy.description') }}</p>
           </div>
-          <div class="solver-action-bar">
-            <Button
-              class="solver-action-button p-button-outlined rounded-xl"
-              :aria-label="strategyActionLabel('copyMacro')"
-              disabled
-            >
-              <i class="pi pi-copy p-button-icon p-button-icon-left"></i>
-              <span class="solver-action-label p-button-label">
-                <span v-for="line in strategyActionLabelLines('copyMacro')" :key="line">{{ line }}</span>
-              </span>
-            </Button>
-            <Button
-              class="solver-action-button p-button-outlined rounded-xl"
-              :aria-label="strategyActionLabel('saveTome')"
-              disabled
-            >
-              <i class="pi pi-bookmark p-button-icon p-button-icon-left"></i>
-              <span class="solver-action-label p-button-label">
-                <span v-for="line in strategyActionLabelLines('saveTome')" :key="line">{{ line }}</span>
-              </span>
-            </Button>
+          <div class="solver-action-bar solver-action-bar-primary">
             <Button
               class="solver-action-button p-button-primary rounded-xl shadow-md"
               :aria-label="strategyActionLabel('solve')"
@@ -557,6 +537,23 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               </template>
             </div>
           </div>
+
+          <div class="solver-result-action-bar">
+            <Button
+              class="solver-action-button p-button-outlined rounded-xl"
+              :aria-label="strategyActionLabel('copyMacro')"
+            >
+              <i class="pi pi-copy p-button-icon p-button-icon-left"></i>
+              <span class="solver-action-label p-button-label">{{ strategyActionLabel('copyMacro') }}</span>
+            </Button>
+            <Button
+              class="solver-action-button p-button-outlined rounded-xl"
+              :aria-label="strategyActionLabel('saveTome')"
+            >
+              <i class="pi pi-bookmark p-button-icon p-button-icon-left"></i>
+              <span class="solver-action-label p-button-label">{{ strategyActionLabel('saveTome') }}</span>
+            </Button>
+          </div>
         </div>
 
         <!-- 初始狀態或計算中 -->
@@ -587,14 +584,22 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   grid-template-columns: 1fr;
   gap: 0.5rem;
 }
+.solver-action-bar-primary {
+  width: 100%;
+}
+.solver-result-action-bar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
 @media (min-width: 640px) {
-  .solver-action-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .solver-result-action-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 1024px) {
-  .solver-action-bar {
-    width: min(100%, 30rem);
+  .solver-action-bar-primary {
+    width: min(100%, 10rem);
   }
 }
 :deep(.solver-action-button) {
@@ -610,6 +615,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   justify-content: center;
   line-height: 1.15;
   white-space: nowrap;
+  min-width: 0;
 }
 .rotation-step {
   min-height: 44px;
