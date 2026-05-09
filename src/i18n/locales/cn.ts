@@ -8,6 +8,7 @@ export default {
   nav: {
     createGuide: '建立秘籍',
     solver: '秘籍求解器',
+    tomeLibrary: '秘籍书库',
     settings: '设置页面',
     github: 'GitHub 项目'
   },
@@ -81,6 +82,7 @@ export default {
       description: '依照目前数值，演算出期望产量最高的手法',
       copyMacro: '复制宏',
       saveTome: '保存秘籍',
+      savedTome: '已保存',
       solve: '求解',
       expectedYield: '期望总产量',
       maxYield: '最高产量',
@@ -90,6 +92,30 @@ export default {
       gatherAction: '采集',
       conditionalSuffix: '（若触发）',
       conditionalGatherSuffix: '（同兴触发）'
+    }
+  },
+  tomeLibrary: {
+    title: '秘籍书库',
+    subtitle: '管理已保存的采集秘籍，搜索物品后即可快速载回求解器调整。',
+    searchPlaceholder: '搜索秘籍中的物品名称',
+    noFood: '未使用食物',
+    unknownDate: '未知时间',
+    rotationPreview: '最佳手法预览',
+    createdAt: '创建于 {time}',
+    emptyTitle: '书库目前是空的',
+    emptyDesc: '在秘籍求解器演算出手法后，按下“保存秘籍”就会收进这里。',
+    emptySearchTitle: '找不到相符的秘籍',
+    emptySearchDesc: '可以改用当前语言名称或英文名称搜索看看。',
+    rows: {
+      playerStats: '玩家数值',
+      gpState: 'GP 状态',
+      food: '食物',
+      nodeBonuses: '矿脉奖励'
+    },
+    actions: {
+      edit: '编辑',
+      copyMacro: '复制宏',
+      delete: '删除秘籍'
     }
   },
   game: {

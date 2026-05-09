@@ -11,6 +11,7 @@ import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import { useSettings } from '../composables/useSettings';
+import { useTomeLibrary } from '../composables/useTomeLibrary';
 
 const { t, locale } = useI18n();
 const {
@@ -38,6 +39,7 @@ const {
 } = useSolver();
 
 const { userStats } = useSettings();
+const { saveTome } = useTomeLibrary();
 type FoodOption = {
   food: GatheringFood;
   quality: FoodQuality;
@@ -48,7 +50,9 @@ type StrategyActionKey = 'copyMacro' | 'saveTome' | 'solve';
 
 const foodSuggestions = ref<FoodOption[]>([]);
 const isSettingsSaved = ref(false);
+const isTomeSaved = ref(false);
 let settingsSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
+let tomeSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
   en: {
@@ -161,6 +165,29 @@ function handleSync() {
   }, 1900);
 }
 
+function handleSaveTome() {
+  if (!activeItem.value?.itemId || !rotationResult.value) return;
+
+  saveTome({
+    itemId: activeItem.value.itemId,
+    stats: { ...solverStats.value },
+    temporaryGp: temporaryGp.value,
+    food: { ...selectedFood.value },
+    nodeBonuses: { ...nodeBonuses.value },
+    rotationResult: rotationResult.value
+  });
+
+  isTomeSaved.value = true;
+  if (tomeSavedTimer) {
+    window.clearTimeout(tomeSavedTimer);
+  }
+
+  tomeSavedTimer = window.setTimeout(() => {
+    isTomeSaved.value = false;
+    tomeSavedTimer = null;
+  }, 1600);
+}
+
 watch(hasUnsavedStats, (hasChanges) => {
   if (!hasChanges) return;
 
@@ -174,6 +201,9 @@ watch(hasUnsavedStats, (hasChanges) => {
 onBeforeUnmount(() => {
   if (settingsSavedTimer) {
     window.clearTimeout(settingsSavedTimer);
+  }
+  if (tomeSavedTimer) {
+    window.clearTimeout(tomeSavedTimer);
   }
 });
 
@@ -548,10 +578,13 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             </Button>
             <Button
               class="solver-action-button p-button-outlined rounded-xl"
+              :class="{ 'is-tome-saved': isTomeSaved }"
               :aria-label="strategyActionLabel('saveTome')"
+              :disabled="isTomeSaved"
+              @click="handleSaveTome"
             >
-              <i class="pi pi-bookmark p-button-icon p-button-icon-left"></i>
-              <span class="solver-action-label p-button-label">{{ strategyActionLabel('saveTome') }}</span>
+              <i class="p-button-icon p-button-icon-left" :class="isTomeSaved ? 'pi pi-check' : 'pi pi-bookmark'"></i>
+              <span class="solver-action-label p-button-label">{{ isTomeSaved ? t('solver.strategy.savedTome') : strategyActionLabel('saveTome') }}</span>
             </Button>
           </div>
         </div>
@@ -607,6 +640,18 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   min-height: 42px;
   justify-content: center;
 }
+:deep(.solver-action-button.is-tome-saved) {
+  color: #15803d;
+  border-color: rgb(134 239 172);
+  background: rgb(220 252 231 / 0.75);
+  box-shadow: 0 0 0 1px rgb(34 197 94 / 0.12);
+}
+:global(.dark .solver-action-button.is-tome-saved) {
+  color: #bbf7d0;
+  border-color: rgb(21 128 61 / 0.55);
+  background: rgb(20 83 45 / 0.22);
+  box-shadow: 0 0 0 1px rgb(74 222 128 / 0.08);
+}
 .solver-action-label {
   flex: 0 1 auto;
   display: inline-flex;
@@ -639,7 +684,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   color: rgb(71 85 105);
   border: 1px solid rgb(226 232 240);
 }
-:global(.dark) .rotation-step-gather {
+:global(.dark .rotation-step-gather) {
   background: rgb(15 23 42);
   color: rgb(203 213 225);
   border-color: rgb(51 65 85);
@@ -658,7 +703,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 .rotation-step-gather .rotation-icon-wrap {
   background: rgb(241 245 249);
 }
-:global(.dark) .rotation-step-gather .rotation-icon-wrap {
+:global(.dark .rotation-step-gather .rotation-icon-wrap) {
   background: rgb(30 41 59);
 }
 .rotation-icon {
@@ -690,9 +735,9 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   background: rgb(220 252 231 / 0.75);
   animation: saveSettingsSuccess 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
-:global(.dark) :deep(.solver-save-settings-button.is-saved) {
-  color: #86efac;
-  background: rgb(20 83 45 / 0.35);
+:global(.dark .solver-save-settings-button.is-saved) {
+  color: #bbf7d0;
+  background: rgb(20 83 45 / 0.22);
 }
 :deep(.solver-save-settings-button.is-saved .p-button-icon) {
   animation: saveSettingsCheck 0.55s cubic-bezier(0.16, 1, 0.3, 1);

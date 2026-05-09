@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
+import { useTomeLibrary } from '../composables/useTomeLibrary';
 
 const route = useRoute();
 const version = '0.1.0';
 const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tome';
+const { tomeCount } = useTomeLibrary();
 
 defineEmits(['close-mobile']);
 </script>
@@ -42,6 +44,19 @@ defineEmits(['close-mobile']);
       >
         <i class="pi pi-calculator shrink-0"></i>
         <span class="leading-tight">{{ $t('nav.solver') }}</span>
+      </router-link>
+
+      <hr class="border-soft-green-100 dark:border-slate-800 my-2" />
+
+      <router-link
+        to="/library"
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-medium"
+        :class="route.path === '/library' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-book shrink-0"></i>
+        <span class="leading-tight flex-1">{{ $t('nav.tomeLibrary') }}</span>
+        <span class="ml-2 bg-soft-green-200 dark:bg-soft-green-900 text-soft-green-800 dark:text-soft-green-300 text-xs px-2 py-0.5 rounded-full shrink-0">{{ tomeCount }}</span>
       </router-link>
 
       <div class="mt-auto"></div>

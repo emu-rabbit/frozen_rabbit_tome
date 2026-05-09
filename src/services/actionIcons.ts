@@ -29,6 +29,15 @@ const ACTION_IDS_BY_NAME: Record<string, number> = {
   諾菲卡福音: 21204
 };
 
+export function getRotationActionId(actionName: string): number | null {
+  if (actionName.startsWith('採集')) return null;
+  return ACTION_IDS_BY_NAME[actionName] ?? null;
+}
+
+export function getRotationActionIconById(actionId: number): string {
+  return getActionIcon(actionId);
+}
+
 export function getRotationActionIcon(actionName: string, gatherIconUrl: string): string {
   if (actionName.startsWith('採集')) return gatherIconUrl;
   const actionId = ACTION_IDS_BY_NAME[actionName];

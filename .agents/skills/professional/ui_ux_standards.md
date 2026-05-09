@@ -23,6 +23,13 @@
 - **留白美感**：避免畫面擁擠，確保足夠的空白區域（Negative Space）。
 - **易用性與協調**：關鍵要素必須易於視覺抓取（Focus），但不可與整體設計格格不入。
 
+### Vue Scoped CSS 與暗黑模式 (Dark Mode)
+- **優先使用既有 Tailwind `dark:` class**：若樣式可直接寫在 template 上，優先使用專案既有的 `dark:bg-*`、`dark:text-*`、`dark:border-*` 等 class，這是本專案目前最穩定的暗黑模式寫法。
+- **Scoped CSS 的 `:global` 必須包住完整 selector**：在 Vue SFC 的 `<style scoped>` 中，不可寫 `:global(.dark) .foo` 或 `:global(html.dark) .foo`。這類寫法可能被編譯成只套用在 `.dark` / `html.dark` 根節點本身，例如 `.dark { ... }`，導致目標元件沒有暗黑樣式，甚至污染整個暗黑模式根節點。正確寫法是 `:global(.dark .foo)` 或 `:global(html.dark .foo)`。
+- **避免錯誤的根節點覆寫**：若 build 後 CSS 出現 `.dark { color/background/border/box-shadow: ... }`，通常代表 scoped dark selector 寫錯。必須修正為完整 global selector，避免暗黑模式下 hover、focus、儲存成功等動畫反饋顏色套到根節點，造成整體畫面色彩異常。
+- **暗黑模式反饋色要降低亮度**：hover、focus ring、儲存成功、完成狀態等反饋在暗黑模式下不可直接沿用亮色模式的高飽和背景與陰影。應降低 opacity、使用較深的背景疊色，並保持文字對比足夠，避免看起來過亮或螢光感太重。
+- **修正後必須驗證編譯結果**：涉及 scoped CSS、暗黑模式或互動反饋時，除了執行 `npm run build`，也應檢查 build 後 CSS 是否產生預期 selector（例如 `html.dark .tome-card`），必要時用瀏覽器 computed style 驗證實際背景、邊框、文字與陰影顏色。
+
 ## 執行步驟
 1. 設計元件時，先列出其所需的 Props 與狀態，並判斷是否可拆分為更小的子元件。
 2. 在調整 CSS 時，優先查找全域變數而非直接寫死數值。

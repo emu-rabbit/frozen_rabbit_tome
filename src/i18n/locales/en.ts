@@ -8,6 +8,7 @@ export default {
   nav: {
     createGuide: 'Create Tome',
     solver: 'Tome Solver',
+    tomeLibrary: 'Tome Library',
     settings: 'Settings',
     github: 'GitHub Project'
   },
@@ -81,6 +82,7 @@ export default {
       description: 'Solves the highest expected-yield rotation from your current values.',
       copyMacro: 'Copy Macro',
       saveTome: 'Save Tome',
+      savedTome: 'Saved',
       solve: 'Solve It',
       expectedYield: 'Expected Yield',
       maxYield: 'Maximum Yield',
@@ -90,6 +92,30 @@ export default {
       gatherAction: 'Gather',
       conditionalSuffix: ' (if triggered)',
       conditionalGatherSuffix: ' (Wise proc)'
+    }
+  },
+  tomeLibrary: {
+    title: 'Tome Library',
+    subtitle: 'Manage saved gathering tomes, search by item, and load a setup back into the solver.',
+    searchPlaceholder: 'Search saved item names',
+    noFood: 'No food',
+    unknownDate: 'Unknown time',
+    rotationPreview: 'Best rotation preview',
+    createdAt: 'Created {time}',
+    emptyTitle: 'Your library is empty',
+    emptyDesc: 'After solving a rotation, press "Save Tome" to keep it here.',
+    emptySearchTitle: 'No matching tomes',
+    emptySearchDesc: 'Try searching by the current language name or the English item name.',
+    rows: {
+      playerStats: 'Player Stats',
+      gpState: 'GP State',
+      food: 'Food',
+      nodeBonuses: 'Node Bonuses'
+    },
+    actions: {
+      edit: 'Edit',
+      copyMacro: 'Copy Macro',
+      delete: 'Delete'
     }
   },
   game: {

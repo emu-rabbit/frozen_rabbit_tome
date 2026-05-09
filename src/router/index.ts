@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import CreateGuide from '../views/CreateGuide.vue';
 import Settings from '../views/Settings.vue';
 import Solver from '../views/Solver.vue';
+import TomeLibrary from '../views/TomeLibrary.vue';
 
 const routes = [
   {
@@ -13,6 +14,11 @@ const routes = [
     path: '/solver',
     name: 'Solver',
     component: Solver,
+  },
+  {
+    path: '/library',
+    name: 'TomeLibrary',
+    component: TomeLibrary,
   },
   {
     path: '/settings',

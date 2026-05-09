@@ -10,6 +10,7 @@ export default {
   nav: {
     createGuide: '建立秘笈',
     solver: '秘笈求解器',
+    tomeLibrary: '秘笈書庫',
     settings: '設定頁面',
     github: 'GitHub 專案'
   },
@@ -83,6 +84,7 @@ export default {
       description: '依照目前數值，演算出期望產量最高的手法',
       copyMacro: '複製巨集',
       saveTome: '儲存秘笈',
+      savedTome: '已儲存',
       solve: '求解',
       expectedYield: '期望總產量',
       maxYield: '最高產量',
@@ -92,6 +94,30 @@ export default {
       gatherAction: '採集',
       conditionalSuffix: '（若觸發）',
       conditionalGatherSuffix: '（同興觸發）'
+    }
+  },
+  tomeLibrary: {
+    title: '秘笈書庫',
+    subtitle: '管理已儲存的採集秘笈，搜尋物品後即可快速載回求解器調整。',
+    searchPlaceholder: '搜尋秘笈中的物品名稱',
+    noFood: '未使用食物',
+    unknownDate: '未知時間',
+    rotationPreview: '最佳手法預覽',
+    createdAt: '建立於 {time}',
+    emptyTitle: '書庫目前是空的',
+    emptyDesc: '在秘笈求解器演算出手法後，按下「儲存秘笈」就會收進這裡。',
+    emptySearchTitle: '找不到相符的秘笈',
+    emptySearchDesc: '可以改用當前語系名稱或英文名稱搜尋看看。',
+    rows: {
+      playerStats: '玩家數值',
+      gpState: 'GP 狀態',
+      food: '食物',
+      nodeBonuses: '礦脈獎勵'
+    },
+    actions: {
+      edit: '編輯',
+      copyMacro: '複製巨集',
+      delete: '刪除秘笈'
     }
   },
   game: {

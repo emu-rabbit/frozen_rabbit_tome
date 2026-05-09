@@ -113,3 +113,24 @@ export interface SolverResponse {
   maxYieldChance: number;
   calculationTime: number;
 }
+
+export interface StoredTomeNodeBonuses {
+  gatheringCount: number;
+  yieldCount: number;
+  extraRate: number;
+}
+
+export type StoredTomeRotationStep =
+  | { type: 'gather' }
+  | { type: 'action'; actionId: number };
+
+export interface StoredTome {
+  id: string;
+  itemId: number;
+  stats: PlayerStats;
+  temporaryGp: number;
+  food: FoodSelection;
+  nodeBonuses: StoredTomeNodeBonuses;
+  rotation: StoredTomeRotationStep[];
+  createdAt: string;
+}

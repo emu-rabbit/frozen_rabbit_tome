@@ -336,6 +336,28 @@ export function getItemIcon(itemId: number): string {
   return path ? `https://xivapi.com${path}` : '';
 }
 
+export function getGatherableItemById(itemId: number): GatherableItem | null {
+  const info = itemInfoMap.get(itemId);
+  if (!info) return null;
+
+  const localeRaw = extractName(rawTargetNames[itemId.toString()], currentLanguage.value);
+  const enRaw = extractName(rawEnglishNames[itemId.toString()], 'en');
+  const nameLocale = localeRaw || enRaw || `Item #${itemId}`;
+  const nameEn = enRaw || localeRaw || `Item #${itemId}`;
+
+  return {
+    itemId,
+    nameLocale,
+    nameEn,
+    glv: info.glv,
+    jobType: info.jobType,
+    perceptionReq: info.perceptionReq,
+    gatheringItemId: info.gatheringItemId,
+    iconUrl: getItemIcon(itemId),
+    isFallback: !localeRaw && !!enRaw
+  };
+}
+
 export function getActionIcon(actionId: number): string {
   const path = resolveIconPath(rawActionIcons[actionId.toString()]);
   return path ? `https://xivapi.com${path}` : '';

@@ -8,6 +8,7 @@ export default {
   nav: {
     createGuide: '秘伝書を作成',
     solver: '秘伝書ソルバー',
+    tomeLibrary: '秘伝書ライブラリ',
     settings: '設定ページ',
     github: 'GitHub プロジェクト'
   },
@@ -81,6 +82,7 @@ export default {
       description: '現在の数値から期待獲得数が最大の手順を計算します。',
       copyMacro: 'マクロをコピー',
       saveTome: '秘伝書を保存',
+      savedTome: '保存しました',
       solve: '計算',
       expectedYield: '期待総獲得数',
       maxYield: '最大獲得数',
@@ -90,6 +92,30 @@ export default {
       gatherAction: '採集',
       conditionalSuffix: '（発動時）',
       conditionalGatherSuffix: '（理知発動）'
+    }
+  },
+  tomeLibrary: {
+    title: '秘伝書ライブラリ',
+    subtitle: '保存した採集秘伝書を管理し、アイテム検索からソルバーへ読み戻せます。',
+    searchPlaceholder: '保存したアイテム名を検索',
+    noFood: '食事なし',
+    unknownDate: '不明な時刻',
+    rotationPreview: '最適手順プレビュー',
+    createdAt: '作成日時 {time}',
+    emptyTitle: 'ライブラリはまだ空です',
+    emptyDesc: 'ソルバーで手順を計算したあと、「秘伝書を保存」を押すとここに保存されます。',
+    emptySearchTitle: '一致する秘伝書がありません',
+    emptySearchDesc: '現在の表示言語名、または英語名で検索してみてください。',
+    rows: {
+      playerStats: 'プレイヤー数値',
+      gpState: 'GP 状態',
+      food: '食事',
+      nodeBonuses: '採集ポイントボーナス'
+    },
+    actions: {
+      edit: '編集',
+      copyMacro: 'マクロをコピー',
+      delete: '削除'
     }
   },
   game: {

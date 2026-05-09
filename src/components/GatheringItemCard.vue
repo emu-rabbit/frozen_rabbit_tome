@@ -84,7 +84,7 @@ function onImageError(e: Event) {
   transform: translateY(-1px);
 }
 
-:global(.dark) .item-card:hover {
+:global(.dark .item-card:hover) {
   box-shadow: 0 4px 20px rgba(82, 168, 144, 0.2);
 }
 

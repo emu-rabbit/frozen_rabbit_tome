@@ -281,7 +281,7 @@ function getUiState() {
   align-self: flex-start;
 }
 
-:global(.dark) .data-scope-badge {
+:global(.dark .data-scope-badge) {
   background: rgba(82, 168, 144, 0.12);
   border-color: rgba(82, 168, 144, 0.3);
   color: #52a890;
@@ -424,7 +424,7 @@ function getUiState() {
   color: #94a3b8;
 }
 
-:global(.dark) .empty-icon {
+:global(.dark .empty-icon) {
   background: #1e293b;
   color: #64748b;
 }
@@ -491,11 +491,11 @@ function getUiState() {
   padding: 0 4px 4px;
 }
 
-:global(.dark) .results-count {
+:global(.dark .results-count) {
   color: #94a3b8;
 }
 
-:global(.dark) .state-text {
+:global(.dark .state-text) {
   color: #94a3b8;
 }
 </style>

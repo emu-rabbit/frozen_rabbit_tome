@@ -1,8 +1,8 @@
 import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
+import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses, StoredTome } from '../types/game';
 import { useSettings } from './useSettings';
-import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
+import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity, getGatherableItemById } from '../services/gameData';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse } from '../types/game';
@@ -138,6 +138,27 @@ export function useSolver() {
     userStats.value[job] = { ...solverStats.value };
   };
 
+  const loadTomeForEditing = (tome: StoredTome) => {
+    const item = getGatherableItemById(tome.itemId);
+    if (!item) return false;
+
+    cancelActiveSolve();
+    activeItem.value = item;
+    solverStats.value = { ...tome.stats };
+    selectedFood.value = { ...tome.food };
+    nodeBonuses.value = {
+      baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
+      gatheringCount: tome.nodeBonuses.gatheringCount,
+      yieldCount: tome.nodeBonuses.yieldCount,
+      extraRate: tome.nodeBonuses.extraRate
+    };
+    temporaryGp.value = tome.temporaryGp;
+    rotationResult.value = null;
+    latestSolveInputSignature = createSolveInputSignature();
+
+    return true;
+  };
+
   /** 動態物品名稱（連動語言切換） */
   const displayName = computed(() => {
     if (!activeItem.value) return '';
@@ -230,6 +251,7 @@ export function useSolver() {
     isDataLoading: isGameDataLoading,
     fetchItemLevelData,
     setSelectedItem,
+    loadTomeForEditing,
     syncFromSettings,
     saveToSettings,
     successRate,
