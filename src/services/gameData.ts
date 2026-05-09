@@ -306,19 +306,20 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
         isFallback: !localeRaw && !!enRaw,
       });
     }
-    if (results.length >= 50) break;
   }
-  if (results.length > 0) {
-    const itemIds = results.map(r => r.itemId).join(',');
+  results.sort((a, b) => b.glv - a.glv || a.itemId - b.itemId);
+  const visibleResults = results.slice(0, 50);
+  if (visibleResults.length > 0) {
+    const itemIds = visibleResults.map(r => r.itemId).join(',');
     const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
     if (resp.ok) {
       const data = await resp.json();
       const collectableMap = new Map<number, boolean>();
       data.Results?.forEach((item: any) => collectableMap.set(item.ID, item.IsCollectable === 1));
-      results.forEach(r => r.isCollectable = collectableMap.get(r.itemId) ?? false);
+      visibleResults.forEach(r => r.isCollectable = collectableMap.get(r.itemId) ?? false);
     }
   }
-  return results;
+  return visibleResults;
 }
 
 export function getItemName(itemId: number): string {

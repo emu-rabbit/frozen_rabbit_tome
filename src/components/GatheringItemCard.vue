@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import type { GatherableItem } from '../types/game';
 
 interface Props {
@@ -7,15 +6,10 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const isFavorite = ref(false);
 
 const emit = defineEmits<{
   (e: 'select', item: GatherableItem): void;
 }>();
-
-function toggleFavorite() {
-  isFavorite.value = !isFavorite.value;
-}
 
 function onImageError(e: Event) {
   (e.target as HTMLImageElement).style.display = 'none';
@@ -59,16 +53,6 @@ function onImageError(e: Event) {
         </span>
       </div>
     </div>
-
-    <!-- 收藏按鈕 -->
-    <button
-      class="item-favorite-btn"
-      :class="{ active: isFavorite }"
-      :aria-label="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
-      @click.stop="toggleFavorite"
-    >
-      <i :class="isFavorite ? 'pi pi-star-fill' : 'pi pi-star'"></i>
-    </button>
   </div>
 </template>
 
@@ -217,38 +201,5 @@ function onImageError(e: Event) {
 
 .item-regular-badge .pi {
   font-size: 0.65rem;
-}
-
-/* 收藏按鈕 */
-.item-favorite-btn {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: #94a3b8;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  transition: all 0.2s;
-  position: relative;
-  z-index: 1;
-}
-
-.item-favorite-btn:hover {
-  background: rgba(234, 179, 8, 0.1);
-  color: #eab308;
-  transform: scale(1.15);
-}
-
-.item-favorite-btn.active {
-  color: #eab308;
-}
-
-.item-favorite-btn.active:hover {
-  color: #ca8a04;
 }
 </style>
