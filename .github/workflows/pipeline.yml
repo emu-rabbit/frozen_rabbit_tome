@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 jobs:
-  # 整合階段：安裝、建置 (測試部分暫時跳過)
+  # 整合階段：安裝、單元測試、建置
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -38,11 +38,8 @@ jobs:
         if: steps.nm-cache.outputs.cache-hit != 'true'
         run: npm ci
         
-      # 未來可以在此處加入測試步驟
-      # - name: Run Unit Tests
-      #   run: npm run test:unit
-      # - name: Run E2E Tests
-      #   run: npx playwright test
+      - name: Run Unit Tests
+        run: npm run test:unit
         
       - name: Build
         run: npm run build
