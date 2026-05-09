@@ -195,6 +195,10 @@ function actionName(action: string) {
 }
 
 function formatChance(value: number) {
+  if (value <= 0.01) {
+    return '<0.01%';
+  }
+
   return `${value.toFixed(2)}%`;
 }
 
