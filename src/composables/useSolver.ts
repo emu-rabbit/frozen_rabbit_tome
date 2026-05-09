@@ -262,7 +262,7 @@ export function useSolver() {
     displayName,
     // 求解功能
     solve: async () => {
-      if (!activeItem.value || !baseValues.value) return;
+      if (!activeItem.value || !baseValues.value || !isPerceptionMet.value) return;
       cancelActiveSolve();
       isSolving.value = true;
       const currentSolveVersion = solveVersion;

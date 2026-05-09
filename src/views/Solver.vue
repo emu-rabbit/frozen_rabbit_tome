@@ -555,6 +555,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               class="solver-action-button p-button-primary rounded-xl shadow-md"
               :aria-label="strategyActionLabel('solve')"
               :loading="isSolving"
+              :disabled="!isPerceptionMet"
               @click="solve"
             >
               <i class="p-button-icon p-button-icon-left" :class="isSolving ? 'pi pi-spin pi-spinner' : 'pi pi-play'"></i>
