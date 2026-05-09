@@ -48,6 +48,7 @@ export default {
     glv: 'Glv',
     noTranslation: '(公式翻訳なし)',
     collectableSystem: '収集品システム',
+    crystalGatheringSystem: 'クリスタル採集システム',
     regularSystem: '通常採集系統',
     apiError: 'XIVAPIから収集品データを取得できませんでした。ネットワーク接続を確認するか、後でもう一度お試しください。',
     retrySearch: '再検索'
@@ -86,6 +87,7 @@ export default {
     noItemDesc: '「秘伝書を作成」から採集アイテムを検索して選擇してください。',
     goToCreate: '作成ページへ',
     collectableWarning: '収集品システムは現在開発中です',
+    crystalGatheringWarning: 'クリスタル採集システムは現在開発中です',
     syncToSettings: '{job}設定を保存',
     syncSuccess: '設定を保存しました',
     food: {

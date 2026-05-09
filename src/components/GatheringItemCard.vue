@@ -47,6 +47,10 @@ function onImageError(e: Event) {
           <i class="pi pi-box"></i>
           {{ $t('createGuide.collectableSystem') }}
         </span>
+        <span v-else-if="props.item.isCrystalGathering" class="item-crystal-badge">
+          <i class="pi pi-sparkles"></i>
+          {{ $t('createGuide.crystalGatheringSystem') }}
+        </span>
         <span v-else class="item-regular-badge">
           <i class="pi pi-compass"></i>
           {{ $t('createGuide.regularSystem') }}
@@ -182,6 +186,24 @@ function onImageError(e: Event) {
 }
 
 .item-collectable-badge .pi {
+  font-size: 0.65rem;
+}
+
+.item-crystal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+  color: white;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.item-crystal-badge .pi {
   font-size: 0.65rem;
 }
 

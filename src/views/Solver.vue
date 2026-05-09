@@ -304,6 +304,15 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       <p class="text-purple-600 dark:text-purple-400 font-semibold">{{ t('solver.collectableWarning') }}</p>
     </div>
 
+    <!-- === 水晶採集系統警告 === -->
+    <div v-else-if="activeItem.isCrystalGathering" class="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+      <div class="w-20 h-20 bg-cyan-50 dark:bg-cyan-900/20 rounded-full flex items-center justify-center mb-6">
+        <i class="pi pi-sparkles text-3xl text-cyan-500"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-slate-700 dark:text-slate-200 mb-2">{{ displayName }}</h2>
+      <p class="text-cyan-600 dark:text-cyan-300 font-semibold">{{ t('solver.crystalGatheringWarning') }}</p>
+    </div>
+
     <!-- === 求解器主畫面 === -->
     <div v-else class="space-y-6 animate-page-in">
       <!-- 物品標題卡 -->

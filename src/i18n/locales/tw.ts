@@ -50,6 +50,7 @@ export default {
     glv: 'Glv',
     noTranslation: '(無官方翻譯)',
     collectableSystem: '收藏品系統',
+    crystalGatheringSystem: '水晶採集系統',
     regularSystem: '一般採集系統',
     apiError: '無法連接至 XIVAPI 獲取收藏品資料。請檢查網路連線或稍後再試。',
     retrySearch: '重試搜尋'
@@ -88,6 +89,7 @@ export default {
     noItemDesc: '請先透過「建立秘笈」搜尋並選擇一個採集物品。',
     goToCreate: '前往建立秘笈',
     collectableWarning: '收藏品系統仍在施工中',
+    crystalGatheringWarning: '水晶採集系統仍在施工中',
     syncToSettings: '儲存{job}設定',
     syncSuccess: '已儲存設定',
     food: {

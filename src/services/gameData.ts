@@ -57,6 +57,12 @@ const SOLVER_ACTION_IDS = new Set([
   21177, 21178, 21203, 21204, 25589, 25590, 26521
 ]);
 
+const CRYSTAL_GATHERING_ITEM_IDS = new Set([
+  2, 3, 4, 5, 6, 7, // Shards
+  8, 9, 10, 11, 12, 13, // Crystals
+  14, 15, 16, 17, 18, 19 // Clusters
+]);
+
 // ─── 輔助解析函數 ────────────────────────────────────────────────────────────
 
 function extractName(entry: any, lang: string): string {
@@ -100,11 +106,15 @@ function resolveIconPath(icon: string | number | { icon?: string | number; Icon?
   return Number.isFinite(iconId) ? iconIdToPath(iconId) : iconValue;
 }
 
+function isCrystalGatheringItem(itemId: number): boolean {
+  return CRYSTAL_GATHERING_ITEM_IDS.has(itemId);
+}
+
 /** 1. 解析 GatheringItem.csv (ItemID -> GatheringItemID) */
 async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number; gatheringItemId: number }>> {
   const map = new Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number; gatheringItemId: number }>();
   const lines = csvText.split('\n');
-  for (let i = 3; i < lines.length; i++) {
+  for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     const parts = line.split(',');
@@ -135,7 +145,7 @@ async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv
 async function parseGatheringPointBaseCsv(csvText: string): Promise<Map<number, number[]>> {
   const map = new Map<number, number[]>();
   const lines = csvText.split('\n');
-  for (let i = 3; i < lines.length; i++) {
+  for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     const parts = line.split(',');
@@ -159,7 +169,7 @@ async function parseGatheringPointBaseCsv(csvText: string): Promise<Map<number, 
 async function parseGatheringPointCsv(csvText: string): Promise<Map<number, number>> {
   const map = new Map<number, number>();
   const lines = csvText.split('\n');
-  for (let i = 3; i < lines.length; i++) {
+  for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     const parts = line.split(',');
@@ -304,6 +314,7 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
         gatheringItemId: info.gatheringItemId,
         iconUrl: rawIcons[itemId.toString()] ? `https://xivapi.com${rawIcons[itemId.toString()]}` : '',
         isFallback: !localeRaw && !!enRaw,
+        isCrystalGathering: isCrystalGatheringItem(itemId)
       });
     }
   }
@@ -354,7 +365,8 @@ export function getGatherableItemById(itemId: number): GatherableItem | null {
     perceptionReq: info.perceptionReq,
     gatheringItemId: info.gatheringItemId,
     iconUrl: getItemIcon(itemId),
-    isFallback: !localeRaw && !!enRaw
+    isFallback: !localeRaw && !!enRaw,
+    isCrystalGathering: isCrystalGatheringItem(itemId)
   };
 }
 

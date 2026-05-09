@@ -48,6 +48,7 @@ export default {
     glv: 'Glv',
     noTranslation: '(No official translation)',
     collectableSystem: 'Collectable',
+    crystalGatheringSystem: 'Crystal Gathering',
     regularSystem: 'Regular',
     apiError: 'Unable to connect to XIVAPI for collectable data. Please check your network or try again later.',
     retrySearch: 'Retry Search'
@@ -86,6 +87,7 @@ export default {
     noItemDesc: 'Please search and select an item via "Create Tome" first.',
     goToCreate: 'Go to Create Tome',
     collectableWarning: 'Collectable system is under construction',
+    crystalGatheringWarning: 'Crystal gathering system is under construction',
     syncToSettings: 'Save {job} Settings',
     syncSuccess: 'Settings saved',
     food: {
