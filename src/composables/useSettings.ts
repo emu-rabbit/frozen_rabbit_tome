@@ -1,5 +1,5 @@
 import { useLocalStorage } from '@vueuse/core';
-import type { MacroSettings, UserStats } from '../types/game';
+import type { DebugSettings, MacroSettings, UserStats } from '../types/game';
 
 export type Language = 'tw' | 'en' | 'ja' | 'cn';
 
@@ -25,11 +25,16 @@ export function useSettings() {
     bufferSeconds: 2
   });
 
+  const debugSettings = useLocalStorage<DebugSettings>('frozen-rabbit-tome-debug-settings', {
+    solverDebugMode: false
+  });
+
   return {
     language,
     isDarkMode,
     initialized,
     userStats,
-    macroSettings
+    macroSettings,
+    debugSettings
   };
 }

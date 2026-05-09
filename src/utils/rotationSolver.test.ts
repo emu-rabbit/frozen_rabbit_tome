@@ -241,4 +241,26 @@ describe('solveGatheringRotation', () => {
     expect(result.revisit.enabled).toBe(false);
     expect(result.rotationPlans).toHaveLength(1);
   });
+
+  it('只在 debug mode 回傳公式、分布與搜尋統計', () => {
+    const normalResult = solveGatheringRotation(createRequest());
+    const debugResult = solveGatheringRotation(createRequest({ debugMode: true }));
+
+    expect(normalResult.debug).toBeUndefined();
+    expect(debugResult.debug?.formulas.success).toMatchObject({
+      gathering: 1200,
+      baseGathering: 1000,
+      score: 120,
+      finalRate: 100
+    });
+    expect(debugResult.debug?.formulas.boon).toMatchObject({
+      perception: 1000,
+      basePerception: 1000,
+      score: 100,
+      finalRate: 35
+    });
+    expect(debugResult.debug?.plans[0].outcomeDistribution.length).toBeGreaterThan(0);
+    expect(debugResult.debug?.plans[0].search.statesSolved).toBeGreaterThan(0);
+    expect(debugResult.debug?.optimality.method).toBe('dynamic-programming-exhaustive-search');
+  });
 });

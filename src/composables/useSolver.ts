@@ -59,7 +59,7 @@ const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
 );
 
 export function useSolver() {
-  const { userStats } = useSettings();
+  const { userStats, debugSettings } = useSettings();
 
   const fetchItemLevelData = async () => {
     const levels = getItemLevelData();
@@ -288,7 +288,8 @@ export function useSolver() {
         nodeBonuses: { ...nodeBonuses.value },
         temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
         jobType: activeItem.value.jobType || 'miner',
-        isTimedNode: activeItem.value.isTimedNode ?? false
+        isTimedNode: activeItem.value.isTimedNode ?? false,
+        debugMode: debugSettings.value.solverDebugMode
       };
 
       worker.postMessage(request);

@@ -96,6 +96,10 @@ export interface MacroSettings {
   bufferSeconds: number;
 }
 
+export interface DebugSettings {
+  solverDebugMode: boolean;
+}
+
 /** 採集動作類型 */
 export type GatheringAction = 'Gather' | 'BountifulYield' | 'KingsYield' | 'SolidReason' | 'WiseToTheWorld';
 
@@ -111,6 +115,7 @@ export interface SolverRequest {
   temporaryGp: number;
   jobType: 'miner' | 'botanist';
   isTimedNode?: boolean;
+  debugMode?: boolean;
 }
 
 export type SolverRotationPlanKind = 'primary' | 'revisit';
@@ -129,6 +134,77 @@ export interface SolverRevisitInfo {
   isFullGp: boolean;
 }
 
+export interface SolverOutcomeDebugEntry {
+  yield: number;
+  probability: number;
+}
+
+export interface SolverFormulaDebugInfo {
+  success: {
+    gathering: number;
+    baseGathering: number;
+    score: number;
+    rawRate: number;
+    levelDifference: number;
+    levelModifier: number;
+    finalRate: number;
+  };
+  boon: {
+    perception: number;
+    basePerception: number;
+    score: number;
+    finalRate: number;
+  };
+  bountiful: {
+    gathering: number;
+    baseGathering: number;
+    plusTwoThreshold: number;
+    plusThreeThreshold: number;
+    amount: number;
+  };
+  gather: {
+    gpRecoveredPerGather: number;
+    baseIntegrity: number;
+    bonusIntegrity: number;
+    maxIntegrity: number;
+    nodeYieldBonus: number;
+    nodeBoonBonus: number;
+  };
+}
+
+export interface SolverSearchDebugInfo {
+  startingGp: number;
+  statesSolved: number;
+  memoHits: number;
+  actionsEvaluated: number;
+  candidateComparisons: number;
+  terminalStates: number;
+}
+
+export interface SolverPlanDebugInfo {
+  kind: SolverRotationPlanKind;
+  startingGp: number;
+  expectedYield: number;
+  minYield: number;
+  maxYield: number;
+  outcomeDistribution: SolverOutcomeDebugEntry[];
+  search: SolverSearchDebugInfo;
+}
+
+export interface SolverDebugInfo {
+  formulas: SolverFormulaDebugInfo;
+  plans: SolverPlanDebugInfo[];
+  combined: {
+    expectedYield: number;
+    revisitChance: number;
+    expression: string;
+  };
+  optimality: {
+    method: 'dynamic-programming-exhaustive-search';
+    stateKeyFields: string[];
+  };
+}
+
 /** 求解器回應 */
 export interface SolverResponse {
   bestRotation: string[];
@@ -140,6 +216,7 @@ export interface SolverResponse {
   minYieldChance: number;
   maxYieldChance: number;
   calculationTime: number;
+  debug?: SolverDebugInfo;
 }
 
 export interface StoredTomeNodeBonuses {

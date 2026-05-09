@@ -11,6 +11,7 @@ import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
+import SolverDebugDialog from '../components/SolverDebugDialog.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
@@ -40,7 +41,7 @@ const {
   isSolving
 } = useSolver();
 
-const { userStats, macroSettings } = useSettings();
+const { userStats, macroSettings, debugSettings } = useSettings();
 const { saveTome } = useTomeLibrary();
 type FoodOption = {
   food: GatheringFood;
@@ -54,6 +55,7 @@ const foodSuggestions = ref<FoodOption[]>([]);
 const isSettingsSaved = ref(false);
 const isTomeSaved = ref(false);
 const isMacroPreviewOpen = ref(false);
+const isDebugDialogOpen = ref(false);
 const macroPreview = ref<MacroBuildResult | null>(null);
 let settingsSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let tomeSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -237,6 +239,12 @@ function handlePreviewMacro() {
       })), macroSettings.value, options)
     : buildGatheringMacro(rotationResult.value.bestRotation, macroSettings.value, options);
   isMacroPreviewOpen.value = true;
+}
+
+function handleOpenDebugDialog() {
+  if (!rotationResult.value?.debug) return;
+
+  isDebugDialogOpen.value = true;
 }
 
 function rotationPlanTitle(plan: SolverRotationPlan) {
@@ -588,6 +596,16 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center sm:justify-start gap-2">
               <i class="pi pi-bolt text-amber-500"></i>
               {{ t('solver.strategy.title') }}
+              <button
+                v-if="debugSettings.solverDebugMode && rotationResult?.debug"
+                type="button"
+                class="solver-debug-info-button"
+                :aria-label="t('solver.debug.open')"
+                :title="t('solver.debug.open')"
+                @click="handleOpenDebugDialog"
+              >
+                <i class="pi pi-info-circle"></i>
+              </button>
             </h3>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('solver.strategy.description') }}</p>
           </div>
@@ -695,6 +713,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
     </div>
 
     <MacroPreviewDialog v-model="isMacroPreviewOpen" :macro="macroPreview" />
+    <SolverDebugDialog v-model="isDebugDialogOpen" :debug="rotationResult?.debug" />
   </div>
 </template>
 
@@ -755,6 +774,29 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   line-height: 1.15;
   white-space: nowrap;
   min-width: 0;
+}
+.solver-debug-info-button {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(187 247 208);
+  border-radius: 0.75rem;
+  background: rgb(240 253 244);
+  color: #15803d;
+  font-size: 0.9rem;
+  transition: all 0.18s ease;
+}
+.solver-debug-info-button:hover {
+  transform: translateY(-1px);
+  border-color: #52a890;
+  background: rgb(220 252 231);
+}
+:global(html.dark .solver-debug-info-button) {
+  border-color: rgb(21 128 61 / 0.55);
+  background: rgb(20 83 45 / 0.22);
+  color: #bbf7d0;
 }
 .rotation-step {
   min-height: 44px;

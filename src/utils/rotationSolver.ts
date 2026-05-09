@@ -1,5 +1,5 @@
 import { calculateSuccessRate, calculateBoonChance, calculateBountifulYield } from './gatheringMath';
-import type { SolverRequest, SolverResponse } from '../types/game';
+import type { SolverDebugInfo, SolverRequest, SolverResponse, SolverSearchDebugInfo } from '../types/game';
 
 type JobType = SolverRequest['jobType'];
 
@@ -32,6 +32,11 @@ interface ActionOption {
   apply: (state: SearchState, solve: (state: SearchState) => SolverResult) => SolverResult;
 }
 
+interface SearchRunResult extends SolverResult {
+  startingGp: number;
+  search: SolverSearchDebugInfo;
+}
+
 const BOON_CAP = 100;
 const SUCCESS_CAP = 100;
 const EV_EPSILON = 0.0000001;
@@ -40,6 +45,22 @@ const TIMED_REVISIT_CHANCE = 0.08;
 const GATHER_ACTION = '採集';
 const WISE_TO_THE_WORLD_ACTION = '理智同興(若觸發)';
 const WISE_PROC_GATHER_ACTION = '採集(理智觸發)';
+const STATE_KEY_FIELDS = [
+  'gp',
+  'integrity',
+  'hasGathered',
+  'successBonus',
+  'successIActive',
+  'successIIActive',
+  'successIIIActive',
+  'boonBonus',
+  'giftIActive',
+  'giftIIActive',
+  'allYieldBonus',
+  'tidings',
+  'nextSuccessBonus',
+  'nextYieldBonus'
+];
 
 function actionNames(jobType: JobType) {
   const isMiner = jobType === 'miner';
@@ -66,6 +87,71 @@ function gpPerGather(level: number): number {
 
 function clampPercent(value: number, cap: number): number {
   return Math.min(cap, Math.max(0, value));
+}
+
+function calculateSuccessFormulaDebug(
+  gathering: number,
+  baseGathering: number,
+  playerLevel: number,
+  itemLevel: number
+) {
+  if (!baseGathering) {
+    return {
+      gathering,
+      baseGathering,
+      score: 0,
+      rawRate: 0,
+      levelDifference: itemLevel > 0 ? playerLevel - itemLevel : 0,
+      levelModifier: 0,
+      finalRate: 0
+    };
+  }
+
+  const score = Math.floor((100 * gathering) / baseGathering);
+  let rawRate = 0;
+
+  if (score >= 80) rawRate = 100;
+  else if (score >= 76) rawRate = 94 + (score - 75) * 1;
+  else if (score >= 64) rawRate = 72 + (score - 64) * 2;
+  else if (score >= 46) rawRate = 60 + Math.floor(((score - 45) * 5) / 9);
+  else if (score === 45) rawRate = 60;
+  else if (score === 44) rawRate = 58;
+  else if (score >= 41) rawRate = 52 + (score - 40) * 2;
+  else if (score >= 21) rawRate = Math.floor(20 + (score - 20) * 1.6);
+  else if (score >= 11) rawRate = 2 + (score - 11) * 2;
+  else if (score >= 1) rawRate = 1;
+
+  const levelDifference = itemLevel > 0 ? playerLevel - itemLevel : 0;
+  let levelModifier = 0;
+
+  if (itemLevel > 0 && rawRate > 0 && rawRate < 100) {
+    levelModifier = levelDifference > 0
+      ? Math.min(5, levelDifference)
+      : Math.max(-25, levelDifference * 5);
+  }
+
+  return {
+    gathering,
+    baseGathering,
+    score,
+    rawRate,
+    levelDifference,
+    levelModifier,
+    finalRate: Math.min(100, Math.max(0, rawRate + levelModifier))
+  };
+}
+
+function calculateBoonFormulaDebug(perception: number, basePerception: number) {
+  const score = basePerception
+    ? Math.min(150, Math.floor((100 * perception) / basePerception))
+    : 0;
+
+  return {
+    perception,
+    basePerception,
+    score,
+    finalRate: calculateBoonChance(perception, basePerception)
+  };
 }
 
 function buildMemoKey(state: SearchState): string {
@@ -101,23 +187,31 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   const bountifulAmount = calculateBountifulYield(stats.gathering, baseValues.Gathering);
   const gatherGp = gpPerGather(stats.level);
   const memo = new Map<string, SolverResult>();
+  let activeSearchStats: SolverSearchDebugInfo | null = null;
 
   const canRaiseSuccess = baseSuccessRate > 1 && baseSuccessRate < SUCCESS_CAP;
   const canRaiseBoon = baseBoonChance + nodeBonuses.extraRate > 1;
 
   function solve(state: SearchState): SolverResult {
     if (state.integrity <= 0) {
+      activeSearchStats && (activeSearchStats.terminalStates += 1);
       return { expectedYield: 0, rotation: [], outcomes: new Map([[0, 1]]) };
     }
 
     const memoKey = buildMemoKey(state);
     const memoized = memo.get(memoKey);
-    if (memoized) return memoized;
+    if (memoized) {
+      activeSearchStats && (activeSearchStats.memoHits += 1);
+      return memoized;
+    }
+
+    activeSearchStats && (activeSearchStats.statesSolved += 1);
 
     let best = gather(state);
     const actions = buildActions(state).sort((a, b) => a.priority - b.priority);
 
     for (const action of actions) {
+      activeSearchStats && (activeSearchStats.actionsEvaluated += 1);
       const result = action.apply(state, solve);
       const candidate = {
         expectedYield: result.expectedYield,
@@ -125,6 +219,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
         outcomes: result.outcomes
       };
 
+      activeSearchStats && (activeSearchStats.candidateComparisons += 1);
       if (isPreferredResult(candidate, best)) {
         best = candidate;
       }
@@ -393,6 +488,15 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     };
   }
 
+  function serializeOutcomes(outcomes: Map<number, number>) {
+    return [...outcomes.entries()]
+      .sort(([leftYield], [rightYield]) => leftYield - rightYield)
+      .map(([totalYield, probability]) => ({
+        yield: totalYield,
+        probability: Number((probability * 100).toFixed(4))
+      }));
+  }
+
   function countGatherActions(rotation: string[]): number {
     return rotation.filter(isGatherAction).length;
   }
@@ -479,9 +583,17 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return -100;
   }
 
-  function solveWithGp(startingGp: number) {
+  function solveWithGp(startingGp: number): SearchRunResult {
     memo.clear();
-    return solve({
+    activeSearchStats = {
+      startingGp: Math.min(stats.gp, startingGp),
+      statesSolved: 0,
+      memoHits: 0,
+      actionsEvaluated: 0,
+      candidateComparisons: 0,
+      terminalStates: 0
+    };
+    const result = solve({
       gp: Math.min(stats.gp, startingGp),
       integrity: maxIntegrity,
       hasGathered: false,
@@ -497,6 +609,14 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       nextSuccessBonus: 0,
       nextYieldBonus: 0
     });
+    const search = activeSearchStats;
+    activeSearchStats = null;
+
+    return {
+      ...result,
+      startingGp: Math.min(stats.gp, startingGp),
+      search
+    };
   }
 
   const initial = solveWithGp(temporaryGp);
@@ -532,7 +652,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
         }
       ];
 
-  return {
+  const response: SolverResponse = {
     bestRotation: initial.rotation,
     rotationPlans,
     revisit: {
@@ -549,4 +669,64 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     maxYieldChance: initialSummary.maxYieldChance,
     calculationTime: 0
   };
+
+  if (request.debugMode) {
+    const plusTwoThreshold = Math.floor(baseValues.Gathering * 0.9);
+    const plusThreeThreshold = Math.floor(baseValues.Gathering * 1.1);
+    const planDebugs: SolverDebugInfo['plans'] = rotationPlans.map((plan) => {
+      const run = plan.kind === 'revisit' ? fullGpResult : initial;
+      const summary = plan.kind === 'revisit' ? fullGpSummary : initialSummary;
+
+      return {
+        kind: plan.kind,
+        startingGp: run.startingGp,
+        expectedYield: Number(run.expectedYield.toFixed(4)),
+        minYield: summary.minYield,
+        maxYield: summary.maxYield,
+        outcomeDistribution: serializeOutcomes(run.outcomes),
+        search: run.search
+      };
+    });
+
+    response.debug = {
+      formulas: {
+        success: calculateSuccessFormulaDebug(
+          stats.gathering,
+          baseValues.Gathering,
+          stats.level,
+          itemLevel
+        ),
+        boon: calculateBoonFormulaDebug(stats.perception, baseValues.Perception),
+        bountiful: {
+          gathering: stats.gathering,
+          baseGathering: baseValues.Gathering,
+          plusTwoThreshold,
+          plusThreeThreshold,
+          amount: bountifulAmount
+        },
+        gather: {
+          gpRecoveredPerGather: gatherGp,
+          baseIntegrity: nodeBonuses.baseIntegrity,
+          bonusIntegrity: nodeBonuses.gatheringCount,
+          maxIntegrity,
+          nodeYieldBonus: nodeBonuses.yieldCount,
+          nodeBoonBonus: nodeBonuses.extraRate
+        }
+      },
+      plans: planDebugs,
+      combined: {
+        expectedYield: Number(expectedYield.toFixed(4)),
+        revisitChance,
+        expression: revisitEnabled
+          ? `${Number(initial.expectedYield.toFixed(4))} + ${revisitChance} * ${Number(fullGpResult.expectedYield.toFixed(4))}`
+          : `${Number(initial.expectedYield.toFixed(4))}`
+      },
+      optimality: {
+        method: 'dynamic-programming-exhaustive-search',
+        stateKeyFields: STATE_KEY_FIELDS
+      }
+    };
+  }
+
+  return response;
 }

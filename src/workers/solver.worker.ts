@@ -14,6 +14,7 @@ self.onmessage = (e: MessageEvent<SolverRequest>) => {
     maxYield: result.maxYield,
     minYieldChance: result.minYieldChance,
     maxYieldChance: result.maxYieldChance,
-    calculationTime: Math.floor(performance.now() - startTime)
+    calculationTime: Math.floor(performance.now() - startTime),
+    debug: result.debug
   } as SolverResponse);
 };
