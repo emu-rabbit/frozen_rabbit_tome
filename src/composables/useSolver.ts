@@ -38,6 +38,23 @@ const rotationResult = ref<SolverResponse | null>(null);
 const isSolving = ref(false);
 let activeWorker: Worker | null = null;
 let solveVersion = 0;
+let latestSolveInputSignature = '';
+
+const createSolveInputSignature = () => JSON.stringify({
+  itemId: activeItem.value?.itemId ?? null,
+  jobType: activeItem.value?.jobType ?? null,
+  stats: solverStats.value,
+  selectedFood: selectedFood.value,
+  nodeBonuses: nodeBonuses.value,
+  temporaryGp: temporaryGp.value
+});
+
+const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
+  left.level === right.level
+  && left.gathering === right.gathering
+  && left.perception === right.perception
+  && left.gp === right.gp
+);
 
 export function useSolver() {
   const { userStats } = useSettings();
@@ -105,7 +122,11 @@ export function useSolver() {
     if (!activeItem.value) return;
     const job = activeItem.value.jobType || 'miner';
     const stats = userStats.value[job];
-    solverStats.value = { ...stats };
+
+    if (!areStatsEqual(solverStats.value, stats)) {
+      solverStats.value = { ...stats };
+    }
+
     // 同步時以食物套用後的滿 GP 作為預設規劃情境
     temporaryGp.value = effectiveStats.value.gp;
   };
@@ -187,7 +208,13 @@ export function useSolver() {
     }
   }, { immediate: true });
 
-  watch([solverStats, nodeBonuses, temporaryGp, selectedFood], () => {
+  latestSolveInputSignature = createSolveInputSignature();
+
+  watch([activeItem, solverStats, nodeBonuses, temporaryGp, selectedFood], () => {
+    const currentSignature = createSolveInputSignature();
+    if (currentSignature === latestSolveInputSignature) return;
+
+    latestSolveInputSignature = currentSignature;
     invalidateSolveResult();
   }, { deep: true });
 
