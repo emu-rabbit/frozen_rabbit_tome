@@ -44,7 +44,22 @@ type FoodOption = {
   label: string;
   searchText: string;
 };
+type StrategyActionKey = 'copyMacro' | 'saveTome' | 'solve';
+
 const foodSuggestions = ref<FoodOption[]>([]);
+
+const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
+  en: {
+    copyMacro: ['Copy', 'Macro'],
+    saveTome: ['Save', 'Tome'],
+    solve: ['Solve It']
+  },
+  ja: {
+    copyMacro: ['マクロを', 'コピー'],
+    saveTome: ['秘伝書を', '保存'],
+    solve: ['計算']
+  }
+};
 
 const selectedFoodModel = computed<FoodOption | null>({
   get: () => selectedFoodItem.value ? toFoodOption(selectedFoodItem.value, selectedFood.value.quality) : null,
@@ -139,6 +154,14 @@ function actionName(action: string) {
 
 function formatChance(value: number) {
   return `${value.toFixed(2)}%`;
+}
+
+function strategyActionLabel(key: StrategyActionKey) {
+  return t(`solver.strategy.${key}`);
+}
+
+function strategyActionLabelLines(key: StrategyActionKey) {
+  return strategyActionLineBreaks[locale.value]?.[key] ?? [strategyActionLabel(key)];
 }
 </script>
 
@@ -403,24 +426,36 @@ function formatChance(value: number) {
           </div>
           <div class="solver-action-bar">
             <Button
-              :label="t('solver.strategy.copyMacro')"
-              icon="pi pi-copy"
               class="solver-action-button p-button-outlined rounded-xl"
+              :aria-label="strategyActionLabel('copyMacro')"
               disabled
-            />
+            >
+              <i class="pi pi-copy p-button-icon p-button-icon-left"></i>
+              <span class="solver-action-label p-button-label">
+                <span v-for="line in strategyActionLabelLines('copyMacro')" :key="line">{{ line }}</span>
+              </span>
+            </Button>
             <Button
-              :label="t('solver.strategy.saveTome')"
-              icon="pi pi-bookmark"
               class="solver-action-button p-button-outlined rounded-xl"
+              :aria-label="strategyActionLabel('saveTome')"
               disabled
-            />
+            >
+              <i class="pi pi-bookmark p-button-icon p-button-icon-left"></i>
+              <span class="solver-action-label p-button-label">
+                <span v-for="line in strategyActionLabelLines('saveTome')" :key="line">{{ line }}</span>
+              </span>
+            </Button>
             <Button
-              :label="t('solver.strategy.solve')"
-              icon="pi pi-play"
               class="solver-action-button p-button-primary rounded-xl shadow-md"
+              :aria-label="strategyActionLabel('solve')"
               :loading="isSolving"
               @click="solve"
-            />
+            >
+              <i class="p-button-icon p-button-icon-left" :class="isSolving ? 'pi pi-spin pi-spinner' : 'pi pi-play'"></i>
+              <span class="solver-action-label p-button-label">
+                <span v-for="line in strategyActionLabelLines('solve')" :key="line">{{ line }}</span>
+              </span>
+            </Button>
           </div>
         </div>
 
@@ -513,11 +548,15 @@ function formatChance(value: number) {
   width: 100%;
   min-height: 42px;
   justify-content: center;
-  white-space: normal;
 }
-:deep(.solver-action-button .p-button-label) {
+.solver-action-label {
   flex: 0 1 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   line-height: 1.15;
+  white-space: nowrap;
 }
 .rotation-step {
   min-height: 44px;
