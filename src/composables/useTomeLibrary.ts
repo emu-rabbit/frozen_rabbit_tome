@@ -16,11 +16,11 @@ function createTomeId() {
 
 function toStoredRotationStep(action: string): StoredTomeRotationStep | null {
   if (action.startsWith('採集')) {
-    return { type: 'gather' };
+    return { type: 'gather', actionName: action };
   }
 
   const actionId = getRotationActionId(action);
-  return actionId ? { type: 'action', actionId } : null;
+  return actionId ? { type: 'action', actionId, actionName: action } : null;
 }
 
 export function useTomeLibrary() {

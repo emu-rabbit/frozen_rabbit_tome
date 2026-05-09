@@ -5,7 +5,7 @@ import SelectButton from 'primevue/selectbutton';
 import InputNumber from 'primevue/inputnumber';
 import { useI18n } from 'vue-i18n';
 
-const { isDarkMode, language, userStats } = useSettings();
+const { isDarkMode, language, userStats, macroSettings } = useSettings();
 const { t } = useI18n();
 
 const langOptions = [
@@ -139,6 +139,29 @@ const langOptions = [
                               <InputNumber v-model="userStats.botanist.gp" :min="0" :useGrouping="false" class="w-full" />
                           </div>
                       </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <!-- Macro Settings -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
+                <i class="pi pi-copy text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.macroTitle') }}</label>
+              </div>
+
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.macroDesc') }}</p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                  <div class="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                      <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('settings.macroSecondsPerGather') }}</label>
+                      <InputNumber v-model="macroSettings.secondsPerGather" :min="1" :max="60" :useGrouping="false" suffix=" 秒" class="w-full" />
+                  </div>
+                  <div class="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                      <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('settings.macroBufferSeconds') }}</label>
+                      <InputNumber v-model="macroSettings.bufferSeconds" :min="0" :max="60" :useGrouping="false" suffix=" 秒" class="w-full" />
                   </div>
               </div>
           </div>

@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, onActivated } from 'v
 import { useI18n } from 'vue-i18n';
 import { useSolver } from '../composables/useSolver';
 import { GATHERING_FOODS } from '../services/foodData';
-import { getItemEnglishName, getItemName } from '../services/gameData';
+import { getActionName, getItemEnglishName, getItemName } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import type { FoodQuality, GatheringFood } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
@@ -12,6 +12,8 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
+import { buildGatheringMacro } from '../utils/macroGenerator';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 const { t, locale } = useI18n();
 const {
@@ -38,7 +40,7 @@ const {
   isSolving
 } = useSolver();
 
-const { userStats } = useSettings();
+const { userStats, macroSettings } = useSettings();
 const { saveTome } = useTomeLibrary();
 type FoodOption = {
   food: GatheringFood;
@@ -51,8 +53,10 @@ type StrategyActionKey = 'copyMacro' | 'saveTome' | 'solve';
 const foodSuggestions = ref<FoodOption[]>([]);
 const isSettingsSaved = ref(false);
 const isTomeSaved = ref(false);
+const copyMacroState = ref<'idle' | 'copied' | 'partial' | 'failed'>('idle');
 let settingsSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let tomeSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
+let copyMacroTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
   en: {
@@ -188,6 +192,42 @@ function handleSaveTome() {
   }, 1600);
 }
 
+async function handleCopyMacro() {
+  if (!rotationResult.value) return;
+
+  const macro = buildGatheringMacro(rotationResult.value.bestRotation, macroSettings.value, {
+    resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
+    formatGatherPrompt: formatMacroGatherPrompt
+  });
+  const copied = await copyTextToClipboard(macro.text);
+  copyMacroState.value = copied
+    ? macro.isComplete ? 'copied' : 'partial'
+    : 'failed';
+
+  if (copyMacroTimer) {
+    window.clearTimeout(copyMacroTimer);
+  }
+
+  copyMacroTimer = window.setTimeout(() => {
+    copyMacroState.value = 'idle';
+    copyMacroTimer = null;
+  }, 2200);
+}
+
+function formatMacroGatherPrompt(context: {
+  count: number;
+  hasConditionalGather: boolean;
+  isFinalRun: boolean;
+}) {
+  if (context.isFinalRun) {
+    return t('macro.prompts.finalGather');
+  }
+
+  return context.hasConditionalGather
+    ? t('macro.prompts.conditionalGatherCount', { count: context.count })
+    : t('macro.prompts.gatherCount', { count: context.count });
+}
+
 watch(hasUnsavedStats, (hasChanges) => {
   if (!hasChanges) return;
 
@@ -204,6 +244,9 @@ onBeforeUnmount(() => {
   }
   if (tomeSavedTimer) {
     window.clearTimeout(tomeSavedTimer);
+  }
+  if (copyMacroTimer) {
+    window.clearTimeout(copyMacroTimer);
   }
 });
 
@@ -229,6 +272,10 @@ function formatChance(value: number) {
 }
 
 function strategyActionLabel(key: StrategyActionKey) {
+  if (key === 'copyMacro' && copyMacroState.value !== 'idle') {
+    return t(`solver.strategy.copyMacroStates.${copyMacroState.value}`);
+  }
+
   return t(`solver.strategy.${key}`);
 }
 
@@ -571,9 +618,11 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           <div class="solver-result-action-bar">
             <Button
               class="solver-action-button p-button-outlined rounded-xl"
+              :class="{ 'is-macro-copied': copyMacroState === 'copied', 'is-macro-partial': copyMacroState === 'partial', 'is-macro-failed': copyMacroState === 'failed' }"
               :aria-label="strategyActionLabel('copyMacro')"
+              @click="handleCopyMacro"
             >
-              <i class="pi pi-copy p-button-icon p-button-icon-left"></i>
+              <i class="p-button-icon p-button-icon-left" :class="copyMacroState === 'idle' ? 'pi pi-copy' : copyMacroState === 'failed' ? 'pi pi-exclamation-triangle' : 'pi pi-check'"></i>
               <span class="solver-action-label p-button-label">{{ strategyActionLabel('copyMacro') }}</span>
             </Button>
             <Button
@@ -645,6 +694,36 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   border-color: rgb(134 239 172);
   background: rgb(220 252 231 / 0.75);
   box-shadow: 0 0 0 1px rgb(34 197 94 / 0.12);
+}
+:deep(.solver-action-button.is-macro-copied) {
+  color: #15803d;
+  border-color: rgb(134 239 172);
+  background: rgb(220 252 231 / 0.75);
+}
+:global(.dark .solver-action-button.is-macro-copied) {
+  color: #bbf7d0;
+  border-color: rgb(21 128 61 / 0.55);
+  background: rgb(20 83 45 / 0.22);
+}
+:deep(.solver-action-button.is-macro-partial) {
+  color: #b45309;
+  border-color: rgb(252 211 77);
+  background: rgb(254 243 199 / 0.8);
+}
+:global(.dark .solver-action-button.is-macro-partial) {
+  color: #fde68a;
+  border-color: rgb(180 83 9 / 0.6);
+  background: rgb(120 53 15 / 0.26);
+}
+:deep(.solver-action-button.is-macro-failed) {
+  color: #b91c1c;
+  border-color: rgb(252 165 165);
+  background: rgb(254 226 226 / 0.8);
+}
+:global(.dark .solver-action-button.is-macro-failed) {
+  color: #fecaca;
+  border-color: rgb(153 27 27 / 0.62);
+  background: rgb(127 29 29 / 0.25);
 }
 :global(.dark .solver-action-button.is-tome-saved) {
   color: #bbf7d0;

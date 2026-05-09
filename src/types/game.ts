@@ -87,6 +87,11 @@ export interface UserStats {
   botanist: PlayerStats;
 }
 
+export interface MacroSettings {
+  secondsPerGather: number;
+  bufferSeconds: number;
+}
+
 /** 採集動作類型 */
 export type GatheringAction = 'Gather' | 'BountifulYield' | 'KingsYield' | 'SolidReason' | 'WiseToTheWorld';
 
@@ -121,8 +126,8 @@ export interface StoredTomeNodeBonuses {
 }
 
 export type StoredTomeRotationStep =
-  | { type: 'gather' }
-  | { type: 'action'; actionId: number };
+  | { type: 'gather'; actionName?: string }
+  | { type: 'action'; actionId: number; actionName?: string };
 
 export interface StoredTome {
   id: string;

@@ -7,6 +7,14 @@ export default {
   common: {
     getStarted: '立即開始'
   },
+  macro: {
+    prompts: {
+      gatherCount: '請採集 {count} 次',
+      conditionalGatherCount: '若理智同興觸發，請採集 {count} 次',
+      finalGather: '請採集到底',
+      finalConditionalGather: '若理智同興觸發，請採集到底'
+    }
+  },
   nav: {
     createGuide: '建立秘笈',
     solver: '秘笈求解器',
@@ -48,6 +56,10 @@ export default {
     aboutDesc: '這是「冷凍兔肉的秘笈」，專為 FFXIV 採集玩家設計的工具箱。',
     statsTitle: '採集玩家數值',
     statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。',
+    macroTitle: '採集巨集',
+    macroDesc: '調整巨集提醒玩家手動採集時的等待時間。預設每個物品 4 秒，外加 2 秒緩衝。',
+    macroSecondsPerGather: '每個物品等待',
+    macroBufferSeconds: '額外緩衝',
   },
   solver: {
     title: '秘笈求解器',
@@ -83,6 +95,11 @@ export default {
       title: '建議採集手法',
       description: '依照目前數值，演算出期望產量最高的手法',
       copyMacro: '複製巨集',
+      copyMacroStates: {
+        copied: '已複製',
+        partial: '已複製前 15 行',
+        failed: '複製失敗'
+      },
       saveTome: '儲存秘笈',
       savedTome: '已儲存',
       solve: '求解',
@@ -117,6 +134,11 @@ export default {
     actions: {
       edit: '編輯',
       copyMacro: '複製巨集',
+      copyMacroStates: {
+        copied: '已複製',
+        partial: '已複製前 15 行',
+        failed: '複製失敗'
+      },
       delete: '刪除秘笈'
     }
   },

@@ -5,6 +5,14 @@ export default {
     description: 'FFXIV Gatherer skill recommendation tool'
   },
   common: {},
+  macro: {
+    prompts: {
+      gatherCount: 'Gather {count} time(s)',
+      conditionalGatherCount: 'If Wise procs, gather {count} time(s)',
+      finalGather: 'Gather until depleted',
+      finalConditionalGather: 'If Wise procs, gather until depleted'
+    }
+  },
   nav: {
     createGuide: 'Create Tome',
     solver: 'Tome Solver',
@@ -46,6 +54,10 @@ export default {
     aboutDesc: 'Frozen Rabbit Tome is a specialized toolkit for FFXIV gatherers.',
     statsTitle: 'Player Equipment Stats',
     statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.',
+    macroTitle: 'Gathering Macro',
+    macroDesc: 'Adjust how long the macro waits while asking you to manually gather. Default is 4 seconds per item plus a 2-second buffer.',
+    macroSecondsPerGather: 'Wait per item',
+    macroBufferSeconds: 'Extra buffer',
   },
   solver: {
     title: 'Tome Solver',
@@ -81,6 +93,11 @@ export default {
       title: 'Recommended Rotation',
       description: 'Solves the highest expected-yield rotation from your current values.',
       copyMacro: 'Copy Macro',
+      copyMacroStates: {
+        copied: 'Copied',
+        partial: 'Copied first 15 lines',
+        failed: 'Copy failed'
+      },
       saveTome: 'Save Tome',
       savedTome: 'Saved',
       solve: 'Solve It',
@@ -115,6 +132,11 @@ export default {
     actions: {
       edit: 'Edit',
       copyMacro: 'Copy Macro',
+      copyMacroStates: {
+        copied: 'Copied',
+        partial: 'Copied first 15 lines',
+        failed: 'Copy failed'
+      },
       delete: 'Delete'
     }
   },

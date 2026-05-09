@@ -5,6 +5,14 @@ export default {
     description: 'FFXIV 大地使者技能推荐工具'
   },
   common: {},
+  macro: {
+    prompts: {
+      gatherCount: '请采集 {count} 次',
+      conditionalGatherCount: '若理智同兴触发，请采集 {count} 次',
+      finalGather: '请采集到底',
+      finalConditionalGather: '若理智同兴触发，请采集到底'
+    }
+  },
   nav: {
     createGuide: '建立秘籍',
     solver: '秘籍求解器',
@@ -46,6 +54,10 @@ export default {
     aboutDesc: '这是"冷冻兔肉的秘籍"，专为 FFXIV 采集玩家设计的工具箱。',
     statsTitle: '玩家装备数值',
     statsDesc: '请填入你在游戏中真实的装备数值，以便获得更精确的演算建议。',
+    macroTitle: '采集宏',
+    macroDesc: '调整宏提醒玩家手动采集时的等待时间。默认每个物品 4 秒，外加 2 秒缓冲。',
+    macroSecondsPerGather: '每个物品等待',
+    macroBufferSeconds: '额外缓冲',
   },
   solver: {
     title: '秘籍求解器',
@@ -81,6 +93,11 @@ export default {
       title: '推荐采集手法',
       description: '依照目前数值，演算出期望产量最高的手法',
       copyMacro: '复制宏',
+      copyMacroStates: {
+        copied: '已复制',
+        partial: '已复制前 15 行',
+        failed: '复制失败'
+      },
       saveTome: '保存秘籍',
       savedTome: '已保存',
       solve: '求解',
@@ -115,6 +132,11 @@ export default {
     actions: {
       edit: '编辑',
       copyMacro: '复制宏',
+      copyMacroStates: {
+        copied: '已复制',
+        partial: '已复制前 15 行',
+        failed: '复制失败'
+      },
       delete: '删除秘籍'
     }
   },

@@ -5,6 +5,14 @@ export default {
     description: 'FFXIV 大地使者スキル推奨ツール'
   },
   common: {},
+  macro: {
+    prompts: {
+      gatherCount: '{count} 回採集してください',
+      conditionalGatherCount: '理知興起が発動したら {count} 回採集してください',
+      finalGather: '最後まで採集してください',
+      finalConditionalGather: '理知興起が発動したら最後まで採集してください'
+    }
+  },
   nav: {
     createGuide: '秘伝書を作成',
     solver: '秘伝書ソルバー',
@@ -46,6 +54,10 @@ export default {
     aboutDesc: '「冷凍兔肉の秘伝書」は、FFXIV の採集プレイヤー向けに設計されたツールボックスです。',
     statsTitle: 'ステータス設定',
     statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。',
+    macroTitle: '採集マクロ',
+    macroDesc: '手動採集を促す時の待機時間を調整します。初期値はアイテム 1 個につき 4 秒、追加バッファ 2 秒です。',
+    macroSecondsPerGather: '1 個ごとの待機',
+    macroBufferSeconds: '追加バッファ',
   },
   solver: {
     title: '秘伝書ソルバー',
@@ -81,6 +93,11 @@ export default {
       title: 'おすすめ採集手順',
       description: '現在の数値から期待獲得数が最大の手順を計算します。',
       copyMacro: 'マクロをコピー',
+      copyMacroStates: {
+        copied: 'コピーしました',
+        partial: '先頭 15 行をコピー',
+        failed: 'コピー失敗'
+      },
       saveTome: '秘伝書を保存',
       savedTome: '保存しました',
       solve: '計算',
@@ -115,6 +132,11 @@ export default {
     actions: {
       edit: '編集',
       copyMacro: 'マクロをコピー',
+      copyMacroStates: {
+        copied: 'コピーしました',
+        partial: '先頭 15 行をコピー',
+        failed: 'コピー失敗'
+      },
       delete: '削除'
     }
   },

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'TomeLibrary' });
 
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
@@ -10,15 +10,23 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useSolver } from '../composables/useSolver';
-import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
+import { useSettings } from '../composables/useSettings';
+import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import type { StoredTome, StoredTomeRotationStep } from '../types/game';
+import { buildGatheringMacroFromStoredRotation } from '../utils/macroGenerator';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const { tomes, deleteTome } = useTomeLibrary();
 const { loadTomeForEditing } = useSolver();
+const { macroSettings } = useSettings();
 const searchQuery = ref('');
+const copiedTomeId = ref<string | null>(null);
+const partialTomeId = ref<string | null>(null);
+const failedTomeId = ref<string | null>(null);
+let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const filteredTomes = computed(() => {
   currentLanguage.value;
@@ -78,6 +86,64 @@ function handleEdit(tome: StoredTome) {
   if (!loadTomeForEditing(tome)) return;
   router.push('/solver');
 }
+
+async function handleCopyMacro(tome: StoredTome) {
+  const macro = buildGatheringMacroFromStoredRotation(tome.rotation, macroSettings.value, {
+    resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
+    formatGatherPrompt: formatMacroGatherPrompt
+  });
+  const copied = await copyTextToClipboard(macro.text);
+
+  copiedTomeId.value = copied && macro.isComplete ? tome.id : null;
+  partialTomeId.value = copied && !macro.isComplete ? tome.id : null;
+  failedTomeId.value = copied ? null : tome.id;
+
+  if (copyTimer) {
+    window.clearTimeout(copyTimer);
+  }
+
+  copyTimer = window.setTimeout(() => {
+    copiedTomeId.value = null;
+    partialTomeId.value = null;
+    failedTomeId.value = null;
+    copyTimer = null;
+  }, 2200);
+}
+
+function formatMacroGatherPrompt(context: {
+  count: number;
+  hasConditionalGather: boolean;
+  isFinalRun: boolean;
+}) {
+  if (context.isFinalRun) {
+    return t('macro.prompts.finalGather');
+  }
+
+  return context.hasConditionalGather
+    ? t('macro.prompts.conditionalGatherCount', { count: context.count })
+    : t('macro.prompts.gatherCount', { count: context.count });
+}
+
+function copyMacroLabel(tome: StoredTome) {
+  if (copiedTomeId.value === tome.id) return t('tomeLibrary.actions.copyMacroStates.copied');
+  if (partialTomeId.value === tome.id) return t('tomeLibrary.actions.copyMacroStates.partial');
+  if (failedTomeId.value === tome.id) return t('tomeLibrary.actions.copyMacroStates.failed');
+
+  return t('tomeLibrary.actions.copyMacro');
+}
+
+function copyMacroIcon(tome: StoredTome) {
+  if (failedTomeId.value === tome.id) return 'pi pi-exclamation-triangle';
+  if (copiedTomeId.value === tome.id || partialTomeId.value === tome.id) return 'pi pi-check';
+
+  return 'pi pi-copy';
+}
+
+onBeforeUnmount(() => {
+  if (copyTimer) {
+    window.clearTimeout(copyTimer);
+  }
+});
 </script>
 
 <template>
@@ -181,9 +247,11 @@ function handleEdit(tome: StoredTome) {
               @click="handleEdit(tome)"
             />
             <Button
-              icon="pi pi-copy"
-              :label="t('tomeLibrary.actions.copyMacro')"
+              :icon="copyMacroIcon(tome)"
+              :label="copyMacroLabel(tome)"
               class="p-button-sm p-button-text library-action"
+              :class="{ 'is-copy-success': copiedTomeId === tome.id, 'is-copy-partial': partialTomeId === tome.id, 'is-copy-failed': failedTomeId === tome.id }"
+              @click="handleCopyMacro(tome)"
             />
             <Button
               icon="pi pi-trash"
@@ -492,6 +560,30 @@ function handleEdit(tome: StoredTome) {
 
 :deep(.library-action) {
   min-height: 2rem;
+}
+:deep(.library-action.is-copy-success) {
+  color: #15803d;
+  background: rgb(220 252 231 / 0.75);
+}
+:global(html.dark .library-action.is-copy-success) {
+  color: #bbf7d0;
+  background: rgb(20 83 45 / 0.22);
+}
+:deep(.library-action.is-copy-partial) {
+  color: #b45309;
+  background: rgb(254 243 199 / 0.8);
+}
+:global(html.dark .library-action.is-copy-partial) {
+  color: #fde68a;
+  background: rgb(120 53 15 / 0.26);
+}
+:deep(.library-action.is-copy-failed) {
+  color: #b91c1c;
+  background: rgb(254 226 226 / 0.8);
+}
+:global(html.dark .library-action.is-copy-failed) {
+  color: #fecaca;
+  background: rgb(127 29 29 / 0.25);
 }
 
 .empty-state {
