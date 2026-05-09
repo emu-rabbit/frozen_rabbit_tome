@@ -14,8 +14,8 @@ import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
-import type { StoredTome, StoredTomeRotationStep } from '../types/game';
-import { buildGatheringMacroFromStoredRotation, type MacroBuildResult } from '../utils/macroGenerator';
+import type { SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
+import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -80,16 +80,42 @@ function rotationIcon(tome: StoredTome, step: StoredTomeRotationStep) {
   return getRotationActionIconById(step.actionId);
 }
 
+function tomeRotationPlans(tome: StoredTome) {
+  return tome.rotationPlans?.length
+    ? tome.rotationPlans
+    : [{ kind: 'primary' as const, rotation: tome.rotation }];
+}
+
+function rotationPlanTitle(kind: SolverRotationPlanKind) {
+  return kind === 'revisit'
+    ? t('solver.strategy.revisitRotation')
+    : t('solver.strategy.primaryRotation');
+}
+
+function rotationCardTitle(kind: SolverRotationPlanKind) {
+  return kind === 'revisit'
+    ? t('solver.strategy.rotationTitles.revisit')
+    : t('solver.strategy.rotationTitles.primary');
+}
+
 function handleEdit(tome: StoredTome) {
   if (!loadTomeForEditing(tome)) return;
   router.push('/solver');
 }
 
 function handlePreviewMacro(tome: StoredTome) {
-  macroPreview.value = buildGatheringMacroFromStoredRotation(tome.rotation, macroSettings.value, {
+  const options: MacroBuildOptions = {
     resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
     formatGatherPrompt: formatMacroGatherPrompt
-  });
+  };
+  const plans = tomeRotationPlans(tome);
+  macroPreview.value = plans.length > 1
+    ? buildGatheringMacroGroupsFromStoredRotations(plans.map((plan) => ({
+        key: plan.kind,
+        title: rotationPlanTitle(plan.kind),
+        rotation: plan.rotation
+      })), macroSettings.value, options)
+    : buildGatheringMacroFromStoredRotation(tome.rotation, macroSettings.value, options);
   isMacroPreviewOpen.value = true;
 }
 
@@ -200,17 +226,24 @@ function copyMacroIcon() {
           </div>
         </div>
 
-        <div class="rotation-strip" :aria-label="t('tomeLibrary.rotationPreview')">
-          <template v-for="(step, index) in tome.rotation" :key="`${tome.id}-${index}`">
-            <span
-              class="rotation-icon-wrap"
-              :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'"
-            >
-              <img v-if="rotationIcon(tome, step)" :src="rotationIcon(tome, step)" class="rotation-icon" alt="" />
-              <i v-else class="pi pi-sparkles text-xs"></i>
-            </span>
-            <i v-if="index < tome.rotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
-          </template>
+        <div class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
+          <div v-for="plan in tomeRotationPlans(tome)" :key="`${tome.id}-${plan.kind}`" class="rotation-preview-block">
+            <div class="rotation-strip">
+              <h4 class="rotation-strip-title">{{ rotationCardTitle(plan.kind) }}</h4>
+              <div class="rotation-icons">
+              <template v-for="(step, index) in plan.rotation" :key="`${tome.id}-${plan.kind}-${index}`">
+                <span
+                  class="rotation-icon-wrap"
+                  :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'"
+                >
+                  <img v-if="rotationIcon(tome, step)" :src="rotationIcon(tome, step)" class="rotation-icon" alt="" />
+                  <i v-else class="pi pi-sparkles text-xs"></i>
+                </span>
+                <i v-if="index < plan.rotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
+              </template>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="card-footer">
@@ -447,20 +480,47 @@ function copyMacroIcon() {
   color: #e2e8f0;
 }
 
+.rotation-preview-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.rotation-preview-block {
+  display: grid;
+}
+
 .rotation-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.75rem;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.85rem;
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
 }
 
+.rotation-strip-title {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.rotation-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 :global(html.dark .rotation-strip) {
   background: rgb(15 23 42 / 0.6);
   border-color: #1e293b;
+}
+
+:global(html.dark .rotation-strip-title) {
+  color: #94a3b8;
 }
 
 .rotation-icon-wrap {

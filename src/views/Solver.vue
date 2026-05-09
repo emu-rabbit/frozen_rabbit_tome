@@ -6,14 +6,14 @@ import { useSolver } from '../composables/useSolver';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getActionName, getItemEnglishName, getItemName } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
-import type { FoodQuality, GatheringFood } from '../types/game';
+import type { FoodQuality, GatheringFood, SolverRotationPlan } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
-import { buildGatheringMacro, type MacroBuildResult } from '../utils/macroGenerator';
+import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
 const { t, locale } = useI18n();
 const {
@@ -76,6 +76,12 @@ const selectedFoodModel = computed<FoodOption | null>({
     }
   }
 });
+
+const displayedRotationPlans = computed(() => rotationResult.value?.rotationPlans?.length
+  ? rotationResult.value.rotationPlans
+  : rotationResult.value
+    ? [{ kind: 'primary', rotation: rotationResult.value.bestRotation, expectedYield: rotationResult.value.expectedYield } as SolverRotationPlan]
+    : []);
 
 const hasUnsavedStats = computed(() => {
   const job = activeItem.value?.jobType;
@@ -195,11 +201,31 @@ function handleSaveTome() {
 function handlePreviewMacro() {
   if (!rotationResult.value) return;
 
-  macroPreview.value = buildGatheringMacro(rotationResult.value.bestRotation, macroSettings.value, {
+  const options: MacroBuildOptions = {
     resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
     formatGatherPrompt: formatMacroGatherPrompt
-  });
+  };
+  const plans = displayedRotationPlans.value;
+  macroPreview.value = plans.length > 1
+    ? buildGatheringMacroGroups(plans.map((plan) => ({
+        key: plan.kind,
+        title: rotationPlanTitle(plan),
+        rotation: plan.rotation
+      })), macroSettings.value, options)
+    : buildGatheringMacro(rotationResult.value.bestRotation, macroSettings.value, options);
   isMacroPreviewOpen.value = true;
+}
+
+function rotationPlanTitle(plan: SolverRotationPlan) {
+  return plan.kind === 'revisit'
+    ? t('solver.strategy.revisitRotation')
+    : t('solver.strategy.primaryRotation');
+}
+
+function rotationBlockTitle(kind: SolverRotationPlan['kind']) {
+  return kind === 'revisit'
+    ? t('solver.strategy.rotationTitles.revisit')
+    : t('solver.strategy.rotationTitles.primary');
 }
 
 function formatMacroGatherPrompt(context: {
@@ -252,14 +278,6 @@ function actionName(action: string) {
     t('solver.strategy.conditionalSuffix'),
     t('solver.strategy.conditionalGatherSuffix')
   );
-}
-
-function formatChance(value: number) {
-  if (value <= 0.01) {
-    return '<0.01%';
-  }
-
-  return `${value.toFixed(2)}%`;
 }
 
 function strategyActionLabel(key: StrategyActionKey) {
@@ -578,24 +596,30 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             </div>
             <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.maxYield') }}</span>
-              <div class="mt-1 flex items-end justify-between gap-3">
+              <div class="mt-1 flex items-end gap-1">
                 <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ rotationResult.maxYield }}</span>
-                <span class="pb-1 text-xs font-bold text-amber-600 dark:text-amber-300">{{ formatChance(rotationResult.maxYieldChance) }}</span>
+                <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ t('game.units.count') }}</span>
               </div>
             </div>
             <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.minYield') }}</span>
-              <div class="mt-1 flex items-end justify-between gap-3">
+              <div class="mt-1 flex items-end gap-1">
                 <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ rotationResult.minYield }}</span>
-                <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ formatChance(rotationResult.minYieldChance) }}</span>
+                <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ t('game.units.count') }}</span>
               </div>
             </div>
           </div>
 
-          <div class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{{ t('solver.strategy.rotationOrder') }}</p>
+          <div
+            v-for="plan in displayedRotationPlans"
+            :key="plan.kind"
+            class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50"
+          >
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ rotationBlockTitle(plan.kind) }}</p>
+            </div>
             <div class="flex flex-wrap items-center gap-2.5">
-              <template v-for="(action, index) in rotationResult.bestRotation" :key="index">
+              <template v-for="(action, index) in plan.rotation" :key="`${plan.kind}-${index}`">
                 <span
                   class="rotation-step"
                   :class="action.startsWith('採集') ? 'rotation-step-gather' : 'rotation-step-action'"
@@ -607,7 +631,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                   </span>
                   <span class="rotation-label">{{ actionName(action) }}</span>
                 </span>
-                <i v-if="index < rotationResult.bestRotation.length - 1" class="pi pi-angle-right text-slate-300"></i>
+                <i v-if="index < plan.rotation.length - 1" class="pi pi-angle-right text-slate-300"></i>
               </template>
             </div>
           </div>

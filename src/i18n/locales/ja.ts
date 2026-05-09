@@ -21,6 +21,7 @@ export default {
       partTitle: 'マクロ #{index}',
       singleSummary: 'このマクロは {lines} 行です。そのままゲーム内へコピーできます。',
       splitSummary: 'このマクロは {lines} 行です。ゲーム内の 15 行制限に合わせて {count} 個に分割しました。',
+      groupSummary: 'この結果には {count} 組のマクロ、合計 {lines} 行が含まれます。各組を個別にコピーできます。',
       lineCount: '{count} / 15 行',
       copySingle: 'マクロをコピー',
       copyPart: '#{index} をコピー',
@@ -124,6 +125,13 @@ export default {
       maxYield: '最大獲得数',
       minYield: '最小獲得数',
       rotationOrder: '手順',
+      primaryRotation: '通常手順',
+      revisitRotation: '再発見発動後の手順',
+      revisitBadge: '再発見発動',
+      rotationTitles: {
+        primary: '採集手順',
+        revisit: '採集手順（再発見発動後）'
+      },
       empty: '上のボタンを押しておすすめ手順を計算します',
       gatherAction: '採集',
       conditionalSuffix: '（発動時）',

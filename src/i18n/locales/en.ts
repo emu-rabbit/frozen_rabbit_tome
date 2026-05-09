@@ -21,6 +21,7 @@ export default {
       partTitle: 'Macro #{index}',
       singleSummary: 'This macro has {lines} line(s) and can be copied into the game.',
       splitSummary: 'This macro has {lines} line(s), split into {count} macros for the 15-line game limit.',
+      groupSummary: 'This result includes {count} macro sets with {lines} total line(s). Copy each set separately.',
       lineCount: '{count} / 15 lines',
       copySingle: 'Copy Macro',
       copyPart: 'Copy #{index}',
@@ -124,6 +125,13 @@ export default {
       maxYield: 'Maximum Yield',
       minYield: 'Minimum Yield',
       rotationOrder: 'Rotation Order',
+      primaryRotation: 'Original Rotation',
+      revisitRotation: 'After Revisit Rotation',
+      revisitBadge: 'Revisit Triggered',
+      rotationTitles: {
+        primary: 'Rotation',
+        revisit: 'Rotation (After Revisit)'
+      },
       empty: 'Click the button above to calculate a recommended rotation',
       gatherAction: 'Gather',
       conditionalSuffix: ' (if triggered)',

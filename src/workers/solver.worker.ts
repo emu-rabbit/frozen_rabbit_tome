@@ -7,6 +7,8 @@ self.onmessage = (e: MessageEvent<SolverRequest>) => {
 
   self.postMessage({
     bestRotation: result.bestRotation,
+    rotationPlans: result.rotationPlans,
+    revisit: result.revisit,
     expectedYield: Number(result.expectedYield.toFixed(2)),
     minYield: result.minYield,
     maxYield: result.maxYield,

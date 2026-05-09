@@ -20,6 +20,8 @@ const failedPartIndex = ref<number | null>(null);
 let feedbackTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const parts = computed(() => props.macro?.parts ?? []);
+const groups = computed(() => props.macro?.groups ?? []);
+const hasGroups = computed(() => groups.value.length > 1);
 const totalLines = computed(() => props.macro?.fullLines.length ?? 0);
 const isSplit = computed(() => parts.value.length > 1);
 
@@ -38,7 +40,7 @@ function copyLabel(part: MacroPart) {
   if (copiedPartIndex.value === part.index) return t('macro.preview.copyStates.copied');
   if (failedPartIndex.value === part.index) return t('macro.preview.copyStates.failed');
 
-  return isSplit.value
+  return isSplit.value || hasGroups.value
     ? t('macro.preview.copyPart', { index: part.index })
     : t('macro.preview.copySingle');
 }
@@ -100,16 +102,43 @@ onBeforeUnmount(() => {
             </button>
           </header>
 
-          <div class="macro-dialog-summary" :class="{ 'is-split': isSplit }">
-            <i class="pi" :class="isSplit ? 'pi-clone' : 'pi-file'"></i>
+          <div class="macro-dialog-summary" :class="{ 'is-split': isSplit || hasGroups }">
+            <i class="pi" :class="isSplit || hasGroups ? 'pi-clone' : 'pi-file'"></i>
             <span>
-              {{ isSplit
+              {{ hasGroups
+                ? t('macro.preview.groupSummary', { count: groups.length, lines: totalLines })
+                : isSplit
                 ? t('macro.preview.splitSummary', { count: parts.length, lines: totalLines })
                 : t('macro.preview.singleSummary', { lines: totalLines }) }}
             </span>
           </div>
 
-          <div class="macro-part-list" :class="{ 'is-split': isSplit }">
+          <div v-if="hasGroups" class="macro-group-list">
+            <section v-for="group in groups" :key="group.key" class="macro-group">
+              <h3 class="macro-group-title">{{ group.title }}</h3>
+              <div class="macro-part-list" :class="{ 'is-split': group.macro.parts.length > 1 }">
+                <article v-for="part in group.macro.parts" :key="`${group.key}-${part.index}`" class="macro-part">
+                  <div class="macro-part-header">
+                    <div>
+                      <h4>{{ group.macro.parts.length > 1 ? t('macro.preview.partTitle', { index: part.index }) : t('macro.preview.singleTitle') }}</h4>
+                      <p>{{ t('macro.preview.lineCount', { count: part.lines.length }) }}</p>
+                    </div>
+                    <Button
+                      :icon="copyIcon(part)"
+                      :label="copyLabel(part)"
+                      class="p-button-sm macro-copy-button"
+                      :class="{ 'is-copied': copiedPartIndex === part.index, 'is-failed': failedPartIndex === part.index }"
+                      @click="copyPart(part)"
+                    />
+                  </div>
+
+                  <pre class="macro-code"><code><span v-for="(line, lineIndex) in part.lines" :key="`${group.key}-${part.index}-${lineIndex}`">{{ line }}{{ lineIndex < part.lines.length - 1 ? '\n' : '' }}</span></code></pre>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <div v-else class="macro-part-list" :class="{ 'is-split': isSplit }">
             <article v-for="part in parts" :key="part.index" class="macro-part">
               <div class="macro-part-header">
                 <div>
@@ -279,6 +308,34 @@ onBeforeUnmount(() => {
   padding: 0 1.25rem 1.25rem;
 }
 
+.macro-group-list {
+  display: grid;
+  gap: 1rem;
+  overflow-y: auto;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.macro-group {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.macro-group .macro-part-list {
+  overflow-y: visible;
+  padding: 0;
+}
+
+.macro-group-title {
+  margin: 0;
+  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+:global(html.dark .macro-group-title) {
+  color: #e2e8f0;
+}
+
 @media (min-width: 860px) {
   .macro-part-list.is-split {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -327,6 +384,13 @@ onBeforeUnmount(() => {
   font-weight: 900;
 }
 
+.macro-part-header h4 {
+  margin: 0;
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
 .macro-part-header p {
   margin: 0.2rem 0 0;
   color: #94a3b8;
@@ -335,6 +399,10 @@ onBeforeUnmount(() => {
 }
 
 :global(html.dark .macro-part-header h3) {
+  color: #e2e8f0;
+}
+
+:global(html.dark .macro-part-header h4) {
   color: #e2e8f0;
 }
 

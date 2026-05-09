@@ -35,6 +35,8 @@ interface ActionOption {
 const BOON_CAP = 100;
 const SUCCESS_CAP = 100;
 const EV_EPSILON = 0.0000001;
+const REGULAR_REVISIT_CHANCE = 0.05;
+const TIMED_REVISIT_CHANCE = 0.08;
 const GATHER_ACTION = '採集';
 const WISE_TO_THE_WORLD_ACTION = '理智同興(若觸發)';
 const WISE_PROC_GATHER_ACTION = '採集(理智觸發)';
@@ -86,7 +88,7 @@ function buildMemoKey(state: SearchState): string {
 }
 
 export function solveGatheringRotation(request: SolverRequest): SolverResponse {
-  const { stats, baseValues, itemLevel, nodeBonuses, temporaryGp, jobType } = request;
+  const { stats, baseValues, itemLevel, nodeBonuses, temporaryGp, jobType, isTimedNode = false } = request;
   const names = actionNames(jobType);
   const maxIntegrity = nodeBonuses.baseIntegrity + nodeBonuses.gatheringCount;
   const baseSuccessRate = calculateSuccessRate(
@@ -477,28 +479,56 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return -100;
   }
 
-  const initial = solve({
-    gp: Math.min(stats.gp, temporaryGp),
-    integrity: maxIntegrity,
-    hasGathered: false,
-    successBonus: 0,
-    successIActive: false,
-    successIIActive: false,
-    successIIIActive: false,
-    boonBonus: 0,
-    giftIActive: false,
-    giftIIActive: false,
-    allYieldBonus: 0,
-    tidings: false,
-    nextSuccessBonus: 0,
-    nextYieldBonus: 0
-  });
-  const outcomeSummary = summarizeOutcomes(initial.outcomes);
+  function solveWithGp(startingGp: number) {
+    memo.clear();
+    return solve({
+      gp: Math.min(stats.gp, startingGp),
+      integrity: maxIntegrity,
+      hasGathered: false,
+      successBonus: 0,
+      successIActive: false,
+      successIIActive: false,
+      successIIIActive: false,
+      boonBonus: 0,
+      giftIActive: false,
+      giftIIActive: false,
+      allYieldBonus: 0,
+      tidings: false,
+      nextSuccessBonus: 0,
+      nextYieldBonus: 0
+    });
+  }
+
+  const initial = solveWithGp(temporaryGp);
+  const isFullGp = Math.min(stats.gp, temporaryGp) >= stats.gp;
+  const revisitEnabled = stats.level >= 91;
+  const revisitChance = revisitEnabled ? (isTimedNode ? TIMED_REVISIT_CHANCE : REGULAR_REVISIT_CHANCE) : 0;
+  const fullGpResult = revisitEnabled && !isFullGp ? solveWithGp(stats.gp) : initial;
+  const initialSummary = summarizeOutcomes(initial.outcomes);
+  const fullGpSummary = summarizeOutcomes(fullGpResult.outcomes);
+  const expectedYield = initial.expectedYield + revisitChance * fullGpResult.expectedYield;
+  const rotationPlans = isFullGp || !revisitEnabled
+    ? [{ kind: 'primary' as const, rotation: initial.rotation, expectedYield: initial.expectedYield }]
+    : [
+        { kind: 'primary' as const, rotation: initial.rotation, expectedYield: initial.expectedYield },
+        { kind: 'revisit' as const, rotation: fullGpResult.rotation, expectedYield: fullGpResult.expectedYield }
+      ];
 
   return {
     bestRotation: initial.rotation,
-    expectedYield: Number(initial.expectedYield.toFixed(2)),
-    ...outcomeSummary,
+    rotationPlans,
+    revisit: {
+      enabled: revisitEnabled,
+      chance: revisitChance,
+      isFullGp
+    },
+    expectedYield: Number(expectedYield.toFixed(2)),
+    minYield: initialSummary.minYield,
+    maxYield: revisitEnabled
+      ? initialSummary.maxYield + fullGpSummary.maxYield
+      : initialSummary.maxYield,
+    minYieldChance: initialSummary.minYieldChance,
+    maxYieldChance: initialSummary.maxYieldChance,
     calculationTime: 0
   };
 }

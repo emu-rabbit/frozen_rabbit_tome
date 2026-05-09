@@ -46,12 +46,19 @@ export interface MacroBuildResult {
   parts: MacroPart[];
   isComplete: boolean;
   omittedLineCount: number;
+  groups?: MacroGroup[];
 }
 
 export interface MacroPart {
   index: number;
   text: string;
   lines: string[];
+}
+
+export interface MacroGroup {
+  key: string;
+  title: string;
+  macro: MacroBuildResult;
 }
 
 export type MacroActionNameResolver = (actionName: string, actionId: number | null) => string;
@@ -106,6 +113,45 @@ export function buildGatheringMacroFromStoredRotation(
   });
 
   return buildMacroFromSteps(steps, settings, options);
+}
+
+export function buildGatheringMacroGroups(
+  groups: Array<{ key: string; title: string; rotation: string[] }>,
+  settings: MacroSettings,
+  options: MacroBuildOptions = {}
+): MacroBuildResult {
+  const macroGroups = groups.map((group) => ({
+    key: group.key,
+    title: group.title,
+    macro: buildGatheringMacro(group.rotation, settings, options)
+  }));
+
+  return combineMacroGroups(macroGroups);
+}
+
+export function buildGatheringMacroGroupsFromStoredRotations(
+  groups: Array<{ key: string; title: string; rotation: StoredTomeRotationStep[] }>,
+  settings: MacroSettings,
+  options: MacroBuildOptions = {}
+): MacroBuildResult {
+  const macroGroups = groups.map((group) => ({
+    key: group.key,
+    title: group.title,
+    macro: buildGatheringMacroFromStoredRotation(group.rotation, settings, options)
+  }));
+
+  return combineMacroGroups(macroGroups);
+}
+
+function combineMacroGroups(groups: MacroGroup[]): MacroBuildResult {
+  const firstMacro = groups[0]?.macro ?? buildMacroFromSteps([], { secondsPerGather: 4, bufferSeconds: 0 }, {});
+
+  return {
+    ...firstMacro,
+    fullLines: groups.flatMap((group) => group.macro.fullLines),
+    fullText: groups.map((group) => group.macro.fullText).join('\n\n'),
+    groups
+  };
 }
 
 function buildMacroFromSteps(

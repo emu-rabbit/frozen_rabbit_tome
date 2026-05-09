@@ -21,6 +21,7 @@ export default {
       partTitle: '宏 #{index}',
       singleSummary: '这份宏共 {lines} 行，可直接复制到游戏中。',
       splitSummary: '这份宏共 {lines} 行，已依游戏 15 行限制拆成 {count} 份。',
+      groupSummary: '这次包含 {count} 组宏，共 {lines} 行，可分别复制到游戏中。',
       lineCount: '{count} / 15 行',
       copySingle: '复制宏',
       copyPart: '复制 #{index}',
@@ -124,6 +125,13 @@ export default {
       maxYield: '最高产量',
       minYield: '最低产量',
       rotationOrder: '手法顺序',
+      primaryRotation: '原采集手法',
+      revisitRotation: '再起触发后手法',
+      revisitBadge: '再起触发',
+      rotationTitles: {
+        primary: '采集手法',
+        revisit: '采集手法（再起触发后）'
+      },
       empty: '点击上方按钮开始计算推荐手法',
       gatherAction: '采集',
       conditionalSuffix: '（若触发）',

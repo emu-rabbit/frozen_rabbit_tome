@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { FoodSelection, NodeBonuses, PlayerStats, SolverResponse, StoredTome, StoredTomeRotationStep } from '../types/game';
+import type { FoodSelection, NodeBonuses, PlayerStats, SolverResponse, StoredTome, StoredTomeRotationPlan, StoredTomeRotationStep } from '../types/game';
 import { getRotationActionId } from '../services/actionIcons';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-library';
@@ -34,9 +34,17 @@ export function useTomeLibrary() {
     nodeBonuses: NodeBonuses;
     rotationResult: SolverResponse;
   }) => {
-    const rotation = payload.rotationResult.bestRotation
+    const rotationPlans = payload.rotationResult.rotationPlans
+      .map((plan): StoredTomeRotationPlan => ({
+        kind: plan.kind,
+        rotation: plan.rotation
+          .map(toStoredRotationStep)
+          .filter((step): step is StoredTomeRotationStep => step !== null)
+      }))
+      .filter((plan) => plan.rotation.length > 0);
+    const rotation = (rotationPlans[0]?.rotation ?? payload.rotationResult.bestRotation
       .map(toStoredRotationStep)
-      .filter((step): step is StoredTomeRotationStep => step !== null);
+      .filter((step): step is StoredTomeRotationStep => step !== null));
 
     const tome: StoredTome = {
       id: createTomeId(),
@@ -50,6 +58,8 @@ export function useTomeLibrary() {
         extraRate: payload.nodeBonuses.extraRate
       },
       rotation,
+      rotationPlans,
+      revisit: payload.rotationResult.revisit,
       createdAt: new Date().toISOString()
     };
 

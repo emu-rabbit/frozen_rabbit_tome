@@ -23,6 +23,7 @@ export default {
       partTitle: '巨集 #{index}',
       singleSummary: '這份巨集共 {lines} 行，可直接複製到遊戲中。',
       splitSummary: '這份巨集共 {lines} 行，已依遊戲 15 行限制拆成 {count} 份。',
+      groupSummary: '這次包含 {count} 組巨集，共 {lines} 行，可分別複製到遊戲中。',
       lineCount: '{count} / 15 行',
       copySingle: '複製巨集',
       copyPart: '複製 #{index}',
@@ -126,6 +127,13 @@ export default {
       maxYield: '最高產量',
       minYield: '最低產量',
       rotationOrder: '手法順序',
+      primaryRotation: '原採集手法',
+      revisitRotation: '再起發動後手法',
+      revisitBadge: '再起發動',
+      rotationTitles: {
+        primary: '採集手法',
+        revisit: '採集手法（再起發動後）'
+      },
       empty: '點擊上方按鈕開始計算建議手法',
       gatherAction: '採集',
       conditionalSuffix: '（若觸發）',

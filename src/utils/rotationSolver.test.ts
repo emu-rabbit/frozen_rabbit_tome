@@ -189,4 +189,56 @@ describe('solveGatheringRotation', () => {
     expect(tidingsIndex).toBe(giftIndexes[giftIndexes.length - 1] + 1);
     expect(bountifulIndex).toBeGreaterThan(tidingsIndex);
   });
+
+  it('滿 GP 時只回傳一組手法，但期望值會納入再起一次的收益', () => {
+    const withRevisit = solveGatheringRotation(createRequest({
+      stats: {
+        level: 91,
+        gathering: 1200,
+        perception: 1000,
+        gp: 930
+      },
+      temporaryGp: 930
+    }));
+
+    expect(withRevisit.rotationPlans).toHaveLength(1);
+    expect(withRevisit.revisit).toMatchObject({ enabled: true, chance: 0.05, isFullGp: true });
+    expect(withRevisit.expectedYield).toBe(Number((withRevisit.rotationPlans[0].expectedYield * 1.05).toFixed(2)));
+    expect(withRevisit.minYield).toBeLessThanOrEqual(withRevisit.rotationPlans[0].expectedYield);
+    expect(withRevisit.maxYield).toBeGreaterThan(withRevisit.rotationPlans[0].expectedYield);
+  });
+
+  it('GP 不滿時回傳原手法與再起後滿 GP 手法', () => {
+    const result = solveGatheringRotation(createRequest({
+      temporaryGp: 300
+    }));
+    const fullGp = solveGatheringRotation(createRequest({
+      stats: {
+        level: 90,
+        gathering: 1200,
+        perception: 1000,
+        gp: 930
+      },
+      temporaryGp: 930
+    }));
+
+    expect(result.rotationPlans.map((plan) => plan.kind)).toEqual(['primary', 'revisit']);
+    expect(result.rotationPlans[1].rotation).toEqual(fullGp.bestRotation);
+    expect(result.maxYield).toBeGreaterThan(fullGp.maxYield);
+  });
+
+  it('91 級以下不會顯示再起分支', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 90,
+        gathering: 1200,
+        perception: 1000,
+        gp: 930
+      },
+      temporaryGp: 300
+    }));
+
+    expect(result.revisit.enabled).toBe(false);
+    expect(result.rotationPlans).toHaveLength(1);
+  });
 });

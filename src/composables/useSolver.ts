@@ -39,10 +39,12 @@ const isSolving = ref(false);
 let activeWorker: Worker | null = null;
 let solveVersion = 0;
 let latestSolveInputSignature = '';
+let shouldPreserveLoadedTomeState = false;
 
 const createSolveInputSignature = () => JSON.stringify({
   itemId: activeItem.value?.itemId ?? null,
   jobType: activeItem.value?.jobType ?? null,
+  isTimedNode: activeItem.value?.isTimedNode ?? false,
   stats: solverStats.value,
   selectedFood: selectedFood.value,
   nodeBonuses: nodeBonuses.value,
@@ -101,6 +103,7 @@ export function useSolver() {
 
   const setSelectedItem = (item: GatherableItem) => {
     const isDifferentItem = activeItem.value?.itemId !== item.itemId;
+    shouldPreserveLoadedTomeState = false;
 
     if (isDifferentItem) {
       cancelActiveSolve();
@@ -120,6 +123,10 @@ export function useSolver() {
 
   const syncFromSettings = () => {
     if (!activeItem.value) return;
+    if (shouldPreserveLoadedTomeState) {
+      return;
+    }
+
     const job = activeItem.value.jobType || 'miner';
     const stats = userStats.value[job];
 
@@ -155,6 +162,7 @@ export function useSolver() {
     temporaryGp.value = tome.temporaryGp;
     rotationResult.value = null;
     latestSolveInputSignature = createSolveInputSignature();
+    shouldPreserveLoadedTomeState = true;
 
     return true;
   };
@@ -279,7 +287,8 @@ export function useSolver() {
         itemLevel: itemRealLevel.value,
         nodeBonuses: { ...nodeBonuses.value },
         temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
-        jobType: activeItem.value.jobType || 'miner'
+        jobType: activeItem.value.jobType || 'miner',
+        isTimedNode: activeItem.value.isTimedNode ?? false
       };
 
       worker.postMessage(request);

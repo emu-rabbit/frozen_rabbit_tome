@@ -24,6 +24,8 @@ export interface GatherableItem {
   perceptionReq?: number;
   /** GatheringItem ID (用於關聯 GatheringPointBase) */
   gatheringItemId?: number;
+  /** 是否推定為限時採集點（再起機率使用） */
+  isTimedNode?: boolean;
 }
 
 /** 玩家核心屬性數值 */
@@ -108,11 +110,28 @@ export interface SolverRequest {
   nodeBonuses: NodeBonuses;
   temporaryGp: number;
   jobType: 'miner' | 'botanist';
+  isTimedNode?: boolean;
+}
+
+export type SolverRotationPlanKind = 'primary' | 'revisit';
+
+export interface SolverRotationPlan {
+  kind: SolverRotationPlanKind;
+  rotation: string[];
+  expectedYield: number;
+}
+
+export interface SolverRevisitInfo {
+  enabled: boolean;
+  chance: number;
+  isFullGp: boolean;
 }
 
 /** 求解器回應 */
 export interface SolverResponse {
   bestRotation: string[];
+  rotationPlans: SolverRotationPlan[];
+  revisit: SolverRevisitInfo;
   expectedYield: number;
   minYield: number;
   maxYield: number;
@@ -131,6 +150,11 @@ export type StoredTomeRotationStep =
   | { type: 'gather'; actionName?: string }
   | { type: 'action'; actionId: number; actionName?: string };
 
+export interface StoredTomeRotationPlan {
+  kind: SolverRotationPlanKind;
+  rotation: StoredTomeRotationStep[];
+}
+
 export interface StoredTome {
   id: string;
   itemId: number;
@@ -139,5 +163,7 @@ export interface StoredTome {
   food: FoodSelection;
   nodeBonuses: StoredTomeNodeBonuses;
   rotation: StoredTomeRotationStep[];
+  rotationPlans?: StoredTomeRotationPlan[];
+  revisit?: SolverRevisitInfo;
   createdAt: string;
 }
