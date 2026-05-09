@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'Solver' });
-import { computed, onMounted, ref, watch, onActivated } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, onActivated } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSolver } from '../composables/useSolver';
 import { GATHERING_FOODS } from '../services/foodData';
@@ -47,6 +47,8 @@ type FoodOption = {
 type StrategyActionKey = 'copyMacro' | 'saveTome' | 'solve';
 
 const foodSuggestions = ref<FoodOption[]>([]);
+const isSettingsSaved = ref(false);
+let settingsSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
   en: {
@@ -70,6 +72,19 @@ const selectedFoodModel = computed<FoodOption | null>({
     }
   }
 });
+
+const hasUnsavedStats = computed(() => {
+  const job = activeItem.value?.jobType;
+  if (!job) return false;
+
+  const savedStats = userStats.value[job];
+  return savedStats.level !== solverStats.value.level
+    || savedStats.gathering !== solverStats.value.gathering
+    || savedStats.perception !== solverStats.value.perception
+    || savedStats.gp !== solverStats.value.gp;
+});
+
+const shouldShowSaveSettingsButton = computed(() => hasUnsavedStats.value || isSettingsSaved.value);
 
 function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
   const localizedName = foodName(food);
@@ -135,9 +150,36 @@ watch(userStats, () => {
 }, { deep: true });
 
 function handleSync() {
+  if (!hasUnsavedStats.value) return;
+
   saveToSettings();
-  // 這裡可以加入提示
+  isSettingsSaved.value = true;
+
+  if (settingsSavedTimer) {
+    window.clearTimeout(settingsSavedTimer);
+  }
+
+  settingsSavedTimer = window.setTimeout(() => {
+    isSettingsSaved.value = false;
+    settingsSavedTimer = null;
+  }, 1900);
 }
+
+watch(hasUnsavedStats, (hasChanges) => {
+  if (!hasChanges) return;
+
+  isSettingsSaved.value = false;
+  if (settingsSavedTimer) {
+    window.clearTimeout(settingsSavedTimer);
+    settingsSavedTimer = null;
+  }
+});
+
+onBeforeUnmount(() => {
+  if (settingsSavedTimer) {
+    window.clearTimeout(settingsSavedTimer);
+  }
+});
 
 function actionIcon(action: string) {
   return getRotationActionIcon(action, activeItem.value?.iconUrl ?? '');
@@ -238,12 +280,19 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <i class="pi pi-user-edit text-soft-green-500"></i>
                 {{ t('solver.statsTitle') }}
               </h3>
-              <Button 
-                icon="pi pi-save" 
-                :label="t('solver.syncToSettings', { job: t(`game.jobs.${activeItem.jobType}`) })" 
-                class="p-button-text p-button-sm text-xs" 
-                @click="handleSync"
-              />
+              <div class="solver-save-settings-slot">
+                <Transition name="save-settings">
+                  <Button
+                    v-if="shouldShowSaveSettingsButton"
+                    :icon="isSettingsSaved ? 'pi pi-check' : 'pi pi-save'"
+                    :label="isSettingsSaved ? t('solver.syncSuccess') : t('solver.syncToSettings', { job: t(`game.jobs.${activeItem.jobType}`) })"
+                    class="p-button-text p-button-sm text-xs solver-save-settings-button"
+                    :class="{ 'is-saved': isSettingsSaved }"
+                    :disabled="isSettingsSaved"
+                    @click="handleSync"
+                  />
+                </Transition>
+              </div>
             </div>
             
             <div class="flex flex-col sm:grid sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
@@ -612,6 +661,43 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+:deep(.solver-save-settings-button) {
+  min-height: 2rem;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+.solver-save-settings-slot {
+  min-height: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+:deep(.solver-save-settings-button.is-saved) {
+  color: #15803d;
+  background: rgb(220 252 231 / 0.75);
+  animation: saveSettingsSuccess 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+:global(.dark) :deep(.solver-save-settings-button.is-saved) {
+  color: #86efac;
+  background: rgb(20 83 45 / 0.35);
+}
+:deep(.solver-save-settings-button.is-saved .p-button-icon) {
+  animation: saveSettingsCheck 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.save-settings-enter-active,
+.save-settings-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.save-settings-enter-from,
+.save-settings-leave-to {
+  opacity: 0;
+  transform: translateY(-0.25rem) scale(0.98);
+}
 .animate-page-in {
   animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -634,5 +720,15 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   20%, 80% { transform: translate3d(2px, 0, 0); }
   30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
   40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+@keyframes saveSettingsSuccess {
+  0% { transform: scale(0.98); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+@keyframes saveSettingsCheck {
+  0% { transform: scale(0.4) rotate(-16deg); opacity: 0; }
+  55% { transform: scale(1.18) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style>

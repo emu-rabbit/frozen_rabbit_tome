@@ -56,8 +56,8 @@ export default {
     noItemDesc: '「秘伝書を作成」から採集アイテムを検索して選擇してください。',
     goToCreate: '作成ページへ',
     collectableWarning: '収集品システムは現在開発中です',
-    syncToSettings: '{job}設定を同期',
-    syncSuccess: 'ステータスをグローバル設定に同期しました',
+    syncToSettings: '{job}設定を保存',
+    syncSuccess: '設定を保存しました',
     food: {
       label: '食事',
       placeholder: '食事を検索',

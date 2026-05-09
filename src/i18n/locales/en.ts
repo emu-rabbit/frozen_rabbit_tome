@@ -56,8 +56,8 @@ export default {
     noItemDesc: 'Please search and select an item via "Create Tome" first.',
     goToCreate: 'Go to Create Tome',
     collectableWarning: 'Collectable system is under construction',
-    syncToSettings: 'Sync {job} Settings',
-    syncSuccess: 'Stats synced to global settings',
+    syncToSettings: 'Save {job} Settings',
+    syncSuccess: 'Settings saved',
     food: {
       label: 'Food',
       placeholder: 'Search food',

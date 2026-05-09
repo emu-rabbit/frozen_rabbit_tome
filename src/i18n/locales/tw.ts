@@ -58,8 +58,8 @@ export default {
     noItemDesc: '請先透過「建立秘笈」搜尋並選擇一個採集物品。',
     goToCreate: '前往建立秘笈',
     collectableWarning: '收藏品系統仍在施工中',
-    syncToSettings: '回寫{job}設定',
-    syncSuccess: '數值已同步至全域設定',
+    syncToSettings: '儲存{job}設定',
+    syncSuccess: '已儲存設定',
     food: {
       label: '食物',
       placeholder: '搜尋食物',
