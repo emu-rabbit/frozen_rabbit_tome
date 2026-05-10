@@ -174,6 +174,17 @@ export default {
         min: '最小値と確率には再発見後の手順を含めています。'
       },
       empty: '上のボタンを押しておすすめ手順を計算します',
+      workerErrors: {
+        reload: '再読み込み',
+        workerStale: {
+          title: 'ソルバーの再読み込みが必要です',
+          desc: 'サイトが更新された直後のため、古いページから新しい計算リソースを読み込めない可能性があります。再読み込みして続行してください。'
+        },
+        workerFailed: {
+          title: 'ソルバーを起動できませんでした',
+          desc: 'ページを再読み込みしてもう一度お試しください。続く場合は、時間を置いてから再度お試しください。'
+        }
+      },
       gatherAction: '採集',
       conditionalSuffix: '（発動時）',
       conditionalGatherSuffix: '（理知発動）'

@@ -174,6 +174,17 @@ export default {
         min: 'The minimum yield and chance include the after-Revisit rotation.'
       },
       empty: 'Click the button above to calculate a recommended rotation',
+      workerErrors: {
+        reload: 'Reload',
+        workerStale: {
+          title: 'The solver needs to reload',
+          desc: 'The site may have just updated, so this old page cannot load the new solver resource. Reload to continue.'
+        },
+        workerFailed: {
+          title: 'The solver could not start',
+          desc: 'Please reload the page and try again. If it keeps happening, try again later.'
+        }
+      },
       gatherAction: 'Gather',
       conditionalSuffix: ' (if triggered)',
       conditionalGatherSuffix: ' (Wise proc)'

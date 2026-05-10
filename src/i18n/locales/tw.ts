@@ -176,6 +176,17 @@ export default {
         min: '最低值與機率已納入再起後手法。'
       },
       empty: '點擊上方按鈕開始計算建議手法',
+      workerErrors: {
+        reload: '重新整理',
+        workerStale: {
+          title: '求解器需要重新載入',
+          desc: '網站可能剛更新完成，舊頁面載不到新的演算資源。按下重新整理後就能繼續使用。'
+        },
+        workerFailed: {
+          title: '求解器暫時無法啟動',
+          desc: '請重新整理頁面後再試一次；若仍然發生，可能需要稍後再回來。'
+        }
+      },
       gatherAction: '採集',
       conditionalSuffix: '（若觸發）',
       conditionalGatherSuffix: '（同興觸發）'

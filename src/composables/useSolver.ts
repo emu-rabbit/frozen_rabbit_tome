@@ -42,6 +42,7 @@ const gatheringItemsData = ref<Record<string, any> | null>(null);
 // 求解器結果
 const rotationResult = ref<SolverResponse | null>(null);
 const isSolving = ref(false);
+const solverError = ref<'workerStale' | 'workerFailed' | null>(null);
 let activeWorker: Worker | null = null;
 let solveVersion = 0;
 let latestSolveInputSignature = '';
@@ -111,6 +112,16 @@ export function useSolver() {
     }
 
     rotationResult.value = null;
+  };
+
+  const requestWorkerReload = () => {
+    solverError.value = typeof window === 'undefined' ? 'workerFailed' : 'workerStale';
+  };
+
+  const reloadPage = () => {
+    if (typeof window === 'undefined') return;
+
+    window.location.reload();
   };
 
   const setSelectedItem = (item: GatherableItem) => {
@@ -294,10 +305,20 @@ export function useSolver() {
     solve: async () => {
       if (!activeItem.value || !baseValues.value || !isPerceptionMet.value) return;
       cancelActiveSolve();
+      solverError.value = null;
       isSolving.value = true;
       const currentSolveVersion = solveVersion;
       
-      const worker = new Worker(new URL('../workers/solver.worker.ts', import.meta.url), { type: 'module' });
+      let worker: Worker;
+      try {
+        worker = new Worker(new URL('../workers/solver.worker.ts', import.meta.url), { type: 'module' });
+      } catch (err) {
+        console.error('Worker creation failed:', err);
+        isSolving.value = false;
+        requestWorkerReload();
+        return;
+      }
+
       activeWorker = worker;
       
       const request: SolverRequest = {
@@ -324,6 +345,7 @@ export function useSolver() {
         }
 
         rotationResult.value = e.data;
+        solverError.value = null;
         isSolving.value = false;
         activeWorker = null;
         worker.terminate();
@@ -339,9 +361,12 @@ export function useSolver() {
         isSolving.value = false;
         activeWorker = null;
         worker.terminate();
+        requestWorkerReload();
       };
     },
     rotationResult,
-    isSolving
+    isSolving,
+    solverError,
+    reloadPage
   };
 }

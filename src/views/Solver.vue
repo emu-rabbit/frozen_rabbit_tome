@@ -38,7 +38,9 @@ const {
   nodeBonuses,
   solve,
   rotationResult,
-  isSolving
+  isSolving,
+  solverError,
+  reloadPage
 } = useSolver();
 
 const { userStats, macroSettings, solverSettings, debugSettings } = useSettings();
@@ -696,6 +698,24 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           </div>
         </div>
 
+        <div
+          v-if="solverError"
+          class="solver-error-alert"
+          role="alert"
+        >
+          <i class="pi pi-refresh"></i>
+          <div>
+            <p>{{ t(`solver.strategy.workerErrors.${solverError}.title`) }}</p>
+            <span>{{ t(`solver.strategy.workerErrors.${solverError}.desc`) }}</span>
+          </div>
+          <Button
+            class="p-button-sm p-button-warning solver-error-reload-button"
+            :label="t('solver.strategy.workerErrors.reload')"
+            icon="pi pi-refresh"
+            @click="reloadPage"
+          />
+        </div>
+
         <!-- 演算結果 -->
         <div v-if="rotationResult" class="space-y-6">
           <div v-if="totalSummaryMetric" class="solver-total-summary">
@@ -842,6 +862,44 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   font-weight: 800;
   line-height: 1.35;
 }
+.solver-error-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgb(253 186 116 / 0.8);
+  border-radius: 0.875rem;
+  background: rgb(255 247 237 / 0.95);
+  color: #9a3412;
+}
+.solver-error-alert > div {
+  flex: 1;
+  min-width: 0;
+}
+.solver-error-alert i {
+  margin-top: 0.15rem;
+  color: #f97316;
+}
+.solver-error-alert p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+.solver-error-alert span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+:deep(.solver-error-reload-button) {
+  flex-shrink: 0;
+  align-self: center;
+  border-radius: 0.75rem;
+  font-weight: 800;
+}
 .rotation-plan-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -902,6 +960,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 :global(html.dark .solver-total-chance) {
   color: #86efac;
 }
+:global(html.dark .solver-error-alert) {
+  border-color: rgb(194 65 12 / 0.55);
+  background: rgb(154 52 18 / 0.16);
+  color: #fed7aa;
+}
+:global(html.dark .solver-error-alert i) {
+  color: #fdba74;
+}
 :global(html.dark .rotation-plan-stats div) {
   border-color: rgb(51 65 85);
   background: rgb(15 23 42 / 0.9);
@@ -939,6 +1005,12 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 @media (max-width: 480px) {
   .rotation-plan-stats {
     grid-template-columns: 1fr;
+  }
+  .solver-error-alert {
+    flex-direction: column;
+  }
+  :deep(.solver-error-reload-button) {
+    width: 100%;
   }
 }
 @media (min-width: 1024px) {
