@@ -8,6 +8,12 @@
 
 ### 1. 大膽提煉隨機分布
 
+使用者確認狀態（2026-05-10）：
+
+- 目前暫時沒有可信答案。
+- 後續 Agent 不可自行假設分布、檔位或機率。
+- 第一版實作應先禁用大膽提煉，或只在明確標示的 experimental mode 中接受使用者提供的分布表。
+
 技能：
 
 - 採掘師：**大膽提煉** / Brazen Prospector
@@ -37,9 +43,15 @@
 - 習得條件：100 級。
 - 適用職業：採掘師。
 
+使用者確認狀態（2026-05-10）：
+
+- 園藝師也有同效果 trait。
+- 繁中譯名同樣是 **強化洞察**。
+- 園藝師版本圖示與採掘師版本不太一樣，後續載入 action/trait icon 時需依職業分開對應。
+
 待確認：
 
-- 園藝師是否同名或同效果，若名稱不同需加入職業名稱映射。
+- 園藝師與採掘師的 **強化洞察** action/trait id 與 icon 對應。
 - 強化洞察的觸發機率公式。
 - 強化洞察的「固定為最大值」對應哪個數值：
   - 是一般洞察的加成量固定最大？
@@ -52,22 +64,49 @@
 
 英文資料常稱 **Intuition**，wiki 稱 **Collector's Intuition**，繁中遊戲 UI 可能顯示為 **洞察** 或相關狀態名稱。
 
+使用者確認狀態（2026-05-10）：
+
+- 遊戲內繁中正式狀態名稱是 **洞察**。
+- 本專案 UI 應依使用者選擇的語系顯示對應官方譯名，不應固定顯示繁中或英文。
+- 洞察至少在目前使用者遊戲內觀察中不是可見 trait，因此不應依賴 trait 資料顯示。
+- 若 Teamcraft action/status dict 無法穩定取得各語系名稱，需建立本地 i18n key 與名稱表，作為收藏品求解器的內部狀態顯示資料。
+
 待確認：
 
-- 遊戲內繁中正式狀態名稱。
-- 本專案 UI 應顯示「洞察」還是「收藏家的直覺」。
-- 若資料來源中的英文名稱和繁中 action/status name 無法直接由 Teamcraft action dict 取得，需建立本地 i18n key。
+- 各語系官方譯名，特別是英文、日文、簡中正式 UI 名稱。
+- 使用者確認（2026-05-10）：上述語系官方名稱目前暫時不知道。實作時可先建立 i18n key，但未查證前不要把 fallback 文字標示為官方譯名。
 
 ### 4. 老主顧 RewardCurrency 代碼語意
 
 `SatisfactionSupplyReward.csv` 中 `RewardCurrency` 常見值包含 2、4、6、7。已確認可取得數量，但 UI 顯示需要穩定對應到具體獎勵名稱。
 
+使用者確認狀態（2026-05-10）：
+
+- 老主顧 reward model 只需考慮金幣、經驗值、大地紫票、大地橘票。
+- 製作職票據與其他貨幣不納入大地使者收藏品求解評分。
+- 若同一 reward row 給兩種貨幣，實際遊戲中可能有條件限制；但本專案未來會讓玩家自行選擇要用哪個貨幣當評分標準，因此第一版先不判斷該貨幣是否真的可取得，只要依 `RewardCurrency` 對應表計算即可。
+- 後續需透過實際老主顧資料與 wiki 對照，建立 `RewardCurrency` 到「大地紫票 / 大地橘票 / 忽略」的穩定 mapping。
+
+待對照樣本：
+
+- `SatisfactionNpc[1]`：Zhloe Aliapoh。
+- `SatisfactionSupply[1.1]`：item `17557`，英文名 `Dated Radz-at-Han Coin`。
+- `SatisfactionSupply[1.1].Reward = 2`，對應 `SatisfactionSupplyReward[2]`：
+  - `RewardCurrency = 4`，Low/Mid/High = `94 / 117 / 140`。
+  - `RewardCurrency = 7`，Low/Mid/High = `82 / 100 / 116`。
+  - Gil Low/Mid/High = `670 / 840 / 1000`。
+- 使用者依 wiki 對照確認：此樣本中較多的 `RewardCurrency = 4` 是 **大地紫票**，較少的 `RewardCurrency = 7` 是 **大地橘票**。
+
+已確認 mapping：
+
+- `RewardCurrency = 2`：巧匠紫票，本專案大地使者求解忽略。
+- `RewardCurrency = 4`：大地紫票。
+- `RewardCurrency = 6`：巧匠橘票，本專案大地使者求解忽略。
+- `RewardCurrency = 7`：大地橘票。
+
 待確認：
 
-- `RewardCurrency = 2/4/6/7` 各自對應的正式名稱。
-- 哪些是紫票、橘票，哪些是製作職票據、採集職票據。
-- 對大地使者求解時，是否只取採集職票據，忽略製作職票據。
-- 若同一 reward row 同時給兩種 currency，玩家等級或 `MinLevelForSecondReward` 是否會影響可獲得的第二獎勵。
+- 無。第一版不判斷 `MinLevelForSecondReward` 對第二獎勵的取得限制。
 
 ### 5. Teamcraft / xivapi 資料差異與更新策略
 
@@ -77,11 +116,18 @@
 - xivapi datamining CSV 用於 GatheringItem、GatheringPoint 等。
 - XIVAPI endpoint 用於 `IsCollectable` 查詢。
 
+使用者決策（2026-05-10）：
+
+- 收藏品 reward table 應優先選擇「需要拉取檔案數較少、較不會載入本專案用不到資料」的資料來源。
+- 資料載入採 **runtime fetch**。
+- fetch 後必須先剪枝成收藏品求解器實際需要的結構，再放入 RAM cache；避免長時間保留過肥原始資料。
+- 若 Teamcraft JSON 已整理好且足以支援需求，就僅使用 Teamcraft JSON，不需要額外拉 xivapi CSV 驗證。
+- 驗證優先級很低。若未來真的需要驗證，可另外寫本地腳本協助開發者手動跑 Teamcraft JSON 與 datamining CSV 對照。
+- 本專案是個人規模工具，資料短暫錯誤或 downtime 不會造成大量損失，因此不要為資料驗證與備援設計過度複雜的管線。
+
 待決策：
 
-- 收藏品 reward table 優先使用 Teamcraft JSON 還是 xivapi CSV。
-- 若使用 CSV，是否在前端 runtime fetch 原始 CSV，或在 build/preprocess 階段產生本地 JSON。
-- 若 Teamcraft JSON 已整理好 `collectables.json`，是否接受其為主要來源，並以 xivapi CSV 作驗證。
+- 逐一確認各收藏品類型最少需要拉哪些檔案，例如純收藏品、薩雷安、珠串、老主顧、精選是否都能由 Teamcraft JSON 滿足。
 
 ## 專案背景與現有狀態
 
@@ -535,6 +581,11 @@ function applyCollectorsFocus(intuitionRate) {
 - 上限可能是 70%，特殊工具可到 100%，需確認強化洞察或特殊工具相關規則。
 - 價值矚目作用於下一次提煉技能，使用後應清除狀態。
 
+使用者確認狀態（2026-05-10）：
+
+- 價值矚目的 floor、機率上限與特殊工具 / 節點效果規則目前暫時沒有答案。
+- 第一版可採文件中的保守暫定實作，但 debug 需清楚標示這是待驗證假設。
+
 ### 慎重提煉收藏價值
 
 已知描述：
@@ -552,7 +603,7 @@ function calculateMeticulousValue(scourValue) {
 
 需確認：
 
-- 慎重提煉是否也可受集中檢查與洞察影響。根據技能與 PDF，提煉類應都可。
+- 使用者確認（2026-05-10）：慎重提煉會受集中檢查與洞察影響。
 - 若受集中檢查，應先以慎重提煉的基礎值還是 Scour 原值帶入 scrutiny？需確認。直覺上應以該次 action 的基礎 collectible gain 作 current result，再加 Scour-based bonus，但 PDF 說 Meticulous and Brazen both use Scour internally，需測試或查資料。
 
 ### 慎重提煉不耗耐久率
@@ -594,14 +645,20 @@ function calculateMeticulousProcRate(gathering, baseGathering) {
 - 是否只倍乘基礎 `MeticulousRate`。
 - 若節點 bonus 或強化洞察另加不耗耐久率，應在倍乘後再加，或分開處理。
 
-暫定：
+使用者確認狀態（2026-05-10）：
+
+- 預備碰觸與節點 bonus、強化洞察的不耗耐久率疊加順序目前暫時沒有可靠答案。
+- 在找到可靠公式與模型前，不要用暫定模型實作預備碰觸的倍率疊加。
+- 後續需由使用者或熟悉機制者補充可靠公式後再納入求解器。
+
+歷史草案（不可作為正式實作依據）：
 
 ```txt
 effectiveMeticulousRate =
   min(100, baseMeticulousRate * (primingTouchActive ? 2 : 1) + nonPrimingBonus)
 ```
 
-其中 `nonPrimingBonus` 需等強化洞察與節點效果確認。
+其中 `nonPrimingBonus` 需等強化洞察與節點效果確認。因使用者已要求不要在未知時採用暫定模型，正式實作前必須重新驗證此公式。
 
 ### 大膽提煉
 
@@ -723,11 +780,13 @@ highReward = {
 }
 ```
 
-需確認是否 floor。使用者附圖中：
+取整規則：
 
 - `213 * 1.5 = 319.5`，顯示 319，因此金幣使用 floor。
 - `437416 * 1.5 = 656124`，整除。
 - `100 * 1.5 = 150`。
+- 使用者確認（2026-05-10）：經驗值與票據若遇到小數時是否也使用 floor，目前未知。
+- 後續實作前若要精準處理經驗值與票據，需找非整除樣本驗證；不能只因金幣使用 floor 就推論所有 reward 都 floor。
 
 老主顧：
 
@@ -810,10 +869,10 @@ interface CollectableSearchState {
 
 若納入多次收藏品採集：
 
-- `Collect` 採一個後耐久 -1，收藏價值應重置為 0 還是保留？
-- FFXIV 採集收藏品實務上每次 collect 會採集一個當前價值物品，是否能在同一節點重新提煉下一個收藏品，需要確認。
-- 初步設計可假設一個節點內可重複循環：提煉提高當前 item 的價值，Collect 後消耗耐久並重置 collectability 為 0。
-- 若遊戲實際機制不是如此，必須修正。
+- 使用者確認（2026-05-10）：`Collect` 採集後，收藏價值會維持，不會重置。
+- 同一節點內可以在採集後繼續提煉，但通常不需要；較好的策略通常是先提煉到目標價值，再用剩餘耐久連續採集多個同價值收藏品。
+- 範例：若前面的提煉流程花 2 點耐久並達到最高價值，剩餘 4 點耐久時，可連續採集 4 個最高價值收藏品。
+- 若未來納入石工、理智等恢復耐久技能，則可能在後續採集更多同價值收藏品，或視狀態再提煉。
 
 ### Action options
 
@@ -914,7 +973,17 @@ if (state.integrity <= 0) {
 }
 ```
 
-但若 `collectability > 0` 且 `integrity == 0`，是否仍可 `Collect` 需要確認。技能說明「收藏品採集消耗 1 點耐久」，因此 integrity 0 應不可 collect。
+使用者確認（2026-05-10）：
+
+- 耐久為 0 時會直接結束採集，不能再使用 `Collect`。
+- 耐久為 0 時也沒有施展石工、理智等恢復耐久技能的機會。
+- 因此求解器必須在 `integrity <= 0` 時立即終止，不可補做任何 action。
+
+注意：
+
+- 收藏品採集沒有額外獲得率狀態，不會發生額外採集。
+- 收藏品仍有採集成功率；影響採集成功率的技能與狀態仍可在收藏品採集過程中生效。
+- `Collect` 的 reward 期望值應乘上採集成功率；若未來加入成功率技能，需納入策略搜尋。
 
 ### Collect action
 
@@ -926,7 +995,7 @@ function collect(state) {
   const next = solve({
     ...state,
     integrity: state.integrity - 1,
-    collectability: 0,
+    collectability: state.collectability,
     scrutinyActive: false,
     collectorsFocusActive: false,
     primingTouchActive: false,
@@ -936,7 +1005,7 @@ function collect(state) {
 }
 ```
 
-若確認遊戲中 collect 後不允許繼續提煉下一個 item，則 Collect 應直接終止或只允許連續 collect 已備好的 item。此點需要實機機制確認。
+使用者確認（2026-05-10）：Collect 後收藏價值維持，因此不應重置為 0。求解器應允許連續採集同價值收藏品；通常最佳策略會在達標後直接連續 Collect，除非未來加入恢復耐久技能或其他特殊條件使繼續提煉有價值。
 
 ### 提煉類 action outcome
 
