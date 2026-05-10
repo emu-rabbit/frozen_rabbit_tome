@@ -30,20 +30,20 @@ defineEmits(['close-mobile']);
         to="/" 
         @click="$emit('close-mobile')"
         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-bold"
-        :class="route.path === '/' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+        :class="['/', '/solver'].includes(route.path) ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
       >
         <i class="pi pi-pencil shrink-0"></i>
         <span class="leading-tight">{{ $t('nav.createGuide') }}</span>
       </router-link>
 
       <router-link 
-        to="/solver" 
+        to="/experiment" 
         @click="$emit('close-mobile')"
         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-bold"
-        :class="route.path === '/solver' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+        :class="['/experiment', '/simulator'].includes(route.path) ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
       >
-        <i class="pi pi-calculator shrink-0"></i>
-        <span class="leading-tight">{{ $t('nav.solver') }}</span>
+        <i class="pi pi-chart-line shrink-0"></i>
+        <span class="leading-tight">{{ $t('nav.createExperiment') }}</span>
       </router-link>
 
       <hr class="border-soft-green-100 dark:border-slate-800 my-2" />
@@ -59,7 +59,25 @@ defineEmits(['close-mobile']);
         <span class="ml-2 bg-soft-green-200 dark:bg-soft-green-900 text-soft-green-800 dark:text-soft-green-300 text-xs px-2 py-0.5 rounded-full shrink-0">{{ tomeCount }}</span>
       </router-link>
 
-      <div class="mt-auto"></div>
+      <router-link
+        to="/experiment-database"
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-medium"
+        :class="route.path === '/experiment-database' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-database shrink-0"></i>
+        <span class="leading-tight flex-1">{{ $t('nav.experimentDatabase') }}</span>
+      </router-link>
+
+      <router-link
+        to="/faq"
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-medium mb-2"
+        :class="route.path === '/faq' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-question-circle shrink-0"></i>
+        <span class="leading-tight flex-1">{{ $t('nav.faq') }}</span>
+      </router-link>
     </nav>
     
     <!-- Footer Section -->

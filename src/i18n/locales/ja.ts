@@ -32,17 +32,20 @@ export default {
     }
   },
   nav: {
-    createGuide: '秘伝書を作成',
+    createGuide: '新しい秘伝書を作成',
     solver: '秘伝書ソルバー',
-    tomeLibrary: '秘伝書ライブラリ',
+    createExperiment: '新しい実験を作成',
+    tomeLibrary: '秘伝書庫',
+    experimentDatabase: '実験データベース',
+    faq: 'よくある質問',
     settings: '設定ページ',
     github: 'GitHub プロジェクト'
   },
   createGuide: {
     title: '採集アイテムの選択',
-    subtitle: '名前で検索できます。見つからない場合は英語での検索をお試しください',
+    description: 'ここでアイテムを検索・選択し、ソルバーに入っておすすめの採集手順を計算します。',
     dataScope: '採掘師と園芸師の採集アイテムのみを表示します。',
-    searchPlaceholder: 'アイテム名を入力',
+    searchPlaceholder: '名前で検索、見つからない場合は英語での検索をお試しください',
     loading: 'データ読み込み中、しばらくお待ちください…',
     noResults: '該当するアイテムが見つかりません。英語で検索してみてください。',
     typeToSearch: 'アイテム名を入力して検索',
@@ -54,6 +57,11 @@ export default {
     regularSystem: '通常採集系統',
     apiError: 'XIVAPIから収集品データを取得できませんでした。ネットワーク接続を確認するか、後でもう一度お試しください。',
     retrySearch: '再検索'
+  },
+  createExperiment: {
+    title: '採集アイテムの選択',
+    description: 'ここでアイテムを検索・選択し、シミュレーターに入って実験と分析を行います。',
+    dataScope: '採掘師と園芸師の採集アイテムのみを表示します。'
   },
   settings: {
     title: '秘伝書の設定',

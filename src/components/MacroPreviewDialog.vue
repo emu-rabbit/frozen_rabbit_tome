@@ -15,9 +15,13 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const copiedPartIndex = ref<number | null>(null);
-const failedPartIndex = ref<number | null>(null);
+const copiedPartId = ref<string | null>(null);
+const failedPartId = ref<string | null>(null);
 let feedbackTimer: ReturnType<typeof window.setTimeout> | null = null;
+
+function getPartId(partIndex: number, groupKey?: string) {
+  return groupKey ? `${groupKey}-${partIndex}` : `${partIndex}`;
+}
 
 const parts = computed(() => props.macro?.parts ?? []);
 const groups = computed(() => props.macro?.groups ?? []);
@@ -29,25 +33,28 @@ function closeDialog() {
   emit('update:modelValue', false);
 }
 
-async function copyPart(part: MacroPart) {
+async function copyPart(part: MacroPart, groupKey?: string) {
+  const id = getPartId(part.index, groupKey);
   const copied = await copyTextToClipboard(part.text);
-  copiedPartIndex.value = copied ? part.index : null;
-  failedPartIndex.value = copied ? null : part.index;
+  copiedPartId.value = copied ? id : null;
+  failedPartId.value = copied ? null : id;
   resetFeedbackLater();
 }
 
-function copyLabel(part: MacroPart) {
-  if (copiedPartIndex.value === part.index) return t('macro.preview.copyStates.copied');
-  if (failedPartIndex.value === part.index) return t('macro.preview.copyStates.failed');
+function copyLabel(part: MacroPart, groupKey?: string) {
+  const id = getPartId(part.index, groupKey);
+  if (copiedPartId.value === id) return t('macro.preview.copyStates.copied');
+  if (failedPartId.value === id) return t('macro.preview.copyStates.failed');
 
   return isSplit.value || hasGroups.value
     ? t('macro.preview.copyPart', { index: part.index })
     : t('macro.preview.copySingle');
 }
 
-function copyIcon(part: MacroPart) {
-  if (failedPartIndex.value === part.index) return 'pi pi-exclamation-triangle';
-  if (copiedPartIndex.value === part.index) return 'pi pi-check';
+function copyIcon(part: MacroPart, groupKey?: string) {
+  const id = getPartId(part.index, groupKey);
+  if (failedPartId.value === id) return 'pi pi-exclamation-triangle';
+  if (copiedPartId.value === id) return 'pi pi-check';
 
   return 'pi pi-copy';
 }
@@ -58,8 +65,8 @@ function resetFeedbackLater() {
   }
 
   feedbackTimer = window.setTimeout(() => {
-    copiedPartIndex.value = null;
-    failedPartIndex.value = null;
+    copiedPartId.value = null;
+    failedPartId.value = null;
     feedbackTimer = null;
   }, 1800);
 }
@@ -67,8 +74,8 @@ function resetFeedbackLater() {
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) return;
 
-  copiedPartIndex.value = null;
-  failedPartIndex.value = null;
+  copiedPartId.value = null;
+  failedPartId.value = null;
 });
 
 onBeforeUnmount(() => {
@@ -124,11 +131,11 @@ onBeforeUnmount(() => {
                       <p>{{ t('macro.preview.lineCount', { count: part.lines.length }) }}</p>
                     </div>
                     <Button
-                      :icon="copyIcon(part)"
-                      :label="copyLabel(part)"
+                      :icon="copyIcon(part, group.key)"
+                      :label="copyLabel(part, group.key)"
                       class="p-button-sm macro-copy-button"
-                      :class="{ 'is-copied': copiedPartIndex === part.index, 'is-failed': failedPartIndex === part.index }"
-                      @click="copyPart(part)"
+                      :class="{ 'is-copied': copiedPartId === getPartId(part.index, group.key), 'is-failed': failedPartId === getPartId(part.index, group.key) }"
+                      @click="copyPart(part, group.key)"
                     />
                   </div>
 
@@ -149,7 +156,7 @@ onBeforeUnmount(() => {
                   :icon="copyIcon(part)"
                   :label="copyLabel(part)"
                   class="p-button-sm macro-copy-button"
-                  :class="{ 'is-copied': copiedPartIndex === part.index, 'is-failed': failedPartIndex === part.index }"
+                  :class="{ 'is-copied': copiedPartId === getPartId(part.index), 'is-failed': failedPartId === getPartId(part.index) }"
                   @click="copyPart(part)"
                 />
               </div>

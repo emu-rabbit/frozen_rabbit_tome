@@ -32,17 +32,20 @@ export default {
     }
   },
   nav: {
-    createGuide: 'Create Tome',
+    createGuide: 'Create New Guide',
     solver: 'Tome Solver',
-    tomeLibrary: 'Tome Library',
+    createExperiment: 'Create New Experiment',
+    tomeLibrary: 'Guide Library',
+    experimentDatabase: 'Experiment Database',
+    faq: 'FAQ',
     settings: 'Settings',
     github: 'GitHub Project'
   },
   createGuide: {
     title: 'Select Item to Gather',
-    subtitle: 'Search by name, or try English if not found',
+    description: 'Search and select an item here to enter the solver and calculate the recommended gathering rotation.',
     dataScope: 'Only Miner & Botanist items are shown.',
-    searchPlaceholder: 'Enter item name',
+    searchPlaceholder: 'Search by name, or try English if not found',
     loading: 'Loading data, please wait…',
     noResults: 'No items found. Try searching in English.',
     typeToSearch: 'Type an item name to search',
@@ -54,6 +57,11 @@ export default {
     regularSystem: 'Regular',
     apiError: 'Unable to connect to XIVAPI for collectable data. Please check your network or try again later.',
     retrySearch: 'Retry Search'
+  },
+  createExperiment: {
+    title: 'Select Item to Gather',
+    description: 'Search and select an item here to enter the simulator for experiments and analysis.',
+    dataScope: 'Only Miner & Botanist items are shown.'
   },
   settings: {
     title: 'Tome Settings',

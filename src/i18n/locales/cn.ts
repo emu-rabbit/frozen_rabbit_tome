@@ -32,17 +32,20 @@ export default {
     }
   },
   nav: {
-    createGuide: '建立秘籍',
+    createGuide: '创建新秘籍',
     solver: '秘籍求解器',
-    tomeLibrary: '秘籍书库',
+    createExperiment: '创建新实验',
+    tomeLibrary: '秘籍藏书库',
+    experimentDatabase: '实验数据库',
+    faq: '常见问题',
     settings: '设置页面',
     github: 'GitHub 项目'
   },
   createGuide: {
-    title: '选择待采集的物品',
-    subtitle: '可输入名称搜索，倘若搜索不到可以尝试使用英文',
+    title: '请选择待采集物品',
+    description: '在这里搜索并选择物品，以进入求解台计算推荐采集手法。',
     dataScope: '仅显示「采矿工」与「园艺工」可采集的物品',
-    searchPlaceholder: '输入物品名称',
+    searchPlaceholder: '输入物品名称，倘若搜索不到可以尝试使用英文',
     loading: '数据加载中，请稍候…',
     noResults: '未找到相符的物品，请尝试使用英文搜索',
     typeToSearch: '请输入物品名称开始搜索',
@@ -54,6 +57,11 @@ export default {
     regularSystem: '一般采集系统',
     apiError: '无法连接至 XIVAPI 获取收藏品数据。请检查网络连接或稍后再试。',
     retrySearch: '重试搜索'
+  },
+  createExperiment: {
+    title: '请选择待采集物品',
+    description: '在这里搜索并选择物品，以进入模拟台进行实验与分析。',
+    dataScope: '仅显示「采矿工」与「园艺工」可采集的物品'
   },
   settings: {
     title: '秘籍设定',

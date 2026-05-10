@@ -21,7 +21,7 @@ const { setSelectedItem } = useSolver();
 
 function handleItemSelect(item: GatherableItem) {
   setSelectedItem(item);
-  router.push('/solver');
+  router.push('/simulator');
 }
 
 // === 搜尋狀態 ===
@@ -131,11 +131,11 @@ function getUiState() {
     <!-- === Header === -->
     <header class="page-header">
       <div class="header-content">
-        <h2 class="page-title text-soft-green-800 dark:text-soft-green-400">{{ t('createGuide.title') }}</h2>
-        <p class="page-description text-sm text-slate-600 dark:text-slate-300 font-medium mb-4">{{ t('createGuide.description') }}</p>
+        <h2 class="page-title text-soft-green-800 dark:text-soft-green-400">{{ t('createExperiment.title') }}</h2>
+        <p class="page-description text-sm text-slate-600 dark:text-slate-300 font-medium mb-4">{{ t('createExperiment.description') }}</p>
         <div class="data-scope-badge">
           <i class="pi pi-info-circle"></i>
-          <span>{{ t('createGuide.dataScope') }}</span>
+          <span>{{ t('createExperiment.dataScope') }}</span>
         </div>
       </div>
     </header>
