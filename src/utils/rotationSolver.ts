@@ -1,5 +1,5 @@
 import { calculateSuccessRate, calculateBoonChance, calculateBountifulYield } from './gatheringMath';
-import type { SolverDebugInfo, SolverRequest, SolverResponse, SolverSearchDebugInfo } from '../types/game';
+import type { SolverDebugInfo, SolverObjectiveMode, SolverRequest, SolverResponse, SolverSearchDebugInfo } from '../types/game';
 
 type JobType = SolverRequest['jobType'];
 
@@ -61,6 +61,13 @@ const STATE_KEY_FIELDS = [
   'nextSuccessBonus',
   'nextYieldBonus'
 ];
+
+type OutcomeSummary = {
+  minYield: number;
+  maxYield: number;
+  minYieldChance: number;
+  maxYieldChance: number;
+};
 
 function actionNames(jobType: JobType) {
   const isMiner = jobType === 'miner';
@@ -175,6 +182,7 @@ function buildMemoKey(state: SearchState): string {
 
 export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   const { stats, baseValues, itemLevel, nodeBonuses, temporaryGp, jobType, isTimedNode = false } = request;
+  const objectiveMode: SolverObjectiveMode = request.objectiveMode ?? 'expected';
   const names = actionNames(jobType);
   const maxIntegrity = nodeBonuses.baseIntegrity + nodeBonuses.gatheringCount;
   const baseSuccessRate = calculateSuccessRate(
@@ -435,10 +443,24 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   function isPreferredResult(candidate: SolverResult, current: SolverResult): boolean {
-    if (candidate.expectedYield > current.expectedYield + EV_EPSILON) return true;
-    if (candidate.expectedYield < current.expectedYield - EV_EPSILON) return false;
+    const candidateScore = scoreResult(candidate);
+    const currentScore = scoreResult(current);
+
+    if (candidateScore > currentScore + EV_EPSILON) return true;
+    if (candidateScore < currentScore - EV_EPSILON) return false;
+
+    if (objectiveMode !== 'expected' && candidate.rotation.length !== current.rotation.length) {
+      return candidate.rotation.length < current.rotation.length;
+    }
 
     return rotationPreferenceScore(candidate.rotation) > rotationPreferenceScore(current.rotation);
+  }
+
+  function scoreResult(result: SolverResult): number {
+    if (objectiveMode === 'max') return getMaxYield(result.outcomes);
+    if (objectiveMode === 'min') return getMinYield(result.outcomes);
+
+    return result.expectedYield;
   }
 
   function addShiftedOutcomes(
@@ -475,7 +497,15 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return total;
   }
 
-  function summarizeOutcomes(outcomes: Map<number, number>) {
+  function getMinYield(outcomes: Map<number, number>): number {
+    return Math.min(...outcomes.keys());
+  }
+
+  function getMaxYield(outcomes: Map<number, number>): number {
+    return Math.max(...outcomes.keys());
+  }
+
+  function summarizeOutcomes(outcomes: Map<number, number>): OutcomeSummary {
     const yields = [...outcomes.keys()].sort((a, b) => a - b);
     const minYield = yields[0] ?? 0;
     const maxYield = yields[yields.length - 1] ?? 0;
@@ -483,8 +513,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return {
       minYield,
       maxYield,
-      minYieldChance: Number(((outcomes.get(minYield) ?? 0) * 100).toFixed(2)),
-      maxYieldChance: Number(((outcomes.get(maxYield) ?? 0) * 100).toFixed(2))
+      minYieldChance: Number(((outcomes.get(minYield) ?? 0) * 100).toFixed(6)),
+      maxYieldChance: Number(((outcomes.get(maxYield) ?? 0) * 100).toFixed(6))
     };
   }
 
@@ -495,6 +525,19 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
         yield: totalYield,
         probability: probability * 100
       }));
+  }
+
+  function combineSequentialOutcomes(left: Map<number, number>, right: Map<number, number>) {
+    const outcomes = new Map<number, number>();
+
+    left.forEach((leftProbability, leftYield) => {
+      right.forEach((rightProbability, rightYield) => {
+        const totalYield = leftYield + rightYield;
+        outcomes.set(totalYield, (outcomes.get(totalYield) ?? 0) + leftProbability * rightProbability);
+      });
+    });
+
+    return outcomes;
   }
 
   function countGatherActions(rotation: string[]): number {
@@ -626,14 +669,24 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   const fullGpResult = revisitEnabled && !isFullGp ? solveWithGp(stats.gp) : initial;
   const initialSummary = summarizeOutcomes(initial.outcomes);
   const fullGpSummary = summarizeOutcomes(fullGpResult.outcomes);
-  const expectedYield = initial.expectedYield + revisitChance * fullGpResult.expectedYield;
+  const revisitOutcomes = combineSequentialOutcomes(initial.outcomes, fullGpResult.outcomes);
+  const combinedOutcomes = revisitEnabled
+    ? mergeWeightedOutcomes([
+        { outcomes: initial.outcomes, weight: 1 - revisitChance },
+        { outcomes: revisitOutcomes, weight: revisitChance }
+      ])
+    : initial.outcomes;
+  const combinedSummary = summarizeOutcomes(combinedOutcomes);
+  const expectedYield = expectedValue(combinedOutcomes);
   const rotationPlans = isFullGp || !revisitEnabled
     ? [{
         kind: 'primary' as const,
         rotation: initial.rotation,
         expectedYield: initial.expectedYield,
         minYield: initialSummary.minYield,
-        maxYield: initialSummary.maxYield
+        maxYield: initialSummary.maxYield,
+        minYieldChance: initialSummary.minYieldChance,
+        maxYieldChance: initialSummary.maxYieldChance
       }]
     : [
         {
@@ -641,14 +694,18 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
           rotation: initial.rotation,
           expectedYield: initial.expectedYield,
           minYield: initialSummary.minYield,
-          maxYield: initialSummary.maxYield
+          maxYield: initialSummary.maxYield,
+          minYieldChance: initialSummary.minYieldChance,
+          maxYieldChance: initialSummary.maxYieldChance
         },
         {
           kind: 'revisit' as const,
           rotation: fullGpResult.rotation,
           expectedYield: fullGpResult.expectedYield,
           minYield: fullGpSummary.minYield,
-          maxYield: fullGpSummary.maxYield
+          maxYield: fullGpSummary.maxYield,
+          minYieldChance: fullGpSummary.minYieldChance,
+          maxYieldChance: fullGpSummary.maxYieldChance
         }
       ];
 
@@ -661,12 +718,11 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       isFullGp
     },
     expectedYield: Number(expectedYield.toFixed(2)),
-    minYield: initialSummary.minYield,
-    maxYield: revisitEnabled
-      ? initialSummary.maxYield + fullGpSummary.maxYield
-      : initialSummary.maxYield,
-    minYieldChance: initialSummary.minYieldChance,
-    maxYieldChance: initialSummary.maxYieldChance,
+    minYield: combinedSummary.minYield,
+    maxYield: combinedSummary.maxYield,
+    minYieldChance: combinedSummary.minYieldChance,
+    maxYieldChance: combinedSummary.maxYieldChance,
+    objectiveMode,
     calculationTime: 0
   };
 

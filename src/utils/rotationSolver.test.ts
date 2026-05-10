@@ -114,6 +114,29 @@ describe('solveGatheringRotation', () => {
     expect(kingBuffs.length).toBeLessThanOrEqual(1);
   });
 
+  it('天選人模式只用最高獲得量評分，不為相同峰值施放機率技能', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 10,
+        gathering: 280,
+        perception: 1000,
+        gp: 250
+      },
+      itemLevel: 10,
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 250,
+      objectiveMode: 'max'
+    }));
+
+    expect(result.objectiveMode).toBe('max');
+    expect(result.bestRotation.some((action) => action.startsWith('敏銳視野'))).toBe(false);
+  });
+
   it('等價時會把下一次採集技能提前到採集前段施放', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {
@@ -206,6 +229,7 @@ describe('solveGatheringRotation', () => {
     expect(withRevisit.expectedYield).toBe(Number((withRevisit.rotationPlans[0].expectedYield * 1.05).toFixed(2)));
     expect(withRevisit.minYield).toBeLessThanOrEqual(withRevisit.rotationPlans[0].expectedYield);
     expect(withRevisit.maxYield).toBeGreaterThan(withRevisit.rotationPlans[0].expectedYield);
+    expect(withRevisit.maxYieldChance).toBeLessThan(withRevisit.rotationPlans[0].maxYieldChance);
   });
 
   it('GP 不滿時回傳原手法與再起後滿 GP 手法', () => {

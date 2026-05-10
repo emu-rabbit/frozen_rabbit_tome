@@ -80,6 +80,18 @@ export default {
     macroDesc: '調整巨集提醒玩家手動採集時的等待時間。預設每個物品 4 秒，外加 2 秒緩衝。',
     macroSecondsPerGather: '每個物品等待',
     macroBufferSeconds: '額外緩衝',
+    solverModeTitle: '求解目標模式',
+    solverModeDesc: '選擇求解台評分手法時最在意的目標。',
+    solverModes: {
+      expected: '平凡人模式',
+      max: '天選人模式',
+      min: '保守人模式'
+    },
+    solverModeDetails: {
+      expected: '使用期望值評分，是目前網站原本的穩健模式。',
+      max: '只看手法可達到的最高獲得量，機率不會進入評分。',
+      min: '只看手法最差情況下的最低獲得量，適合想要保底的採集規劃。'
+    },
     debugTitle: '專家偵錯模式',
     debugDesc: '開啟後，求解結果會提供公式、機率分布與最優性檢查資訊。',
     solverDebugMode: '顯示求解器偵錯資訊',
@@ -119,6 +131,11 @@ export default {
     strategy: {
       title: '建議採集手法',
       description: '依照目前數值，演算出期望產量最高的手法',
+      modeDescriptions: {
+        expected: '平凡人模式：依照目前數值，演算出期望產量最高的手法',
+        max: '天選人模式：依照目前數值，演算出最高產量最漂亮的手法',
+        min: '保守人模式：依照目前數值，演算出最低產量最穩的手法'
+      },
       copyMacro: '預覽巨集',
       copyMacroStates: {
         copied: '已複製',
@@ -129,9 +146,16 @@ export default {
       savedTome: '已儲存',
       solve: '求解',
       totalExpectedYield: '總期望產量',
+      summary: {
+        expected: '總期望產量',
+        max: '總最高產量',
+        min: '總最低產量'
+      },
       expectedYield: '期望總產量',
       maxYield: '最高產量',
       minYield: '最低產量',
+      yieldChance: '機率 {chance}%',
+      chanceWithRevisit: '含再起可能：{chance}% 機率',
       rotationOrder: '手法順序',
       primaryRotation: '原採集手法',
       revisitRotation: '再起發動後手法',
@@ -141,8 +165,16 @@ export default {
         primaryWithRevisit: '採集手法（再起也是相同手法）',
         revisit: '採集手法（再起發動後）'
       },
-      revisitSameRotationNote: '總期望值已納入再起機率。',
-      revisitTotalNote: '總期望值已納入再起機率。',
+      revisitSameRotationNote: {
+        expected: '總期望值已納入再起機率。',
+        max: '最高值與機率已納入再起可能。',
+        min: '最低值與機率已納入再起可能。'
+      },
+      revisitTotalNote: {
+        expected: '總期望值已納入再起機率。',
+        max: '最高值與機率已納入再起後手法。',
+        min: '最低值與機率已納入再起後手法。'
+      },
       empty: '點擊上方按鈕開始計算建議手法',
       gatherAction: '採集',
       conditionalSuffix: '（若觸發）',
@@ -206,7 +238,8 @@ export default {
       playerStats: '玩家數值',
       gpState: 'GP 狀態',
       food: '食物',
-      nodeBonuses: '礦脈獎勵'
+      nodeBonuses: '礦脈獎勵',
+      objectiveMode: '求解模式'
     },
     actions: {
       edit: '編輯',

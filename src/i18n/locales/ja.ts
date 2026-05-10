@@ -78,6 +78,18 @@ export default {
     macroDesc: '手動採集を促す時の待機時間を調整します。初期値はアイテム 1 個につき 4 秒、追加バッファ 2 秒です。',
     macroSecondsPerGather: '1 個ごとの待機',
     macroBufferSeconds: '追加バッファ',
+    solverModeTitle: 'ソルバー目標モード',
+    solverModeDesc: '手順を評価するときに重視する目標を選択します。',
+    solverModes: {
+      expected: '通常モード',
+      max: '選ばれし者モード',
+      min: '慎重モード'
+    },
+    solverModeDetails: {
+      expected: '期待値で評価します。従来のサイトと同じ安定したモードです。',
+      max: '到達可能な最大獲得数だけで評価します。確率は評価に入りません。',
+      min: '最悪時の最小獲得数だけで評価します。堅実な採集計画向けです。'
+    },
     debugTitle: '専門家向けデバッグモード',
     debugDesc: '有効にすると、計算結果に数式、確率分布、最適性チェックを表示します。',
     solverDebugMode: 'ソルバーのデバッグ情報を表示',
@@ -117,6 +129,11 @@ export default {
     strategy: {
       title: 'おすすめ採集手順',
       description: '現在の数値から期待獲得数が最大の手順を計算します。',
+      modeDescriptions: {
+        expected: '通常モード：現在の数値から期待獲得数が最大の手順を計算します。',
+        max: '選ばれし者モード：現在の数値から最大獲得数が最も高い手順を計算します。',
+        min: '慎重モード：現在の数値から最小獲得数が最も安定する手順を計算します。'
+      },
       copyMacro: 'マクロを確認',
       copyMacroStates: {
         copied: 'コピーしました',
@@ -127,9 +144,16 @@ export default {
       savedTome: '保存しました',
       solve: '計算',
       totalExpectedYield: '合計期待獲得数',
+      summary: {
+        expected: '合計期待獲得数',
+        max: '合計最大獲得数',
+        min: '合計最小獲得数'
+      },
       expectedYield: '期待総獲得数',
       maxYield: '最大獲得数',
       minYield: '最小獲得数',
+      yieldChance: '確率 {chance}%',
+      chanceWithRevisit: '再発見込み：{chance}% の確率',
       rotationOrder: '手順',
       primaryRotation: '通常手順',
       revisitRotation: '再発見発動後の手順',
@@ -139,8 +163,16 @@ export default {
         primaryWithRevisit: '採集手順（再発見後も同じ手順）',
         revisit: '採集手順（再発見発動後）'
       },
-      revisitSameRotationNote: '合計期待値には再発見確率を含めています。',
-      revisitTotalNote: '合計期待値には再発見確率を含めています。',
+      revisitSameRotationNote: {
+        expected: '合計期待値には再発見確率を含めています。',
+        max: '最大値と確率には再発見の可能性を含めています。',
+        min: '最小値と確率には再発見の可能性を含めています。'
+      },
+      revisitTotalNote: {
+        expected: '合計期待値には再発見確率を含めています。',
+        max: '最大値と確率には再発見後の手順を含めています。',
+        min: '最小値と確率には再発見後の手順を含めています。'
+      },
       empty: '上のボタンを押しておすすめ手順を計算します',
       gatherAction: '採集',
       conditionalSuffix: '（発動時）',
@@ -204,7 +236,8 @@ export default {
       playerStats: 'プレイヤー数値',
       gpState: 'GP 状態',
       food: '食事',
-      nodeBonuses: '採集ポイントボーナス'
+      nodeBonuses: '採集ポイントボーナス',
+      objectiveMode: 'ソルバーモード'
     },
     actions: {
       edit: '編集',

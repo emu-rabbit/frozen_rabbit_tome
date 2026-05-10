@@ -14,7 +14,7 @@ import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
-import type { SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
+import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
 const { t, locale } = useI18n();
@@ -57,6 +57,14 @@ function formatFood(tome: StoredTome) {
 
 function formatNodeBonuses(tome: StoredTome) {
   return `${tome.nodeBonuses.gatheringCount}/${tome.nodeBonuses.yieldCount}/${tome.nodeBonuses.extraRate}`;
+}
+
+function tomeObjectiveMode(tome: StoredTome): SolverObjectiveMode {
+  return tome.objectiveMode ?? 'expected';
+}
+
+function formatObjectiveMode(tome: StoredTome) {
+  return t(`settings.solverModes.${tomeObjectiveMode(tome)}`);
 }
 
 function formatCreatedAt(value: string) {
@@ -227,6 +235,10 @@ function copyMacroIcon() {
           <div class="summary-row">
             <span>{{ t('tomeLibrary.rows.nodeBonuses') }}</span>
             <strong>{{ formatNodeBonuses(tome) }}</strong>
+          </div>
+          <div class="summary-row summary-row-wide">
+            <span>{{ t('tomeLibrary.rows.objectiveMode') }}</span>
+            <strong>{{ formatObjectiveMode(tome) }}</strong>
           </div>
         </div>
 
@@ -478,6 +490,12 @@ function copyMacroIcon() {
   font-weight: 800;
   text-align: right;
   overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .summary-row-wide {
+    grid-column: 1 / -1;
+  }
 }
 
 :global(html.dark .summary-row strong) {

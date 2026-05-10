@@ -1,19 +1,27 @@
 <script setup lang="ts">
 defineOptions({ name: 'Settings' });
+import { computed } from 'vue';
 import { useSettings } from '../composables/useSettings';
 import SelectButton from 'primevue/selectbutton';
 import InputNumber from 'primevue/inputnumber';
 import { useI18n } from 'vue-i18n';
+import type { SolverObjectiveMode } from '../types/game';
 
-const { isDarkMode, language, userStats, macroSettings, debugSettings } = useSettings();
+const { isDarkMode, language, userStats, macroSettings, solverSettings, debugSettings } = useSettings();
 const { t } = useI18n();
 
 const langOptions = [
-  { label: t('settings.langOptions.tw'), value: 'tw' },
-  { label: t('settings.langOptions.cn'), value: 'cn' },
-  { label: t('settings.langOptions.en'), value: 'en' },
-  { label: t('settings.langOptions.ja'), value: 'ja' },
+  { label: '繁體中文', value: 'tw' },
+  { label: '简体中文', value: 'cn' },
+  { label: 'English', value: 'en' },
+  { label: '日本語', value: 'ja' },
 ];
+
+const solverModeOptions = computed<Array<{ label: string; value: SolverObjectiveMode }>>(() => [
+  { label: t('settings.solverModes.expected'), value: 'expected' },
+  { label: t('settings.solverModes.max'), value: 'max' },
+  { label: t('settings.solverModes.min'), value: 'min' },
+]);
 </script>
 
 <template>
@@ -75,6 +83,32 @@ const langOptions = [
                     class="settings-lang-toggle whitespace-nowrap min-w-max"
                   />
               </div>
+          </div>
+      </div>
+
+      <!-- Solver Objective Settings -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
+                <i class="pi pi-compass text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.solverModeTitle') }}</label>
+              </div>
+
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.solverModeDesc') }}</p>
+
+              <div class="overflow-x-auto no-scrollbar -mx-1 px-1">
+                  <SelectButton
+                    v-model="solverSettings.objectiveMode"
+                    :options="solverModeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="settings-lang-toggle whitespace-nowrap min-w-max"
+                  />
+              </div>
+
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-1">
+                {{ $t(`settings.solverModeDetails.${solverSettings.objectiveMode}`) }}
+              </p>
           </div>
       </div>
 

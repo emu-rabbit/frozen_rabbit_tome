@@ -6,7 +6,7 @@ import { useSolver } from '../composables/useSolver';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getActionName, getItemEnglishName, getItemName } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
-import type { FoodQuality, GatheringFood, SolverRotationPlan } from '../types/game';
+import type { FoodQuality, GatheringFood, SolverObjectiveMode, SolverRotationPlan } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
@@ -41,7 +41,7 @@ const {
   isSolving
 } = useSolver();
 
-const { userStats, macroSettings, debugSettings } = useSettings();
+const { userStats, macroSettings, solverSettings, debugSettings } = useSettings();
 const { saveTome } = useTomeLibrary();
 type FoodOption = {
   food: GatheringFood;
@@ -50,6 +50,13 @@ type FoodOption = {
   searchText: string;
 };
 type StrategyActionKey = 'copyMacro' | 'saveTome' | 'solve';
+type YieldMetricKey = 'expected' | 'max' | 'min';
+type YieldMetric = {
+  key: YieldMetricKey;
+  label: string;
+  value: number;
+  chance?: number;
+};
 
 const foodSuggestions = ref<FoodOption[]>([]);
 const isSettingsSaved = ref(false);
@@ -87,9 +94,34 @@ const displayedRotationPlans = computed(() => rotationResult.value?.rotationPlan
         rotation: rotationResult.value.bestRotation,
         expectedYield: rotationResult.value.expectedYield,
         minYield: rotationResult.value.minYield,
-        maxYield: rotationResult.value.maxYield
+        maxYield: rotationResult.value.maxYield,
+        minYieldChance: rotationResult.value.minYieldChance,
+        maxYieldChance: rotationResult.value.maxYieldChance
       } as SolverRotationPlan]
     : []);
+
+const currentObjectiveMode = computed<SolverObjectiveMode>(() => (
+  rotationResult.value?.objectiveMode ?? solverSettings.value.objectiveMode
+));
+
+const orderedYieldMetricKeys = computed<YieldMetricKey[]>(() => {
+  if (currentObjectiveMode.value === 'max') return ['max', 'expected', 'min'];
+  if (currentObjectiveMode.value === 'min') return ['min', 'expected', 'max'];
+
+  return ['expected', 'max', 'min'];
+});
+
+const totalSummaryMetric = computed<YieldMetric | null>(() => {
+  if (!rotationResult.value) return null;
+
+  return buildYieldMetric(currentObjectiveMode.value, {
+    expectedYield: rotationResult.value.expectedYield,
+    minYield: rotationResult.value.minYield,
+    maxYield: rotationResult.value.maxYield,
+    minYieldChance: rotationResult.value.minYieldChance,
+    maxYieldChance: rotationResult.value.maxYieldChance
+  });
+});
 
 const hasUnsavedStats = computed(() => {
   const job = activeItem.value?.jobType;
@@ -246,8 +278,56 @@ function rotationBlockTitle(kind: SolverRotationPlan['kind']) {
     : t('solver.strategy.rotationTitles.primary');
 }
 
-function formatPlanExpectedYield(plan: SolverRotationPlan) {
-  return Number(plan.expectedYield.toFixed(2));
+function buildYieldMetric(key: YieldMetricKey, source: {
+  expectedYield: number;
+  minYield: number;
+  maxYield: number;
+  minYieldChance: number;
+  maxYieldChance: number;
+}): YieldMetric {
+  if (key === 'max') {
+    return {
+      key,
+      label: t('solver.strategy.maxYield'),
+      value: source.maxYield,
+      chance: source.maxYieldChance
+    };
+  }
+
+  if (key === 'min') {
+    return {
+      key,
+      label: t('solver.strategy.minYield'),
+      value: source.minYield,
+      chance: source.minYieldChance
+    };
+  }
+
+  return {
+    key,
+    label: t('solver.strategy.expectedYield'),
+    value: Number(source.expectedYield.toFixed(2))
+  };
+}
+
+function planYieldMetrics(plan: SolverRotationPlan) {
+  return orderedYieldMetricKeys.value.map((key) => buildYieldMetric(key, {
+    expectedYield: plan.expectedYield,
+    minYield: plan.minYield,
+    maxYield: plan.maxYield,
+    minYieldChance: plan.minYieldChance,
+    maxYieldChance: plan.maxYieldChance
+  }));
+}
+
+function formatMetricValue(metric: YieldMetric) {
+  return metric.key === 'expected' ? Number(metric.value.toFixed(2)) : metric.value;
+}
+
+function formatChance(chance: number) {
+  if (chance > 0 && chance < 0.01) return '<0.01';
+
+  return Number(chance.toFixed(2)).toString();
 }
 
 function formatMacroGatherPrompt(context: {
@@ -598,7 +678,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <i class="pi pi-info-circle"></i>
               </button>
             </h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('solver.strategy.description') }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ t(`solver.strategy.modeDescriptions.${currentObjectiveMode}`) }}</p>
           </div>
           <div class="solver-action-bar solver-action-bar-primary">
             <Button
@@ -618,18 +698,21 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 
         <!-- 演算結果 -->
         <div v-if="rotationResult" class="space-y-6">
-          <div class="solver-total-summary">
+          <div v-if="totalSummaryMetric" class="solver-total-summary">
             <div>
-              <span class="text-xs font-bold text-soft-green-700 dark:text-soft-green-300 uppercase tracking-widest">{{ t('solver.strategy.totalExpectedYield') }}</span>
+              <span class="text-xs font-bold text-soft-green-700 dark:text-soft-green-300 uppercase tracking-widest">{{ t(`solver.strategy.summary.${currentObjectiveMode}`) }}</span>
               <div class="mt-1 flex items-end gap-1">
-                <span class="text-3xl font-black text-soft-green-800 dark:text-soft-green-200">{{ rotationResult.expectedYield }}</span>
+                <span class="text-3xl font-black text-soft-green-800 dark:text-soft-green-200">{{ formatMetricValue(totalSummaryMetric) }}</span>
                 <span class="pb-1 text-xs font-bold text-soft-green-600 dark:text-soft-green-300">{{ t('game.units.count') }}</span>
               </div>
+              <p v-if="totalSummaryMetric.chance !== undefined" class="solver-total-chance">
+                {{ t('solver.strategy.yieldChance', { chance: formatChance(totalSummaryMetric.chance) }) }}
+              </p>
             </div>
             <p v-if="rotationResult.revisit.enabled" class="solver-total-note">
               {{ rotationResult.revisit.isFullGp
-                ? t('solver.strategy.revisitSameRotationNote')
-                : t('solver.strategy.revisitTotalNote') }}
+                ? t(`solver.strategy.revisitSameRotationNote.${currentObjectiveMode}`)
+                : t(`solver.strategy.revisitTotalNote.${currentObjectiveMode}`) }}
             </p>
           </div>
 
@@ -642,17 +725,19 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ rotationBlockTitle(plan.kind) }}</p>
             </div>
             <div class="rotation-plan-stats">
-              <div>
-                <span>{{ t('solver.strategy.expectedYield') }}</span>
-                <strong>{{ formatPlanExpectedYield(plan) }}</strong>
-              </div>
-              <div>
-                <span>{{ t('solver.strategy.minYield') }}</span>
-                <strong>{{ plan.minYield }}</strong>
-              </div>
-              <div>
-                <span>{{ t('solver.strategy.maxYield') }}</span>
-                <strong>{{ plan.maxYield }}</strong>
+              <div
+                v-for="metric in planYieldMetrics(plan)"
+                :key="`${plan.kind}-${metric.key}`"
+                :class="{ 'is-primary-metric': metric.key === currentObjectiveMode }"
+              >
+                <span>{{ metric.label }}</span>
+                <strong>
+                  {{ formatMetricValue(metric) }}
+                  <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+                </strong>
+                <small v-if="metric.chance !== undefined">
+                  {{ t('solver.strategy.yieldChance', { chance: formatChance(metric.chance) }) }}
+                </small>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2.5">
@@ -750,6 +835,13 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   font-weight: 700;
   line-height: 1.5;
 }
+.solver-total-chance {
+  margin: 0.25rem 0 0;
+  color: #3f8f79;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
 .rotation-plan-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -763,8 +855,13 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   padding: 0.65rem 0.75rem;
   border: 1px solid rgb(226 232 240);
 }
+.rotation-plan-stats div.is-primary-metric {
+  border-color: rgb(82 168 144 / 0.55);
+  background: rgb(240 253 244 / 0.86);
+}
 .rotation-plan-stats span,
-.rotation-plan-stats strong {
+.rotation-plan-stats strong,
+.rotation-plan-stats small {
   display: block;
 }
 .rotation-plan-stats span {
@@ -780,6 +877,21 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   font-weight: 900;
   line-height: 1.1;
 }
+.rotation-plan-stats .rotation-plan-stat-unit {
+  display: inline;
+  margin: 0 0 0 0.15rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.rotation-plan-stats small {
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
 :global(html.dark .solver-total-summary) {
   border-color: rgb(21 128 61 / 0.5);
   background: rgb(20 83 45 / 0.2);
@@ -787,15 +899,28 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 :global(html.dark .solver-total-note) {
   color: #86efac;
 }
+:global(html.dark .solver-total-chance) {
+  color: #86efac;
+}
 :global(html.dark .rotation-plan-stats div) {
   border-color: rgb(51 65 85);
   background: rgb(15 23 42 / 0.9);
+}
+:global(html.dark .rotation-plan-stats div.is-primary-metric) {
+  border-color: rgb(74 222 128 / 0.42);
+  background: rgb(20 83 45 / 0.22);
 }
 :global(html.dark .rotation-plan-stats span) {
   color: #94a3b8;
 }
 :global(html.dark .rotation-plan-stats strong) {
   color: #f8fafc;
+}
+:global(html.dark .rotation-plan-stats .rotation-plan-stat-unit) {
+  color: #cbd5e1;
+}
+:global(html.dark .rotation-plan-stats small) {
+  color: #cbd5e1;
 }
 @media (min-width: 640px) {
   .solver-result-action-bar {

@@ -60,6 +60,7 @@ export function useTomeLibrary() {
       rotation,
       rotationPlans,
       revisit: payload.rotationResult.revisit,
+      objectiveMode: payload.rotationResult.objectiveMode,
       createdAt: new Date().toISOString()
     };
 

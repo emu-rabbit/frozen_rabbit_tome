@@ -46,16 +46,20 @@ let activeWorker: Worker | null = null;
 let solveVersion = 0;
 let latestSolveInputSignature = '';
 const lastSyncedSettingsStats: Partial<Record<GatheringJob, PlayerStats>> = {};
+const { solverSettings: globalSolverSettings } = useSettings();
 
-const createSolveInputSignature = () => JSON.stringify({
-  itemId: activeItem.value?.itemId ?? null,
-  jobType: activeItem.value?.jobType ?? null,
-  isTimedNode: activeItem.value?.isTimedNode ?? false,
-  stats: solverStats.value,
-  selectedFood: selectedFood.value,
-  nodeBonuses: nodeBonuses.value,
-  temporaryGp: temporaryGp.value
-});
+const createSolveInputSignature = () => {
+  return JSON.stringify({
+    itemId: activeItem.value?.itemId ?? null,
+    jobType: activeItem.value?.jobType ?? null,
+    isTimedNode: activeItem.value?.isTimedNode ?? false,
+    stats: solverStats.value,
+    selectedFood: selectedFood.value,
+    nodeBonuses: nodeBonuses.value,
+    temporaryGp: temporaryGp.value,
+    objectiveMode: globalSolverSettings.value.objectiveMode
+  });
+};
 
 const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
   left.level === right.level
@@ -67,7 +71,7 @@ const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
 const cloneStats = (stats: PlayerStats): PlayerStats => ({ ...stats });
 
 export function useSolver() {
-  const { userStats, debugSettings } = useSettings();
+  const { userStats, debugSettings, solverSettings } = useSettings();
 
   const fetchItemLevelData = async () => {
     const levels = getItemLevelData();
@@ -163,6 +167,8 @@ export function useSolver() {
     const item = getGatherableItemById(tome.itemId);
     if (!item) return false;
 
+    const tomeObjectiveMode = tome.objectiveMode ?? 'expected';
+
     cancelActiveSolve();
     activeItem.value = item;
     solverStats.value = { ...tome.stats };
@@ -174,6 +180,7 @@ export function useSolver() {
       extraRate: tome.nodeBonuses.extraRate
     };
     temporaryGp.value = tome.temporaryGp;
+    solverSettings.value.objectiveMode = tomeObjectiveMode;
     rotationResult.value = null;
     latestSolveInputSignature = createSolveInputSignature();
     const job: GatheringJob = item.jobType || 'miner';
@@ -254,7 +261,7 @@ export function useSolver() {
 
   latestSolveInputSignature = createSolveInputSignature();
 
-  watch([activeItem, solverStats, nodeBonuses, temporaryGp, selectedFood], () => {
+  watch([activeItem, solverStats, nodeBonuses, temporaryGp, selectedFood, solverSettings], () => {
     const currentSignature = createSolveInputSignature();
     if (currentSignature === latestSolveInputSignature) return;
 
@@ -304,6 +311,7 @@ export function useSolver() {
         temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
         jobType: activeItem.value.jobType || 'miner',
         isTimedNode: activeItem.value.isTimedNode ?? false,
+        objectiveMode: solverSettings.value.objectiveMode,
         debugMode: debugSettings.value.solverDebugMode
       };
 

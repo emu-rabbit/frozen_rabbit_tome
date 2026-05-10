@@ -96,6 +96,12 @@ export interface MacroSettings {
   bufferSeconds: number;
 }
 
+export type SolverObjectiveMode = 'expected' | 'max' | 'min';
+
+export interface SolverSettings {
+  objectiveMode: SolverObjectiveMode;
+}
+
 export interface DebugSettings {
   solverDebugMode: boolean;
 }
@@ -115,6 +121,7 @@ export interface SolverRequest {
   temporaryGp: number;
   jobType: 'miner' | 'botanist';
   isTimedNode?: boolean;
+  objectiveMode?: SolverObjectiveMode;
   debugMode?: boolean;
 }
 
@@ -126,6 +133,8 @@ export interface SolverRotationPlan {
   expectedYield: number;
   minYield: number;
   maxYield: number;
+  minYieldChance: number;
+  maxYieldChance: number;
 }
 
 export interface SolverRevisitInfo {
@@ -215,6 +224,7 @@ export interface SolverResponse {
   maxYield: number;
   minYieldChance: number;
   maxYieldChance: number;
+  objectiveMode: SolverObjectiveMode;
   calculationTime: number;
   debug?: SolverDebugInfo;
 }
@@ -244,5 +254,6 @@ export interface StoredTome {
   rotation: StoredTomeRotationStep[];
   rotationPlans?: StoredTomeRotationPlan[];
   revisit?: SolverRevisitInfo;
+  objectiveMode?: SolverObjectiveMode;
   createdAt: string;
 }

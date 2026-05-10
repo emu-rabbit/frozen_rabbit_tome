@@ -78,6 +78,18 @@ export default {
     macroDesc: 'Adjust how long the macro waits while asking you to manually gather. Default is 4 seconds per item plus a 2-second buffer.',
     macroSecondsPerGather: 'Wait per item',
     macroBufferSeconds: 'Extra buffer',
+    solverModeTitle: 'Solver Goal Mode',
+    solverModeDesc: 'Choose what the solver optimizes when scoring rotations.',
+    solverModes: {
+      expected: 'Ordinary Mode',
+      max: 'Chosen Mode',
+      min: 'Cautious Mode'
+    },
+    solverModeDetails: {
+      expected: 'Scores rotations by expected yield, matching the original site behavior.',
+      max: 'Scores only by the highest possible yield. Probability does not affect scoring.',
+      min: 'Scores only by the lowest possible yield for more conservative planning.'
+    },
     debugTitle: 'Expert Debug Mode',
     debugDesc: 'When enabled, solved results expose formulas, probability distributions, and optimality checks.',
     solverDebugMode: 'Show solver debug info',
@@ -117,6 +129,11 @@ export default {
     strategy: {
       title: 'Recommended Rotation',
       description: 'Solves the highest expected-yield rotation from your current values.',
+      modeDescriptions: {
+        expected: 'Ordinary Mode: solve the highest expected-yield rotation from your current values.',
+        max: 'Chosen Mode: solve the rotation with the highest possible yield.',
+        min: 'Cautious Mode: solve the rotation with the strongest minimum yield.'
+      },
       copyMacro: 'Preview Macro',
       copyMacroStates: {
         copied: 'Copied',
@@ -127,9 +144,16 @@ export default {
       savedTome: 'Saved',
       solve: 'Solve It',
       totalExpectedYield: 'Total Expected Yield',
+      summary: {
+        expected: 'Total Expected Yield',
+        max: 'Total Maximum Yield',
+        min: 'Total Minimum Yield'
+      },
       expectedYield: 'Expected Yield',
       maxYield: 'Maximum Yield',
       minYield: 'Minimum Yield',
+      yieldChance: '{chance}% chance',
+      chanceWithRevisit: '{chance}% chance including Revisit',
       rotationOrder: 'Rotation Order',
       primaryRotation: 'Original Rotation',
       revisitRotation: 'After Revisit Rotation',
@@ -139,8 +163,16 @@ export default {
         primaryWithRevisit: 'Rotation (Revisit uses the same plan)',
         revisit: 'Rotation (After Revisit)'
       },
-      revisitSameRotationNote: 'The total expected yield includes Revisit chance.',
-      revisitTotalNote: 'The total expected yield includes Revisit chance.',
+      revisitSameRotationNote: {
+        expected: 'The total expected yield includes Revisit chance.',
+        max: 'The maximum yield and chance include possible Revisit.',
+        min: 'The minimum yield and chance include possible Revisit.'
+      },
+      revisitTotalNote: {
+        expected: 'The total expected yield includes Revisit chance.',
+        max: 'The maximum yield and chance include the after-Revisit rotation.',
+        min: 'The minimum yield and chance include the after-Revisit rotation.'
+      },
       empty: 'Click the button above to calculate a recommended rotation',
       gatherAction: 'Gather',
       conditionalSuffix: ' (if triggered)',
@@ -204,7 +236,8 @@ export default {
       playerStats: 'Player Stats',
       gpState: 'GP State',
       food: 'Food',
-      nodeBonuses: 'Node Bonuses'
+      nodeBonuses: 'Node Bonuses',
+      objectiveMode: 'Solver Mode'
     },
     actions: {
       edit: 'Edit',
