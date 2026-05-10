@@ -84,11 +84,9 @@ watch(language, () => {
 
       <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <KeepAlive include="CreateGuide,Solver,TomeLibrary,Settings">
-              <component :is="Component" />
-            </KeepAlive>
-          </transition>
+          <KeepAlive include="CreateGuide,Solver,TomeLibrary,Settings">
+            <component :is="Component" />
+          </KeepAlive>
         </router-view>
       </div>
     </main>
@@ -99,16 +97,6 @@ watch(language, () => {
 
 
 <style>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
 main {
   scrollbar-gutter: stable;
 }

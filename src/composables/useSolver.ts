@@ -7,6 +7,12 @@ import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../service
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse } from '../types/game';
 
+type GatheringJob = NonNullable<GatherableItem['jobType']>;
+type SyncFromSettingsOptions = {
+  forceStats?: boolean;
+  resetTemporaryGp?: boolean;
+};
+
 const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
 const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
   level: 100,
@@ -39,7 +45,7 @@ const isSolving = ref(false);
 let activeWorker: Worker | null = null;
 let solveVersion = 0;
 let latestSolveInputSignature = '';
-let shouldPreserveLoadedTomeState = false;
+const lastSyncedSettingsStats: Partial<Record<GatheringJob, PlayerStats>> = {};
 
 const createSolveInputSignature = () => JSON.stringify({
   itemId: activeItem.value?.itemId ?? null,
@@ -57,6 +63,8 @@ const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
   && left.perception === right.perception
   && left.gp === right.gp
 );
+
+const cloneStats = (stats: PlayerStats): PlayerStats => ({ ...stats });
 
 export function useSolver() {
   const { userStats, debugSettings } = useSettings();
@@ -103,7 +111,6 @@ export function useSolver() {
 
   const setSelectedItem = (item: GatherableItem) => {
     const isDifferentItem = activeItem.value?.itemId !== item.itemId;
-    shouldPreserveLoadedTomeState = false;
 
     if (isDifferentItem) {
       cancelActiveSolve();
@@ -118,31 +125,38 @@ export function useSolver() {
       yieldCount: 0,
       extraRate: 0
     };
-    syncFromSettings();
+    syncFromSettings({ forceStats: true, resetTemporaryGp: true });
   };
 
-  const syncFromSettings = () => {
+  // 求解台是一份可編輯草稿；只在設定真的變動或明確初始化時覆蓋，避免切頁回來洗掉手填 GP。
+  const syncFromSettings = (options: SyncFromSettingsOptions = {}) => {
     if (!activeItem.value) return;
-    if (shouldPreserveLoadedTomeState) {
-      return;
-    }
 
-    const job = activeItem.value.jobType || 'miner';
+    const job: GatheringJob = activeItem.value.jobType || 'miner';
     const stats = userStats.value[job];
+    const previousSyncedStats = lastSyncedSettingsStats[job];
+    const shouldSyncStats = options.forceStats
+      || !previousSyncedStats
+      || !areStatsEqual(previousSyncedStats, stats);
 
-    if (!areStatsEqual(solverStats.value, stats)) {
-      solverStats.value = { ...stats };
+    if (shouldSyncStats) {
+      lastSyncedSettingsStats[job] = cloneStats(stats);
+      if (!areStatsEqual(solverStats.value, stats)) {
+        solverStats.value = cloneStats(stats);
+      }
     }
 
-    // 同步時以食物套用後的滿 GP 作為預設規劃情境
-    temporaryGp.value = effectiveStats.value.gp;
+    if (options.resetTemporaryGp) {
+      temporaryGp.value = effectiveStats.value.gp;
+    }
   };
 
   const saveToSettings = () => {
     if (!activeItem.value) return;
-    const job = activeItem.value.jobType || 'miner';
+    const job: GatheringJob = activeItem.value.jobType || 'miner';
     // 將 solverStats (包含修改後的 max GP) 寫回全域設定
-    userStats.value[job] = { ...solverStats.value };
+    userStats.value[job] = cloneStats(solverStats.value);
+    lastSyncedSettingsStats[job] = cloneStats(solverStats.value);
   };
 
   const loadTomeForEditing = (tome: StoredTome) => {
@@ -162,7 +176,8 @@ export function useSolver() {
     temporaryGp.value = tome.temporaryGp;
     rotationResult.value = null;
     latestSolveInputSignature = createSolveInputSignature();
-    shouldPreserveLoadedTomeState = true;
+    const job: GatheringJob = item.jobType || 'miner';
+    lastSyncedSettingsStats[job] = cloneStats(userStats.value[job]);
 
     return true;
   };

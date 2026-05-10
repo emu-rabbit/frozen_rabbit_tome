@@ -318,7 +318,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 <template>
   <div class="solver-page p-6 max-w-4xl mx-auto">
     <!-- === 未選擇物品 (引導畫面) === -->
-    <div v-if="!activeItem?.itemId" class="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+    <div v-if="!activeItem?.itemId" class="flex flex-col items-center justify-center py-20 text-center">
       <div class="w-24 h-24 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-8 border-2 border-dashed border-slate-200 dark:border-slate-700">
         <i class="pi pi-map text-4xl text-slate-300"></i>
       </div>
@@ -336,7 +336,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
     </div>
 
     <!-- === 收藏品警告 === -->
-    <div v-else-if="activeItem.isCollectable" class="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+    <div v-else-if="activeItem.isCollectable" class="flex flex-col items-center justify-center py-20 text-center">
       <div class="w-20 h-20 bg-purple-50 dark:bg-purple-900/20 rounded-full flex items-center justify-center mb-6">
         <i class="pi pi-hammer text-3xl text-purple-500"></i>
       </div>
@@ -345,7 +345,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
     </div>
 
     <!-- === 水晶採集系統警告 === -->
-    <div v-else-if="activeItem.isCrystalGathering" class="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+    <div v-else-if="activeItem.isCrystalGathering" class="flex flex-col items-center justify-center py-20 text-center">
       <div class="w-20 h-20 bg-cyan-50 dark:bg-cyan-900/20 rounded-full flex items-center justify-center mb-6">
         <i class="pi pi-sparkles text-3xl text-cyan-500"></i>
       </div>
@@ -354,7 +354,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
     </div>
 
     <!-- === 求解器主畫面 === -->
-    <div v-else class="space-y-6 animate-page-in">
+    <div v-else class="space-y-6">
       <!-- 物品標題卡 -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
         <div class="flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-4 sm:gap-6 text-center sm:text-left">
@@ -534,7 +534,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       </div>
 
       <!-- 採集點獎勵區 -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm animate-page-in" style="animation-delay: 0.1s;">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
         <h3 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-6">
           <i class="pi pi-gift text-amber-500"></i>
           {{ t('solver.nodeBonusesTitle') }}
@@ -581,7 +581,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       </div>
 
       <!-- 策略演算區 -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm animate-page-in overflow-hidden" style="animation-delay: 0.2s;">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5 mb-8">
           <div class="flex flex-col gap-1 text-center sm:text-left">
             <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center sm:justify-start gap-2">
@@ -961,20 +961,6 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 .save-settings-leave-to {
   opacity: 0;
   transform: translateY(-0.25rem) scale(0.98);
-}
-.animate-page-in {
-  animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 .animate-shake {
   animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
