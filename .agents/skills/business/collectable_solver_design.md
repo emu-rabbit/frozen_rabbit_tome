@@ -2,6 +2,65 @@
 
 本文件整理 2026-05-10 針對 `frozen_rabbit_tome` 收藏品採集求解系統的研究結論。目標是讓後續 Agent 可以只讀本文件，再搭配既有 `.agents` 核心規範與程式碼，理解並實作收藏品求解系統。
 
+## 2026-05-10 實測修正與命名勘誤
+
+本節優先級高於本文較早期草案敘述。後續 Agent 實作收藏品第一版求解器時，請先讀本節與 `.agents/skills/business/collectable_solver_v1_implementation.md`。
+
+### 名稱對照
+
+| 遊戲內繁中/現象 | Teamcraft 名稱 | 實作含義 |
+| :--- | :--- | :--- |
+| 價值提升效果 / 價值提升機率 | Collector's Intuition / IntuitionRate | 本次提煉類技能收藏價值提升量變高。最大值 case 面板為 40%，價值矚目後為 70%。 |
+| 洞察 Buff | Collector's Standard | 下一次 `Brazen` / `Meticulous` 變強。第一版排除 `Brazen`，但可納入一般洞察對 `Meticulous` 的影響。 |
+| 強化洞察 | Collector's High Standard | Lv100 偶爾升級版。發生率未知，第一版求解器排除。 |
+
+重要：`IntuitionRate` 不是「洞察 Buff 發生率」。它對應本次是否觸發「價值提升效果」。價值提升不一定給洞察 Buff，兩者必須拆成兩個隨機事件。
+
+### 第一版已確認可用模型
+
+最大值 case 實測與 Teamcraft 對照如下：
+
+| 狀態 | 技能 | 未觸發價值提升 | 觸發價值提升 | 備註 |
+| :--- | :--- | ---: | ---: | :--- |
+| 無洞察 | 提煉 | +200 | +300 | 使用 `Scour`。 |
+| 無洞察 | 慎重提煉 | +150 | +250 | 慎重不耗耐久率最大值 case 為 25%。 |
+| 洞察 / Collector's Standard | 慎重提煉 | +200 | +300 | 第一版可納入。 |
+| 集中檢查 | 提煉 | +450 | +550 | 使用者依遊戲經驗確認。 |
+| 集中檢查 | 慎重提煉 | +400 | +550 | 使用者依遊戲經驗確認。 |
+| 集中檢查 + 洞察 | 慎重提煉 | +450 | +550 | 使用者依遊戲經驗確認。 |
+
+`價值矚目 / Collector's Focus` 已確認：
+
+- 消耗 100 GP。
+- 將價值提升機率乘以 1.75 並向下取整；最大值 case 40% 變 70%。
+- 只會在下一次提煉類技能後消耗；施放其他 GP Buff 不會消耗。
+
+`預備碰觸 / Priming Touch` 已確認：
+
+- 消耗 100 GP。
+- 將慎重不耗耐久率翻倍；最大值 case 25% 變 50%。
+- 不改變收藏價值提升量，也不改變價值提升機率。
+- 只會在下一次提煉類技能後消耗；施放其他 GP Buff 不會消耗。
+
+`Collector's Standard / 洞察 Buff` 近似機率採 Teamcraft `Gathering Math`：
+
+- Lv55 收藏品點：0%。
+- 一般非限時收藏品點：25%。
+- 未滿等級上限未知點：25%。
+- 精選點：20%。
+- 滿等未知 / 傳說點：13%。
+
+限制：
+
+- 剛開節點不能立即觸發，必須先使用收藏品技能。
+- 收藏價值達 1000 或耐久歸 0 時不能再觸發。
+- 裝備與等級不影響 `Collector's Standard` 機率。
+
+### 第一版固定排除
+
+- `Brazen / 大膽提煉`：隨機分布、檔位、取整順序仍未知。
+- `Collector's High Standard / 強化洞察`：發生率未知；少量手測無法建立可靠期望值模型。可在模擬器作為手動狀態或 experimental probability，不納入第一版求解器最佳化。
+
 ## 尚待解決問題
 
 以下問題尚未有足夠可信資料，請後續先向使用者或專家確認，再進入正式實作。若沒有確認，實作時必須以保守 TODO、feature flag 或明確未支援狀態處理，不可自行猜測。
@@ -403,10 +462,11 @@ https://v2.xivapi.com/api/sheet/SatisfactionSupplyReward/1
 | 提煉 | 大膽提煉 | 大膽提煉 | Brazen Prospector / Brazen Woodsman | 0 | -1 | 提煉 50% 到 150%，分布待確認 |
 | 提煉 | 慎重提煉 | 慎重提煉 | Meticulous Prospector / Meticulous Woodsman | 0 | -1 或 0 | 提煉 75%，有機率不消耗耐久 |
 | Buff | 集中檢查 | 集中檢查 | Scrutiny | 200 | 0 | 下一次提煉技能增加收藏價值提升量 |
-| Buff | 價值矚目 | 價值矚目 | Collector's Focus | 100 | 0 | 下一次提煉技能提高洞察觸發率 |
+| Buff | 價值矚目 | 價值矚目 | Collector's Focus | 100 | 0 | 下一次提煉類技能提高「價值提升機率」；不是直接提高洞察 Buff / Collector's Standard 機率 |
 | Buff | 預備碰觸 | 預備碰觸 | Priming Touch | 100 | 0 | 下一次慎重提煉不消耗耐久率翻倍 |
-| Trait | 洞察 / 收藏家的直覺 | 洞察 / 收藏家的直覺 | Collector's Intuition | 0 | 0 | 隨提煉觸發，增加本次收藏價值提升量 |
-| Trait | 強化洞察 | 待確認 | Enhanced Intuition | 0 | 0 | Lv100 trait，效果待確認 |
+| Proc | 價值提升效果 | 價值提升效果 | Collector's Intuition | 0 | 0 | 隨提煉類技能觸發，增加本次收藏價值提升量 |
+| Buff | 洞察 | 洞察 | Collector's Standard | 0 | 0 | 隨收藏品技能近似機率觸發，使下一次大膽/慎重提煉變強 |
+| Buff | 強化洞察 | 強化洞察 | Collector's High Standard | 0 | 0 | Lv100 升級版，發生率未知，第一版排除 |
 
 GP 消耗可從 `Action.csv` 的 `PrimaryCostValue` 取得。
 
@@ -434,7 +494,7 @@ GP 消耗可從 `Action.csv` 的 `PrimaryCostValue` 取得。
 本專案目前 `.agents/skills/business/gathering_math_formulas.md` 寫「收藏品純化機制」時使用「當前鑑別力 / 基礎鑑別力」。但 PDF `How to Craft like a Machine: Otis Edition` 第 11-12 頁顯示，收藏品公式需依函式使用不同 STAT：
 
 - **提煉 / Scour**：使用獲得力與基礎獲得力。
-- **洞察率 / IntuitionRate**：使用獲得力與基礎獲得力。
+- **價值提升率 / IntuitionRate**：使用獲得力與基礎獲得力。注意：這不是 `Collector's Standard / 洞察 Buff` 機率。
 - **慎重提煉不耗耐久率 / MeticulousRate**：使用獲得力與基礎獲得力。
 - **集中檢查 / Scrutiny**：使用鑑別力與基礎鑑別力。
 
@@ -508,9 +568,11 @@ function applyScrutiny(scourValue, scrutinyMultiplier) {
 }
 ```
 
-### 洞察 / 收藏家的直覺
+### 價值提升效果 / Collector's Intuition
 
-洞察發動時，於目前結果再加 `Scour * 50%`。
+注意：本段早期曾以「洞察」稱呼 `Collector's Intuition`，容易與繁中遊戲狀態 **洞察 / Collector's Standard** 混淆。後續實作請稱為「價值提升效果」或 `valueIncreaseProc`。
+
+價值提升發動時，於目前結果再加 `Scour * 50%`。
 
 PDF 表示公式：
 
@@ -520,8 +582,8 @@ Intuition = floor(Scour * 50 / 100 + currentResult)
 
 注意：
 
-- 洞察在集中檢查之後套用。
-- 若集中檢查與洞察同時存在，先算集中檢查後的結果，再加 `floor?` 公式中使用 Scour 的 50%。
+- 價值提升在集中檢查之後套用。
+- 若集中檢查與價值提升同時存在，先算集中檢查後的結果，再加 `floor?` 公式中使用 Scour 的 50%。
 - PDF 文字說 Intuition will multiply the Scour result by 1.5 and add Scrutiny bonus as appropriate。實作時可用「base Scour bonus」追蹤，避免重複乘錯。
 
 建議實作：
@@ -532,9 +594,9 @@ function applyIntuition(currentValue, scourValue) {
 }
 ```
 
-仍需確認強化洞察是否改變此函式。
+強化洞察 / Collector's High Standard 是否改變此函式不納入第一版。
 
-### 洞察率
+### 價值提升率 / IntuitionRate
 
 以獲得力計算 `RateScore`。
 
@@ -555,7 +617,7 @@ function calculateIntuitionRate(gathering, baseGathering) {
 }
 ```
 
-最高約 40。
+最高約 40。遊戲 UI 會顯示為「價值提升機率」。
 
 ### 價值矚目
 
@@ -565,7 +627,7 @@ PDF 表示：
 CollectorsFocus = IntuitionRateResult * 175 / 100
 ```
 
-也就是將目前洞察率乘以 1.75。
+也就是將目前價值提升率乘以 1.75。
 
 實作方向：
 
@@ -583,8 +645,8 @@ function applyCollectorsFocus(intuitionRate) {
 
 使用者確認狀態（2026-05-10）：
 
-- 價值矚目的 floor、機率上限與特殊工具 / 節點效果規則目前暫時沒有答案。
-- 第一版可採文件中的保守暫定實作，但 debug 需清楚標示這是待驗證假設。
+- 2026-05-10 使用者實測：最大值 case 從 40% 變 70%，與 `Floor(IntuitionRate * 175 / 100)` 相符。
+- 價值矚目只會在下一次提煉類技能後消耗；施放其他 GP Buff 不會消耗。
 
 ### 慎重提煉收藏價值
 
@@ -1025,10 +1087,13 @@ const proc = nextState({ integrity: state.integrity });
 expected = procRate * solve(proc) + (1 - procRate) * solve(noProc);
 ```
 
-洞察 outcome：
+價值提升與洞察 outcome（舊草案，需依 v1 文件修正）：
 
-- 每次提煉類技能應同時有洞察觸發與未觸發分支。
-- 若 `collectorsFocusActive`，本次 intuition rate = focus rate。
+注意：以下早期草案把 `IntuitionRate` 和洞察 Buff 混在同一個 outcome。後續實作請以 `.agents/skills/business/collectable_solver_v1_implementation.md` 為準，將「價值提升 / Collector's Intuition」與「洞察 Buff / Collector's Standard」拆成兩個獨立隨機事件。
+
+- 每次提煉類技能應同時有價值提升觸發與未觸發分支。
+- 每次收藏品技能結束後，若符合限制，另有 `Collector's Standard / 洞察 Buff` 觸發與未觸發分支。
+- 若 `collectorsFocusActive`，本次 value increase rate = focus rate。
 - 使用後清除 `collectorsFocusActive`。
 
 建議先建立一個共用函式：

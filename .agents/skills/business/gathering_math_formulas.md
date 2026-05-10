@@ -44,19 +44,55 @@
 - **獲得量 +2**：當前獲得力 >= `Floor(基礎獲得力 * 0.9)`。
 - **獲得量 +3**：當前獲得力 >= `Floor(基礎獲得力 * 1.1)`。
 
-## 5. 收藏品純化機制 (Collectables Scour)
-純化數值基於 **純化分數 (ScourScore)**：`Min(95, Floor(100 * 當前鑑別力 / 基礎鑑別力))`。
+## 5. 收藏品提煉機制 (Collectables)
 
-### 基礎純化值 (Scour Value)
-- `ScourScore <= 66`：150
-- `66 < ScourScore <= 85`：`Floor((ScourScore - 66) * 40 / 19 + 150)` (最高 190)
-- `85 < ScourScore <= 95`：`ScourScore - 85 + 190` (最高 200)
+> 2026-05-10 實測與 Teamcraft 對照修正：
+> 收藏品公式不可全部使用鑑別力。`Scour`、價值提升率、慎重不耗耐久率使用 **獲得力 / 基礎獲得力**；`Scrutiny` 使用 **鑑別力 / 基礎鑑別力**。
+> Teamcraft 文件中的 `IntuitionRate` 對應遊戲 UI 的「價值提升機率」，不是繁中狀態「洞察」Buff。繁中「洞察」Buff 對應 Teamcraft 的 `Collector's Standard`。
 
-### 慎重純化 (Meticulous Chance)
-不消耗耐久的機率：
-- `ScourScore <= 66`：5%
-- `66 < ScourScore <= 85`：`Floor((ScourScore - 66) * 5 / 19 + 5)` (%)
-- `85 < ScourScore <= 95`：`(ScourScore - 85) + 10` (%) (最高 20%)
+### 通用分數
+- `Score = Floor(100 * 當前屬性 / 基礎值)`
+- `ActionScore = Min(95, Score)`
+- `RateScore = Min(100, Score)`
+
+### 提煉基礎值 (Scour Value)
+`Scour` 使用 **獲得力** 計算 `ActionScore`。
+
+- `ActionScore <= 66`：150
+- `66 < ActionScore <= 85`：`Floor((ActionScore - 66) * 40 / 19 + 150)` (最高 190)
+- `85 < ActionScore <= 95`：`ActionScore - 85 + 190` (最高 200)
+
+### 集中檢查 (Scrutiny)
+`Scrutiny` 使用 **鑑別力** 計算 `ActionScore`，結果為 90 到 125 的倍率基礎，並套用在本次提煉結果上。
+
+- `ActionScore <= 66`：90
+- `66 < ActionScore <= 85`：`Floor((ActionScore - 66) * 25 / 19 + 90)`
+- `85 < ActionScore <= 95`：`ActionScore - 85 + 115`
+- 套用：`Floor(Scour * ScrutinyResult / 100 + Scour)`
+
+### 價值提升率 (Collector's Intuition / IntuitionRate)
+`IntuitionRate` 使用 **獲得力** 計算 `RateScore`，遊戲繁中 UI 顯示為「價值提升機率」。
+
+- `RateScore <= 66`：10%
+- `66 < RateScore <= 85`：`Floor((RateScore - 66) * 10 / 19 + 10)` (%)
+- `85 < RateScore <= 100`：`Floor((RateScore - 85) * 20 / 15 + 20)` (%)，最高 40%
+- `Collector's Focus / 價值矚目`：`Floor(IntuitionRate * 175 / 100)`，最大值 case 40% 會變 70%。
+
+### 慎重提煉 (Meticulous)
+- 收藏價值基礎提升量：`Floor(Scour * 75 / 100)`。
+- 不消耗耐久率使用 **獲得力** 計算 `RateScore`。
+- `RateScore <= 66`：5%
+- `66 < RateScore <= 85`：`Floor((RateScore - 66) * 5 / 19 + 5)` (%)
+- `85 < RateScore <= 100`：`(RateScore - 85) + 10` (%)，最高 25%
+- `Priming Touch / 預備碰觸`：目前實測為只將慎重不耗耐久率翻倍；最大值 case 25% 變 50%。強化洞察相關疊加不納入第一版。
+
+### 一般洞察 Buff (Collector's Standard)
+繁中遊戲 UI 的 **洞察** Buff 對應 Teamcraft 的 `Collector's Standard`，不是 `Collector's Intuition`。
+
+- 觸發後會使下一次 `Brazen` / `Meticulous` 提升到接近 `Scour` 的基準。
+- 第一版排除 `Brazen`，但可納入 `Meticulous`：最大值 case 實測為慎重 `+200`，價值提升時 `+300`。
+- 觸發限制：剛開節點不能立即觸發；收藏價值達 1000 或耐久歸 0 時不能再觸發。
+- Teamcraft 近似機率：Lv55 收藏品點 0%；一般非限時收藏品點 25%；未滿等級上限未知點 25%；精選點 20%；滿等未知 / 傳說點 13%。
 
 ## 6. 其他關鍵數值
 - **再起 (Revisit - 7.0 新特性)**：
