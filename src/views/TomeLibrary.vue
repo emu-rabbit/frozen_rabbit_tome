@@ -92,7 +92,11 @@ function rotationPlanTitle(kind: SolverRotationPlanKind) {
     : t('solver.strategy.primaryRotation');
 }
 
-function rotationCardTitle(kind: SolverRotationPlanKind) {
+function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
+  if (kind === 'primary' && tome.revisit?.enabled && tome.revisit.isFullGp && tomeRotationPlans(tome).length === 1) {
+    return t('solver.strategy.rotationTitles.primaryWithRevisit');
+  }
+
   return kind === 'revisit'
     ? t('solver.strategy.rotationTitles.revisit')
     : t('solver.strategy.rotationTitles.primary');
@@ -229,7 +233,7 @@ function copyMacroIcon() {
         <div class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
           <div v-for="plan in tomeRotationPlans(tome)" :key="`${tome.id}-${plan.kind}`" class="rotation-preview-block">
             <div class="rotation-strip">
-              <h4 class="rotation-strip-title">{{ rotationCardTitle(plan.kind) }}</h4>
+              <h4 class="rotation-strip-title">{{ rotationCardTitle(tome, plan.kind) }}</h4>
               <div class="rotation-icons">
               <template v-for="(step, index) in plan.rotation" :key="`${tome.id}-${plan.kind}-${index}`">
                 <span
