@@ -121,6 +121,18 @@ else:
 
 最大值 case：125。
 
+`Scrutiny` 依 Teamcraft 公式先由 `Scour` 算出額外加成，再加到本次提煉 action 的基礎提升量上：
+
+```txt
+scrutinyBonus = floor(Scour * scrutinyMultiplier / 100)
+
+Scour + Scrutiny = Scour + scrutinyBonus
+Meticulous + Scrutiny = floor(Scour * 75 / 100) + scrutinyBonus
+Meticulous + Collector's Standard + Scrutiny = Scour + scrutinyBonus
+```
+
+價值提升效果另加 `floor(Scour * 50 / 100)`。最大值 case：`Scour = 200`、`scrutinyMultiplier = 125`、`scrutinyBonus = 250`，因此 `Scrutiny + Meticulous` 為 `400 / 500`。
+
 ## 最大值 Case 實測表
 
 以下表格來自使用者在遊戲內最大值 case 實測，作為實作測試基準。
@@ -131,7 +143,7 @@ else:
 | 無 buff | Meticulous | +150 | +250 |
 | Collector's Standard | Meticulous | +200 | +300 |
 | Scrutiny | Scour | +450 | +550 |
-| Scrutiny | Meticulous | +400 | +550 |
+| Scrutiny | Meticulous | +400 | +500 |
 | Scrutiny + Collector's Standard | Meticulous | +450 | +550 |
 
 `Meticulous` 另有不耗耐久 outcome；不耗耐久與價值提升是分開事件。
@@ -227,7 +239,7 @@ gp|integrity|collectability|scrutiny|focus|priming|standard|hasUsedCollectableAc
 ### Scour outcome
 
 - 無 Scrutiny：`+Scour` / value-up `+floor(Scour * 150 / 100)`，最大值 case為 `+200 / +300`。
-- Scrutiny：最大值 case `+450 / +550`。第一版可先用最大值實測表做測試，公式實作時以 `Scrutiny = floor(Scour * scrutinyMultiplier / 100 + Scour)` 作 base，再依 Teamcraft `Intuition = floor(Scour * 50 / 100 + Scrutiny OR Scour)` 推導 value-up。
+- Scrutiny：最大值 case `+450 / +550`。公式實作時以 `scrutinyBonus = floor(Scour * scrutinyMultiplier / 100)`，`Scour + Scrutiny = Scour + scrutinyBonus`，價值提升再加 `floor(Scour * 50 / 100)`。
 
 ### Meticulous outcome
 
@@ -235,7 +247,7 @@ gp|integrity|collectability|scrutiny|focus|priming|standard|hasUsedCollectableAc
 
 - 無 buff：`+150 / +250`。
 - Standard：`+200 / +300`。
-- Scrutiny：`+400 / +550`。
+- Scrutiny：`+400 / +500`。
 - Scrutiny + Standard：`+450 / +550`。
 
 非最大值 case 的精確公式若有疑慮，先在 debug 顯示公式來源與中間值。不要回退到簡單線性假設。
@@ -358,7 +370,7 @@ Debug 或 tooltip 顯示：
 - 無 buff + `Meticulous`：150 / 250。
 - `Standard` + `Meticulous`：200 / 300。
 - `Scrutiny` + `Scour`：450 / 550。
-- `Scrutiny` + `Meticulous`：400 / 550。
+- `Scrutiny` + `Meticulous`：400 / 500。
 - `Scrutiny` + `Standard` + `Meticulous`：450 / 550。
 
 Solver 測試：

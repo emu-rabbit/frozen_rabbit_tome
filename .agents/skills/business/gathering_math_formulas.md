@@ -63,12 +63,16 @@
 - `85 < ActionScore <= 95`：`ActionScore - 85 + 190` (最高 200)
 
 ### 集中檢查 (Scrutiny)
-`Scrutiny` 使用 **鑑別力** 計算 `ActionScore`，結果為 90 到 125 的倍率基礎，並套用在本次提煉結果上。
+`Scrutiny` 使用 **鑑別力** 計算 `ActionScore`，結果為 90 到 125 的倍率基礎。依 Teamcraft 公式，`Scrutiny` 的額外加成使用 `Scour` 值計算，再加到本次提煉 action 的基礎提升量上。
 
 - `ActionScore <= 66`：90
 - `66 < ActionScore <= 85`：`Floor((ActionScore - 66) * 25 / 19 + 90)`
 - `85 < ActionScore <= 95`：`ActionScore - 85 + 115`
-- 套用：`Floor(Scour * ScrutinyResult / 100 + Scour)`
+- `ScrutinyBonus = Floor(Scour * ScrutinyResult / 100)`
+- `Scour + Scrutiny = Scour + ScrutinyBonus`
+- `Meticulous + Scrutiny = Floor(Scour * 75 / 100) + ScrutinyBonus`
+- `Meticulous + Collector's Standard + Scrutiny = Scour + ScrutinyBonus`
+- 價值提升效果另加 `Floor(Scour * 50 / 100)`；最大值 case 中 `Scrutiny + Meticulous` 為 `400 / 500`，不是 `400 / 550`。
 
 ### 價值提升率 (Collector's Intuition / IntuitionRate)
 `IntuitionRate` 使用 **獲得力** 計算 `RateScore`，遊戲繁中 UI 顯示為「價值提升機率」。
@@ -89,17 +93,29 @@
 ### 一般洞察 Buff (Collector's Standard)
 繁中遊戲 UI 的 **洞察** Buff 對應 Teamcraft 的 `Collector's Standard`，不是 `Collector's Intuition`。
 
+- 這是使用收藏品技能時可能發生的隱藏 proc。
 - 觸發後會使下一次 `Brazen` / `Meticulous` 提升到接近 `Scour` 的基準。
 - 第一版排除 `Brazen`，但可納入 `Meticulous`：最大值 case 實測為慎重 `+200`，價值提升時 `+300`。
-- 觸發限制：剛開節點不能立即觸發；收藏價值達 1000 或耐久歸 0 時不能再觸發。
-- Teamcraft 近似機率：Lv55 收藏品點 0%；一般非限時收藏品點 25%；未滿等級上限未知點 25%；精選點 20%；滿等未知 / 傳說點 13%。
+- 觸發限制：
+  - 剛開節點不能立即觸發，必須先使用一次收藏品技能。
+  - 收藏價值達 1000 時不能觸發。
+  - 節點耐久歸 0 時不能觸發。
+  - 裝備與等級不影響此機率。
+- Teamcraft 近似機率：
+  - 節點等級為 55 的收藏品點：0%。
+  - 一般非限時收藏品點：25%。
+  - 未滿等級上限的未知點：25%。
+  - 精選點 (Ephemeral)：20%。
+  - 滿等未知 / 傳說點：13%。
+- Teamcraft 備註：Lv55 收藏品點無法觸發此效果是不一致的特殊情況，不應推定為通用規則。
+- `Collector's High Standard / 強化洞察` 目前所知不多，第一版 solver 不納入。
 
 ## 6. 其他關鍵數值
 - **再起 (Revisit - 7.0 新特性)**：
     - 普通採集點：5%
     - 限時採集點：8%
-- **收藏家的標準 (Collector's Standard)**：
-    - 普通點：25% / 精選點：20% / 傳說或未知點：13%。
+- **洞察 (Collector's Standard)**：
+    - 詳細條件與節點類型機率見「一般洞察 Buff」段落。
 - **昇華率 (Sublime Rate)**：針對 Prime 物品，上限 25%，門檻極高 (獲得力分數需達 95~110)。
 
 ---
