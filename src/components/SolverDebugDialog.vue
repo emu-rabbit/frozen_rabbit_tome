@@ -48,6 +48,11 @@ function boonScoreFormula() {
     score: boon.score
   });
 }
+
+function formatProbability(probability: number) {
+  if (probability > 0 && probability < 0.0001) return '<0.0001%';
+  return `${Number(probability.toFixed(4))}%`;
+}
 </script>
 
 <template>
@@ -142,7 +147,7 @@ function boonScoreFormula() {
                       <div class="debug-outcome-track">
                         <div :style="{ width: `${Math.min(100, entry.probability)}%` }"></div>
                       </div>
-                      <span>{{ entry.probability }}%</span>
+                      <span>{{ formatProbability(entry.probability) }}</span>
                     </div>
                   </div>
                 </article>

@@ -48,6 +48,7 @@ export default {
     loading: '資料載入中，請稍候…',
     noResults: '未找到相符的物品，請嘗試使用英文搜尋',
     typeToSearch: '請輸入物品名稱開始搜尋',
+    resultCount: '{count}{plus} 筆結果',
     glv: 'Glv',
     noTranslation: '(無官方翻譯)',
     collectableSystem: '收藏品系統',
@@ -127,6 +128,7 @@ export default {
       saveTome: '儲存秘笈',
       savedTome: '已儲存',
       solve: '求解',
+      totalExpectedYield: '總期望產量',
       expectedYield: '期望總產量',
       maxYield: '最高產量',
       minYield: '最低產量',
@@ -136,8 +138,11 @@ export default {
       revisitBadge: '再起發動',
       rotationTitles: {
         primary: '採集手法',
+        primaryWithRevisit: '採集手法（再起也是相同手法）',
         revisit: '採集手法（再起發動後）'
       },
+      revisitSameRotationNote: '總期望值已納入再起機率。',
+      revisitTotalNote: '總期望值已納入再起機率。',
       empty: '點擊上方按鈕開始計算建議手法',
       gatherAction: '採集',
       conditionalSuffix: '（若觸發）',
@@ -178,7 +183,7 @@ export default {
       maxYield: '最大',
       statesSolved: '解過狀態',
       memoHits: 'Memo 命中',
-      actionsEvaluated: '候選技能',
+      actionsEvaluated: '已評估分支',
       optimality: '最優性說明',
       optimalityMethod: '求解器會對每個狀態窮舉可施放技能與直接採集分支，使用 memoization 保存子問題最佳解；因此在目前模型內，根狀態取得的就是全域最佳期望值。',
       tieBreaker: '若期望值在 epsilon 內相同，使用 rotationPreferenceScore 選擇更符合施放習慣的等價手法。',
@@ -228,7 +233,8 @@ export default {
     units: {
       times: '次',
       count: '個',
-      percent: '%'
+      percent: '%',
+      secondsSuffix: ' 秒'
     }
   },
   welcomeModal: {

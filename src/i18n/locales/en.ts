@@ -46,6 +46,7 @@ export default {
     loading: 'Loading data, please wait…',
     noResults: 'No items found. Try searching in English.',
     typeToSearch: 'Type an item name to search',
+    resultCount: '{count}{plus} results',
     glv: 'Glv',
     noTranslation: '(No official translation)',
     collectableSystem: 'Collectable',
@@ -125,6 +126,7 @@ export default {
       saveTome: 'Save Tome',
       savedTome: 'Saved',
       solve: 'Solve It',
+      totalExpectedYield: 'Total Expected Yield',
       expectedYield: 'Expected Yield',
       maxYield: 'Maximum Yield',
       minYield: 'Minimum Yield',
@@ -134,8 +136,11 @@ export default {
       revisitBadge: 'Revisit Triggered',
       rotationTitles: {
         primary: 'Rotation',
+        primaryWithRevisit: 'Rotation (Revisit uses the same plan)',
         revisit: 'Rotation (After Revisit)'
       },
+      revisitSameRotationNote: 'The total expected yield includes Revisit chance.',
+      revisitTotalNote: 'The total expected yield includes Revisit chance.',
       empty: 'Click the button above to calculate a recommended rotation',
       gatherAction: 'Gather',
       conditionalSuffix: ' (if triggered)',
@@ -146,7 +151,7 @@ export default {
       close: 'Close debug dialog',
       kicker: 'Solver Debug',
       title: 'Expected Value and Optimality Check',
-      subtitle: 'Formulas, outcome distributions, and dynamic-programming search statistics for this solve.',
+      subtitle: 'Formulas, yield distributions, and dynamic-programming search statistics for this solve.',
       formulas: 'Formula Inputs',
       successFormula: 'Gathering Success Rate',
       successScoreFormula: 'Success score = floor(100 * {gathering} / {baseGathering}) = {score}',
@@ -168,7 +173,7 @@ export default {
       gpRecovered: 'Recovered per gather',
       expectedValue: 'Total Expected Value',
       revisitChance: 'Revisit chance',
-      plans: 'Rotation Branches',
+      plans: 'Rotation Results',
       primaryPlan: 'Primary rotation',
       revisitPlan: 'After Revisit rotation',
       startingGp: 'Starting GP',
@@ -176,9 +181,9 @@ export default {
       maxYield: 'Max',
       statesSolved: 'States solved',
       memoHits: 'Memo hits',
-      actionsEvaluated: 'Candidate actions',
+      actionsEvaluated: 'Evaluated branches',
       optimality: 'Optimality',
-      optimalityMethod: 'For each state, the solver exhaustively compares every legal action branch and the direct gather branch, memoizing the best subproblem result. Within the current model, the root state therefore receives the globally best expected value.',
+      optimalityMethod: 'For each state, the solver exhaustively evaluates every legal action branch and the direct gather branch, then memoizes the best subproblem result. Within the current model, the root state therefore receives the globally best expected value.',
       tieBreaker: 'If expected values are equal within epsilon, rotationPreferenceScore selects the equivalent rotation that better matches practical casting habits.',
       caveat: 'Optimality holds for the currently modeled regular-gathering skills, GP, integrity, success rate, Boon, Revisit, and Wise to the World probabilities. Collectables, crystal gathering, and manual interruption are not included.'
     }
@@ -226,7 +231,8 @@ export default {
     units: {
       times: 'Time(s)',
       count: 'Piece(s)',
-      percent: '%'
+      percent: '%',
+      secondsSuffix: ' s'
     }
   },
   welcomeModal: {

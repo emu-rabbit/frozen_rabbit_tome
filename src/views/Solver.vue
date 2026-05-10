@@ -91,23 +91,6 @@ const displayedRotationPlans = computed(() => rotationResult.value?.rotationPlan
       } as SolverRotationPlan]
     : []);
 
-const maxYieldDisplay = computed(() => {
-  if (!rotationResult.value?.revisit.enabled) return rotationResult.value?.maxYield ?? 0;
-
-  const plans = displayedRotationPlans.value;
-  if (plans.length === 1) {
-    return `${plans[0].maxYield}+${plans[0].maxYield}`;
-  }
-
-  const primaryPlan = plans.find((plan) => plan.kind === 'primary');
-  const revisitPlan = plans.find((plan) => plan.kind === 'revisit');
-  if (!primaryPlan || !revisitPlan) return rotationResult.value.maxYield;
-
-  return `${primaryPlan.maxYield}+${revisitPlan.maxYield}`;
-});
-
-const minYieldDisplay = computed(() => rotationResult.value?.minYield ?? 0);
-
 const hasUnsavedStats = computed(() => {
   const job = activeItem.value?.jobType;
   if (!job) return false;
@@ -254,9 +237,17 @@ function rotationPlanTitle(plan: SolverRotationPlan) {
 }
 
 function rotationBlockTitle(kind: SolverRotationPlan['kind']) {
+  if (kind === 'primary' && rotationResult.value?.revisit.enabled && rotationResult.value.revisit.isFullGp) {
+    return t('solver.strategy.rotationTitles.primaryWithRevisit');
+  }
+
   return kind === 'revisit'
     ? t('solver.strategy.rotationTitles.revisit')
     : t('solver.strategy.rotationTitles.primary');
+}
+
+function formatPlanExpectedYield(plan: SolverRotationPlan) {
+  return Number(plan.expectedYield.toFixed(2));
 }
 
 function formatMacroGatherPrompt(context: {
@@ -627,28 +618,19 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 
         <!-- 演算結果 -->
         <div v-if="rotationResult" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="p-4 bg-soft-green-50 dark:bg-soft-green-900/20 rounded-xl border border-soft-green-100 dark:border-soft-green-800/40">
-              <span class="text-xs font-bold text-soft-green-700 dark:text-soft-green-300 uppercase tracking-widest">{{ t('solver.strategy.expectedYield') }}</span>
+          <div class="solver-total-summary">
+            <div>
+              <span class="text-xs font-bold text-soft-green-700 dark:text-soft-green-300 uppercase tracking-widest">{{ t('solver.strategy.totalExpectedYield') }}</span>
               <div class="mt-1 flex items-end gap-1">
                 <span class="text-3xl font-black text-soft-green-800 dark:text-soft-green-200">{{ rotationResult.expectedYield }}</span>
                 <span class="pb-1 text-xs font-bold text-soft-green-600 dark:text-soft-green-300">{{ t('game.units.count') }}</span>
               </div>
             </div>
-            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.maxYield') }}</span>
-              <div class="mt-1 flex items-end gap-1">
-                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ maxYieldDisplay }}</span>
-                <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ t('game.units.count') }}</span>
-              </div>
-            </div>
-            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{{ t('solver.strategy.minYield') }}</span>
-              <div class="mt-1 flex items-end gap-1">
-                <span class="text-3xl font-black text-slate-800 dark:text-slate-100">{{ minYieldDisplay }}</span>
-                <span class="pb-1 text-xs font-bold text-slate-500 dark:text-slate-300">{{ t('game.units.count') }}</span>
-              </div>
-            </div>
+            <p v-if="rotationResult.revisit.enabled" class="solver-total-note">
+              {{ rotationResult.revisit.isFullGp
+                ? t('solver.strategy.revisitSameRotationNote')
+                : t('solver.strategy.revisitTotalNote') }}
+            </p>
           </div>
 
           <div
@@ -658,6 +640,20 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           >
             <div class="flex flex-wrap items-center gap-2 mb-4">
               <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ rotationBlockTitle(plan.kind) }}</p>
+            </div>
+            <div class="rotation-plan-stats">
+              <div>
+                <span>{{ t('solver.strategy.expectedYield') }}</span>
+                <strong>{{ formatPlanExpectedYield(plan) }}</strong>
+              </div>
+              <div>
+                <span>{{ t('solver.strategy.minYield') }}</span>
+                <strong>{{ plan.minYield }}</strong>
+              </div>
+              <div>
+                <span>{{ t('solver.strategy.maxYield') }}</span>
+                <strong>{{ plan.maxYield }}</strong>
+              </div>
             </div>
             <div class="flex flex-wrap items-center gap-2.5">
               <template v-for="(action, index) in plan.rotation" :key="`${plan.kind}-${index}`">
@@ -738,9 +734,86 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   grid-template-columns: 1fr;
   gap: 0.75rem;
 }
+.solver-total-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgb(187 247 208 / 0.86);
+  border-radius: 0.875rem;
+  background: rgb(240 253 244 / 0.9);
+}
+.solver-total-note {
+  margin: 0;
+  color: #3f8f79;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.rotation-plan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.rotation-plan-stats div {
+  min-width: 0;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgb(226 232 240);
+}
+.rotation-plan-stats span,
+.rotation-plan-stats strong {
+  display: block;
+}
+.rotation-plan-stats span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.rotation-plan-stats strong {
+  margin-top: 0.15rem;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+:global(html.dark .solver-total-summary) {
+  border-color: rgb(21 128 61 / 0.5);
+  background: rgb(20 83 45 / 0.2);
+}
+:global(html.dark .solver-total-note) {
+  color: #86efac;
+}
+:global(html.dark .rotation-plan-stats div) {
+  border-color: rgb(51 65 85);
+  background: rgb(15 23 42 / 0.9);
+}
+:global(html.dark .rotation-plan-stats span) {
+  color: #94a3b8;
+}
+:global(html.dark .rotation-plan-stats strong) {
+  color: #f8fafc;
+}
 @media (min-width: 640px) {
   .solver-result-action-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .solver-total-summary {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .solver-total-note {
+    max-width: 28rem;
+    text-align: right;
+  }
+}
+@media (max-width: 480px) {
+  .rotation-plan-stats {
+    grid-template-columns: 1fr;
   }
 }
 @media (min-width: 1024px) {

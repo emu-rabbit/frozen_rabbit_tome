@@ -157,11 +157,11 @@ const langOptions = [
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   <div class="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
                       <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('settings.macroSecondsPerGather') }}</label>
-                      <InputNumber v-model="macroSettings.secondsPerGather" :min="1" :max="60" :useGrouping="false" suffix=" 秒" class="w-full" />
+                      <InputNumber v-model="macroSettings.secondsPerGather" :min="1" :max="60" :useGrouping="false" :suffix="t('game.units.secondsSuffix')" class="w-full" />
                   </div>
                   <div class="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
                       <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('settings.macroBufferSeconds') }}</label>
-                      <InputNumber v-model="macroSettings.bufferSeconds" :min="0" :max="60" :useGrouping="false" suffix=" 秒" class="w-full" />
+                      <InputNumber v-model="macroSettings.bufferSeconds" :min="0" :max="60" :useGrouping="false" :suffix="t('game.units.secondsSuffix')" class="w-full" />
                   </div>
               </div>
           </div>

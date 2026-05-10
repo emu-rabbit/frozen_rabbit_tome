@@ -493,7 +493,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       .sort(([leftYield], [rightYield]) => leftYield - rightYield)
       .map(([totalYield, probability]) => ({
         yield: totalYield,
-        probability: Number((probability * 100).toFixed(4))
+        probability: probability * 100
       }));
   }
 

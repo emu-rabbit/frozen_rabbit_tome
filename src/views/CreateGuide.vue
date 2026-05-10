@@ -205,7 +205,7 @@ function getUiState() {
         <!-- 搜尋結果 -->
         <div v-else key="results">
           <div class="results-count">
-            <span>{{ searchResults.length }}{{ searchResults.length >= 50 ? '+' : '' }} 筆結果</span>
+            <span>{{ t('createGuide.resultCount', { count: searchResults.length, plus: searchResults.length >= 50 ? '+' : '' }) }}</span>
           </div>
           <div class="results-grid">
             <GatheringItemCard

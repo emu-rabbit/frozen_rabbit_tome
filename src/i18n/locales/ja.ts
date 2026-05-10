@@ -46,6 +46,7 @@ export default {
     loading: 'データ読み込み中、しばらくお待ちください…',
     noResults: '該当するアイテムが見つかりません。英語で検索してみてください。',
     typeToSearch: 'アイテム名を入力して検索',
+    resultCount: '{count}{plus} 件',
     glv: 'Glv',
     noTranslation: '(公式翻訳なし)',
     collectableSystem: '収集品システム',
@@ -125,6 +126,7 @@ export default {
       saveTome: '秘伝書を保存',
       savedTome: '保存しました',
       solve: '計算',
+      totalExpectedYield: '合計期待獲得数',
       expectedYield: '期待総獲得数',
       maxYield: '最大獲得数',
       minYield: '最小獲得数',
@@ -134,8 +136,11 @@ export default {
       revisitBadge: '再発見発動',
       rotationTitles: {
         primary: '採集手順',
+        primaryWithRevisit: '採集手順（再発見後も同じ手順）',
         revisit: '採集手順（再発見発動後）'
       },
+      revisitSameRotationNote: '合計期待値には再発見確率を含めています。',
+      revisitTotalNote: '合計期待値には再発見確率を含めています。',
       empty: '上のボタンを押しておすすめ手順を計算します',
       gatherAction: '採集',
       conditionalSuffix: '（発動時）',
@@ -146,7 +151,7 @@ export default {
       close: 'デバッグ画面を閉じる',
       kicker: 'Solver Debug',
       title: '期待値と最適性の検証',
-      subtitle: '今回の計算で使った数式、outcome 分布、動的計画法の探索統計を表示します。',
+      subtitle: '今回の計算で使った数式、獲得数分布、動的計画法の探索統計を表示します。',
       formulas: '数式入力',
       successFormula: '採集成功率',
       successScoreFormula: '成功率スコア = floor(100 * {gathering} / {baseGathering}) = {score}',
@@ -156,7 +161,7 @@ export default {
       finalSuccess: '最終成功率',
       boonFormula: 'ボーナス発生率',
       boonScoreFormula: 'ボーナススコア = min(150, floor(100 * {perception} / {basePerception})) = {score}',
-      finalBoon: '最終 Boon 確率',
+      finalBoon: '最終ボーナス発生率',
       bountifulFormula: 'バウンティフル系',
       plusTwoThreshold: '+2 閾値',
       plusThreeThreshold: '+3 閾値',
@@ -168,7 +173,7 @@ export default {
       gpRecovered: '採集ごとの回復',
       expectedValue: '総期待値',
       revisitChance: '再発見確率',
-      plans: '手順分岐',
+      plans: '手順ごとの結果',
       primaryPlan: '通常手順',
       revisitPlan: '再発見発動後の手順',
       startingGp: '開始 GP',
@@ -176,9 +181,9 @@ export default {
       maxYield: '最大',
       statesSolved: '解いた状態',
       memoHits: 'Memo 命中',
-      actionsEvaluated: '候補スキル',
+      actionsEvaluated: '評価済み分岐',
       optimality: '最適性の説明',
-      optimalityMethod: 'ソルバーは各状態で使用可能な全スキル分岐と直接採集分岐を比較し、memoization で部分問題の最良解を保存します。現在のモデル内では、根状態の解が大域的に最大の期待値になります。',
+      optimalityMethod: 'ソルバーは各状態で使用可能な全アクション分岐と直接採集分岐を評価し、memoization で部分問題の最良解を保存します。現在のモデル内では、根状態の解が大域的に最大の期待値になります。',
       tieBreaker: '期待値が epsilon の範囲内で同値の場合、rotationPreferenceScore により実用上の詠唱順に近い等価手順を選びます。',
       caveat: '最適性は、現在モデル化されている通常採集スキル、GP、耐久、成功率、Boon、再発見、理知興起の確率に対して成立します。収集品、クリスタル採集、手動中断は含まれません。'
     }
@@ -226,7 +231,8 @@ export default {
     units: {
       times: '回',
       count: '個',
-      percent: '%'
+      percent: '%',
+      secondsSuffix: ' 秒'
     }
   },
   welcomeModal: {

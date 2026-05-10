@@ -46,6 +46,7 @@ export default {
     loading: '数据加载中，请稍候…',
     noResults: '未找到相符的物品，请尝试使用英文搜索',
     typeToSearch: '请输入物品名称开始搜索',
+    resultCount: '{count}{plus} 笔结果',
     glv: 'Glv',
     noTranslation: '(无官方翻译)',
     collectableSystem: '收藏品系统',
@@ -125,6 +126,7 @@ export default {
       saveTome: '保存秘籍',
       savedTome: '已保存',
       solve: '求解',
+      totalExpectedYield: '总期望产量',
       expectedYield: '期望总产量',
       maxYield: '最高产量',
       minYield: '最低产量',
@@ -134,8 +136,11 @@ export default {
       revisitBadge: '再起触发',
       rotationTitles: {
         primary: '采集手法',
+        primaryWithRevisit: '采集手法（再起也是相同手法）',
         revisit: '采集手法（再起触发后）'
       },
+      revisitSameRotationNote: '总期望值已纳入再起概率。',
+      revisitTotalNote: '总期望值已纳入再起概率。',
       empty: '点击上方按钮开始计算推荐手法',
       gatherAction: '采集',
       conditionalSuffix: '（若触发）',
@@ -176,7 +181,7 @@ export default {
       maxYield: '最大',
       statesSolved: '已解状态',
       memoHits: 'Memo 命中',
-      actionsEvaluated: '候选技能',
+      actionsEvaluated: '已评估分支',
       optimality: '最优性说明',
       optimalityMethod: '求解器会对每个状态穷举可施放技能与直接采集分支，使用 memoization 保存子问题最佳解；因此在目前模型内，根状态取得的就是全局最佳期望值。',
       tieBreaker: '若期望值在 epsilon 内相同，使用 rotationPreferenceScore 选择更符合施放习惯的等价手法。',
@@ -226,7 +231,8 @@ export default {
     units: {
       times: '次',
       count: '个',
-      percent: '%'
+      percent: '%',
+      secondsSuffix: ' 秒'
     }
   },
   welcomeModal: {
