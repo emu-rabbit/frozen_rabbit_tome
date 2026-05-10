@@ -3,11 +3,13 @@ import { ref, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Sidebar from './components/Sidebar.vue';
 import LanguageModal from './components/LanguageModal.vue';
+import SponsorModal from './components/SponsorModal.vue';
 import { useSettings } from './composables/useSettings';
 import { loadGameData } from './services/gameData';
 
 const { locale, t } = useI18n();
 const isMobileMenuOpen = ref(false);
+const isSponsorModalOpen = ref(false);
 const { isDarkMode, language } = useSettings();
 
 // 同步語系
@@ -73,7 +75,7 @@ watch(language, () => {
       class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 z-[70] lg:relative lg:w-72 lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-in-out flex shadow-2xl lg:shadow-none"
       :class="isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'"
     >
-      <Sidebar @close-mobile="isMobileMenuOpen = false" />
+      <Sidebar @close-mobile="isMobileMenuOpen = false" @open-sponsor="isSponsorModalOpen = true" />
     </aside>
 
     <!-- Main Content -->
@@ -91,7 +93,8 @@ watch(language, () => {
       </div>
     </main>
 
-
+    <!-- Global Modals -->
+    <SponsorModal v-model:visible="isSponsorModalOpen" />
   </div>
 </template>
 

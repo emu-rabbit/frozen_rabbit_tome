@@ -39,7 +39,8 @@ export default {
     experimentDatabase: '实验数据库',
     faq: '常见问题',
     settings: '设置页面',
-    github: 'GitHub 项目'
+    github: 'GitHub 项目',
+    sponsor: '赞助冷冻库电费'
   },
   createGuide: {
     title: '请选择待采集物品',
@@ -292,5 +293,13 @@ export default {
     subtitle: '在你开始之前，请先选择你偏好的语言',
     description: '这将会调整整个秘籍的界面语言。你之后随时可以在"设置"中更改。',
     confirm: '就用这个语言开始吧！'
+  },
+  sponsorModal: {
+    title: '支持冷冻兔肉的秘籍',
+    description: '感謝您的支持！由於部分支付平台在台灣存在區域限制，建議台灣玩家優先使用「台灣地區」，海外玩家建議使用「全球地區」。如有任何問題，請聯繫：{email}',
+    twProvider: '台湾地区 (绿界科技)',
+    twDesc: '支持超商、ATM 与本地信用卡。',
+    globalProvider: '全球地区 (Ko-fi / PayPal)',
+    globalDesc: '适合海外玩家，支援信用卡与 PayPal，且具备 Discord 自动身分组整合。'
   }
 }

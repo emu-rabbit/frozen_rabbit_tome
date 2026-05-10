@@ -39,7 +39,8 @@ export default {
     experimentDatabase: '実験データベース',
     faq: 'よくある質問',
     settings: '設定ページ',
-    github: 'GitHub プロジェクト'
+    github: 'GitHub プロジェクト',
+    sponsor: '電気代を支援する'
   },
   createGuide: {
     title: '採集アイテムの選択',
@@ -292,5 +293,13 @@ export default {
     subtitle: '開始する前に、ご希望の言語を選択してください',
     description: 'これにより、インターフェース全体の言語が調整されます。後で「設定」からいつでも変更できます。',
     confirm: 'この言語で開始する'
+  },
+  sponsorModal: {
+    title: '冷凍ラビットを支援する',
+    description: 'ご支援ありがとうございます！支払方法を選択してください。お問い合わせ：{email}',
+    twProvider: '台灣地區 (ECPay)',
+    twDesc: '台灣の方向けの決済方法です。',
+    globalProvider: '全世界 (Ko-fi / PayPal)',
+    globalDesc: '海外のプレイヤーに最適です。'
   }
 }

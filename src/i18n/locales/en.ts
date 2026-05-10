@@ -39,7 +39,8 @@ export default {
     experimentDatabase: 'Experiment Database',
     faq: 'FAQ',
     settings: 'Settings',
-    github: 'GitHub Project'
+    github: 'GitHub Project',
+    sponsor: 'Sponsor the Freezer bill'
   },
   createGuide: {
     title: 'Select Item to Gather',
@@ -292,5 +293,13 @@ export default {
     subtitle: 'Please select your preferred language',
     description: 'This will adjust the entire interface language. You can change it anytime in Settings.',
     confirm: 'Start with this language'
+  },
+  sponsorModal: {
+    title: 'Support Frozen Rabbit',
+    description: 'Thank you for your support! Please choose your preferred region to ensure a smooth donation process. Contact: {email}',
+    twProvider: 'Taiwan (ECPay)',
+    twDesc: 'Best for supporters in Taiwan. Supports local cards and convenience stores.',
+    globalProvider: 'Global (Ko-fi / PayPal)',
+    globalDesc: 'Best for international supporters. Supports Discord integration.'
   }
 }

@@ -41,7 +41,8 @@ export default {
     experimentDatabase: '實驗數據庫',
     faq: '常見問題',
     settings: '設定頁面',
-    github: 'GitHub 專案'
+    github: 'GitHub 專案',
+    sponsor: '贊助冷凍庫電費'
   },
   createGuide: {
     title: '請選擇待採集物品',
@@ -294,5 +295,13 @@ export default {
     subtitle: '在你開始之前，請先選擇你偏好的語言',
     description: '這將會調整整個秘笈的介面語言。你之後隨時可以在「設定」中更改。',
     confirm: '就用這個語言開始吧！'
+  },
+  sponsorModal: {
+    title: '支持冷凍兔肉的秘笈',
+    description: '感謝您的支持！由於支付平台（PayPal/Stripe）在台灣有區域轉帳限制，建議台灣玩家優先使用「台灣地區（綠界）」進行贊助，海外玩家則可使用「全球地區（Ko-fi）」。如有任何問題，請聯繫：{email}',
+    twProvider: '台灣地區 (綠界科技)',
+    twDesc: '支援超商代碼、ATM、國內信用卡，最適合台灣玩家支持。',
+    globalProvider: '全球地區 (Ko-fi / PayPal)',
+    globalDesc: '適合海外玩家，支援信用卡與 PayPal，且具備 Discord 自動身分組整合。'
   }
 }
