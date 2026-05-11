@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { FoodSelection, NodeBonuses, PlayerStats, SolverResponse, StoredTome, StoredTomeRotationPlan, StoredTomeRotationStep } from '../types/game';
+import type { CollectableSolverResult } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-library';
@@ -32,8 +33,50 @@ export function useTomeLibrary() {
     temporaryGp: number;
     food: FoodSelection;
     nodeBonuses: NodeBonuses;
-    rotationResult: SolverResponse;
+    rotationResult?: SolverResponse;
+    collectableResult?: CollectableSolverResult;
   }) => {
+    if (payload.collectableResult) {
+      const tome: StoredTome = {
+        kind: 'collectable',
+        id: createTomeId(),
+        itemId: payload.itemId,
+        stats: { ...payload.stats },
+        temporaryGp: payload.temporaryGp,
+        food: { ...payload.food },
+        nodeBonuses: {
+          baseIntegrity: payload.nodeBonuses.baseIntegrity,
+          gatheringCount: payload.nodeBonuses.gatheringCount,
+          yieldCount: payload.nodeBonuses.yieldCount,
+          extraRate: payload.nodeBonuses.extraRate
+        },
+        rotation: [],
+        collectableObjective: { kind: 'scrip' },
+        collectableRewardTableSummary: payload.collectableResult.debug
+          ? payload.collectableResult.debug.formulas.rewardTable
+          : undefined,
+        collectablePolicy: {
+          rootAction: payload.collectableResult.policy.recommendedAction,
+          previewBranches: payload.collectableResult.policy.branches.slice(0, 4).map((branch) => ({
+            labelKey: branch.labelKey,
+            conditionKey: branch.conditionKey,
+            probability: branch.probability,
+            actionKind: branch.next?.recommendedAction.kind
+          }))
+        },
+        collectableExpectedScore: payload.collectableResult.expectedScore,
+        collectableExpectedReward: payload.collectableResult.expectedReward,
+        createdAt: new Date().toISOString()
+      };
+
+      tomes.value = [tome, ...tomes.value];
+      return tome;
+    }
+
+    if (!payload.rotationResult) {
+      throw new Error('saveTome requires either rotationResult or collectableResult');
+    }
+
     const rotationPlans = payload.rotationResult.rotationPlans
       .map((plan): StoredTomeRotationPlan => ({
         kind: plan.kind,
@@ -48,6 +91,7 @@ export function useTomeLibrary() {
 
     const tome: StoredTome = {
       id: createTomeId(),
+      kind: 'regular',
       itemId: payload.itemId,
       stats: { ...payload.stats },
       temporaryGp: payload.temporaryGp,

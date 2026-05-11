@@ -13,9 +13,12 @@ import Button from 'primevue/button';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SolverDebugDialog from '../components/SolverDebugDialog.vue';
 import PendingFeature from '../components/PendingFeature.vue';
+import CollectableSolverPanel from '../components/CollectableSolverPanel.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
+import type { CollectableSolverResult } from '../types/collectable';
+import { calculateCollectableScourValue } from '../utils/collectableMath';
 
 const { t, locale } = useI18n();
 const {
@@ -138,6 +141,10 @@ const hasUnsavedStats = computed(() => {
 });
 
 const shouldShowSaveSettingsButton = computed(() => hasUnsavedStats.value || isSettingsSaved.value);
+const collectableScourValue = computed(() => {
+  if (!baseValues.value?.Gathering) return null;
+  return calculateCollectableScourValue(effectiveStats.value.gathering, baseValues.value.Gathering);
+});
 
 function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
   const localizedName = foodName(food);
@@ -239,6 +246,19 @@ function handleSaveTome() {
     isTomeSaved.value = false;
     tomeSavedTimer = null;
   }, 1600);
+}
+
+function handleSaveCollectableTome(result: CollectableSolverResult) {
+  if (!activeItem.value?.itemId) return;
+
+  saveTome({
+    itemId: activeItem.value.itemId,
+    stats: { ...solverStats.value },
+    temporaryGp: temporaryGp.value,
+    food: { ...selectedFood.value },
+    nodeBonuses: { ...nodeBonuses.value },
+    collectableResult: result
+  });
 }
 
 function handlePreviewMacro() {
@@ -424,13 +444,163 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       </router-link>
     </div>
 
-    <!-- === 收藏品/水晶採集系統 施工中畫面 === -->
+    <!-- === 水晶採集系統 施工中畫面 === -->
     <PendingFeature
-      v-else-if="activeItem.isCollectable || activeItem.isCrystalGathering"
+      v-else-if="activeItem.isCrystalGathering"
       :title="displayName"
-      :type="activeItem.isCollectable ? 'collectable' : 'crystal'"
+      type="crystal"
       back-path="/"
     />
+
+    <!-- === 收藏品求解器主畫面 === -->
+    <div v-else-if="activeItem.isCollectable" class="space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-4">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-4 sm:gap-6 text-center sm:text-left">
+          <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
+            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" class="w-12 h-12 pixelated" />
+            <i v-else class="pi pi-box text-2xl text-slate-400"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+              <span class="text-xs font-bold px-2 py-0.5 bg-soft-green-500 text-white rounded-md uppercase tracking-wider">
+                {{ t(`game.jobs.${activeItem.jobType}`) }}
+              </span>
+              <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
+                {{ t('createGuide.glv') }} {{ activeItem.glv }}
+              </span>
+              <span class="text-xs font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
+                {{ t('createGuide.collectableSystem') }}
+              </span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{{ displayName }}</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+        <div class="md:col-span-2">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <h3 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <i class="pi pi-user-edit text-soft-green-500"></i>
+                {{ t('solver.statsTitle') }}
+              </h3>
+              <div class="solver-save-settings-slot">
+                <Transition name="save-settings">
+                  <Button
+                    v-if="shouldShowSaveSettingsButton"
+                    :icon="isSettingsSaved ? 'pi pi-check' : 'pi pi-save'"
+                    :label="isSettingsSaved ? t('solver.syncSuccess') : t('solver.syncToSettings', { job: t(`game.jobs.${activeItem.jobType}`) })"
+                    class="p-button-text p-button-sm text-xs solver-save-settings-button"
+                    :class="{ 'is-saved': isSettingsSaved }"
+                    :disabled="isSettingsSaved"
+                    @click="handleSync"
+                  />
+                </Transition>
+              </div>
+            </div>
+            <div class="flex flex-col sm:grid sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.level') }}</label>
+                <InputNumber v-model="solverStats.level" :min="1" :max="100" class="w-full" fluid />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.food.label') }}</label>
+                <AutoComplete
+                  v-model="selectedFoodModel"
+                  :suggestions="foodSuggestions"
+                  optionLabel="label"
+                  :placeholder="t('solver.food.placeholder')"
+                  forceSelection
+                  dropdown
+                  showClear
+                  class="w-full"
+                  inputClass="w-full"
+                  @complete="searchFoods"
+                />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2">
+                  <span>{{ t('game.stats.gathering') }}</span>
+                  <span v-if="foodBonus.gathering > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.gathering }} = {{ effectiveStats.gathering }}</span>
+                </label>
+                <InputNumber v-model="solverStats.gathering" :min="0" class="w-full" fluid />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2">
+                  <span>{{ t('game.stats.perception') }}</span>
+                  <span v-if="foodBonus.perception > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.perception }} = {{ effectiveStats.perception }}</span>
+                </label>
+                <InputNumber v-model="solverStats.perception" :min="0" class="w-full" fluid />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex flex-wrap items-center justify-between gap-1">
+                  <span>{{ t('solver.currentGp') }}</span>
+                  <span class="text-[10px] text-amber-600">{{ t('solver.effectiveMaxGp') }}: {{ effectiveStats.gp }}</span>
+                </label>
+                <InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" class="w-full" fluid />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2" :title="t('solver.maxGp')">
+                  <span class="truncate">{{ t('solver.maxGp') }}</span>
+                  <span v-if="foodBonus.gp > 0" class="text-soft-green-600 dark:text-soft-green-300 flex-shrink-0">+{{ foodBonus.gp }} = {{ effectiveStats.gp }}</span>
+                </label>
+                <InputNumber v-model="solverStats.gp" :min="0" class="w-full" fluid />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col justify-center">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('solver.results.gatheringRate') }}</p>
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ successRate }}</span>
+              <span class="text-xl font-bold text-slate-400">%</span>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col justify-center">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('collectableSolver.stats.scourValue') }}</p>
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ collectableScourValue ?? '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <h3 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-6">
+          <i class="pi pi-gift text-amber-500"></i>
+          {{ t('solver.nodeBonusesTitle') }}
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+            <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
+              <span>{{ t('solver.nodeBonuses.baseIntegrity') }}</span>
+              <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.baseIntegrity" :min="1" :max="10" fluid class="p-inputtext-sm mt-auto" />
+          </div>
+          <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+            <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
+              <span>{{ t('solver.nodeBonuses.gatheringCount') }}</span>
+              <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
+          </div>
+        </div>
+      </div>
+
+      <CollectableSolverPanel
+        :active-item="activeItem"
+        :effective-stats="effectiveStats"
+        :base-values="baseValues"
+        :item-real-level="itemRealLevel"
+        :node-bonuses="nodeBonuses"
+        :temporary-gp="temporaryGp"
+        :debug-mode="debugSettings.solverDebugMode"
+        @save="handleSaveCollectableTome"
+      />
+    </div>
 
     <!-- === 求解器主畫面 === -->
     <div v-else class="space-y-6">

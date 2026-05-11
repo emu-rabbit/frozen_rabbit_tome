@@ -333,6 +333,117 @@ export default {
       caveat: '最優性成立於目前建模的普通採集技能、GP、耐久、成功率、Boon、再起與理智同興機率；未納入收藏品、水晶採集與玩家手動中斷。'
     }
   },
+  collectableSolver: {
+    badge: '收藏品秘笈',
+    title: '收藏品求解台',
+    description: '依目前支援模型推算收藏品採集的推薦判斷策略。',
+    solving: '正在推算收藏品推薦策略...',
+    empty: '點擊求解後，這裡會顯示可依狀態判斷的推薦策略。',
+    stats: {
+      scourValue: '提煉基礎值'
+    },
+    actions: {
+      solve: '求解',
+      collect: '收藏品採集',
+      scour: '提煉',
+      meticulous: '慎重提煉',
+      scrutiny: '集中檢查',
+      collectorsFocus: '價值矚目',
+      primingTouch: '預備碰觸',
+      successI: '獲得率提高 I',
+      successII: '獲得率提高 II',
+      successIII: '獲得率提高 III',
+      nextCollectSuccess: '下次收藏成功率提高',
+      restoreIntegrity: '恢復耐久',
+      wiseToTheWorld: '理智同興'
+    },
+    results: {
+      kicker: 'Recommended Policy',
+      title: '推薦策略',
+      subtitle: '這不是固定巨集，而是依照隨機結果與收藏價值做判斷的策略。',
+      expectedScore: '期望分數',
+      expectedReward: '期望收益',
+      rewardSummary: '票據 {scrip} / 金幣 {gil}',
+      limitationNote: '第一版未納入大膽提煉、強化洞察、精選收益模型與實際經驗值換算。'
+    },
+    policy: {
+      now: '現在建議',
+      stateSummary: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}',
+      nextBranches: '可能分支',
+      outcomeValue: '價值 {value}，耐久 {integrity}',
+      nextAction: '下一步：{action}',
+      terminal: '此分支已結束',
+      back: '上一層',
+      root: '回起點'
+    },
+    branches: {
+      applied: '已施放',
+      collectSuccess: '採集成功',
+      collectFailed: '採集失敗',
+      valueNormal: '未觸發價值提升',
+      valueIncreased: '觸發價值提升',
+      meticulousSaved: '慎重未消耗耐久',
+      meticulousConsumed: '慎重消耗耐久',
+      integrityConsumed: '消耗耐久',
+      integrityRestored: '恢復耐久',
+      wiseProc: '觸發理智同興',
+      wiseNoProc: '未觸發理智同興',
+      standardProc: '觸發洞察',
+      standardNoProc: '未觸發洞察'
+    },
+    conditions: {
+      always: '此動作成功施放後進入下一狀態。',
+      collectSuccess: '收藏品採集成功時取得目前檔位收益。',
+      collectFailed: '收藏品採集失敗時不取得收益，但仍消耗耐久。',
+      refineOutcome: '依價值提升與耐久消耗結果進入下一狀態。',
+      integrityRestored: '耐久恢復 1 點，最多不超過此採集點的目前耐久上限。',
+      wiseProc: '石工之理或農夫之智恢復耐久後，50% 機率獲得可免費恢復 1 點耐久的理智同興。',
+      wiseNoProc: '石工之理或農夫之智恢復耐久後，未獲得理智同興。',
+      standardProc: '提煉類動作後觸發 Collector\'s Standard / 洞察。',
+      standardNoProc: '提煉類動作後未觸發 Collector\'s Standard / 洞察。'
+    },
+    errors: {
+      unsupportedReward: {
+        title: '找不到收藏品獎勵表',
+        desc: '此物品目前不在第一版純收藏品繳納資料中，暫時無法求解。'
+      },
+      workerStale: {
+        title: '求解器需要重新載入',
+        desc: '網站可能剛更新完成，重新整理後即可繼續。'
+      },
+      workerFailed: {
+        title: '收藏品求解器暫時無法啟動',
+        desc: '請重新整理頁面後再試一次。'
+      }
+    },
+    debug: {
+      open: '查看收藏品求解器偵錯資訊',
+      close: '關閉偵錯視窗',
+      kicker: 'Collectable Debug',
+      title: '收藏品公式與策略驗證',
+      subtitle: '這裡列出本次求解使用的公式、reward table 與搜尋統計。',
+      formulas: '公式輸入',
+      success: '收藏品採集成功率',
+      collectableFormula: '收藏品公式',
+      valueIncreaseRate: '價值提升率',
+      meticulousRate: '慎重不耗率',
+      scrutiny: '集中檢查',
+      standardRate: 'Collector\'s Standard 機率',
+      rewardTable: '獎勵門檻',
+      low: '低標',
+      mid: '中標',
+      high: '高標',
+      search: '搜尋統計',
+      branchCount: '分支數',
+      limitations: '第一版限制',
+      optimalityNote: '求解器會對目前支援的收藏品技能與成功率補強技能進行 DP policy search；推薦成立於目前模型內。'
+    },
+    limitations: {
+      'brazen-excluded': '未納入大膽提煉，因隨機分布尚未確認。',
+      'high-standard-excluded': '未納入強化洞察，因觸發機率尚未確認。',
+      'reduction-reward-model-excluded': '未納入精選收益模型。'
+    }
+  },
   tomeLibrary: {
     title: '秘笈書庫',
     subtitle: '管理已儲存的採集秘笈，搜尋物品後即可快速載回求解器調整。',

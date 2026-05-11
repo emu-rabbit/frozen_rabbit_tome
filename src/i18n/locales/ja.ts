@@ -332,6 +332,106 @@ export default {
       caveat: '最適性は、現在モデル化されている通常採集スキル、GP、耐久、成功率、Boon、再発見、理知興起の確率に対して成立します。収集品、クリスタル採集、手動中断は含まれません。'
     }
   },
+  collectableSolver: {
+    badge: '収集品秘伝書',
+    title: '収集品ソルバー',
+    description: '現在サポートしているモデルに基づき、収集品採集の推奨判断方針を計算します。',
+    solving: '収集品の推奨方針を計算中...',
+    empty: '計算すると、状態に応じた推奨方針がここに表示されます。',
+    stats: { scourValue: 'Scour 値' },
+    actions: {
+      solve: '計算',
+      collect: '収集品採集',
+      scour: 'Scour',
+      meticulous: 'Meticulous',
+      scrutiny: 'Scrutiny',
+      collectorsFocus: "Collector's Focus",
+      primingTouch: 'Priming Touch',
+      successI: '採集成功率アップ I',
+      successII: '採集成功率アップ II',
+      successIII: '採集成功率アップ III',
+      nextCollectSuccess: '次回収集成功率アップ',
+      restoreIntegrity: '耐久回復',
+      wiseToTheWorld: 'Wise to the World'
+    },
+    results: {
+      kicker: 'Recommended Policy',
+      title: '推奨方針',
+      subtitle: '固定マクロではなく、proc と収集価値に応じて判断する方針です。',
+      expectedScore: '期待スコア',
+      expectedReward: '期待報酬',
+      rewardSummary: 'スクリップ {scrip} / ギル {gil}',
+      limitationNote: 'V1 では Brazen、Collector\'s High Standard、精選報酬モデル、実際の経験値換算を含みません。'
+    },
+    policy: {
+      now: '現在の推奨',
+      stateSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}',
+      nextBranches: '分岐候補',
+      outcomeValue: '価値 {value}、耐久 {integrity}',
+      nextAction: '次：{action}',
+      terminal: 'この分岐はここで終了',
+      back: '戻る',
+      root: '起点'
+    },
+    branches: {
+      applied: '使用済み',
+      collectSuccess: '採集成功',
+      collectFailed: '採集失敗',
+      valueNormal: '価値上昇なし',
+      valueIncreased: '価値上昇あり',
+      meticulousSaved: 'Meticulous で耐久消費なし',
+      meticulousConsumed: 'Meticulous で耐久消費',
+      integrityConsumed: '耐久消費',
+      integrityRestored: '耐久回復',
+      wiseProc: 'Wise to the World 発動',
+      wiseNoProc: 'Wise to the World なし',
+      standardProc: 'Collector\'s Standard 発動',
+      standardNoProc: 'Collector\'s Standard なし'
+    },
+    conditions: {
+      always: 'このアクションを使用して次の状態へ進みます。',
+      collectSuccess: '収集品採集に成功し、現在の報酬段階を得ます。',
+      collectFailed: '収集品採集に失敗し、報酬は得られませんが耐久は消費します。',
+      refineOutcome: '価値上昇と耐久消費の結果に応じて進みます。',
+      integrityRestored: '耐久を 1 回復します。現在の採集地点の耐久上限を超えません。',
+      wiseProc: 'Solid Reason / Ageless Words で耐久を回復した後、50% の確率で無料の Wise to the World を得ます。',
+      wiseNoProc: 'Solid Reason / Ageless Words で耐久を回復した後、Wise to the World は発動しません。',
+      standardProc: '精選系アクション後に Collector\'s Standard が発動します。',
+      standardNoProc: '精選系アクション後に Collector\'s Standard が発動しません。'
+    },
+    errors: {
+      unsupportedReward: { title: '報酬テーブルが見つかりません', desc: 'このアイテムは V1 の通常収集品納品データにないため、まだ計算できません。' },
+      workerStale: { title: 'ソルバーの再読み込みが必要です', desc: 'サイト更新直後の可能性があります。再読み込みしてからお試しください。' },
+      workerFailed: { title: '収集品ソルバーを起動できません', desc: 'ページを再読み込みしてもう一度お試しください。' }
+    },
+    debug: {
+      open: '収集品ソルバーのデバッグ情報を開く',
+      close: 'デバッグ画面を閉じる',
+      kicker: 'Collectable Debug',
+      title: '収集品公式と方針の検証',
+      subtitle: '今回の計算で使った公式、reward table、探索統計を表示します。',
+      formulas: '公式入力',
+      success: '収集品採集成功率',
+      collectableFormula: '収集品公式',
+      valueIncreaseRate: '価値上昇率',
+      meticulousRate: 'Meticulous 耐久保存率',
+      scrutiny: 'Scrutiny',
+      standardRate: 'Collector\'s Standard 確率',
+      rewardTable: '報酬しきい値',
+      low: '低',
+      mid: '中',
+      high: '高',
+      search: '探索統計',
+      branchCount: '分岐数',
+      limitations: 'V1 の制限',
+      optimalityNote: 'ソルバーは現在サポートしている収集品アクションと成功率補助スキルに対して DP policy search を行います。推奨はこのモデル内で成立します。'
+    },
+    limitations: {
+      'brazen-excluded': 'Brazen はランダム分布が未確認のため含めていません。',
+      'high-standard-excluded': 'Collector\'s High Standard は発動率が未確認のため含めていません。',
+      'reduction-reward-model-excluded': '精選報酬モデルは含めていません。'
+    }
+  },
   tomeLibrary: {
     title: '秘伝書ライブラリ',
     subtitle: '保存した採集秘伝書を管理し、アイテム検索からソルバーへ読み戻せます。',

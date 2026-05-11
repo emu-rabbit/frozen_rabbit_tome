@@ -14,6 +14,7 @@ import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
+import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
@@ -56,6 +57,10 @@ function formatFood(tome: StoredTome) {
 }
 
 function formatNodeBonuses(tome: StoredTome) {
+  if (isCollectableTome(tome)) {
+    return `${tome.nodeBonuses.baseIntegrity ?? '-'}/${tome.nodeBonuses.gatheringCount}`;
+  }
+
   return `${tome.nodeBonuses.gatheringCount}/${tome.nodeBonuses.yieldCount}/${tome.nodeBonuses.extraRate}`;
 }
 
@@ -64,7 +69,12 @@ function tomeObjectiveMode(tome: StoredTome): SolverObjectiveMode {
 }
 
 function formatObjectiveMode(tome: StoredTome) {
+  if (isCollectableTome(tome)) return t('collectableSolver.results.expectedScore');
   return t(`settings.solverModes.${tomeObjectiveMode(tome)}`);
+}
+
+function isCollectableTome(tome: StoredTome) {
+  return tome.kind === 'collectable';
 }
 
 function formatCreatedAt(value: string) {
@@ -116,6 +126,8 @@ function handleEdit(tome: StoredTome) {
 }
 
 function handlePreviewMacro(tome: StoredTome) {
+  if (isCollectableTome(tome)) return;
+
   const options: MacroBuildOptions = {
     resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
     formatGatherPrompt: formatMacroGatherPrompt
@@ -157,6 +169,25 @@ function copyMacroLabel() {
 
 function copyMacroIcon() {
   return 'pi pi-file-edit';
+}
+
+function collectableRootActionName(tome: StoredTome) {
+  if (!tome.collectablePolicy?.rootAction) return '-';
+  return getCollectableActionName(tome.collectablePolicy.rootAction.kind, itemMeta(tome)?.jobType || 'miner');
+}
+
+function collectableRootActionIcon(tome: StoredTome) {
+  if (!tome.collectablePolicy?.rootAction) return '';
+  return getCollectableActionIcon(tome.collectablePolicy.rootAction.kind, itemMeta(tome)?.jobType || 'miner');
+}
+
+function collectableRewardSummary(tome: StoredTome) {
+  const reward = tome.collectableExpectedReward;
+  if (!reward) return '-';
+  return t('collectableSolver.results.rewardSummary', {
+    scrip: Number(reward.scrip.toFixed(2)),
+    gil: Number(reward.gil.toFixed(2))
+  });
 }
 </script>
 
@@ -211,7 +242,7 @@ function copyMacroIcon() {
             <div class="item-meta">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(tome)?.glv ?? '-' }}</span>
               <span class="item-job-badge">{{ itemMeta(tome)?.jobType ? t(`game.jobs.${itemMeta(tome)?.jobType}`) : '-' }}</span>
-              <span v-if="itemMeta(tome)?.isCollectable" class="item-collectable-badge">
+              <span v-if="isCollectableTome(tome) || itemMeta(tome)?.isCollectable" class="item-collectable-badge">
                 <i class="pi pi-box"></i>
                 {{ t('createGuide.collectableSystem') }}
               </span>
@@ -250,7 +281,23 @@ function copyMacroIcon() {
           </div>
         </div>
 
-        <div class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
+        <div v-if="isCollectableTome(tome)" class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
+          <div class="rotation-preview-block">
+            <div class="rotation-strip">
+              <h4 class="rotation-strip-title">{{ t('collectableSolver.results.title') }}</h4>
+              <div class="rotation-icons">
+                <span class="rotation-icon-wrap rotation-action">
+                  <img v-if="collectableRootActionIcon(tome)" :src="collectableRootActionIcon(tome)" class="rotation-icon" alt="" />
+                  <i v-else class="pi pi-sitemap text-xs"></i>
+                </span>
+                <span class="collectable-preview-text">{{ collectableRootActionName(tome) }}</span>
+              </div>
+              <p class="collectable-preview-reward">{{ collectableRewardSummary(tome) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
           <div v-for="plan in tomeRotationPlans(tome)" :key="`${tome.id}-${plan.kind}`" class="rotation-preview-block">
             <div class="rotation-strip">
               <h4 class="rotation-strip-title">{{ rotationCardTitle(tome, plan.kind) }}</h4>
@@ -280,6 +327,7 @@ function copyMacroIcon() {
               @click="handleEdit(tome)"
             />
             <Button
+              v-if="!isCollectableTome(tome)"
               :icon="copyMacroIcon()"
               :label="copyMacroLabel()"
               class="p-button-sm p-button-text library-action"

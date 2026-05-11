@@ -1,5 +1,11 @@
 // === FFXIV 採集物品 型別定義 ===
 // 對應姊妹站 frozen_rabbit_workshop 的 MockItem 擴展版本
+import type {
+  CollectableObjective,
+  CollectableRewardTableSummary,
+  CollectableRewardVector,
+  StoredCollectablePolicy
+} from './collectable';
 
 /** 可採集物品（僅限採礦師/園藝師，排除漁師與收藏品） */
 export interface GatherableItem {
@@ -246,6 +252,7 @@ export interface StoredTomeRotationPlan {
 }
 
 export interface StoredTome {
+  kind?: 'regular' | 'collectable';
   id: string;
   itemId: number;
   stats: PlayerStats;
@@ -256,6 +263,11 @@ export interface StoredTome {
   rotationPlans?: StoredTomeRotationPlan[];
   revisit?: SolverRevisitInfo;
   objectiveMode?: SolverObjectiveMode;
+  collectableObjective?: CollectableObjective;
+  collectableRewardTableSummary?: CollectableRewardTableSummary;
+  collectablePolicy?: StoredCollectablePolicy;
+  collectableExpectedScore?: number;
+  collectableExpectedReward?: CollectableRewardVector;
   createdAt: string;
 }
 

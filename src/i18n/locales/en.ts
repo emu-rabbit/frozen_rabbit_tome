@@ -332,6 +332,117 @@ export default {
       caveat: 'Optimality holds for the currently modeled regular-gathering skills, GP, integrity, success rate, Boon, Revisit, and Wise to the World probabilities. Collectables, crystal gathering, and manual interruption are not included.'
     }
   },
+  collectableSolver: {
+    badge: 'Collectable Tome',
+    title: 'Collectable Solver',
+    description: 'Recommends a collectable gathering decision policy from the currently supported model.',
+    solving: 'Calculating collectable policy...',
+    empty: 'Solve to show a state-based recommended policy here.',
+    stats: {
+      scourValue: 'Scour Value'
+    },
+    actions: {
+      solve: 'Solve',
+      collect: 'Collect',
+      scour: 'Scour',
+      meticulous: 'Meticulous',
+      scrutiny: 'Scrutiny',
+      collectorsFocus: "Collector's Focus",
+      primingTouch: 'Priming Touch',
+      successI: 'Gathering Rate I',
+      successII: 'Gathering Rate II',
+      successIII: 'Gathering Rate III',
+      nextCollectSuccess: 'Next Collect Rate',
+      restoreIntegrity: 'Restore Integrity',
+      wiseToTheWorld: 'Wise to the World'
+    },
+    results: {
+      kicker: 'Recommended Policy',
+      title: 'Recommended Policy',
+      subtitle: 'This is not a fixed macro. Follow the policy based on procs and collectability.',
+      expectedScore: 'Expected Score',
+      expectedReward: 'Expected Reward',
+      rewardSummary: 'Scrip {scrip} / Gil {gil}',
+      limitationNote: 'V1 excludes Brazen, Collector\'s High Standard, aetherial reduction reward modeling, and real EXP conversion.'
+    },
+    policy: {
+      now: 'Use Now',
+      stateSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}',
+      nextBranches: 'Possible Branches',
+      outcomeValue: 'Value {value}, integrity {integrity}',
+      nextAction: 'Next: {action}',
+      terminal: 'This branch ends here',
+      back: 'Back',
+      root: 'Root'
+    },
+    branches: {
+      applied: 'Applied',
+      collectSuccess: 'Collect succeeded',
+      collectFailed: 'Collect failed',
+      valueNormal: 'No value increase',
+      valueIncreased: 'Value increase',
+      meticulousSaved: 'Meticulous saved integrity',
+      meticulousConsumed: 'Meticulous consumed integrity',
+      integrityConsumed: 'Integrity consumed',
+      integrityRestored: 'Integrity restored',
+      wiseProc: 'Wise to the World proc',
+      wiseNoProc: 'No Wise to the World',
+      standardProc: "Collector's Standard proc",
+      standardNoProc: "No Collector's Standard"
+    },
+    conditions: {
+      always: 'The action was applied and moves to the next state.',
+      collectSuccess: 'Successful Collect receives the current reward tier.',
+      collectFailed: 'Failed Collect gives no reward but still consumes integrity.',
+      refineOutcome: 'Moves by value increase and integrity outcome.',
+      integrityRestored: 'Restores 1 integrity, capped by the current node integrity maximum.',
+      wiseProc: 'After Solid Reason or Ageless Words restores integrity, there is a 50% chance to gain a free Wise to the World restore.',
+      wiseNoProc: 'After Solid Reason or Ageless Words restores integrity, Wise to the World did not proc.',
+      standardProc: "Collector's Standard procs after a refine action.",
+      standardNoProc: "Collector's Standard does not proc after a refine action."
+    },
+    errors: {
+      unsupportedReward: {
+        title: 'Reward table not found',
+        desc: 'This item is not in the V1 pure collectable turn-in data, so it cannot be solved yet.'
+      },
+      workerStale: {
+        title: 'Solver needs reload',
+        desc: 'The site may have updated. Refresh and try again.'
+      },
+      workerFailed: {
+        title: 'Collectable solver could not start',
+        desc: 'Please refresh the page and try again.'
+      }
+    },
+    debug: {
+      open: 'Open collectable solver debug info',
+      close: 'Close debug dialog',
+      kicker: 'Collectable Debug',
+      title: 'Collectable Formula and Policy Check',
+      subtitle: 'Shows formulas, reward table, and search statistics for this solve.',
+      formulas: 'Formula Inputs',
+      success: 'Collect Success Rate',
+      collectableFormula: 'Collectable Formula',
+      valueIncreaseRate: 'Value Increase Rate',
+      meticulousRate: 'Meticulous Save Rate',
+      scrutiny: 'Scrutiny',
+      standardRate: "Collector's Standard Rate",
+      rewardTable: 'Reward Thresholds',
+      low: 'Low',
+      mid: 'Mid',
+      high: 'High',
+      search: 'Search Stats',
+      branchCount: 'Branches',
+      limitations: 'V1 Limitations',
+      optimalityNote: 'The solver runs DP policy search over currently supported collectable actions and success-rate buffs. The recommendation is scoped to this model.'
+    },
+    limitations: {
+      'brazen-excluded': 'Brazen is excluded because its random distribution is not confirmed.',
+      'high-standard-excluded': "Collector's High Standard is excluded because its proc rate is not confirmed.",
+      'reduction-reward-model-excluded': 'Aetherial reduction reward modeling is excluded.'
+    }
+  },
   tomeLibrary: {
     title: 'Tome Library',
     subtitle: 'Manage saved gathering tomes, search by item, and load a setup back into the solver.',

@@ -181,7 +181,7 @@ export function useSolver() {
     const tomeObjectiveMode = tome.objectiveMode ?? 'expected';
 
     cancelActiveSolve();
-    activeItem.value = item;
+    activeItem.value = tome.kind === 'collectable' ? { ...item, isCollectable: true } : item;
     solverStats.value = { ...tome.stats };
     selectedFood.value = { ...tome.food };
     nodeBonuses.value = {
