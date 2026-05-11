@@ -1,0 +1,178 @@
+import { ref, computed, watch } from 'vue';
+import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
+import { useSettings } from './useSettings';
+import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
+import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
+import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
+import { useSimulator } from './useSimulator';
+
+type GatheringJob = NonNullable<GatherableItem['jobType']>;
+type SyncFromSettingsOptions = {
+  forceStats?: boolean;
+  resetTemporaryGp?: boolean;
+};
+
+// ── 模擬台獨立狀態：與求解台完全隔離，不共享任何 ref ──
+const activeItem = ref<GatherableItem | null>(null);
+const simStats = ref<PlayerStats>({
+  level: 100,
+  gathering: 5345,
+  perception: 5137,
+  gp: 930
+});
+const selectedFood = ref<FoodSelection>({
+  foodId: null,
+  quality: 'hq'
+});
+const nodeBonuses = ref<NodeBonuses>({
+  baseIntegrity: 4,
+  gatheringCount: 0,
+  yieldCount: 0,
+  extraRate: 0
+});
+const temporaryGp = ref(930);
+
+const itemLevelData = ref<Record<string, any> | null>(null);
+const gatheringItemsData = ref<Record<string, any> | null>(null);
+
+// 追蹤「上次同步設定時的屬性值」，以判斷是否需要更新
+const lastSyncedSettingsStats: Partial<Record<GatheringJob, PlayerStats>> = {};
+
+const areStatsEqual = (a: PlayerStats, b: PlayerStats) =>
+  a.level === b.level && a.gathering === b.gathering && a.perception === b.perception && a.gp === b.gp;
+
+const cloneStats = (s: PlayerStats): PlayerStats => ({ ...s });
+
+export function useSimulatorStats() {
+  const { userStats } = useSettings();
+
+  // ── 遊戲資料載入 ──
+  const fetchItemLevelData = async () => {
+    itemLevelData.value = getItemLevelData();
+    gatheringItemsData.value = getGatheringItemsData();
+  };
+
+  watch(isGameDataLoading, (loading) => {
+    if (!loading) {
+      fetchItemLevelData();
+      if (activeItem.value?.gatheringItemId) {
+        nodeBonuses.value.baseIntegrity = getItemBaseIntegrity(activeItem.value.gatheringItemId);
+      }
+    }
+  }, { immediate: true });
+
+  // ── 從全域設定同步屬性（不強制覆蓋使用者已手動調整的值）──
+  const syncFromSettings = (options: SyncFromSettingsOptions = {}) => {
+    if (!activeItem.value) return;
+    const job: GatheringJob = activeItem.value.jobType || 'miner';
+    const stats = userStats.value[job];
+    const prev = lastSyncedSettingsStats[job];
+    const shouldSync = options.forceStats || !prev || !areStatsEqual(prev, stats);
+
+    if (shouldSync) {
+      lastSyncedSettingsStats[job] = cloneStats(stats);
+      if (!areStatsEqual(simStats.value, stats)) {
+        simStats.value = cloneStats(stats);
+      }
+    }
+
+    if (options.resetTemporaryGp) {
+      temporaryGp.value = effectiveStats.value.gp;
+    }
+  };
+
+  // ── 選擇物品：相同物品保留現有狀態；不同物品完整重置 ──
+  const setSelectedItem = (item: GatherableItem) => {
+    const isSameItem = activeItem.value?.itemId === item.itemId;
+
+    if (isSameItem) {
+      // 只更新 activeItem 以防物件參考變動，其餘參數一律保留
+      activeItem.value = item;
+      return;
+    }
+
+    // 不同物品 → 完整重置
+    activeItem.value = item;
+    nodeBonuses.value = {
+      baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
+      gatheringCount: 0,
+      yieldCount: 0,
+      extraRate: 0
+    };
+    selectedFood.value = { foodId: null, quality: 'hq' };
+
+    // 重置模擬手法與分析結果
+    const { reset: resetSimulator } = useSimulator();
+    resetSimulator();
+
+    // 從全域設定載入屬性
+    syncFromSettings({ forceStats: true, resetTemporaryGp: true });
+  };
+
+  // ── computed ──
+  const displayName = computed(() => activeItem.value ? getItemName(activeItem.value.itemId) : '');
+  const selectedFoodItem = computed(() => getGatheringFood(selectedFood.value.foodId));
+  const foodBonus = computed(() => calculateFoodBonus(simStats.value, selectedFoodItem.value, selectedFood.value.quality));
+  const effectiveStats = computed(() => applyFoodBonus(simStats.value, foodBonus.value));
+
+  const baseValues = computed(() => {
+    if (!activeItem.value || !itemLevelData.value) return null;
+    return itemLevelData.value[activeItem.value.glv.toString()] || null;
+  });
+
+  const itemRealLevel = computed(() => {
+    if (!activeItem.value || !gatheringItemsData.value) return 0;
+    const entry = Object.values(gatheringItemsData.value).find((i: any) => i.itemId === activeItem.value?.itemId);
+    return (entry as any)?.level || 0;
+  });
+
+  const successRate = computed(() => {
+    if (!baseValues.value || !activeItem.value) return 0;
+    const baseGathering = baseValues.value.Gathering;
+    if (!baseGathering) return 0;
+    return calculateSuccessRate(effectiveStats.value.gathering, baseGathering, effectiveStats.value.level, itemRealLevel.value);
+  });
+
+  const boonChance = computed(() => {
+    if (!baseValues.value || !activeItem.value) return 0;
+    const basePerception = baseValues.value.Perception;
+    if (!basePerception) return 0;
+    return calculateBoonChance(effectiveStats.value.perception, basePerception);
+  });
+
+  const isPerceptionMet = computed(() => {
+    if (!activeItem.value) return true;
+    return effectiveStats.value.perception >= (activeItem.value.perceptionReq || 0);
+  });
+
+  // GP 自動修正：當有效最大 GP 下調時，temporaryGp 跟著縮小
+  watch(() => effectiveStats.value.gp, (maxGp, prevMaxGp) => {
+    const wasFullGp = prevMaxGp === undefined
+      ? temporaryGp.value >= simStats.value.gp
+      : temporaryGp.value === prevMaxGp;
+    if (wasFullGp || temporaryGp.value > maxGp) {
+      temporaryGp.value = maxGp;
+    }
+  }, { immediate: true });
+
+  return {
+    activeItem,
+    simStats,
+    selectedFood,
+    selectedFoodItem,
+    foodBonus,
+    effectiveStats,
+    nodeBonuses,
+    temporaryGp,
+    isDataLoading: isGameDataLoading,
+    fetchItemLevelData,
+    setSelectedItem,
+    syncFromSettings,
+    displayName,
+    baseValues,
+    itemRealLevel,
+    successRate,
+    boonChance,
+    isPerceptionMet
+  };
+}

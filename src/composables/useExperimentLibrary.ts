@@ -1,4 +1,4 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { FoodSelection, NodeBonuses, PlayerStats, SimulationResponse, StoredExperiment, StoredTomeRotationStep } from '../types/game';
 import { getRotationActionId } from '../services/actionIcons';
@@ -6,7 +6,7 @@ import { getRotationActionId } from '../services/actionIcons';
 const STORAGE_KEY = 'frozen-rabbit-tome-experiments';
 const SEARCH_KEY = 'frozen-rabbit-tome-experiment-search';
 const experiments = useLocalStorage<StoredExperiment[]>(STORAGE_KEY, []);
-const persistentSearchQuery = useLocalStorage(SEARCH_KEY, '');
+const persistentSearchQuery = ref('');
 
 function createExperimentId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();

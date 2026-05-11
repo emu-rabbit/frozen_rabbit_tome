@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
-import { useSolver } from '../composables/useSolver';
+import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useSettings } from '../composables/useSettings';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useSimulator } from '../composables/useSimulator';
@@ -31,7 +31,7 @@ const route = useRoute();
 const router = useRouter();
 const {
   activeItem,
-  solverStats,
+  simStats,
   selectedFood,
   selectedFoodItem,
   effectiveStats,
@@ -46,10 +46,12 @@ const {
   fetchItemLevelData,
   syncFromSettings,
   setSelectedItem
-} = useSolver();
+} = useSimulatorStats();
 const { userStats } = useSettings();
 const { saveExperiment, getExperiment, fromStoredRotationStep } = useExperimentLibrary();
 const { primaryRotation, revisitRotation, simulatorAnalysis: analysis, reset: resetSimulator } = useSimulator();
+// 模擬台內部使用 simStats 作為屬性操作的目標（等同 Solver 的 solverStats）
+const solverStats = simStats;
 
 const activeBlock = ref<'primary' | 'revisit'>('primary');
 const savedExperimentId = ref<string | null>(null);
@@ -127,20 +129,20 @@ onMounted(() => {
 
 onActivated(() => {
   syncFromSettings();
-  
+
   const isFromDatabase = !!route.query.experiment;
   const isNewExperiment = route.query.new === '1';
 
   if (isFromDatabase) {
     loadExperimentFromRoute();
   } else if (isNewExperiment) {
-    // 強制重置模擬台內容
-    resetSimulator();
+    // new=1 表示從物品卡進入，setSelectedItem 已根據「是否同一物品」決定是否重置，
+    // 此處只需清除暫存的儲存狀態與 URL 參數。
     activeBlock.value = 'primary';
     savedExperimentId.value = null;
     isSaved.value = false;
-    
-    // 清除 URL 中的 new 參數，避免重新整理時又重置
+
+    // 清除 URL 中的 new 參數，避免重新整理時又觸發
     router.replace({ path: '/simulator', query: {} });
   }
 });

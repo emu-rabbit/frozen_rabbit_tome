@@ -1,7 +1,7 @@
-import { useLocalStorage } from '@vueuse/core';
+import { ref } from 'vue';
 
-export const createGuideSearchQuery = useLocalStorage('frozen-rabbit-tome-create-guide-search', '');
-export const createExperimentSearchQuery = useLocalStorage('frozen-rabbit-tome-create-experiment-search', '');
+export const createGuideSearchQuery = ref('');
+export const createExperimentSearchQuery = ref('');
 
 export function useSearchStore() {
   return {

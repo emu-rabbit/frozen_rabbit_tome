@@ -1,11 +1,10 @@
 import { ref } from 'vue';
-import { useLocalStorage } from '@vueuse/core';
 import type { SimulationResponse } from '../types/game';
 
-// Persistent draft state for Simulator
-const primaryRotation = useLocalStorage<string[]>('frozen-rabbit-tome-simulator-primary', []);
-const revisitRotation = useLocalStorage<string[]>('frozen-rabbit-tome-simulator-revisit', []);
-const simulatorAnalysis = useLocalStorage<SimulationResponse | null>('frozen-rabbit-tome-simulator-analysis', null);
+// Persistent draft state for Simulator (now just reactive state)
+const primaryRotation = ref<string[]>([]);
+const revisitRotation = ref<string[]>([]);
+const simulatorAnalysis = ref<SimulationResponse | null>(null);
 
 export function useSimulator() {
   const reset = () => {

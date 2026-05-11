@@ -15,12 +15,12 @@ import {
 } from '../services/gameData';
 import type { GatherableItem } from '../types/game';
 import { useRouter } from 'vue-router';
-import { useSolver } from '../composables/useSolver';
+import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useSearchStore } from '../composables/useSearchStore';
 
 const { t } = useI18n();
 const router = useRouter();
-const { setSelectedItem } = useSolver();
+const { setSelectedItem } = useSimulatorStats();
 
 function handleItemSelect(item: GatherableItem) {
   setSelectedItem(item);
