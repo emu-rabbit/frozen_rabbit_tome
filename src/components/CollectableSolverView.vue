@@ -8,8 +8,10 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import CollectablePolicyNodeCard from './CollectablePolicyNodeCard.vue';
+import CollectableDebugDialog from './CollectableDebugDialog.vue';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
+import { useSettings } from '../composables/useSettings';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getItemName, getItemEnglishName } from '../services/gameData';
 import type { FoodQuality, GatheringFood } from '../types/game';
@@ -41,10 +43,12 @@ const {
   isSolving,
   solveError,
   solverResult,
+  isDebugDialogOpen,
   buildStoredTome
 } = useCollectableSolver();
 
 const { saveCollectableTome } = useTomeLibrary();
+const { debugSettings } = useSettings();
 
 // ─── Food autocomplete ───────────────────────────────────────────────────────
 
@@ -299,8 +303,24 @@ const foodBonusPerception = computed(() => effectiveStats.value.perception - sol
         <div class="policy-tree-scroll">
           <CollectablePolicyNodeCard :node="solverResult.policy" :depth="0" />
         </div>
+
+        <!-- Debug button (only in debug mode) -->
+        <div v-if="debugSettings.solverDebugMode && solverResult.debug" class="debug-bar">
+          <Button
+            icon="pi pi-code"
+            :label="t('solver.debug.open')"
+            class="p-button-sm p-button-text text-slate-400"
+            @click="isDebugDialogOpen = true"
+          />
+        </div>
       </div>
     </template>
+
+    <!-- Debug dialog -->
+    <CollectableDebugDialog
+      v-model="isDebugDialogOpen"
+      :debug="solverResult?.debug"
+    />
   </div>
 </template>
 
@@ -588,5 +608,17 @@ const foodBonusPerception = computed(() => effectiveStats.value.perception - sol
 .policy-tree-scroll {
   overflow-x: auto;
   padding-bottom: 0.5rem;
+}
+
+.debug-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.5rem;
+}
+
+:global(html.dark .debug-bar) {
+  border-color: #1e293b;
 }
 </style>
