@@ -96,11 +96,13 @@ export default {
     actions: {
       simulate: '進行分析',
       save: '儲存實驗',
-      saved: '已儲存'
+      saved: '已儲存',
+      copyReport: '複製報告'
     },
     analysis: {
       title: '分析報告',
       subtitle: '根據設定手法計算之期望結果',
+      empty: '點擊上方按鈕開始進行分析',
       summary: '總結',
       expectedYield: '期望獲得量',
       maxYield: '最大獲得量',

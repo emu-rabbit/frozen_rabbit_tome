@@ -94,11 +94,13 @@ export default {
     actions: {
       simulate: 'Analyze',
       save: 'Save Experiment',
-      saved: 'Saved'
+      saved: 'Saved',
+      copyReport: 'Copy Report'
     },
     analysis: {
       title: 'Analysis Report',
       subtitle: 'Expected outcome based on current rotation and stats',
+      empty: 'Click the button above to analyze the rotation',
       summary: 'Summary',
       expectedYield: 'Expected Yield',
       maxYield: 'Maximum Yield',

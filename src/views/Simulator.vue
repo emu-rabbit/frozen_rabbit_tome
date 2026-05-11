@@ -536,42 +536,38 @@ function analysisChance(chance: number) {
           </div>
         </div>
 
-        <div class="simulate-actions">
-          <Button 
-            :label="t('simulator.actions.simulate')" 
-            icon="pi pi-play" 
-            class="rounded-xl p-button-lg px-8 font-bold shadow-sm" 
-            :disabled="!canRunSimulation" 
-            @click="runSimulation" 
-          />
-        </div>
       </section>
 
-      <section class="analysis-panel panel mt-8">
-        <div class="simulation-header mb-2">
-          <h2 class="section-title">
-            <div class="icon-wrap bg-soft-green-100 text-soft-green-600 dark:bg-soft-green-900/50 dark:text-soft-green-400">
-              <i class="pi pi-chart-bar text-xl"></i>
+      <section class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden analysis-panel">
+        <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5 mb-8">
+          <div class="flex flex-col gap-1 text-center sm:text-left">
+            <div class="section-title justify-center sm:justify-start mb-1">
+              <i class="pi pi-chart-bar text-soft-green-500"></i>
+              <h2>{{ t('simulator.analysis.title') }}</h2>
             </div>
-            <span class="flex items-center gap-3">
-              {{ t('simulator.analysis.title') }}
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                {{ t('simulator.analysis.subtitle') }}
-              </span>
-            </span>
-          </h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('simulator.analysis.subtitle') }}</p>
+          </div>
+          <div class="w-full lg:w-auto min-w-[200px]">
+            <Button
+              class="w-full text-lg py-[1.125rem] px-8 font-bold flex items-center justify-center gap-2 rounded-[1.25rem] shadow-md p-button-primary"
+              :aria-label="t('simulator.actions.simulate')"
+              :disabled="!canRunSimulation"
+              @click="runSimulation"
+            >
+              <i class="pi pi-play"></i>
+              <span>{{ t('simulator.actions.simulate') }}</span>
+            </Button>
+          </div>
         </div>
 
-        <template v-if="!analysis || !analysis.total">
-          <div class="empty-state p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center text-center bg-white/50 dark:bg-slate-900/50">
-            <i class="pi pi-chart-line text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
-            <p class="text-slate-500 dark:text-slate-400 m-0 font-medium">
-              {{ t('simulator.strategy.empty') }}
-            </p>
+        <div v-if="!analysis || !analysis.total" class="flex flex-col items-center justify-center py-12 px-4 text-center">
+          <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
+            <i class="pi pi-chart-line text-2xl text-slate-300 dark:text-slate-600"></i>
           </div>
-        </template>
+          <p class="text-slate-500 dark:text-slate-400 font-medium">{{ t('simulator.analysis.empty') }}</p>
+        </div>
 
-        <template v-else>
+        <div v-else class="space-y-6">
           <div class="analysis-grid">
             <article class="analysis-card total p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.analysis.summary') }}</h3>
@@ -627,17 +623,27 @@ function analysisChance(chance: number) {
         </article>
           </div>
           
-          <div class="mt-6 flex justify-end border-t border-slate-200 dark:border-slate-800 pt-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
             <Button
-              :label="isSaved ? t('simulator.actions.saved') : t('simulator.actions.save')"
-              :icon="isSaved ? 'pi pi-check' : 'pi pi-save'"
-              class="rounded-xl p-button-lg font-bold shadow-sm px-6 transition-all"
-              :class="isSaved ? 'p-button-success' : 'p-button-primary'"
+              class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl"
+              :aria-label="t('simulator.actions.copyReport')"
+              disabled
+            >
+              <i class="pi pi-file-edit"></i>
+              <span>{{ t('simulator.actions.copyReport') }}</span>
+            </Button>
+            <Button
+              class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
+              :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isSaved }"
+              :aria-label="t('simulator.actions.save')"
               :disabled="isSaved"
               @click="saveCurrentExperiment"
-            />
+            >
+              <i :class="isSaved ? 'pi pi-check' : 'pi pi-bookmark'"></i>
+              <span>{{ isSaved ? t('simulator.actions.saved') : t('simulator.actions.save') }}</span>
+            </Button>
           </div>
-        </template>
+        </div>
       </section>
     </div>
   </div>
@@ -663,8 +669,7 @@ function analysisChance(chance: number) {
 .item-panel,
 .simulation-header,
 .item-heading,
-.section-title,
-.simulate-actions {
+.section-title {
   display: flex;
   gap: 1rem;
 }
@@ -676,14 +681,7 @@ function analysisChance(chance: number) {
   align-items: center;
 }
 
-.simulate-actions {
-  justify-content: center;
-  padding: 1.5rem 0 0;
-  border-top: 1px dashed #e2e8f0;
-}
-:global(html.dark .simulate-actions) {
-  border-top-color: #334155;
-}
+
 
 .item-icon-wrap {
   width: 56px;

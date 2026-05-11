@@ -94,11 +94,13 @@ export default {
     actions: {
       simulate: '分析する',
       save: '実験を保存',
-      saved: '保存済み'
+      saved: '保存済み',
+      copyReport: 'レポートをコピー'
     },
     analysis: {
       title: '分析レポート',
       subtitle: '設定したスキル回しに基づく期待値',
+      empty: '上のボタンを押して分析を開始します',
       summary: '概要',
       expectedYield: '期待獲得数',
       maxYield: '最大獲得数',
