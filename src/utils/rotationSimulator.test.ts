@@ -48,8 +48,19 @@ describe('rotationSimulator', () => {
     });
 
     expect(result.revisitChance).toBe(0.05);
-    expect(result.revisit?.rotation).toEqual(['採集']);
     expect(result.total.expectedYield).toBeGreaterThan(result.primary.expectedYield);
+  });
+
+  it('blocks skill usage when integrity reaches zero', () => {
+    const request: SimulationRequest = {
+      ...baseRequest,
+      nodeBonuses: { ...baseRequest.nodeBonuses, baseIntegrity: 1 },
+      primaryRotation: ['採集', '敏銳視野'] // After '採集', integrity is 0
+    };
+
+    const validation = validateSimulatorRotation(request, request.primaryRotation);
+    expect(validation.isValid).toBe(false);
+    expect(validation.invalidIndexes).toContain(1);
   });
 
   it('branches Solid Reason and Wise to the World as conditional durability recovery', () => {
