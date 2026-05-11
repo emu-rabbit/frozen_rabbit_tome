@@ -100,13 +100,38 @@ else:
 
 最大值 case：25%。
 
-`Priming Touch`：
+`Priming Touch`（含強化洞察疊加）：
+
+**已由使用者遊戲內實測確認（2026-05-11）：**
+
+實測數據：
+- 一般慎重不耗率（最大值 case）：25%
+- 觸發強化洞察（Collector's High Standard）後：65% → 意即強化洞察額外加 **+40 個百分點**
+- 再施展預備碰觸後：90% → 驗算：`25 * 2 + 40 = 90` ✅
+
+**確認公式：**
+
+```txt
+highStandardBonus = 40  （固定 +40%，Lv100 trait）
+
+effectiveMeticulousRate = min(100, baseMeticulousRate * 2 + highStandardBonus + nodeBonus)
+```
+
+其中：
+- `baseMeticulousRate`：由獲得力計算的公式基礎值（最大 25%）
+- `highStandardBonus`：強化洞察觸發時固定 +40%，否則 0
+- `nodeBonus`：採集點特殊加成（若有），目前尚無具體數值；第一版先設 0
+- 預備碰觸只翻倍 `baseMeticulousRate`，不影響 `highStandardBonus` 或 `nodeBonus`
+
+第一版（不含強化洞察）的簡化公式：
 
 ```txt
 primedMeticulousRate = min(100, meticulousRate * 2)
 ```
 
-最大值 case：25% -> 50%。
+最大值 case：25% → 50%（無強化洞察時）。
+
+未來納入強化洞察時，應先判定 `highStandardActive`，再套用完整公式。強化洞察的觸發機率尚未確認，繼續排除於第一版求解器外。
 
 ### Scrutiny Multiplier
 
