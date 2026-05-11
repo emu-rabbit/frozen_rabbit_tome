@@ -92,7 +92,7 @@ export default {
       currentGp: 'Current GP'
     },
     actions: {
-      simulate: 'Simulate Both',
+      simulate: 'Analyze',
       save: 'Save Experiment',
       saved: 'Saved'
     },

@@ -94,7 +94,7 @@ export default {
       currentGp: '目前 GP'
     },
     actions: {
-      simulate: '同時模擬',
+      simulate: '進行分析',
       save: '儲存實驗',
       saved: '已儲存'
     },

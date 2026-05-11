@@ -230,6 +230,7 @@ export interface SolverResponse {
 }
 
 export interface StoredTomeNodeBonuses {
+  baseIntegrity?: number;
   gatheringCount: number;
   yieldCount: number;
   extraRate: number;

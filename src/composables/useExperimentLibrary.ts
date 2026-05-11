@@ -4,7 +4,9 @@ import type { FoodSelection, NodeBonuses, PlayerStats, SimulationResponse, Store
 import { getRotationActionId } from '../services/actionIcons';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-experiments';
+const SEARCH_KEY = 'frozen-rabbit-tome-experiment-search';
 const experiments = useLocalStorage<StoredExperiment[]>(STORAGE_KEY, []);
+const persistentSearchQuery = useLocalStorage(SEARCH_KEY, '');
 
 function createExperimentId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -81,6 +83,7 @@ export function useExperimentLibrary() {
     saveExperiment,
     deleteExperiment,
     getExperiment,
-    fromStoredRotationStep
+    fromStoredRotationStep,
+    searchQuery: persistentSearchQuery
   };
 }

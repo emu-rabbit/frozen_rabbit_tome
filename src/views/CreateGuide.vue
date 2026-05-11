@@ -14,6 +14,7 @@ import {
 import type { GatherableItem } from '../types/game';
 import { useRouter } from 'vue-router';
 import { useSolver } from '../composables/useSolver';
+import { useSearchStore } from '../composables/useSearchStore';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -27,7 +28,7 @@ function handleItemSelect(item: GatherableItem) {
 // === 搜尋狀態 ===
 // 使用 module-level ref（而非 reactive 物件）讓 KeepAlive 能保留狀態。
 // 即使 KeepAlive 未生效（例如路由配置變動），這些 ref 也會常駐於記憶體中。
-const searchQuery = ref('');
+const { createGuideSearchQuery: searchQuery } = useSearchStore();
 const searchResults = ref<GatherableItem[]>([]);
 const hasSearched = ref(false);
 const isSearching = ref(false);

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ name: 'CreateExperiment' });
+
 import { ref, watch, onActivated } from 'vue';
 import { watchDebounced } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
@@ -14,6 +16,7 @@ import {
 import type { GatherableItem } from '../types/game';
 import { useRouter } from 'vue-router';
 import { useSolver } from '../composables/useSolver';
+import { useSearchStore } from '../composables/useSearchStore';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -21,13 +24,13 @@ const { setSelectedItem } = useSolver();
 
 function handleItemSelect(item: GatherableItem) {
   setSelectedItem(item);
-  router.push('/simulator');
+  router.push({ path: '/simulator', query: { new: '1' } });
 }
 
 // === 搜尋狀態 ===
 // 使用 module-level ref（而非 reactive 物件）讓 KeepAlive 能保留狀態。
 // 即使 KeepAlive 未生效（例如路由配置變動），這些 ref 也會常駐於記憶體中。
-const searchQuery = ref('');
+const { createExperimentSearchQuery: searchQuery } = useSearchStore();
 const searchResults = ref<GatherableItem[]>([]);
 const hasSearched = ref(false);
 const isSearching = ref(false);

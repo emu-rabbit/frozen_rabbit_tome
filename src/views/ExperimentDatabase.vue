@@ -9,14 +9,14 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
-import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
+import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage, getItemBaseIntegrity } from '../services/gameData';
+import { getGatheringFood } from '../services/foodData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
 
 const { t, locale } = useI18n();
 const router = useRouter();
-const { experiments, deleteExperiment } = useExperimentLibrary();
-const searchQuery = ref('');
+const { experiments, deleteExperiment, searchQuery } = useExperimentLibrary();
 
 const filteredExperiments = computed(() => {
   currentLanguage.value;
@@ -67,6 +67,20 @@ function rotationIcon(experiment: StoredExperiment, step: StoredTomeRotationStep
 function handleEdit(experiment: StoredExperiment) {
   router.push({ path: '/simulator', query: { experiment: experiment.id } });
 }
+
+function foodInfo(experiment: StoredExperiment) {
+  const food = getGatheringFood(experiment.food.foodId);
+  if (!food) return null;
+  return {
+    name: getItemName(food.id),
+    quality: t(`solver.food.${experiment.food.quality}`)
+  };
+}
+
+function formatChance(chance: number) {
+  if (chance > 0 && chance < 0.01) return '<0.01';
+  return Number(chance.toFixed(2)).toString();
+}
 </script>
 
 <template>
@@ -109,12 +123,49 @@ function handleEdit(experiment: StoredExperiment) {
           </div>
         </div>
 
-        <div class="summary-grid">
-          <div><span>{{ t('experimentDatabase.rows.playerStats') }}</span><strong>{{ formatStats(experiment) }}</strong></div>
-          <div><span>{{ t('experimentDatabase.rows.gpState') }}</span><strong>{{ formatGp(experiment) }}</strong></div>
-          <div><span>{{ t('experimentDatabase.rows.nodeBonuses') }}</span><strong>{{ formatNodeBonuses(experiment) }}</strong></div>
-          <div><span>{{ t('experimentDatabase.rows.totalExpected') }}</span><strong>{{ t('experimentDatabase.countValue', { count: experiment.analysis.total.expectedYield }) }}</strong></div>
-          <div><span>{{ t('experimentDatabase.rows.maxMin') }}</span><strong>{{ experiment.analysis.total.maxYield }} / {{ experiment.analysis.total.minYield }}</strong></div>
+        <div class="summary-info-strip">
+          <div class="info-group">
+            <span>{{ t('experimentDatabase.rows.playerStats') }}</span>
+            <strong>{{ formatStats(experiment) }}</strong>
+          </div>
+          <div class="info-group">
+            <span>{{ t('experimentDatabase.rows.gpState') }}</span>
+            <strong>{{ formatGp(experiment) }}</strong>
+          </div>
+          <div class="info-group">
+            <span>{{ t('experimentDatabase.rows.nodeBonuses') }}</span>
+            <strong>{{ formatNodeBonuses(experiment) }}</strong>
+          </div>
+          <div v-if="foodInfo(experiment)" class="info-group food">
+            <span>{{ t('tomeLibrary.rows.food') }}</span>
+            <strong>{{ foodInfo(experiment).name }} ({{ foodInfo(experiment).quality }})</strong>
+          </div>
+        </div>
+
+        <div class="rotation-plan-stats">
+          <div class="is-primary-metric">
+            <span>{{ t('experimentDatabase.rows.totalExpected') }}</span>
+            <strong>
+              {{ experiment.analysis.total.expectedYield }}
+              <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+            </strong>
+          </div>
+          <div>
+            <span>{{ t('simulator.analysis.maxYield') }}</span>
+            <strong>
+              {{ experiment.analysis.total.maxYield }}
+              <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+            </strong>
+            <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(experiment.analysis.total.maxYieldChance) }) }}</small>
+          </div>
+          <div>
+            <span>{{ t('simulator.analysis.minYield') }}</span>
+            <strong>
+              {{ experiment.analysis.total.minYield }}
+              <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+            </strong>
+            <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(experiment.analysis.total.minYieldChance) }) }}</small>
+          </div>
         </div>
 
         <div class="rotation-preview-list">
@@ -287,34 +338,102 @@ function handleEdit(experiment: StoredExperiment) {
 .item-meta span:nth-child(3) {
   background: #2563eb;
 }
-.summary-grid {
+.summary-info-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+:global(html.dark .summary-info-strip) {
+  background: rgb(30 41 59 / 0.35);
+  border-color: #1e293b;
+}
+.info-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 120px;
+}
+.info-group.food {
+  flex: 1 1 200px;
+}
+.info-group span {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.info-group strong {
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:global(html.dark .info-group strong) {
+  color: #cbd5e1;
+}
+.rotation-plan-stats {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
 }
-.summary-grid div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 0.82rem;
-}
-:global(html.dark .summary-grid div) {
-  background: rgb(30 41 59 / 0.55);
-  color: #94a3b8;
-}
-.summary-grid strong {
+.rotation-plan-stats div {
   min-width: 0;
-  color: #334155;
-  font-weight: 800;
-  text-align: right;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e2e8f0;
 }
-:global(html.dark .summary-grid strong) {
-  color: #e2e8f0;
+:global(html.dark .rotation-plan-stats div) {
+  background: #1e293b;
+  border-color: #334155;
+}
+.rotation-plan-stats div.is-primary-metric {
+  border-color: rgb(82 168 144 / 0.55);
+  background: rgb(240 253 244 / 0.86);
+}
+:global(html.dark .rotation-plan-stats div.is-primary-metric) {
+  background: rgb(20 83 45 / 0.22);
+}
+.rotation-plan-stats span,
+.rotation-plan-stats strong,
+.rotation-plan-stats small {
+  display: block;
+}
+.rotation-plan-stats span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.rotation-plan-stats strong {
+  margin-top: 0.15rem;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+:global(html.dark .rotation-plan-stats strong) {
+  color: #f8fafc;
+}
+.rotation-plan-stats .rotation-plan-stat-unit {
+  display: inline;
+  margin: 0 0 0 0.15rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.rotation-plan-stats small {
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 .rotation-preview-list {
   display: grid;

@@ -86,7 +86,7 @@ watch(language, () => {
 
       <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
-          <KeepAlive include="CreateGuide,Solver,TomeLibrary,Settings">
+          <KeepAlive include="CreateGuide,Solver,TomeLibrary,Settings,CreateExperiment,Simulator,ExperimentDatabase">
             <component :is="Component" />
           </KeepAlive>
         </router-view>

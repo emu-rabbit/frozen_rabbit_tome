@@ -92,7 +92,7 @@ export default {
       currentGp: '現在 GP'
     },
     actions: {
-      simulate: '両方をシミュレート',
+      simulate: '分析する',
       save: '実験を保存',
       saved: '保存済み'
     },

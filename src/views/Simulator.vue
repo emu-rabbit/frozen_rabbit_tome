@@ -10,12 +10,13 @@ import AutoComplete from 'primevue/autocomplete';
 import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
+import { useSimulator } from '../composables/useSimulator';
 import { GATHERING_FOODS } from '../services/foodData';
-import { getGatherableItemById, getItemEnglishName, getItemName } from '../services/gameData';
+import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import type { SimulationRequest } from '../utils/rotationSimulator';
-import type { FoodQuality, GatheringFood } from '../types/game';
+import type { FoodQuality, GatheringFood, SimulationResponse } from '../types/game';
 
 type FoodOption = {
   food: GatheringFood;
@@ -47,11 +48,9 @@ const {
 } = useSolver();
 const { userStats } = useSettings();
 const { saveExperiment, getExperiment, fromStoredRotationStep } = useExperimentLibrary();
+const { primaryRotation, revisitRotation, simulatorAnalysis: analysis, reset: resetSimulator } = useSimulator();
 
-const primaryRotation = ref<string[]>([]);
-const revisitRotation = ref<string[]>([]);
 const activeBlock = ref<'primary' | 'revisit'>('primary');
-const analysis = ref<ReturnType<typeof simulateGatheringRotation> | null>(null);
 const savedExperimentId = ref<string | null>(null);
 const isSaved = ref(false);
 const foodSuggestions = ref<FoodOption[]>([]);
@@ -125,7 +124,21 @@ onMounted(() => {
 
 onActivated(() => {
   syncFromSettings();
-  loadExperimentFromRoute();
+  
+  const isFromDatabase = !!route.query.experiment;
+  const isNewExperiment = route.query.new === '1';
+
+  if (isFromDatabase) {
+    loadExperimentFromRoute();
+  } else if (isNewExperiment) {
+    // 強制重置模擬台內容
+    resetSimulator();
+    savedExperimentId.value = null;
+    isSaved.value = false;
+    
+    // 清除 URL 中的 new 參數，避免重新整理時又重置
+    router.replace({ path: '/simulator', query: {} });
+  }
 });
 
 watch(userStats, () => syncFromSettings(), { deep: true });
@@ -268,19 +281,30 @@ function loadExperimentFromRoute() {
   const item = experiment ? getGatherableItemById(experiment.itemId) : null;
   if (!experiment || !item) return;
 
+  // 1. 設置物品
   setSelectedItem(item);
+  
+  // 2. 設置數值 (需要確保 setSelectedItem 觸發的 syncFromSettings 不會蓋掉這些)
   solverStats.value = { ...experiment.stats };
   selectedFood.value = { ...experiment.food };
   nodeBonuses.value = {
-    baseIntegrity: item.gatheringItemId ? nodeBonuses.value.baseIntegrity : 4,
+    baseIntegrity: experiment.nodeBonuses.baseIntegrity ?? (item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4),
     gatheringCount: experiment.nodeBonuses.gatheringCount,
     yieldCount: experiment.nodeBonuses.yieldCount,
     extraRate: experiment.nodeBonuses.extraRate
   };
   temporaryGp.value = experiment.temporaryGp;
+  
+  // 3. 設置手法
   primaryRotation.value = experiment.primaryRotation.map(fromStoredRotationStep).filter(Boolean);
   revisitRotation.value = experiment.revisitRotation.map(fromStoredRotationStep).filter(Boolean);
-  analysis.value = experiment.analysis;
+  
+  // 4. 設置分析結果
+  if (experiment.analysis && experiment.analysis.total) {
+    analysis.value = experiment.analysis;
+  } else {
+    analysis.value = null;
+  }
   savedExperimentId.value = id;
 }
 
@@ -522,7 +546,7 @@ function analysisChance(chance: number) {
         </div>
       </section>
 
-      <section v-if="analysis" class="analysis-grid">
+      <section v-if="analysis && analysis.total" class="analysis-grid">
         <article class="panel analysis-card total">
           <h3>{{ t('simulator.analysis.summary') }}</h3>
           <div class="analysis-content">
@@ -541,7 +565,7 @@ function analysisChance(chance: number) {
           </div>
           <p v-if="analysis.revisitChance > 0" class="note">{{ t('simulator.analysis.revisitNote', { chance: formatChance(analysis.revisitChance * 100) }) }}</p>
         </article>
-        <article class="panel analysis-card">
+        <article v-if="analysis.primary" class="panel analysis-card">
           <h3>{{ t('simulator.primaryRotationAnalysis') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
