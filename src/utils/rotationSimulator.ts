@@ -192,6 +192,7 @@ function applyAction(action: SimulatorAction, state: SimState, request: Simulati
 
 function canUseAction(action: SimulatorAction, state: SimState, request: Omit<SimulationRequest, 'primaryRotation' | 'revisitRotation'>): boolean {
   if (request.stats.level < action.minLevel || state.gp < action.gpCost) return false;
+  if (state.integrity <= 0) return false;
   const maxIntegrity = request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount;
   const baseSuccessRate = calculateSuccessRate(request.stats.gathering, request.baseValues.Gathering, request.stats.level, request.itemLevel);
   const baseBoonChance = calculateBoonChance(request.stats.perception, request.baseValues.Perception);
@@ -266,7 +267,6 @@ function summarizeRun(kind: SimulationRotationAnalysis['kind'], rotation: string
 
   return {
     kind,
-    rotation,
     expectedYield: Number(states.reduce((sum, state) => sum + state.yield * state.probability, 0).toFixed(2)),
     minYield,
     maxYield,

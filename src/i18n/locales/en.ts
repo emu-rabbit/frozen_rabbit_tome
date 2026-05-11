@@ -101,7 +101,8 @@ export default {
       simulate: 'Analyze',
       save: 'Save Experiment',
       saved: 'Saved',
-      copyReport: 'Copy Report'
+      copyReport: 'Copy Report',
+      copied: 'Copied'
     },
     analysis: {
       title: 'Analysis Report',
@@ -150,6 +151,8 @@ export default {
     },
     actions: {
       edit: 'Edit',
+      copyReport: 'Copy Report',
+      copied: 'Copied',
       delete: 'Delete Experiment'
     }
   },

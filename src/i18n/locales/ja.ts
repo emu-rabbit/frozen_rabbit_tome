@@ -101,7 +101,8 @@ export default {
       simulate: '分析する',
       save: '実験を保存',
       saved: '保存済み',
-      copyReport: 'レポートをコピー'
+      copyReport: 'レポートをコピー',
+      copied: 'コピー済み'
     },
     analysis: {
       title: '分析レポート',
@@ -150,6 +151,8 @@ export default {
     },
     actions: {
       edit: '編集',
+      copyReport: 'レポートをコピー',
+      copied: 'コピー済み',
       delete: '実験を削除'
     }
   },

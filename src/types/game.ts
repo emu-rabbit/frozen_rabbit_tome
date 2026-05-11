@@ -261,7 +261,7 @@ export interface StoredTome {
 
 export interface SimulationRotationAnalysis {
   kind: SolverRotationPlanKind | 'total';
-  rotation: string[];
+
   expectedYield: number;
   minYield: number;
   maxYield: number;

@@ -101,7 +101,8 @@ export default {
       simulate: '进行分析',
       save: '保存实验',
       saved: '已保存',
-      copyReport: '复制报告'
+      copyReport: '复制报告',
+      copied: '已复制'
     },
     analysis: {
       title: '分析报告',
@@ -150,6 +151,8 @@ export default {
     },
     actions: {
       edit: '编辑',
+      copyReport: '复制报告',
+      copied: '已复制',
       delete: '删除实验'
     }
   },

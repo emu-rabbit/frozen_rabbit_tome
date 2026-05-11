@@ -11,12 +11,12 @@ import InputText from 'primevue/inputtext';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage, getItemBaseIntegrity } from '../services/gameData';
 import { getGatheringFood } from '../services/foodData';
-import { getRotationActionIconById } from '../services/actionIcons';
+import { getRotationActionIconById, getRotationActionName } from '../services/actionIcons';
 import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
 
 const { t, locale } = useI18n();
 const router = useRouter();
-const { experiments, deleteExperiment, searchQuery } = useExperimentLibrary();
+const { experiments, deleteExperiment, searchQuery, fromStoredRotationStep } = useExperimentLibrary();
 
 const copiedExperimentId = ref<string | null>(null);
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -85,9 +85,46 @@ function formatChance(chance: number) {
   return Number(chance.toFixed(2)).toString();
 }
 
+function actionLabel(step: StoredTomeRotationStep) {
+  const actionName = fromStoredRotationStep(step);
+  return getRotationActionName(
+    actionName,
+    t('solver.strategy.gatherAction'),
+    t('solver.strategy.conditionalSuffix'),
+    t('solver.strategy.conditionalGatherSuffix')
+  );
+}
+
 async function copyReportFromDb(experiment: StoredExperiment) {
+  const mapRotation = (rotation: StoredTomeRotationStep[]) => rotation.map(step => {
+    if (step.type === 'gather') return { type: 'gather', actionName: actionLabel(step) };
+    return { type: 'action', actionId: step.actionId, actionName: actionLabel(step) };
+  });
+
+  const cleanAnalysis = (analysisData: any) => {
+    const { primary, revisit, total, ...rest } = analysisData;
+    const cleanRotation = (obj: any) => {
+      if (!obj) return obj;
+      const { rotation, ...cleaned } = obj;
+      return cleaned;
+    };
+    return {
+      ...rest,
+      primary: cleanRotation(primary),
+      ...(revisit ? { revisit: cleanRotation(revisit) } : {}),
+      total: cleanRotation(total)
+    };
+  };
+
+  const report = {
+    ...experiment,
+    primaryRotation: mapRotation(experiment.primaryRotation),
+    revisitRotation: mapRotation(experiment.revisitRotation),
+    analysis: cleanAnalysis(experiment.analysis)
+  };
+
   try {
-    await navigator.clipboard.writeText(JSON.stringify(experiment, null, 2));
+    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
     copiedExperimentId.value = experiment.id;
     if (copyTimer) window.clearTimeout(copyTimer);
     copyTimer = window.setTimeout(() => {

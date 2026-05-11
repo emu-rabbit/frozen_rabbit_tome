@@ -14,7 +14,7 @@ import { useSimulator } from '../composables/useSimulator';
 import PendingFeature from '../components/PendingFeature.vue';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
-import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
+import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import type { SimulationRequest } from '../utils/rotationSimulator';
 import type { FoodQuality, GatheringFood, SimulationResponse } from '../types/game';
@@ -278,15 +278,35 @@ function saveCurrentExperiment() {
 
 async function copyReport() {
   if (!activeItem.value || !analysis.value) return;
+  const mapRotation = (rotation: string[]) => rotation.map(action => {
+    if (action.startsWith('採集')) return { type: 'gather', actionName: actionLabel(action) };
+    const actionId = getRotationActionId(action);
+    return { type: 'action', actionId, actionName: actionLabel(action) };
+  });
+
+  const cleanAnalysis = (analysisData: SimulationResponse) => {
+    const { primary, revisit, total, ...rest } = analysisData;
+    const cleanRotation = (obj: any) => {
+      const { rotation, ...cleaned } = obj;
+      return cleaned;
+    };
+    return {
+      ...rest,
+      primary: cleanRotation(primary),
+      ...(revisit ? { revisit: cleanRotation(revisit) } : {}),
+      total: cleanRotation(total)
+    };
+  };
+
   const report = {
     itemId: activeItem.value.itemId,
     stats: { ...solverStats.value },
     temporaryGp: temporaryGp.value,
     food: { ...selectedFood.value },
     nodeBonuses: { ...nodeBonuses.value },
-    primaryRotation: primaryRotation.value,
-    revisitRotation: revisitRotation.value,
-    analysis: analysis.value
+    primaryRotation: mapRotation(primaryRotation.value),
+    revisitRotation: mapRotation(revisitRotation.value),
+    analysis: cleanAnalysis(analysis.value)
   };
 
   try {
