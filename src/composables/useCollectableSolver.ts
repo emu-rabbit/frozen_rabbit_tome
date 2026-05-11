@@ -4,6 +4,7 @@ import { isGameDataLoading, getItemBaseIntegrity, getItemLevelData, getGathering
 import { getCollectableRewardInfo } from '../services/collectableRewards';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { useSettings } from './useSettings';
+import { activeItem, solverStats, selectedFood } from './useSolver';
 import type {
   CollectableNodeType,
   CollectableRewardThreshold,
@@ -11,21 +12,6 @@ import type {
   CollectableSolverResult,
   StoredCollectableTome
 } from '../types/collectable';
-import type { GatherableItem, FoodSelection, PlayerStats } from '../types/game';
-
-// ─── 共用模組級別狀態（與 useSolver 共用） ──────────────────────────────────
-
-const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
-const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
-  level: 100,
-  gathering: 5345,
-  perception: 5137,
-  gp: 930
-});
-const selectedFood = useLocalStorage<FoodSelection>('frozen-rabbit-tome-selected-food', {
-  foodId: null,
-  quality: 'hq'
-});
 
 // ─── 收藏品求解台專屬狀態 ────────────────────────────────────────────────────
 

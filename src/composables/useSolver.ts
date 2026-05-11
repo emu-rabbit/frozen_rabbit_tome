@@ -14,15 +14,17 @@ type SyncFromSettingsOptions = {
   resetTemporaryGp?: boolean;
 };
 
-const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
-const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
+// 這三個 ref 以具名匯出讓 useCollectableSolver 共享同一個實例，
+// 避免同 tab 內兩個 useLocalStorage(key) 各自獨立而不同步的問題。
+export const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
+export const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
   level: 100,
   gathering: 5345,
   perception: 5137,
   gp: 930
 });
 
-const selectedFood = useLocalStorage<FoodSelection>('frozen-rabbit-tome-selected-food', {
+export const selectedFood = useLocalStorage<FoodSelection>('frozen-rabbit-tome-selected-food', {
   foodId: null,
   quality: 'hq'
 });

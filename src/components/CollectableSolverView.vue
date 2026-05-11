@@ -132,7 +132,7 @@ const foodBonusPerception = computed(() => effectiveStats.value.perception - sol
         </div>
         <div class="flex-1">
           <div class="flex flex-wrap items-center gap-2 mb-1">
-            <span class="badge-green">{{ t(`game.jobs.${activeItem.jobType}`) }}</span>
+            <span v-if="activeItem.jobType" class="badge-green">{{ t(`game.jobs.${activeItem.jobType}`) }}</span>
             <span class="badge-slate">{{ t('createGuide.glv') }} {{ activeItem.glv }}</span>
             <span class="badge-purple">{{ t('createGuide.collectableSystem') }}</span>
           </div>
