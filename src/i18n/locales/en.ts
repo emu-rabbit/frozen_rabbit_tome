@@ -349,7 +349,9 @@ export default {
       gpState: 'GP State',
       food: 'Food',
       nodeBonuses: 'Node Bonuses',
-      objectiveMode: 'Solver Mode'
+      objectiveMode: 'Solver Mode',
+      expectedCollectability: 'Expected Collectability',
+      expectedScrip: 'Expected Scrip'
     },
     actions: {
       edit: 'Edit',

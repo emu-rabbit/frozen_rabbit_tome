@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { FoodSelection, NodeBonuses, PlayerStats, SolverResponse, StoredTome, StoredRegularTome, StoredTomeRotationPlan, StoredTomeRotationStep } from '../types/game';
+import type { StoredCollectableTome } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-library';
@@ -69,6 +70,11 @@ export function useTomeLibrary() {
     return tome;
   };
 
+  const saveCollectableTome = (tome: StoredCollectableTome) => {
+    tomes.value = [tome, ...tomes.value];
+    return tome;
+  };
+
   const deleteTome = (id: string) => {
     tomes.value = tomes.value.filter((tome) => tome.id !== id);
   };
@@ -77,6 +83,7 @@ export function useTomeLibrary() {
     tomes,
     tomeCount,
     saveTome,
+    saveCollectableTome,
     deleteTome
   };
 }

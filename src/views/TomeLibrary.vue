@@ -15,13 +15,15 @@ import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
-import { isRegularTome } from '../types/game';
+import { isRegularTome, isCollectableTome } from '../types/game';
+import { useCollectableSolver } from '../composables/useCollectableSolver';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const { tomes, deleteTome } = useTomeLibrary();
 const { loadTomeForEditing } = useSolver();
+const { activeItem: collectableActiveItem, loadFromTome: loadCollectableTome } = useCollectableSolver();
 const { macroSettings } = useSettings();
 const searchQuery = ref('');
 const isMacroPreviewOpen = ref(false);
@@ -120,6 +122,14 @@ function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
 }
 
 function handleEdit(tome: StoredTome) {
+  if (isCollectableTome(tome)) {
+    const item = getGatherableItemById(tome.itemId);
+    if (!item) return;
+    collectableActiveItem.value = item;
+    loadCollectableTome(tome);
+    router.push('/solver');
+    return;
+  }
   if (!loadTomeForEditing(tome)) return;
   router.push('/solver');
 }
@@ -250,17 +260,29 @@ function copyMacroIcon() {
             <span>{{ t('tomeLibrary.rows.food') }}</span>
             <strong>{{ formatFood(tome) }}</strong>
           </div>
-          <div class="summary-row">
-            <span>{{ t('tomeLibrary.rows.nodeBonuses') }}</span>
-            <strong>{{ formatNodeBonuses(tome) }}</strong>
-          </div>
-          <div class="summary-row summary-row-wide">
-            <span>{{ t('tomeLibrary.rows.objectiveMode') }}</span>
-            <strong>{{ formatObjectiveMode(tome) }}</strong>
-          </div>
+          <template v-if="isCollectableTome(tome)">
+            <div class="summary-row">
+              <span>{{ t('tomeLibrary.rows.expectedCollectability') }}</span>
+              <strong>{{ Math.round(tome.expectedCollectability) }}</strong>
+            </div>
+            <div class="summary-row summary-row-wide">
+              <span>{{ t('tomeLibrary.rows.expectedScrip') }}</span>
+              <strong>{{ tome.expectedScrip.toFixed(1) }}</strong>
+            </div>
+          </template>
+          <template v-else>
+            <div class="summary-row">
+              <span>{{ t('tomeLibrary.rows.nodeBonuses') }}</span>
+              <strong>{{ formatNodeBonuses(tome) }}</strong>
+            </div>
+            <div class="summary-row summary-row-wide">
+              <span>{{ t('tomeLibrary.rows.objectiveMode') }}</span>
+              <strong>{{ formatObjectiveMode(tome) }}</strong>
+            </div>
+          </template>
         </div>
 
-        <div class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
+        <div v-if="!isCollectableTome(tome)" class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
           <div v-for="plan in tomeRotationPlans(tome)" :key="`${tome.id}-${plan.kind}`" class="rotation-preview-block">
             <div class="rotation-strip">
               <h4 class="rotation-strip-title">{{ rotationCardTitle(tome, plan.kind) }}</h4>
@@ -290,6 +312,7 @@ function copyMacroIcon() {
               @click="handleEdit(tome)"
             />
             <Button
+              v-if="!isCollectableTome(tome)"
               :icon="copyMacroIcon()"
               :label="copyMacroLabel()"
               class="p-button-sm p-button-text library-action"

@@ -350,7 +350,9 @@ export default {
       gpState: 'GP 狀態',
       food: '食物',
       nodeBonuses: '礦脈獎勵',
-      objectiveMode: '求解模式'
+      objectiveMode: '求解模式',
+      expectedCollectability: '期望收藏值',
+      expectedScrip: '期望票券'
     },
     actions: {
       edit: '編輯',

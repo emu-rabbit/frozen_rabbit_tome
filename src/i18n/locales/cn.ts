@@ -349,7 +349,9 @@ export default {
       gpState: 'GP 状态',
       food: '食物',
       nodeBonuses: '矿脉奖励',
-      objectiveMode: '求解模式'
+      objectiveMode: '求解模式',
+      expectedCollectability: '期望收藏值',
+      expectedScrip: '期望票券'
     },
     actions: {
       edit: '编辑',

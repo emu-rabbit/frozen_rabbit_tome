@@ -349,7 +349,9 @@ export default {
       gpState: 'GP 状態',
       food: '食事',
       nodeBonuses: '採集ポイントボーナス',
-      objectiveMode: 'ソルバーモード'
+      objectiveMode: 'ソルバーモード',
+      expectedCollectability: '期待収集価値',
+      expectedScrip: '期待スクリップ'
     },
     actions: {
       edit: '編集',
