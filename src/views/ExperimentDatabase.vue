@@ -149,7 +149,7 @@ function formatChance(chance: number) {
           </div>
           <div v-if="foodInfo(experiment)" class="info-group food">
             <span>{{ t('tomeLibrary.rows.food') }}</span>
-            <strong>{{ foodInfo(experiment).name }} ({{ foodInfo(experiment).quality }})</strong>
+            <strong>{{ foodInfo(experiment)?.name }} ({{ foodInfo(experiment)?.quality }})</strong>
           </div>
         </div>
 
