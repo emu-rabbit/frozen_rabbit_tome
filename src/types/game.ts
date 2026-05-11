@@ -1,6 +1,9 @@
 // === FFXIV 採集物品 型別定義 ===
 // 對應姊妹站 frozen_rabbit_workshop 的 MockItem 擴展版本
 
+import type { StoredCollectableTome, StoredCrystalTome } from './collectable'
+export type { StoredCollectableTome, StoredCrystalTome } from './collectable'
+
 /** 可採集物品（僅限採礦師/園藝師，排除漁師與收藏品） */
 export interface GatherableItem {
   /** FFXIV 物品 ID */
@@ -245,7 +248,8 @@ export interface StoredTomeRotationPlan {
   rotation: StoredTomeRotationStep[];
 }
 
-export interface StoredTome {
+export interface StoredRegularTome {
+  tomeType: 'regular';
   id: string;
   itemId: number;
   stats: PlayerStats;
@@ -257,6 +261,16 @@ export interface StoredTome {
   revisit?: SolverRevisitInfo;
   objectiveMode?: SolverObjectiveMode;
   createdAt: string;
+}
+
+export type StoredTome = StoredRegularTome | StoredCollectableTome | StoredCrystalTome;
+
+export function isRegularTome(tome: StoredTome): tome is StoredRegularTome {
+  return !tome.tomeType || tome.tomeType === 'regular';
+}
+
+export function isCollectableTome(tome: StoredTome): tome is StoredCollectableTome {
+  return tome.tomeType === 'collectable';
 }
 
 export interface SimulationRotationAnalysis {

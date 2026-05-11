@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses, StoredTome } from '../types/game';
+import { isRegularTome } from '../types/game';
 import { useSettings } from './useSettings';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity, getGatherableItemById } from '../services/gameData';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
@@ -175,6 +176,8 @@ export function useSolver() {
   };
 
   const loadTomeForEditing = (tome: StoredTome) => {
+    if (!isRegularTome(tome)) return false;
+
     const item = getGatherableItemById(tome.itemId);
     if (!item) return false;
 

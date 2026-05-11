@@ -15,6 +15,7 @@ import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
+import { isRegularTome } from '../types/game';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
 const { t, locale } = useI18n();
@@ -56,10 +57,12 @@ function formatFood(tome: StoredTome) {
 }
 
 function formatNodeBonuses(tome: StoredTome) {
+  if (!isRegularTome(tome)) return '-';
   return `${tome.nodeBonuses.gatheringCount}/${tome.nodeBonuses.yieldCount}/${tome.nodeBonuses.extraRate}`;
 }
 
 function tomeObjectiveMode(tome: StoredTome): SolverObjectiveMode {
+  if (!isRegularTome(tome)) return 'expected';
   return tome.objectiveMode ?? 'expected';
 }
 
@@ -89,6 +92,7 @@ function rotationIcon(tome: StoredTome, step: StoredTomeRotationStep) {
 }
 
 function tomeRotationPlans(tome: StoredTome) {
+  if (!isRegularTome(tome)) return [];
   return tome.rotationPlans?.length
     ? tome.rotationPlans
     : [{ kind: 'primary' as const, rotation: tome.rotation }];
@@ -101,6 +105,11 @@ function rotationPlanTitle(kind: SolverRotationPlanKind) {
 }
 
 function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
+  if (!isRegularTome(tome)) {
+    return kind === 'revisit'
+      ? t('solver.strategy.rotationTitles.revisit')
+      : t('solver.strategy.rotationTitles.primary');
+  }
   if (kind === 'primary' && tome.revisit?.enabled && tome.revisit.isFullGp && tomeRotationPlans(tome).length === 1) {
     return t('solver.strategy.rotationTitles.primaryWithRevisit');
   }
@@ -116,6 +125,7 @@ function handleEdit(tome: StoredTome) {
 }
 
 function handlePreviewMacro(tome: StoredTome) {
+  if (!isRegularTome(tome)) return;
   const options: MacroBuildOptions = {
     resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
     formatGatherPrompt: formatMacroGatherPrompt
