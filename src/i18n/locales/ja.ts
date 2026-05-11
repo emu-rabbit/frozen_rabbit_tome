@@ -4,7 +4,13 @@ export default {
     subtitle: '兎肉が教える採集の秘訣',
     description: 'FFXIV 大地使者スキル推奨ツール'
   },
-  common: {},
+  common: {
+    backToSelection: 'アイテム選択に戻る',
+    pending: {
+      collectableDesc: '収集品採集システムは現在開発中です。公開まで今しばらくお待ちください。',
+      crystalDesc: 'クリスタル採集システムは現在開発中です。公開まで今しばらくお待ちください。'
+    }
+  },
   macro: {
     prompts: {
       gatherCount: '{count} 回採集してください',

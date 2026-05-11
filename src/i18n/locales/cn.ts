@@ -4,7 +4,13 @@ export default {
     subtitle: '兔肉不私藏的好秘籍',
     description: 'FFXIV 大地使者技能推荐工具'
   },
-  common: {},
+  common: {
+    backToSelection: '返回物品选择',
+    pending: {
+      collectableDesc: '收藏品采集系统目前尚在开发中，敬请期待。',
+      crystalDesc: '水晶采集系统目前尚在开发中，敬请期待。'
+    }
+  },
   macro: {
     prompts: {
       gatherCount: '请采集 {count} 次',

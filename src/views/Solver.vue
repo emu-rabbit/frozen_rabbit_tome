@@ -12,6 +12,7 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SolverDebugDialog from '../components/SolverDebugDialog.vue';
+import PendingFeature from '../components/PendingFeature.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
@@ -423,23 +424,13 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       </router-link>
     </div>
 
-    <!-- === 收藏品警告 === -->
-    <div v-else-if="activeItem.isCollectable" class="flex flex-col items-center justify-center py-20 text-center">
-      <div class="w-20 h-20 bg-purple-50 dark:bg-purple-900/20 rounded-full flex items-center justify-center mb-6">
-        <i class="pi pi-hammer text-3xl text-purple-500"></i>
-      </div>
-      <h2 class="text-2xl font-bold text-slate-700 dark:text-slate-200 mb-2">{{ displayName }}</h2>
-      <p class="text-purple-600 dark:text-purple-400 font-semibold">{{ t('solver.collectableWarning') }}</p>
-    </div>
-
-    <!-- === 水晶採集系統警告 === -->
-    <div v-else-if="activeItem.isCrystalGathering" class="flex flex-col items-center justify-center py-20 text-center">
-      <div class="w-20 h-20 bg-cyan-50 dark:bg-cyan-900/20 rounded-full flex items-center justify-center mb-6">
-        <i class="pi pi-sparkles text-3xl text-cyan-500"></i>
-      </div>
-      <h2 class="text-2xl font-bold text-slate-700 dark:text-slate-200 mb-2">{{ displayName }}</h2>
-      <p class="text-cyan-600 dark:text-cyan-300 font-semibold">{{ t('solver.crystalGatheringWarning') }}</p>
-    </div>
+    <!-- === 收藏品/水晶採集系統 施工中畫面 === -->
+    <PendingFeature
+      v-else-if="activeItem.isCollectable || activeItem.isCrystalGathering"
+      :title="displayName"
+      :type="activeItem.isCollectable ? 'collectable' : 'crystal'"
+      back-path="/"
+    />
 
     <!-- === 求解器主畫面 === -->
     <div v-else class="space-y-6">

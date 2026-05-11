@@ -4,7 +4,13 @@ export default {
     subtitle: 'Secret gathering tips from the rabbit',
     description: 'FFXIV Gatherer skill recommendation tool'
   },
-  common: {},
+  common: {
+    backToSelection: 'Back to Selection',
+    pending: {
+      collectableDesc: 'The collectable gathering system is currently under development. Stay tuned!',
+      crystalDesc: 'The crystal gathering system is currently under development. Stay tuned!'
+    }
+  },
   macro: {
     prompts: {
       gatherCount: 'Gather {count} time(s)',

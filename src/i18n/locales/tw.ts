@@ -5,7 +5,12 @@ export default {
     description: 'FFXIV 大地使者技能推薦工具'
   },
   common: {
-    getStarted: '立即開始'
+    getStarted: '立即開始',
+    backToSelection: '返回物品選擇',
+    pending: {
+      collectableDesc: '收藏品採集系統目前尚在開發中，敬請期待。',
+      crystalDesc: '水晶採集系統目前尚在開發中，敬請期待。'
+    }
   },
   macro: {
     prompts: {

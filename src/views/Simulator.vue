@@ -11,6 +11,7 @@ import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useSimulator } from '../composables/useSimulator';
+import PendingFeature from '../components/PendingFeature.vue';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
@@ -357,11 +358,13 @@ function progressPercent(range: number[], maxValue: number) {
       <Button :label="t('simulator.goToCreate')" icon="pi pi-search" class="rounded-xl" @click="goCreateExperiment" />
     </div>
 
-    <div v-else-if="activeItem.isCollectable || activeItem.isCrystalGathering" class="empty-state">
-      <div class="empty-icon"><i class="pi pi-hammer"></i></div>
-      <h2>{{ displayName }}</h2>
-      <p>{{ activeItem.isCollectable ? t('simulator.collectablePending') : t('simulator.crystalPending') }}</p>
-    </div>
+    <!-- === 收藏品/水晶採集系統 施工中畫面 === -->
+    <PendingFeature
+      v-else-if="activeItem.isCollectable || activeItem.isCrystalGathering"
+      :title="displayName"
+      :type="activeItem.isCollectable ? 'collectable' : 'crystal'"
+      back-path="/experiment"
+    />
 
     <div v-else class="space-y-6">
       <section class="panel item-panel">
