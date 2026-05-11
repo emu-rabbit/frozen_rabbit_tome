@@ -133,6 +133,7 @@ onActivated(() => {
   } else if (isNewExperiment) {
     // 強制重置模擬台內容
     resetSimulator();
+    activeBlock.value = 'primary';
     savedExperimentId.value = null;
     isSaved.value = false;
     
@@ -298,6 +299,7 @@ function loadExperimentFromRoute() {
   // 3. 設置手法
   primaryRotation.value = experiment.primaryRotation.map(fromStoredRotationStep).filter(Boolean);
   revisitRotation.value = experiment.revisitRotation.map(fromStoredRotationStep).filter(Boolean);
+  activeBlock.value = 'primary';
   
   // 4. 設置分析結果
   if (experiment.analysis && experiment.analysis.total) {
@@ -535,19 +537,43 @@ function analysisChance(chance: number) {
         </div>
 
         <div class="simulate-actions">
-          <Button :label="t('simulator.actions.simulate')" icon="pi pi-play" class="rounded-xl" :disabled="!canRunSimulation" @click="runSimulation" />
-          <Button
-            :label="isSaved ? t('simulator.actions.saved') : t('simulator.actions.save')"
-            :icon="isSaved ? 'pi pi-check' : 'pi pi-save'"
-            class="rounded-xl p-button-outlined"
-            :disabled="!analysis || isSaved"
-            @click="saveCurrentExperiment"
+          <Button 
+            :label="t('simulator.actions.simulate')" 
+            icon="pi pi-play" 
+            class="rounded-xl p-button-lg px-8 font-bold shadow-sm" 
+            :disabled="!canRunSimulation" 
+            @click="runSimulation" 
           />
         </div>
       </section>
 
-      <section v-if="analysis && analysis.total" class="analysis-grid">
-        <article class="panel analysis-card total">
+      <section class="analysis-panel panel mt-8">
+        <div class="simulation-header mb-2">
+          <h2 class="section-title">
+            <div class="icon-wrap bg-soft-green-100 text-soft-green-600 dark:bg-soft-green-900/50 dark:text-soft-green-400">
+              <i class="pi pi-chart-bar text-xl"></i>
+            </div>
+            <span class="flex items-center gap-3">
+              {{ t('simulator.analysis.title') }}
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {{ t('simulator.analysis.subtitle') }}
+              </span>
+            </span>
+          </h2>
+        </div>
+
+        <template v-if="!analysis || !analysis.total">
+          <div class="empty-state p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center text-center bg-white/50 dark:bg-slate-900/50">
+            <i class="pi pi-chart-line text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
+            <p class="text-slate-500 dark:text-slate-400 m-0 font-medium">
+              {{ t('simulator.strategy.empty') }}
+            </p>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="analysis-grid">
+            <article class="analysis-card total p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.analysis.summary') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
@@ -565,7 +591,7 @@ function analysisChance(chance: number) {
           </div>
           <p v-if="analysis.revisitChance > 0" class="note">{{ t('simulator.analysis.revisitNote', { chance: formatChance(analysis.revisitChance * 100) }) }}</p>
         </article>
-        <article v-if="analysis.primary" class="panel analysis-card">
+        <article v-if="analysis.primary && analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.primaryRotationAnalysis') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
@@ -582,7 +608,7 @@ function analysisChance(chance: number) {
             </div>
           </div>
         </article>
-        <article v-if="analysis.revisit" class="panel analysis-card">
+        <article v-if="analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.revisitRotationAnalysis') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
@@ -599,6 +625,19 @@ function analysisChance(chance: number) {
             </div>
           </div>
         </article>
+          </div>
+          
+          <div class="mt-6 flex justify-end border-t border-slate-200 dark:border-slate-800 pt-6">
+            <Button
+              :label="isSaved ? t('simulator.actions.saved') : t('simulator.actions.save')"
+              :icon="isSaved ? 'pi pi-check' : 'pi pi-save'"
+              class="rounded-xl p-button-lg font-bold shadow-sm px-6 transition-all"
+              :class="isSaved ? 'p-button-success' : 'p-button-primary'"
+              :disabled="isSaved"
+              @click="saveCurrentExperiment"
+            />
+          </div>
+        </template>
       </section>
     </div>
   </div>
@@ -636,6 +675,16 @@ function analysisChance(chance: number) {
 .item-heading {
   align-items: center;
 }
+
+.simulate-actions {
+  justify-content: center;
+  padding: 1.5rem 0 0;
+  border-top: 1px dashed #e2e8f0;
+}
+:global(html.dark .simulate-actions) {
+  border-top-color: #334155;
+}
+
 .item-icon-wrap {
   width: 56px;
   height: 56px;

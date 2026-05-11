@@ -97,6 +97,8 @@ export default {
       saved: 'Saved'
     },
     analysis: {
+      title: 'Analysis Report',
+      subtitle: 'Expected outcome based on current rotation and stats',
       summary: 'Summary',
       expectedYield: 'Expected Yield',
       maxYield: 'Maximum Yield',

@@ -97,6 +97,8 @@ export default {
       saved: '保存済み'
     },
     analysis: {
+      title: '分析レポート',
+      subtitle: '設定したスキル回しに基づく期待値',
       summary: '概要',
       expectedYield: '期待獲得数',
       maxYield: '最大獲得数',

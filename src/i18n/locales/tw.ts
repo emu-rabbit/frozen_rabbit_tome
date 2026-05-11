@@ -99,6 +99,8 @@ export default {
       saved: '已儲存'
     },
     analysis: {
+      title: '分析報告',
+      subtitle: '根據設定手法計算之期望結果',
       summary: '總結',
       expectedYield: '期望獲得量',
       maxYield: '最大獲得量',
