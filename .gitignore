@@ -149,3 +149,6 @@ src/**/*.d.ts
 *.js.map
 *.d.ts
 tsconfig.tsbuildinfo
+
+# Claude Code
+.claude/
