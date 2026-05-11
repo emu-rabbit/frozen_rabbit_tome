@@ -49,9 +49,16 @@ function boonScoreFormula() {
   });
 }
 
-function formatProbability(probability: number) {
-  if (probability > 0 && probability < 0.0001) return '<0.0001%';
-  return `${Number(probability.toFixed(4))}%`;
+function formatProbability(probability: number, useSpacePadding = false, includePercent = true) {
+  const percentSuffix = includePercent ? '%' : '';
+  if (probability > 0 && probability < 0.01) {
+    return useSpacePadding ? `< 0.01${percentSuffix}` : `<0.01${percentSuffix}`;
+  }
+  const formatted = probability.toFixed(2);
+  if (useSpacePadding) {
+    return formatted.padStart(6, ' ') + percentSuffix;
+  }
+  return formatted + percentSuffix;
 }
 </script>
 
@@ -147,7 +154,7 @@ function formatProbability(probability: number) {
                       <div class="debug-outcome-track">
                         <div :style="{ width: `${Math.min(100, entry.probability)}%` }"></div>
                       </div>
-                      <span>{{ formatProbability(entry.probability) }}</span>
+                      <span class="probability-text">{{ formatProbability(entry.probability, true) }}</span>
                     </div>
                   </div>
                 </article>
@@ -404,6 +411,10 @@ function formatProbability(probability: number) {
 
 :global(html.dark .debug-outcome-row) {
   color: #cbd5e1;
+}
+.probability-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre;
 }
 
 .debug-outcome-track {

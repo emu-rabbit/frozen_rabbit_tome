@@ -314,9 +314,16 @@ function goCreateExperiment() {
   router.push('/experiment');
 }
 
-function formatChance(chance: number) {
-  if (chance > 0 && chance < 0.01) return '<0.01';
-  return Number(chance.toFixed(2)).toString();
+function formatProbability(chance: number, useSpacePadding = false, includePercent = true) {
+  const percentSuffix = includePercent ? '%' : '';
+  if (chance > 0 && chance < 0.01) {
+    return useSpacePadding ? `< 0.01${percentSuffix}` : `<0.01${percentSuffix}`;
+  }
+  const formatted = chance.toFixed(2);
+  if (useSpacePadding) {
+    return formatted.padStart(6, ' ') + percentSuffix;
+  }
+  return formatted + percentSuffix;
 }
 
 function summarizePreview(states: Array<{ gp: number; integrity: number }>) {
@@ -338,9 +345,7 @@ function progressPercent(range: number[], maxValue: number) {
   return `${Math.min(100, Math.max(0, (highValue / maxValue) * 100))}%`;
 }
 
-function analysisChance(chance: number) {
-  return Number(chance.toFixed(2));
-}
+// Removed analysisChance as it is replaced by formatProbability
 </script>
 
 <template>
@@ -368,7 +373,7 @@ function analysisChance(chance: number) {
           <div class="min-w-0">
             <div class="item-badges">
               <span>{{ t(`game.jobs.${activeItem.jobType}`) }}</span>
-              <span>GLV {{ activeItem.glv }}</span>
+              <span>{{ t('createGuide.glv') }} {{ activeItem.glv }}</span>
               <span>Lv {{ itemRealLevel || '-' }}</span>
             </div>
             <h1>{{ displayName }}</h1>
@@ -574,32 +579,32 @@ function analysisChance(chance: number) {
           <div class="analysis-content">
             <div class="metric-grid">
               <div><span>{{ t('simulator.analysis.expectedYield') }}</span><strong>{{ analysis.total.expectedYield }}</strong></div>
-              <div><span>{{ t('simulator.analysis.maxYield') }}</span><strong>{{ analysis.total.maxYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: analysisChance(analysis.total.maxYieldChance) }) }}</small></div>
-              <div><span>{{ t('simulator.analysis.minYield') }}</span><strong>{{ analysis.total.minYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: analysisChance(analysis.total.minYieldChance) }) }}</small></div>
+              <div><span>{{ t('simulator.analysis.maxYield') }}</span><strong>{{ analysis.total.maxYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.total.maxYieldChance, false, false) }) }}</small></div>
+              <div><span>{{ t('simulator.analysis.minYield') }}</span><strong>{{ analysis.total.minYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.total.minYieldChance, false, false) }) }}</small></div>
             </div>
             <div class="distribution">
               <div v-for="entry in analysis.total.outcomeDistribution" :key="`total-${entry.yield}`" class="bar-row">
                 <span>{{ entry.yield }}</span>
                 <div class="bar-track"><div class="bar-fill" :style="{ width: `${Math.max(2, Math.min(100, entry.probability))}%` }"></div></div>
-                <small>{{ analysisChance(entry.probability) }}%</small>
+                <small class="probability-text">{{ formatProbability(entry.probability, true, true) }}</small>
               </div>
             </div>
           </div>
-          <p v-if="analysis.revisitChance > 0" class="note">{{ t('simulator.analysis.revisitNote', { chance: formatChance(analysis.revisitChance * 100) }) }}</p>
+          <p v-if="analysis.revisitChance > 0" class="note">{{ t('simulator.analysis.revisitNote', { chance: formatProbability(analysis.revisitChance * 100, false, false) }) }}</p>
         </article>
         <article v-if="analysis.primary && analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.primaryRotationAnalysis') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
               <div><span>{{ t('simulator.analysis.expectedYield') }}</span><strong>{{ analysis.primary.expectedYield }}</strong></div>
-              <div><span>{{ t('simulator.analysis.maxYield') }}</span><strong>{{ analysis.primary.maxYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: analysisChance(analysis.primary.maxYieldChance) }) }}</small></div>
-              <div><span>{{ t('simulator.analysis.minYield') }}</span><strong>{{ analysis.primary.minYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: analysisChance(analysis.primary.minYieldChance) }) }}</small></div>
+              <div><span>{{ t('simulator.analysis.maxYield') }}</span><strong>{{ analysis.primary.maxYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.primary.maxYieldChance, false, false) }) }}</small></div>
+              <div><span>{{ t('simulator.analysis.minYield') }}</span><strong>{{ analysis.primary.minYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.primary.minYieldChance, false, false) }) }}</small></div>
             </div>
             <div class="distribution">
               <div v-for="entry in analysis.primary.outcomeDistribution" :key="`primary-${entry.yield}`" class="bar-row">
                 <span>{{ entry.yield }}</span>
                 <div class="bar-track"><div class="bar-fill" :style="{ width: `${Math.max(2, Math.min(100, entry.probability))}%` }"></div></div>
-                <small>{{ analysisChance(entry.probability) }}%</small>
+                <small class="probability-text">{{ formatProbability(entry.probability, true, true) }}</small>
               </div>
             </div>
           </div>
@@ -609,14 +614,14 @@ function analysisChance(chance: number) {
           <div class="analysis-content">
             <div class="metric-grid">
               <div><span>{{ t('simulator.analysis.expectedYield') }}</span><strong>{{ analysis.revisit.expectedYield }}</strong></div>
-              <div><span>{{ t('simulator.analysis.maxYield') }}</span><strong>{{ analysis.revisit.maxYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: analysisChance(analysis.revisit.maxYieldChance) }) }}</small></div>
-              <div><span>{{ t('simulator.analysis.minYield') }}</span><strong>{{ analysis.revisit.minYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: analysisChance(analysis.revisit.minYieldChance) }) }}</small></div>
+              <div><span>{{ t('simulator.analysis.maxYield') }}</span><strong>{{ analysis.revisit.maxYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.revisit.maxYieldChance, false, false) }) }}</small></div>
+              <div><span>{{ t('simulator.analysis.minYield') }}</span><strong>{{ analysis.revisit.minYield }}</strong><small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.revisit.minYieldChance, false, false) }) }}</small></div>
             </div>
             <div class="distribution">
               <div v-for="entry in analysis.revisit.outcomeDistribution" :key="`revisit-${entry.yield}`" class="bar-row">
                 <span>{{ entry.yield }}</span>
                 <div class="bar-track"><div class="bar-fill" :style="{ width: `${Math.max(2, Math.min(100, entry.probability))}%` }"></div></div>
-                <small>{{ analysisChance(entry.probability) }}%</small>
+                <small class="probability-text">{{ formatProbability(entry.probability, true, true) }}</small>
               </div>
             </div>
           </div>
@@ -1168,6 +1173,10 @@ function analysisChance(chance: number) {
   color: #64748b;
   font-size: 0.78rem;
   font-weight: 800;
+}
+.probability-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre;
 }
 .bar-track {
   height: 0.6rem;

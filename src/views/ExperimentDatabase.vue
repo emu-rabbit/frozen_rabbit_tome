@@ -116,9 +116,20 @@ function formatChance(chance: number) {
           <div class="item-info">
             <h3>{{ getItemName(experiment.itemId) }}</h3>
             <div class="item-meta">
-              <span>GLV {{ itemMeta(experiment)?.glv ?? '-' }}</span>
-              <span>{{ itemMeta(experiment)?.jobType ? t(`game.jobs.${itemMeta(experiment)?.jobType}`) : '-' }}</span>
-              <span><i class="pi pi-flask"></i> {{ t('experimentDatabase.regularExperiment') }}</span>
+              <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(experiment)?.glv ?? '-' }}</span>
+              <span class="item-job-badge">{{ itemMeta(experiment)?.jobType ? t(`game.jobs.${itemMeta(experiment)?.jobType}`) : '-' }}</span>
+              <span v-if="itemMeta(experiment)?.isCollectable" class="item-collectable-badge">
+                <i class="pi pi-box"></i>
+                {{ t('createGuide.collectableSystem') }}
+              </span>
+              <span v-else-if="itemMeta(experiment)?.isCrystalGathering" class="item-crystal-badge">
+                <i class="pi pi-sparkles"></i>
+                {{ t('createGuide.crystalGatheringSystem') }}
+              </span>
+              <span v-else class="item-regular-badge">
+                <i class="pi pi-compass"></i>
+                {{ t('createGuide.regularSystem') }}
+              </span>
             </div>
           </div>
         </div>
@@ -321,7 +332,11 @@ function formatChance(chance: number) {
   margin-top: 0.45rem;
   flex-wrap: wrap;
 }
-.item-meta span {
+.item-glv-badge,
+.item-job-badge,
+.item-regular-badge,
+.item-collectable-badge,
+.item-crystal-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -330,13 +345,22 @@ function formatChance(chance: number) {
   font-size: 0.75rem;
   font-weight: 800;
   color: white;
-  background: #52a890;
+  white-space: nowrap;
 }
-.item-meta span:nth-child(2) {
-  background: #64748b;
+.item-glv-badge {
+  background: linear-gradient(135deg, #52a890, #3d8b75);
 }
-.item-meta span:nth-child(3) {
-  background: #2563eb;
+.item-job-badge {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+.item-regular-badge {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+.item-collectable-badge {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+.item-crystal-badge {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
 }
 .summary-info-strip {
   display: flex;

@@ -326,10 +326,16 @@ function formatMetricValue(metric: YieldMetric) {
   return metric.key === 'expected' ? Number(metric.value.toFixed(2)) : metric.value;
 }
 
-function formatChance(chance: number) {
-  if (chance > 0 && chance < 0.01) return '<0.01';
-
-  return Number(chance.toFixed(2)).toString();
+function formatChance(chance: number, useSpacePadding = false, includePercent = false) {
+  const percentSuffix = includePercent ? '%' : '';
+  if (chance > 0 && chance < 0.01) {
+    return useSpacePadding ? `< 0.01${percentSuffix}` : `<0.01${percentSuffix}`;
+  }
+  const formatted = chance.toFixed(2);
+  if (useSpacePadding) {
+    return formatted.padStart(6, ' ') + percentSuffix;
+  }
+  return formatted + percentSuffix;
 }
 
 function formatMacroGatherPrompt(context: {
@@ -450,7 +456,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 {{ t(`game.jobs.${activeItem.jobType}`) }}
               </span>
               <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
-                GLV {{ activeItem.glv }}
+                {{ t('createGuide.glv') }} {{ activeItem.glv }}
               </span>
               <span v-if="itemRealLevel > 0" class="text-xs font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
                 Lv {{ itemRealLevel }}
@@ -469,7 +475,6 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           </div>
         </div>
       </div>
-
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
         <!-- 數值調整區 -->
         <div class="md:col-span-2">

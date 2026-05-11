@@ -211,7 +211,15 @@ function copyMacroIcon() {
             <div class="item-meta">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(tome)?.glv ?? '-' }}</span>
               <span class="item-job-badge">{{ itemMeta(tome)?.jobType ? t(`game.jobs.${itemMeta(tome)?.jobType}`) : '-' }}</span>
-              <span class="item-regular-badge">
+              <span v-if="itemMeta(tome)?.isCollectable" class="item-collectable-badge">
+                <i class="pi pi-box"></i>
+                {{ t('createGuide.collectableSystem') }}
+              </span>
+              <span v-else-if="itemMeta(tome)?.isCrystalGathering" class="item-crystal-badge">
+                <i class="pi pi-sparkles"></i>
+                {{ t('createGuide.crystalGatheringSystem') }}
+              </span>
+              <span v-else class="item-regular-badge">
                 <i class="pi pi-compass"></i>
                 {{ t('createGuide.regularSystem') }}
               </span>
@@ -431,7 +439,9 @@ function copyMacroIcon() {
 
 .item-glv-badge,
 .item-job-badge,
-.item-regular-badge {
+.item-regular-badge,
+.item-collectable-badge,
+.item-crystal-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -446,13 +456,17 @@ function copyMacroIcon() {
 .item-glv-badge {
   background: linear-gradient(135deg, #52a890, #3d8b75);
 }
-
 .item-job-badge {
   background: linear-gradient(135deg, #64748b, #475569);
 }
-
 .item-regular-badge {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+.item-collectable-badge {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+.item-crystal-badge {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
 }
 
 .summary-grid {
