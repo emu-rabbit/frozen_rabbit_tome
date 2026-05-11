@@ -64,6 +64,85 @@ export default {
     description: 'ここでアイテムを検索・選択し、シミュレーターに入って実験と分析を行います。',
     dataScope: '採掘師と園芸師の採集アイテムのみを表示します。'
   },
+  simulator: {
+    noItemTitle: '実験アイテム未選択',
+    noItemDesc: '先に実験を作成し、通常採集アイテムを選択してください。',
+    goToCreate: '実験作成へ',
+    collectablePending: '収集品採集システムは後で実装予定です。',
+    crystalPending: 'クリスタル採集システムは後で実装予定です。',
+    statsTitle: '実験数値',
+    perceptionWarning: '技術力が不足しているため、このアイテムは採集できません。',
+    integrity: '耐久',
+    tabsLabel: '採集手順タブ',
+    clearRotation: '{name}をクリア',
+    rotationSimulation: '指定手順のシミュレーション',
+    copyPrimaryRotation: '通常手順をコピー',
+    primaryGathering: '通常採集',
+    revisitGathering: '再発見後の採集',
+    emptyPrimaryRotation: '下のスキルを押して手順を作成します。',
+    emptyRevisitRotation: '耐久が 0 になった後、再発見発動時の 2 つ目の手順を作成できます。',
+    removeFromHere: 'このスキル以降を削除',
+    rotationIssueTitle: 'この手順には使用できないスキルがあります',
+    rotationIssueDesc: '赤く表示されたスキルを確認してください。現在の数値ではレベル、GP、耐久、または前提条件が満たされていません。',
+    primaryRotationAnalysis: '通常採集手順',
+    revisitRotationAnalysis: '再発見後の手順',
+    rates: {
+      success: '採集成功率',
+      boon: 'ボーナス発生率',
+      currentGp: '現在 GP'
+    },
+    actions: {
+      simulate: '両方をシミュレート',
+      save: '実験を保存',
+      saved: '保存済み'
+    },
+    analysis: {
+      summary: '概要',
+      expectedYield: '期待獲得数',
+      maxYield: '最大獲得数',
+      minYield: '最小獲得数',
+      chance: '確率 {chance}%',
+      revisitNote: '再発見 {chance}% の確率を含みます。'
+    },
+    actionCategories: {
+      gather: '採集アクション',
+      success: '獲得率アップ',
+      boon: 'ボーナス発生率アップ',
+      nextSuccess: '次回獲得率アップ',
+      nextYield: '次回獲得数アップ',
+      restore: '耐久回復',
+      wholeYield: '採集場所全体の獲得数アップ',
+      boonYield: 'ボーナス獲得数アップ'
+    }
+  },
+  experimentDatabase: {
+    title: '実験データベース',
+    subtitle: '保存した通常採集実験を管理し、シミュレーターへ読み戻して再分析できます。',
+    searchPlaceholder: '実験のアイテム名を検索',
+    emptyTitle: '実験データベースはまだ空です',
+    emptyDesc: 'シミュレーターで分析したあと、「実験を保存」を押すとここに保存されます。',
+    emptySearchTitle: '一致する実験がありません',
+    emptySearchDesc: '現在の表示言語名、または英語名で検索してみてください。',
+    unknownDate: '不明な時刻',
+    regularExperiment: '通常採集実験',
+    countValue: '{count} 個',
+    updatedAt: '更新日時 {time}',
+    rows: {
+      playerStats: 'プレイヤー数値',
+      gpState: 'GP 状態',
+      nodeBonuses: '採集ポイントボーナス',
+      totalExpected: '合計期待値',
+      maxMin: '最大 / 最小'
+    },
+    rotations: {
+      primary: '通常採集',
+      revisit: '再発見後の採集'
+    },
+    actions: {
+      edit: '編集',
+      delete: '実験を削除'
+    }
+  },
   settings: {
     title: '秘伝書の設定',
     description: '秘伝書の各種設定を調整します',

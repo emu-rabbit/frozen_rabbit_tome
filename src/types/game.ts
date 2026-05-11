@@ -257,3 +257,37 @@ export interface StoredTome {
   objectiveMode?: SolverObjectiveMode;
   createdAt: string;
 }
+
+export interface SimulationRotationAnalysis {
+  kind: SolverRotationPlanKind | 'total';
+  rotation: string[];
+  expectedYield: number;
+  minYield: number;
+  maxYield: number;
+  minYieldChance: number;
+  maxYieldChance: number;
+  outcomeDistribution: SolverOutcomeDebugEntry[];
+  finalIntegrityRange: [number, number];
+  finalGpRange: [number, number];
+}
+
+export interface SimulationResponse {
+  primary: SimulationRotationAnalysis;
+  revisit?: SimulationRotationAnalysis;
+  total: SimulationRotationAnalysis;
+  revisitChance: number;
+}
+
+export interface StoredExperiment {
+  id: string;
+  itemId: number;
+  stats: PlayerStats;
+  temporaryGp: number;
+  food: FoodSelection;
+  nodeBonuses: StoredTomeNodeBonuses;
+  primaryRotation: StoredTomeRotationStep[];
+  revisitRotation: StoredTomeRotationStep[];
+  analysis: SimulationResponse;
+  createdAt: string;
+  updatedAt: string;
+}

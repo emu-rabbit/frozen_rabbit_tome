@@ -66,6 +66,85 @@ export default {
     description: '在這裡搜尋並選擇物品，以進入模擬台進行實驗與分析。',
     dataScope: '僅顯示「採掘師」與「園藝師」可採集的物品'
   },
+  simulator: {
+    noItemTitle: '尚未選擇實驗物品',
+    noItemDesc: '請先建立實驗並選擇一個一般採集物品。',
+    goToCreate: '前往創建實驗',
+    collectablePending: '收藏品採集系統之後才動工。',
+    crystalPending: '水晶採集系統之後才動工。',
+    statsTitle: '實驗數值',
+    perceptionWarning: '鑑別力不達標，無法採集此物品。',
+    integrity: '耐久',
+    tabsLabel: '採集手法分頁',
+    clearRotation: '清空{name}',
+    rotationSimulation: '指定手法模擬',
+    copyPrimaryRotation: '複製一般手法',
+    primaryGathering: '一般採集',
+    revisitGathering: '再起後採集',
+    emptyPrimaryRotation: '點下方技能開始建立手法。',
+    emptyRevisitRotation: '耐久歸零後可建立再起發動時的第二段手法。',
+    removeFromHere: '移除此技能與後方技能',
+    rotationIssueTitle: '手法串目前有無法施展的技能',
+    rotationIssueDesc: '請檢查被標紅的技能，可能是等級、GP、耐久或前置條件在目前數值下不成立。',
+    primaryRotationAnalysis: '一般採集手法',
+    revisitRotationAnalysis: '再起後手法',
+    rates: {
+      success: '採集成功率',
+      boon: '額外採集率',
+      currentGp: '目前 GP'
+    },
+    actions: {
+      simulate: '同時模擬',
+      save: '儲存實驗',
+      saved: '已儲存'
+    },
+    analysis: {
+      summary: '總結',
+      expectedYield: '期望獲得量',
+      maxYield: '最大獲得量',
+      minYield: '最小獲得量',
+      chance: '機率 {chance}%',
+      revisitNote: '已納入再起 {chance}% 機率。'
+    },
+    actionCategories: {
+      gather: '採集動作',
+      success: '獲得率提高',
+      boon: '額外採集率提高',
+      nextSuccess: '下一次獲得率提高',
+      nextYield: '下一次獲得量提高',
+      restore: '恢復耐久',
+      wholeYield: '整點獲得量提高',
+      boonYield: '額外採集獲得數提高'
+    }
+  },
+  experimentDatabase: {
+    title: '實驗資料庫',
+    subtitle: '管理已儲存的一般採集實驗，之後可以載回模擬台重新分析。',
+    searchPlaceholder: '搜尋實驗中的物品名稱',
+    emptyTitle: '實驗資料庫目前是空的',
+    emptyDesc: '在模擬台完成分析後，按下「儲存實驗」就會收進這裡。',
+    emptySearchTitle: '找不到相符的實驗',
+    emptySearchDesc: '可以改用當前語系名稱或英文名稱搜尋看看。',
+    unknownDate: '未知時間',
+    regularExperiment: '一般採集實驗',
+    countValue: '{count} 個',
+    updatedAt: '更新於 {time}',
+    rows: {
+      playerStats: '玩家數值',
+      gpState: 'GP 狀態',
+      nodeBonuses: '節點獎勵',
+      totalExpected: '總期望',
+      maxMin: '最大 / 最小'
+    },
+    rotations: {
+      primary: '一般採集',
+      revisit: '再起後採集'
+    },
+    actions: {
+      edit: '編輯',
+      delete: '刪除實驗'
+    }
+  },
   settings: {
     title: '秘笈設定',
     description: '調整秘笈的各項偏好設定',

@@ -64,6 +64,85 @@ export default {
     description: 'Search and select an item here to enter the simulator for experiments and analysis.',
     dataScope: 'Only Miner & Botanist items are shown.'
   },
+  simulator: {
+    noItemTitle: 'No Experiment Item Selected',
+    noItemDesc: 'Create an experiment and select a regular gathering item first.',
+    goToCreate: 'Go to Create Experiment',
+    collectablePending: 'The collectable gathering system will be built later.',
+    crystalPending: 'The crystal gathering system will be built later.',
+    statsTitle: 'Experiment Values',
+    perceptionWarning: 'Perception is below the requirement, so this item cannot be gathered.',
+    integrity: 'Integrity',
+    tabsLabel: 'Gathering rotation tabs',
+    clearRotation: 'Clear {name}',
+    rotationSimulation: 'Simulate Custom Rotation',
+    copyPrimaryRotation: 'Copy Primary Rotation',
+    primaryGathering: 'Primary Gathering',
+    revisitGathering: 'After Revisit',
+    emptyPrimaryRotation: 'Click skills below to build a rotation.',
+    emptyRevisitRotation: 'After durability reaches zero, build the second rotation for Revisit.',
+    removeFromHere: 'Remove this skill and everything after it',
+    rotationIssueTitle: 'This rotation has a skill that cannot be used',
+    rotationIssueDesc: 'Check the red-highlighted skill. Its level, GP, durability, or prerequisite condition is not valid with the current values.',
+    primaryRotationAnalysis: 'Primary Rotation',
+    revisitRotationAnalysis: 'After-Revisit Rotation',
+    rates: {
+      success: 'Gathering Rate',
+      boon: 'Boon Rate',
+      currentGp: 'Current GP'
+    },
+    actions: {
+      simulate: 'Simulate Both',
+      save: 'Save Experiment',
+      saved: 'Saved'
+    },
+    analysis: {
+      summary: 'Summary',
+      expectedYield: 'Expected Yield',
+      maxYield: 'Maximum Yield',
+      minYield: 'Minimum Yield',
+      chance: '{chance}% chance',
+      revisitNote: 'Includes {chance}% Revisit chance.'
+    },
+    actionCategories: {
+      gather: 'Gathering Action',
+      success: 'Gathering Rate Buffs',
+      boon: 'Boon Rate Buffs',
+      nextSuccess: 'Next Gather Rate Buffs',
+      nextYield: 'Next Gather Yield Buffs',
+      restore: 'Durability Recovery',
+      wholeYield: 'Whole Node Yield Buffs',
+      boonYield: 'Boon Yield Buffs'
+    }
+  },
+  experimentDatabase: {
+    title: 'Experiment Database',
+    subtitle: 'Manage saved regular gathering experiments and load them back into the simulator for analysis.',
+    searchPlaceholder: 'Search experiment item names',
+    emptyTitle: 'Your experiment database is empty',
+    emptyDesc: 'After analyzing a setup in the simulator, press "Save Experiment" to keep it here.',
+    emptySearchTitle: 'No matching experiments',
+    emptySearchDesc: 'Try searching by the current language name or the English item name.',
+    unknownDate: 'Unknown time',
+    regularExperiment: 'Regular gathering experiment',
+    countValue: '{count} item(s)',
+    updatedAt: 'Updated {time}',
+    rows: {
+      playerStats: 'Player Stats',
+      gpState: 'GP State',
+      nodeBonuses: 'Node Bonuses',
+      totalExpected: 'Total Expected',
+      maxMin: 'Max / Min'
+    },
+    rotations: {
+      primary: 'Primary Gathering',
+      revisit: 'After Revisit'
+    },
+    actions: {
+      edit: 'Edit',
+      delete: 'Delete Experiment'
+    }
+  },
   settings: {
     title: 'Tome Settings',
     description: 'Adjust your tome preferences',

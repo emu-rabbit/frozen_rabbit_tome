@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
+import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 
 const route = useRoute();
 const version = '0.1.0';
 const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tome';
 const { tomeCount } = useTomeLibrary();
+const { experimentCount } = useExperimentLibrary();
 
 defineEmits(['close-mobile', 'open-sponsor']);
 </script>
@@ -67,6 +69,7 @@ defineEmits(['close-mobile', 'open-sponsor']);
       >
         <i class="pi pi-database shrink-0"></i>
         <span class="leading-tight flex-1">{{ $t('nav.experimentDatabase') }}</span>
+        <span class="ml-2 bg-soft-green-200 dark:bg-soft-green-900 text-soft-green-800 dark:text-soft-green-300 text-xs px-2 py-0.5 rounded-full shrink-0">{{ experimentCount }}</span>
       </router-link>
 
       <router-link

@@ -1,15 +1,451 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+defineOptions({ name: 'ExperimentDatabase' });
 
-const { t } = useI18n();
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import Button from 'primevue/button';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import InputText from 'primevue/inputtext';
+import { useExperimentLibrary } from '../composables/useExperimentLibrary';
+import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
+import { getRotationActionIconById } from '../services/actionIcons';
+import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
+
+const { t, locale } = useI18n();
+const router = useRouter();
+const { experiments, deleteExperiment } = useExperimentLibrary();
+const searchQuery = ref('');
+
+const filteredExperiments = computed(() => {
+  currentLanguage.value;
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return experiments.value;
+
+  return experiments.value.filter((experiment) => {
+    const localizedName = getItemName(experiment.itemId).toLowerCase();
+    const englishName = getItemEnglishName(experiment.itemId).toLowerCase();
+    return localizedName.includes(query) || englishName.includes(query);
+  });
+});
+
+function itemMeta(experiment: StoredExperiment) {
+  return getGatherableItemById(experiment.itemId);
+}
+
+function formatCreatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return t('experimentDatabase.unknownDate');
+
+  return new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function formatStats(experiment: StoredExperiment) {
+  return `${experiment.stats.level}/${experiment.stats.gathering}/${experiment.stats.perception}`;
+}
+
+function formatGp(experiment: StoredExperiment) {
+  return `${experiment.temporaryGp}/${experiment.stats.gp}`;
+}
+
+function formatNodeBonuses(experiment: StoredExperiment) {
+  return `${experiment.nodeBonuses.gatheringCount}/${experiment.nodeBonuses.yieldCount}/${experiment.nodeBonuses.extraRate}`;
+}
+
+function rotationIcon(experiment: StoredExperiment, step: StoredTomeRotationStep) {
+  if (step.type === 'gather') return getItemIcon(experiment.itemId);
+  return getRotationActionIconById(step.actionId);
+}
+
+function handleEdit(experiment: StoredExperiment) {
+  router.push({ path: '/simulator', query: { experiment: experiment.id } });
+}
 </script>
 
 <template>
-  <div class="experiment-database-page p-6">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-soft-green-100 dark:border-slate-800 text-center">
-      <div class="text-4xl mb-4">🚧</div>
-      <h2 class="text-2xl font-bold text-soft-green-800 dark:text-soft-green-400 mb-2">實驗數據庫</h2>
-      <p class="text-slate-500 dark:text-slate-400">系統施工中，敬請期待...</p>
+  <div class="experiment-database-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title text-soft-green-800 dark:text-soft-green-400">{{ t('experimentDatabase.title') }}</h2>
+        <p class="page-subtitle text-slate-500 dark:text-slate-400">{{ t('experimentDatabase.subtitle') }}</p>
+      </div>
+
+      <IconField class="search-field">
+        <InputIcon><i class="pi pi-search search-icon"></i></InputIcon>
+        <InputText v-model="searchQuery" :placeholder="t('experimentDatabase.searchPlaceholder')" class="search-input" autocomplete="off" />
+        <InputIcon v-if="searchQuery" style="cursor:pointer" @click="searchQuery = ''">
+          <i class="pi pi-times clear-icon"></i>
+        </InputIcon>
+      </IconField>
+    </header>
+
+    <div v-if="filteredExperiments.length === 0" class="empty-state">
+      <div class="empty-icon"><i class="pi pi-database"></i></div>
+      <h3>{{ searchQuery ? t('experimentDatabase.emptySearchTitle') : t('experimentDatabase.emptyTitle') }}</h3>
+      <p>{{ searchQuery ? t('experimentDatabase.emptySearchDesc') : t('experimentDatabase.emptyDesc') }}</p>
+    </div>
+
+    <div v-else class="experiment-list">
+      <article v-for="experiment in filteredExperiments" :key="experiment.id" class="experiment-card">
+        <div class="item-section">
+          <div class="item-icon-wrap">
+            <img v-if="getItemIcon(experiment.itemId)" :src="getItemIcon(experiment.itemId)" :alt="getItemName(experiment.itemId)" class="item-icon" loading="lazy" />
+            <i v-else class="pi pi-box text-slate-400"></i>
+          </div>
+          <div class="item-info">
+            <h3>{{ getItemName(experiment.itemId) }}</h3>
+            <div class="item-meta">
+              <span>GLV {{ itemMeta(experiment)?.glv ?? '-' }}</span>
+              <span>{{ itemMeta(experiment)?.jobType ? t(`game.jobs.${itemMeta(experiment)?.jobType}`) : '-' }}</span>
+              <span><i class="pi pi-flask"></i> {{ t('experimentDatabase.regularExperiment') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div><span>{{ t('experimentDatabase.rows.playerStats') }}</span><strong>{{ formatStats(experiment) }}</strong></div>
+          <div><span>{{ t('experimentDatabase.rows.gpState') }}</span><strong>{{ formatGp(experiment) }}</strong></div>
+          <div><span>{{ t('experimentDatabase.rows.nodeBonuses') }}</span><strong>{{ formatNodeBonuses(experiment) }}</strong></div>
+          <div><span>{{ t('experimentDatabase.rows.totalExpected') }}</span><strong>{{ t('experimentDatabase.countValue', { count: experiment.analysis.total.expectedYield }) }}</strong></div>
+          <div><span>{{ t('experimentDatabase.rows.maxMin') }}</span><strong>{{ experiment.analysis.total.maxYield }} / {{ experiment.analysis.total.minYield }}</strong></div>
+        </div>
+
+        <div class="rotation-preview-list">
+          <div class="rotation-strip">
+            <h4>{{ t('experimentDatabase.rotations.primary') }}</h4>
+            <div class="rotation-icons">
+              <template v-for="(step, index) in experiment.primaryRotation" :key="`p-${experiment.id}-${index}`">
+                <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'">
+                  <img v-if="rotationIcon(experiment, step)" :src="rotationIcon(experiment, step)" class="rotation-icon" alt="" />
+                  <i v-else class="pi pi-sparkles text-xs"></i>
+                </span>
+                <i v-if="index < experiment.primaryRotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
+              </template>
+            </div>
+          </div>
+          <div v-if="experiment.revisitRotation.length" class="rotation-strip">
+            <h4>{{ t('experimentDatabase.rotations.revisit') }}</h4>
+            <div class="rotation-icons">
+              <template v-for="(step, index) in experiment.revisitRotation" :key="`r-${experiment.id}-${index}`">
+                <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-revisit'">
+                  <img v-if="rotationIcon(experiment, step)" :src="rotationIcon(experiment, step)" class="rotation-icon" alt="" />
+                  <i v-else class="pi pi-sparkles text-xs"></i>
+                </span>
+                <i v-if="index < experiment.revisitRotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span>{{ t('experimentDatabase.updatedAt', { time: formatCreatedAt(experiment.updatedAt) }) }}</span>
+          <div class="action-bar">
+            <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
+            <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
+          </div>
+        </div>
+      </article>
     </div>
   </div>
 </template>
+
+<style scoped>
+.experiment-database-page {
+  padding: 2rem 1.5rem;
+  max-width: 980px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: pageIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.page-header {
+  display: grid;
+  gap: 1rem;
+}
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 0.35rem;
+  line-height: 1.2;
+}
+.page-subtitle {
+  font-size: 0.9rem;
+  margin: 0;
+}
+.search-field {
+  width: 100%;
+}
+.search-icon,
+.clear-icon {
+  color: #94a3b8;
+}
+:deep(.search-input) {
+  width: 100% !important;
+  padding: 1rem 3rem !important;
+  border-radius: 16px !important;
+  background: white !important;
+  border: 1.5px solid #e2e8f0 !important;
+  font-size: 1rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s !important;
+}
+:global(.dark .search-input) {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+:deep(.search-input:focus) {
+  border-color: #52a890 !important;
+  box-shadow: 0 0 0 4px rgba(82, 168, 144, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+.experiment-list {
+  display: grid;
+  gap: 1rem;
+}
+.experiment-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+:global(html.dark .experiment-card) {
+  background: #0f172a;
+  border-color: #334155;
+}
+.item-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+.item-icon-wrap {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+:global(html.dark .item-icon-wrap) {
+  background: #1e293b;
+}
+.item-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.item-info {
+  min-width: 0;
+}
+.item-info h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.05rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+:global(html.dark .item-info h3) {
+  color: #f8fafc;
+}
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+  flex-wrap: wrap;
+}
+.item-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: white;
+  background: #52a890;
+}
+.item-meta span:nth-child(2) {
+  background: #64748b;
+}
+.item-meta span:nth-child(3) {
+  background: #2563eb;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+.summary-grid div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+:global(html.dark .summary-grid div) {
+  background: rgb(30 41 59 / 0.55);
+  color: #94a3b8;
+}
+.summary-grid strong {
+  min-width: 0;
+  color: #334155;
+  font-weight: 800;
+  text-align: right;
+}
+:global(html.dark .summary-grid strong) {
+  color: #e2e8f0;
+}
+.rotation-preview-list {
+  display: grid;
+  gap: 0.6rem;
+}
+.rotation-strip {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.85rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+:global(html.dark .rotation-strip) {
+  background: rgb(15 23 42 / 0.6);
+  border-color: #1e293b;
+}
+.rotation-strip h4 {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.rotation-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.rotation-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rotation-action {
+  background: #52a890;
+}
+.rotation-revisit {
+  background: #2563eb;
+}
+.rotation-gather {
+  background: #e2e8f0;
+}
+:global(html.dark .rotation-gather) {
+  background: #1e293b;
+}
+.rotation-arrow {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+.rotation-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+.card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.9rem;
+}
+:global(html.dark .card-footer) {
+  border-color: #1e293b;
+}
+.card-footer > span {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: #94a3b8;
+  text-align: center;
+}
+.empty-state h3,
+.empty-state p {
+  margin: 0;
+}
+.empty-state h3 {
+  color: #475569;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+:global(html.dark .empty-state h3) {
+  color: #cbd5e1;
+}
+.empty-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: rgba(82, 168, 144, 0.1);
+  color: #52a890;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+@media (min-width: 640px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 768px) {
+  .experiment-database-page {
+    padding: 2.5rem 2rem;
+  }
+  .card-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

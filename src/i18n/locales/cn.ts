@@ -64,6 +64,85 @@ export default {
     description: '在这里搜索并选择物品，以进入模拟台进行实验与分析。',
     dataScope: '仅显示「采矿工」与「园艺工」可采集的物品'
   },
+  simulator: {
+    noItemTitle: '尚未选择实验物品',
+    noItemDesc: '请先建立实验并选择一个一般采集物品。',
+    goToCreate: '前往创建实验',
+    collectablePending: '收藏品采集系统之后才动工。',
+    crystalPending: '水晶采集系统之后才动工。',
+    statsTitle: '实验数值',
+    perceptionWarning: '鉴别力不达标，无法采集此物品。',
+    integrity: '耐久',
+    tabsLabel: '采集手法分页',
+    clearRotation: '清空{name}',
+    rotationSimulation: '指定手法模拟',
+    copyPrimaryRotation: '复制一般手法',
+    primaryGathering: '一般采集',
+    revisitGathering: '再起后采集',
+    emptyPrimaryRotation: '点下方技能开始建立手法。',
+    emptyRevisitRotation: '耐久归零后可建立再起触发时的第二段手法。',
+    removeFromHere: '移除此技能与后方技能',
+    rotationIssueTitle: '手法串目前有无法施展的技能',
+    rotationIssueDesc: '请检查被标红的技能，可能是等级、GP、耐久或前置条件在目前数值下不成立。',
+    primaryRotationAnalysis: '一般采集手法',
+    revisitRotationAnalysis: '再起后手法',
+    rates: {
+      success: '采集成功率',
+      boon: '额外采集率',
+      currentGp: '目前 GP'
+    },
+    actions: {
+      simulate: '同时模拟',
+      save: '保存实验',
+      saved: '已保存'
+    },
+    analysis: {
+      summary: '总结',
+      expectedYield: '期望获得量',
+      maxYield: '最大获得量',
+      minYield: '最小获得量',
+      chance: '概率 {chance}%',
+      revisitNote: '已纳入再起 {chance}% 概率。'
+    },
+    actionCategories: {
+      gather: '采集动作',
+      success: '获得率提高',
+      boon: '额外采集率提高',
+      nextSuccess: '下一次获得率提高',
+      nextYield: '下一次获得量提高',
+      restore: '恢复耐久',
+      wholeYield: '整点获得量提高',
+      boonYield: '额外采集获得数提高'
+    }
+  },
+  experimentDatabase: {
+    title: '实验数据库',
+    subtitle: '管理已保存的一般采集实验，之后可以载回模拟台重新分析。',
+    searchPlaceholder: '搜索实验中的物品名称',
+    emptyTitle: '实验数据库目前是空的',
+    emptyDesc: '在模拟台完成分析后，按下“保存实验”就会收进这里。',
+    emptySearchTitle: '找不到相符的实验',
+    emptySearchDesc: '可以改用当前语言名称或英文名称搜索看看。',
+    unknownDate: '未知时间',
+    regularExperiment: '一般采集实验',
+    countValue: '{count} 个',
+    updatedAt: '更新于 {time}',
+    rows: {
+      playerStats: '玩家数值',
+      gpState: 'GP 状态',
+      nodeBonuses: '节点奖励',
+      totalExpected: '总期望',
+      maxMin: '最大 / 最小'
+    },
+    rotations: {
+      primary: '一般采集',
+      revisit: '再起后采集'
+    },
+    actions: {
+      edit: '编辑',
+      delete: '删除实验'
+    }
+  },
   settings: {
     title: '秘籍设定',
     description: '调整秘籍的各项偏好设定',
