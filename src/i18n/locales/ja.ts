@@ -136,7 +136,7 @@ export default {
     unknownDate: '不明な時刻',
     regularExperiment: '通常採集実験',
     countValue: '{count} 個',
-    updatedAt: '更新日時 {time}',
+    createdAt: '作成日時 {time}',
     rows: {
       playerStats: 'プレイヤー数値',
       gpState: 'GP 状態',

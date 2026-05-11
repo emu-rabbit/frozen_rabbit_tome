@@ -18,6 +18,9 @@ const { t, locale } = useI18n();
 const router = useRouter();
 const { experiments, deleteExperiment, searchQuery } = useExperimentLibrary();
 
+const copiedExperimentId = ref<string | null>(null);
+let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
+
 const filteredExperiments = computed(() => {
   currentLanguage.value;
   const query = searchQuery.value.trim().toLowerCase();
@@ -80,6 +83,30 @@ function foodInfo(experiment: StoredExperiment) {
 function formatChance(chance: number) {
   if (chance > 0 && chance < 0.01) return '<0.01';
   return Number(chance.toFixed(2)).toString();
+}
+
+async function copyReportFromDb(experiment: StoredExperiment) {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(experiment, null, 2));
+    copiedExperimentId.value = experiment.id;
+    if (copyTimer) window.clearTimeout(copyTimer);
+    copyTimer = window.setTimeout(() => {
+      if (copiedExperimentId.value === experiment.id) {
+        copiedExperimentId.value = null;
+      }
+      copyTimer = null;
+    }, 1600);
+  } catch (error) {
+    console.error('Failed to copy report:', error);
+  }
+}
+
+function copyReportIcon(experiment: StoredExperiment) {
+  return copiedExperimentId.value === experiment.id ? 'pi pi-check' : 'pi pi-file-edit';
+}
+
+function copyReportLabel(experiment: StoredExperiment) {
+  return copiedExperimentId.value === experiment.id ? t('experimentDatabase.actions.copied') : t('experimentDatabase.actions.copyReport');
 }
 </script>
 
@@ -207,9 +234,10 @@ function formatChance(chance: number) {
         </div>
 
         <div class="card-footer">
-          <span>{{ t('experimentDatabase.updatedAt', { time: formatCreatedAt(experiment.updatedAt) }) }}</span>
+          <span>{{ t('experimentDatabase.createdAt', { time: formatCreatedAt(experiment.createdAt) }) }}</span>
           <div class="action-bar">
             <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
+            <Button :icon="copyReportIcon(experiment)" :label="copyReportLabel(experiment)" class="p-button-sm p-button-text library-action" @click="copyReportFromDb(experiment)" />
             <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
           </div>
         </div>

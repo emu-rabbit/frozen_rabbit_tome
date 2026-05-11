@@ -136,7 +136,7 @@ export default {
     unknownDate: '未知时间',
     regularExperiment: '一般采集实验',
     countValue: '{count} 个',
-    updatedAt: '更新于 {time}',
+    createdAt: '建立于 {time}',
     rows: {
       playerStats: '玩家数值',
       gpState: 'GP 状态',

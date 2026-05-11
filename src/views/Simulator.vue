@@ -54,8 +54,10 @@ const { primaryRotation, revisitRotation, simulatorAnalysis: analysis, reset: re
 const activeBlock = ref<'primary' | 'revisit'>('primary');
 const savedExperimentId = ref<string | null>(null);
 const isSaved = ref(false);
+const isReportCopied = ref(false);
 const foodSuggestions = ref<FoodOption[]>([]);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
+let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 const actionCategoryOrder = ['gather', 'success', 'boon', 'nextSuccess', 'nextYield', 'restore', 'wholeYield', 'boonYield'] as const;
 
 const actionOptions = computed(() => activeItem.value?.jobType ? getSimulatorActions(activeItem.value.jobType) : []);
@@ -256,7 +258,6 @@ function searchFoods(event: { query: string }) {
 function saveCurrentExperiment() {
   if (!activeItem.value || !analysis.value) return;
   const saved = saveExperiment({
-    existingId: savedExperimentId.value,
     itemId: activeItem.value.itemId,
     stats: { ...solverStats.value },
     temporaryGp: temporaryGp.value,
@@ -273,6 +274,32 @@ function saveCurrentExperiment() {
     isSaved.value = false;
     saveTimer = null;
   }, 1600);
+}
+
+async function copyReport() {
+  if (!activeItem.value || !analysis.value) return;
+  const report = {
+    itemId: activeItem.value.itemId,
+    stats: { ...solverStats.value },
+    temporaryGp: temporaryGp.value,
+    food: { ...selectedFood.value },
+    nodeBonuses: { ...nodeBonuses.value },
+    primaryRotation: primaryRotation.value,
+    revisitRotation: revisitRotation.value,
+    analysis: analysis.value
+  };
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    isReportCopied.value = true;
+    if (copyTimer) window.clearTimeout(copyTimer);
+    copyTimer = window.setTimeout(() => {
+      isReportCopied.value = false;
+      copyTimer = null;
+    }, 1600);
+  } catch (error) {
+    console.error('Failed to copy report:', error);
+  }
 }
 
 function loadExperimentFromRoute() {
@@ -633,12 +660,14 @@ function progressPercent(range: number[], maxValue: number) {
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
             <Button
-              class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl"
+              class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
+              :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isReportCopied }"
               :aria-label="t('simulator.actions.copyReport')"
-              disabled
+              :disabled="!analysis || !analysis.total"
+              @click="copyReport"
             >
-              <i class="pi pi-file-edit"></i>
-              <span>{{ t('simulator.actions.copyReport') }}</span>
+              <i :class="isReportCopied ? 'pi pi-check' : 'pi pi-file-edit'"></i>
+              <span>{{ isReportCopied ? t('simulator.actions.copied') : t('simulator.actions.copyReport') }}</span>
             </Button>
             <Button
               class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"

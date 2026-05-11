@@ -136,7 +136,7 @@ export default {
     unknownDate: 'Unknown time',
     regularExperiment: 'Regular gathering experiment',
     countValue: '{count} item(s)',
-    updatedAt: 'Updated {time}',
+    createdAt: 'Created at {time}',
     rows: {
       playerStats: 'Player Stats',
       gpState: 'GP State',

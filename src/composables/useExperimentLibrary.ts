@@ -28,7 +28,6 @@ export function useExperimentLibrary() {
   const experimentCount = computed(() => experiments.value.length);
 
   const saveExperiment = (payload: {
-    existingId?: string | null;
     itemId: number;
     stats: PlayerStats;
     temporaryGp: number;
@@ -39,11 +38,8 @@ export function useExperimentLibrary() {
     analysis: SimulationResponse;
   }) => {
     const now = new Date().toISOString();
-    const existing = payload.existingId
-      ? experiments.value.find((experiment) => experiment.id === payload.existingId)
-      : null;
     const experiment: StoredExperiment = {
-      id: existing?.id ?? createExperimentId(),
+      id: createExperimentId(),
       itemId: payload.itemId,
       stats: { ...payload.stats },
       temporaryGp: payload.temporaryGp,
@@ -60,13 +56,11 @@ export function useExperimentLibrary() {
         .map(toStoredRotationStep)
         .filter((step): step is StoredTomeRotationStep => step !== null),
       analysis: payload.analysis,
-      createdAt: existing?.createdAt ?? now,
+      createdAt: now,
       updatedAt: now
     };
 
-    experiments.value = existing
-      ? experiments.value.map((item) => item.id === existing.id ? experiment : item)
-      : [experiment, ...experiments.value];
+    experiments.value = [experiment, ...experiments.value];
 
     return experiment;
   };

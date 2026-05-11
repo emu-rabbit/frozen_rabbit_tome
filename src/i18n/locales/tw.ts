@@ -102,7 +102,8 @@ export default {
       simulate: '進行分析',
       save: '儲存實驗',
       saved: '已儲存',
-      copyReport: '複製報告'
+      copyReport: '複製報告',
+      copied: '已複製'
     },
     analysis: {
       title: '分析報告',
@@ -137,7 +138,7 @@ export default {
     unknownDate: '未知時間',
     regularExperiment: '一般採集實驗',
     countValue: '{count} 個',
-    updatedAt: '更新於 {time}',
+    createdAt: '建立於 {time}',
     rows: {
       playerStats: '玩家數值',
       gpState: 'GP 狀態',
@@ -151,6 +152,8 @@ export default {
     },
     actions: {
       edit: '編輯',
+      copyReport: '複製報告',
+      copied: '已複製',
       delete: '刪除實驗'
     }
   },
