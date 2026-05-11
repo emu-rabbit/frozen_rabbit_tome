@@ -26,9 +26,10 @@
 - [收藏品求解系統設計 (collectable_solver_design.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/business/collectable_solver_design.md)：收藏品求解器的待解問題、資料來源、公式、reward model、演算法與 UIUX 設計。
 - [收藏品第一版求解器實作規格 (collectable_solver_v1_implementation.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/business/collectable_solver_v1_implementation.md)：根據 2026-05-10 實測與 Teamcraft 對照整理的第一版收藏品求解器實作範圍、公式、狀態、分支與測試規格。
  
- ### 4. 專案使命 (Mission)
+### 4. 專案使命 (Mission)
 - [品牌識別 (brand_identity.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/mission/brand_identity.md)：定義 Frozen Rabbit 的視覺與人格設定。
 - [專案目標 (project_mission.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/mission/project_mission.md)：本專案的最終願景。
+- [產品架構：秘笈與實驗 (product_architecture.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tome/.agents/skills/mission/product_architecture.md)：定義目前網頁兩大系統，秘笈負責求解器推薦手法，實驗負責模擬器與分析器，並規範不可宣稱最佳。
 - [參考專案 (reference_project.md)](file:///c:/Users/User/Documents/GitHub/frozen_rabbit_tips/.agents/skills/mission/reference_project.md)：與姊妹專案的連結與差異。
 
 ## 核心規則
