@@ -86,8 +86,6 @@ export function useCollectableSolver() {
     if (item?.isCollectable && item.itemId) {
       fetchRewards(item.itemId);
       if (item.gatheringItemId) {
-        const base = getItemBaseIntegrity(item.gatheringItemId);
-        // 重設獎勵為 0（新物品）
         integrityBonus.value = 0;
       }
       solverResult.value = null;

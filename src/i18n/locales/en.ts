@@ -332,6 +332,61 @@ export default {
       caveat: 'Optimality holds for the currently modeled regular-gathering skills, GP, integrity, success rate, Boon, Revisit, and Wise to the World probabilities. Collectables, crystal gathering, and manual interruption are not included.'
     }
   },
+  collectableSolver: {
+    title: 'Collectable Solver',
+    integritySection: 'Durability Settings',
+    baseIntegrity: 'Base Node Durability',
+    integrityBonus: 'Bonus Durability',
+    totalIntegrity: 'Total Durability',
+    nodeType: 'Node Type',
+    nodeTypes: {
+      normal: 'Normal Collectable Node (25%)',
+      satisfaction: 'Satisfaction Node (20%)',
+      legendary: 'Legendary Node (13%)',
+      unknown: 'Unknown (use normal rate)'
+    },
+    solve: 'Solve',
+    solving: 'Solving...',
+    loadingRewards: 'Loading reward data...',
+    rewardDataError: {
+      fetchFailed: 'Unable to fetch reward data. Check your connection and try again.',
+      notFound: 'No reward data found for this item.'
+    },
+    solveError: 'Solver failed. Please refresh the page and try again.',
+    saveTome: 'Save Tome',
+    savedTome: 'Saved',
+    results: {
+      expectedCollectability: 'Expected Collectability',
+      expectedScrip: 'Expected Scrip',
+      rewardTiers: 'Reward Tiers'
+    },
+    policy: {
+      title: 'Recommended Action Flow',
+      gp: 'GP',
+      integrity: 'Dur',
+      collectability: 'Collectability',
+      action: 'Recommended Action',
+      gpCost: 'GP Cost',
+      expectedScrip: 'Expected Scrip from Here',
+      terminal: {
+        collect: 'Collect!',
+        noDurability: 'No Durability',
+        noGp: 'No GP'
+      },
+      branchProb: '{prob}%',
+      delta: '{sign}{value}',
+      moreBranches: '+ {count} branches',
+      depthLimit: '(sequence continues optimally)'
+    },
+    actions: {
+      scour: 'Scour',
+      meticulous: 'Meticulous',
+      scrutiny: 'Scrutiny',
+      'collectors-focus': "Collector's Focus",
+      'priming-touch': 'Priming Touch',
+      collect: 'Collect!'
+    }
+  },
   tomeLibrary: {
     title: 'Tome Library',
     subtitle: 'Manage saved gathering tomes, search by item, and load a setup back into the solver.',

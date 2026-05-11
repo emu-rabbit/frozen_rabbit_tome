@@ -13,6 +13,7 @@ import Button from 'primevue/button';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SolverDebugDialog from '../components/SolverDebugDialog.vue';
 import PendingFeature from '../components/PendingFeature.vue';
+import CollectableSolverView from '../components/CollectableSolverView.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
@@ -424,11 +425,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       </router-link>
     </div>
 
-    <!-- === 收藏品/水晶採集系統 施工中畫面 === -->
+    <!-- === 收藏品採集求解台 === -->
+    <CollectableSolverView v-else-if="activeItem.isCollectable" />
+
+    <!-- === 水晶採集系統 施工中畫面 === -->
     <PendingFeature
-      v-else-if="activeItem.isCollectable || activeItem.isCrystalGathering"
+      v-else-if="activeItem.isCrystalGathering"
       :title="displayName"
-      :type="activeItem.isCollectable ? 'collectable' : 'crystal'"
+      type="crystal"
       back-path="/"
     />
 

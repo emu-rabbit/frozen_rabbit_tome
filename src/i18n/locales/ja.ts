@@ -332,6 +332,61 @@ export default {
       caveat: '最適性は、現在モデル化されている通常採集スキル、GP、耐久、成功率、Boon、再発見、理知興起の確率に対して成立します。収集品、クリスタル採集、手動中断は含まれません。'
     }
   },
+  collectableSolver: {
+    title: 'コレクターズソルバー',
+    integritySection: '耐久度設定',
+    baseIntegrity: 'ノード基本耐久',
+    integrityBonus: '耐久ボーナス',
+    totalIntegrity: '合計耐久',
+    nodeType: 'ノードタイプ',
+    nodeTypes: {
+      normal: '通常コレクタブルポイント（25%）',
+      satisfaction: '満足度ポイント（20%）',
+      legendary: '伝説ポイント（13%）',
+      unknown: '不明（通常確率を使用）'
+    },
+    solve: '解析',
+    solving: '解析中...',
+    loadingRewards: '報酬データを読み込み中...',
+    rewardDataError: {
+      fetchFailed: '報酬データを取得できません。ネットワークを確認して再試行してください。',
+      notFound: 'このアイテムのコレクタブル報酬データが見つかりません。'
+    },
+    solveError: '解析失敗。ページを更新して再試行してください。',
+    saveTome: '秘伝書を保存',
+    savedTome: '保存済み',
+    results: {
+      expectedCollectability: '期待収集価値',
+      expectedScrip: '期待スクリップ',
+      rewardTiers: '報酬閾値'
+    },
+    policy: {
+      title: '推奨アクションフロー',
+      gp: 'GP',
+      integrity: '耐久',
+      collectability: '収集価値',
+      action: '推奨アクション',
+      gpCost: 'GP消費',
+      expectedScrip: 'この先の期待スクリップ',
+      terminal: {
+        collect: '採集！',
+        noDurability: '耐久切れ',
+        noGp: 'GP不足'
+      },
+      branchProb: '{prob}%',
+      delta: '{sign}{value}',
+      moreBranches: '+ {count}分岐',
+      depthLimit: '（最適な行動が続きます）'
+    },
+    actions: {
+      scour: 'スカウア',
+      meticulous: 'メティキュラス',
+      scrutiny: 'スクルーティニー',
+      'collectors-focus': 'コレクターズフォーカス',
+      'priming-touch': 'プライミングタッチ',
+      collect: '採集！'
+    }
+  },
   tomeLibrary: {
     title: '秘伝書ライブラリ',
     subtitle: '保存した採集秘伝書を管理し、アイテム検索からソルバーへ読み戻せます。',

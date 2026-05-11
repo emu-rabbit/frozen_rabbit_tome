@@ -333,6 +333,61 @@ export default {
       caveat: '最優性成立於目前建模的普通採集技能、GP、耐久、成功率、Boon、再起與理智同興機率；未納入收藏品、水晶採集與玩家手動中斷。'
     }
   },
+  collectableSolver: {
+    title: '收藏品求解台',
+    integritySection: '耐久度設定',
+    baseIntegrity: '節點基礎耐久',
+    integrityBonus: '額外耐久獎勵',
+    totalIntegrity: '總耐久',
+    nodeType: '節點類型',
+    nodeTypes: {
+      normal: '一般收藏品點（25%）',
+      satisfaction: '精選點（20%）',
+      legendary: '傳說點（13%）',
+      unknown: '未知（使用一般機率）'
+    },
+    solve: '求解',
+    solving: '求解中...',
+    loadingRewards: '正在讀取報酬資料...',
+    rewardDataError: {
+      fetchFailed: '無法取得報酬資料，請檢查網路連線後重試。',
+      notFound: '找不到此物品的收藏品報酬資料。'
+    },
+    solveError: '求解失敗，請重新整理頁面後再試。',
+    saveTome: '儲存秘笈',
+    savedTome: '已儲存',
+    results: {
+      expectedCollectability: '期望收藏值',
+      expectedScrip: '期望票券',
+      rewardTiers: '報酬門檻'
+    },
+    policy: {
+      title: '建議操作流程',
+      gp: 'GP',
+      integrity: '耐久',
+      collectability: '收藏值',
+      action: '建議動作',
+      gpCost: '消耗 GP',
+      expectedScrip: '往後期望票券',
+      terminal: {
+        collect: '採集！',
+        noDurability: '耐久耗盡',
+        noGp: 'GP 不足'
+      },
+      branchProb: '{prob}% 機率',
+      delta: '{sign}{value} 收藏值',
+      moreBranches: '+ {count} 條分支',
+      depthLimit: '（後續流程依情況繼續）'
+    },
+    actions: {
+      scour: '精選',
+      meticulous: '採掘',
+      scrutiny: '洞察',
+      'collectors-focus': '採集者集中',
+      'priming-touch': '提升之觸',
+      collect: '採集！'
+    }
+  },
   tomeLibrary: {
     title: '秘笈書庫',
     subtitle: '管理已儲存的採集秘笈，搜尋物品後即可快速載回求解器調整。',
