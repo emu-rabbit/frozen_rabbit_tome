@@ -41,8 +41,25 @@
 - 同一組底層公式與 action model 可以被兩邊共用，但 UI 心智模型必須分開。
 - 公式、資料與狀態模型應盡量共用，避免秘笈與實驗對同一技能算出不一致結果。
 
+## 收藏品秘笈現況
+
+收藏品採集已不是「施工中」的空入口；後續 Agent 應以目前已存在的收藏品求解器為基礎維護，而不是重開大型規劃。
+
+- 現有核心檔案：
+  - `src/utils/collectableMath.ts`：收藏品公式、reward tier、reward vector scoring。
+  - `src/utils/collectableSolver.ts`：DP + memo 的 policy search。
+  - `src/workers/collectableSolver.worker.ts`：收藏品 worker。
+  - `src/services/collectableRewards.ts`：純收藏品、老主顧、薩雷安魔法大學與珠串萬貨街 reward table 載入。
+  - `src/services/collectableActions.ts`：收藏品 action id、名稱與 icon fallback。
+  - `src/components/CollectableSolverPanel.vue`、`CollectablePolicyView.vue`、`CollectableDebugDialog.vue`：收藏品秘笈 UI。
+  - `src/types/collectable.ts`：收藏品 request、result、policy tree 與儲存型別。
+- 收藏品結果是 **policy tree / 判斷表**，不是固定 linear rotation；藏書庫儲存的也應是 policy preview。
+- 收藏品秘笈不提供巨集。若使用者要照指定手法跑結果，應歸入實驗系統。
+- 目前可依 `expected`、`min`、`max` 等模式排序；對外仍只能稱「推薦」或「依目前模型推算」。
+- Debug 必須保留限制提示：`Brazen / 大膽提煉`、`Collector's High Standard / 強化洞察` 與精選 reward model 仍不納入目前秘笈推薦。
+
 ## 與既有 Skill 的關係
 
 - `project_mission.md` 定義專案目標，本文件定義目前產品架構與文案邊界。
 - `gathering_math_formulas.md` 是底層公式來源，秘笈與實驗都必須遵守。
-- `collectable_solver_design.md` 與 `collectable_solver_v1_implementation.md` 中的「求解器」描述，應理解為秘笈系統底下的推薦器，不可延伸成對外宣稱最佳。
+- `ffxiv_gathering_skills.md` 定義可用 action model 與目前排除的技能。

@@ -22,9 +22,8 @@
 
 ### 3. 業務知識 (Business)
 - [FFXIV 採集知識 (ffxiv_gathering_knowledge.md)](./business/ffxiv_gathering_knowledge.md)：遊戲內採集系統的背景資訊。
-- [採集數學公式 (gathering_math_formulas.md)](./business/gathering_math_formulas.md)：用於計算成功率與產量的核心算法。
-- [收藏品求解系統設計 (collectable_solver_design.md)](./business/collectable_solver_design.md)：收藏品求解器的待解問題、資料來源、公式、reward model、演算法與 UIUX 設計。
-- [收藏品第一版求解器實作規格 (collectable_solver_v1_implementation.md)](./business/collectable_solver_v1_implementation.md)：根據 2026-05-10 實測與 Teamcraft 對照整理的第一版收藏品求解器實作範圍、公式、狀態、分支與測試規格。
+- [採掘師與園藝師技能列表 (ffxiv_gathering_skills.md)](./business/ffxiv_gathering_skills.md)：普通採集與收藏品 action model 的技能清單、GP 成本、支援範圍與排除項目。
+- [採集數學公式 (gathering_math_formulas.md)](./business/gathering_math_formulas.md)：用於計算成功率、產量、收藏品提煉、隨機 proc 與目前未知邊界的核心算法。
 
 ### 4. 專案使命 (Mission)
 - [品牌識別 (brand_identity.md)](./mission/brand_identity.md)：定義 Frozen Rabbit 的視覺與人格設定。

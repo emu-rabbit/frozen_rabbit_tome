@@ -67,6 +67,26 @@
 
 對外文案不可宣稱「最佳」、「最優」或「唯一正解」；若需要描述排序，請使用「推薦」、「較高期望」、「依目前模型推算」等語氣。
 
+## 7. 收藏品分類與 reward 資料現況
+
+大地使者收藏品不可只用 `IsCollectable=true` 判斷後直接套同一套 reward model。後續維護時請先判斷玩法分類，再決定秘笈是否支援。
+
+目前分類理解：
+
+- **純收藏品繳納**：可由 Teamcraft `collectables.json` 建立三檔門檻與票據 reward。
+- **老主顧**：可由 datamining `SatisfactionSupply.csv` 與 `SatisfactionSupplyReward.csv` 建立門檻、金幣與大地票據；`RewardCurrency = 4` 對應大地紫票，`RewardCurrency = 7` 對應大地橘票。若同一 row 有兩種貨幣，目前依求解目標取可用 reward，不判斷實際遊戲條件限制。
+- **薩雷安魔法大學**：可由 `SharlayanCraftWorksSupply.csv` 建立兩檔 reward table。
+- **珠串萬貨街**：可由 `BankaCraftWorksSupply.csv` 搭配 `CollectablesRefine.csv` 建立 reward table。
+- **精選**：需要獨立 reward model，通常與 reduction 結果、素材與隨機獎勵有關，目前不可沿用一般 scrip/exp/gil reward table。
+- **宇宙探索 / Stellar Mission**：採集收藏品可分類，但不支援目前收藏品秘笈求解。宇宙探索有專用採集技能、宇宙工具或特殊裝備效果，且 mission score、銀星/金星門檻與 reward 欄位語意尚未完整確認。
+
+資料來源與維護原則：
+
+- Runtime 載入後應先剪枝成 `CollectableRewardTable` 所需結構，再放入 RAM cache。
+- 若 Teamcraft JSON 已能支援需求，不必額外以 XIVAPI CSV 做重型交叉驗證。
+- 補充 CSV 失敗時應有可理解的錯誤或 fallback，不可讓純收藏品 Teamcraft reward 一起失效。
+- 不要把宇宙探索的 `WKSItemInfo.csv` 全集直接當作採集收藏品任務目標；它包含非採集收藏品與非評分目標物。
+
 ---
 **Agent 參考注意：**
 1. FFXIV 6.0 (Endwalker) 後已取消 HQ 採集物，全面改為「獲得力加成 (Gatherer's Boon)」。

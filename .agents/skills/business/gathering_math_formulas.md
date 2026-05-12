@@ -108,7 +108,26 @@
   - 精選點 (Ephemeral)：20%。
   - 滿等未知 / 傳說點：13%。
 - Teamcraft 備註：Lv55 收藏品點無法觸發此效果是不一致的特殊情況，不應推定為通用規則。
-- `Collector's High Standard / 強化洞察` 目前所知不多，第一版 solver 不納入。
+- `Collector's High Standard / 強化洞察` 的觸發機率目前未知，秘笈推薦不納入。
+
+### 目前收藏品求解器模型邊界
+
+目前秘笈收藏品求解器可使用 `Collect`、`Scour`、`Meticulous`、`Scrutiny`、`Collector's Focus`、`Priming Touch`、採集成功率補強技能、`Solid Reason / Ageless Words`、`Wise to the World` 與 `Revisit`。求解器以 DP + memo 搜尋 policy tree，`Collect` 的 reward 期望必須乘採集成功率；採集失敗仍消耗耐久但沒有 reward。
+
+已確認且必須保留的邊界：
+
+- `Collect` 後收藏價值維持，不會重置為 0；因此可連續採集同一收藏價值的收藏品。
+- `Priming Touch` 不會被 `Scour` 消耗，只在下一次 `Meticulous` 後消耗。
+- `Scrutiny` 與 `Collector's Focus` 在下一次提煉類技能後消耗。
+- `Collector's Standard` 只能在已使用過收藏品技能、耐久仍大於 0、收藏價值未達 1000 且目前沒有洞察狀態時觸發。
+- `Revisit`：91 級以上納入，普通採集點 5%，限時採集點 8%；若觸發，求解器需另外評估滿 GP 重新開始的 policy。
+
+目前仍不可自行補模型的項目：
+
+- `Brazen / 大膽提煉`：隨機分布、檔位與取整順序尚未確認；不要放進秘笈推薦。
+- `Collector's High Standard / 強化洞察`：觸發率未知。已知其會使強化後的慎重不耗耐久率出現額外提升，但完整觸發模型與對大膽提煉、節點特殊效果的疊加順序仍需實測確認。
+- 節點特殊效果若影響慎重不耗耐久率，與 `Priming Touch`、`Collector's High Standard` 的疊加順序未定；需要使用者決策或遊戲內樣本。
+- 精選 reward model 與宇宙探索 score/reward model 不可沿用目前一般收藏品 reward table。
 
 ## 6. 其他關鍵數值
 - **再起 (Revisit - 7.0 新特性)**：
