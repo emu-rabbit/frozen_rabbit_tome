@@ -341,7 +341,7 @@ export default {
   collectableSolver: {
     badge: '収集品秘伝書',
     title: '収集品ソルバー',
-    description: 'Brazen と Collector\'s High Standard は未対応です。採集系の紫貨／橙貨の期待量で評価します。',
+    description: 'Brazen と強活眼は未対応です。採集系の紫貨／橙貨の期待量で評価します。',
     solving: '収集品の推奨方針を計算中...',
     empty: '計算すると、状態に応じた推奨方針がここに表示されます。',
     stats: { scourValue: 'Scour 値' },
@@ -378,7 +378,7 @@ export default {
       expectedReward: '期待報酬',
       rewardSummary: 'スクリップ {scrip} / ギル {gil}',
       revisitIncluded: '合計期待値には再発見 {chance}% の確率を含みます。',
-      limitationNote: 'V1 では Brazen、Collector\'s High Standard、精選報酬モデル、実際の経験値換算を含みません。'
+      limitationNote: 'V1 では Brazen、強活眼、精選報酬モデル、実際の経験値換算を含みません。'
     },
     policy: {
       now: '現在の推奨',
@@ -389,7 +389,7 @@ export default {
       confluentHint: '今回のランダム結果は同じ状態に合流するため、追加の選択は不要です。',
       deterministicHint: 'このアクションの結果は 1 つだけです。そのまま次へ進めます。',
       collectQuestion: '今回の収集品採集は成功しましたか？',
-      standardQuestion: 'Collector\'s Standard は発動しましたか？',
+      standardQuestion: '活眼は発生しましたか？',
       wiseQuestion: 'Wise to the World は発動しましたか？',
       revisitQuestion: '耐久を使い切った後、再発見は発動しましたか？',
       collectabilityQuestion: '現在の収集価値はいくつですか？',
@@ -437,8 +437,8 @@ export default {
       integrityRestored: '耐久回復',
       wiseProc: 'Wise to the World 発動',
       wiseNoProc: 'Wise to the World なし',
-      standardProc: 'Collector\'s Standard 発動',
-      standardNoProc: 'Collector\'s Standard なし',
+      standardProc: '活眼発生',
+      standardNoProc: '活眼なし',
       revisitProc: '再発見発動',
       revisitNoProc: '再発見なし'
     },
@@ -450,8 +450,8 @@ export default {
       integrityRestored: '耐久を 1 回復します。現在の採集地点の耐久上限を超えません。',
       wiseProc: 'Solid Reason / Ageless Words で耐久を回復した後、50% の確率で無料の Wise to the World を得ます。',
       wiseNoProc: 'Solid Reason / Ageless Words で耐久を回復した後、Wise to the World は発動しません。',
-      standardProc: '精選系アクション後に Collector\'s Standard が発動します。',
-      standardNoProc: '精選系アクション後に Collector\'s Standard が発動しません。',
+      standardProc: '収集品アクション後に活眼が発生します。',
+      standardNoProc: '収集品アクション後に活眼が発生しません。',
       revisitProc: '再発見が発動すると GP が全回復し、耐久と採集回数が戻り、再発見後の決定木へ進みます。',
       revisitNoProc: '再発見が発動しなかったため、この採集場所は終了です。'
     },
@@ -495,7 +495,7 @@ export default {
       valueIncreaseRate: '価値上昇率',
       meticulousRate: 'Meticulous 耐久保存率',
       scrutiny: 'Scrutiny',
-      standardRate: 'Collector\'s Standard 確率',
+      standardRate: '活眼発生率',
       rewardTable: '報酬しきい値',
       low: '低',
       mid: '中',
@@ -510,7 +510,7 @@ export default {
     },
     limitations: {
       'brazen-excluded': 'Brazen はランダム分布が未確認のため含めていません。',
-      'high-standard-excluded': 'Collector\'s High Standard は発動率が未確認のため含めていません。',
+      'high-standard-excluded': '強活眼は発生率が未確認のため含めていません。',
       'reduction-reward-model-excluded': '精選報酬モデルは含めていません。'
     }
   },
