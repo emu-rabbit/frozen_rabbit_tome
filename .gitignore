@@ -153,3 +153,7 @@ tsconfig.tsbuildinfo
 
 # Claude Code
 .claude/
+
+# Codex research scratch outputs
+scratch/collectable-audit-cache/
+scratch/collectable-audit-report/

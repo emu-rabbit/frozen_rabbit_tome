@@ -226,7 +226,7 @@
 
 ## 收藏品系統分類
 
-使用者目前將大地收藏品分為以下類型：
+使用者目前將大地收藏品分為以下類型。2026-05-12 以 `scratch/audit-gatherable-collectables.mjs` 交叉稽核 datamining / Teamcraft 資料後確認：若只使用前五類，會留下 30 個採掘師 / 園藝師 `IsCollectable=true` 物品未分類；這 30 個可由宇宙探索 `WKS*` mission 資料完整覆蓋，因此分類系統需包含第 6 類「宇宙探索」。
 
 1. **純粹的收藏品繳納**
    - 通常用於換紫票/橘票。
@@ -244,6 +244,34 @@
    - 複合獎勵：老主顧好感度、金幣、紫票、橘票，以及可能的經驗值。
    - 資料表可取得門檻與獎勵。
    - 好感度通常三檔相同，不建議作為求解目標。
+6. **宇宙探索 / Stellar Mission**
+   - 資料來源為 datamining 的 `WKS*` 表。
+   - 不是原本的純收藏品繳納、老主顧、薩雷安魔法大學、珠串萬貨街或精選。
+   - 判定方式不可只用 `WKSItemInfo.csv` 的全部宇宙探索物品全集，因為那會包含非採集收藏品與非評分目標物。
+   - 暫定分類方式：從 `WKSItemInfo.csv` 展開到真實 `Item` id，再與採掘師 / 園藝師 `GatheringItem.csv`、`Item.IsCollectable`、`Item.ItemUICategory = 63` 交集；必要時再用 `WKSMissionSupplyItem.csv`、`WKSMissionToDoEvalutionItem.csv` 輔助確認其確實出現在 WKS 任務資料中。
+   - 2026-05-12 稽核結果：原本未分類的 30 個採集收藏品全部歸入此類；加入宇宙探索後，269 個採掘師 / 園藝師可採集收藏品皆可分類。
+   - 稽核樣本：`48652 Lunar Copper Sand` 在 `WKSItemInfo.csv` 為 `383,48652,...`。外部 wiki 也標為 Cosmic Exploration Item / Stellar Mission 用物品。
+   - 重要修正：`WKSMissionToDoEvalutionItem` 或 `WKSMissionToDo` 內出現某個 WKS item index，不代表該 item 可直接連到該 mission 的可見完成條件或 reward。使用者已確認 `WKSMissionToDo[102].Unknown10 = 383` 雖可展開到 `Lunar Copper Sand`，但 `WKSMissionUnit[410]`「Multi-purpose Fiberboard Materials」與 `Lunar Copper Sand` 完全無關。
+
+分類稽核摘要（2026-05-12）：
+
+```json
+{
+  "collectableGatherableCandidates": 269,
+  "categorizedCollectableCandidates": 269,
+  "uncategorizedCollectableCandidates": 0,
+  "byCategory": {
+    "generalCollectableTurnIn": 94,
+    "customDelivery": 55,
+    "sharlayanStudium": 4,
+    "wachumeqimeqi": 4,
+    "aetherialReduction": 90,
+    "cosmicExploration": 30
+  }
+}
+```
+
+注意：分類不一定完全互斥。已確認有 8 個 `Connoisseur's ...` 物品同時屬於純收藏品繳納與精選。分類系統應允許多標籤，UI 或 reward model 再依使用者選擇的玩法目標決定要使用哪個 reward table。
 
 ## 資料來源總覽
 
@@ -426,6 +454,87 @@ https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en
 - Teamcraft `reduction.json` / `reverse-reduction.json`
   - 較適合前端直接讀。
   - 本階段先不要納入紫票/橘票評分。
+
+宇宙探索 / Stellar Mission：
+
+- `WKSItemInfo.csv`
+  - 欄位：`#`、`Item`、`WKSItemSubCategory` 等。
+  - `#` 是 WKS item index；`Item` 是真實 FFXIV item id。
+  - 單獨使用此表會取得宇宙探索物品全集，不等於採集收藏品任務目標。
+- `WKSMissionSupplyItem.csv`
+  - 欄位模式：`Item[0]`、`Item[1]`、`Item[2]`、`ItemCount[0]`、`ItemCount[1]`、`ItemCount[2]`。
+  - `Item[n]` 指向 `WKSItemInfo.csv` 的 `#`，不是直接的 FFXIV item id。
+- `WKSMissionToDoEvalutionItem.csv`
+  - 欄位：`Item`。
+  - `Item` 同樣指向 `WKSItemInfo.csv` 的 `#`。
+- `WKSMissionInfo.csv`
+  - mission 資訊關聯表，欄位語意尚待整理。
+- `WKSMissionReward.csv`
+  - 宇宙探索 mission reward 入口。
+  - 已知欄位包含：`ExpModifier[0..2]`、`CosmoCredits`、`PlanetCredits`、`BaseDronebits`、`ResearchReward[0..2]`、`Item`、`ItemCount`、`Tool[0..2]`、`TypeIndex[0..2]`。
+  - 欄位名稱顯示 `CosmoCredits` 與 `PlanetCredits` 可直接作為未來 reward vector 候選；`ResearchReward[n]` 可能對應 Cosmic Data / Class Points / research 類獎勵，但仍需與 wiki 或遊戲 UI 對照後再命名。
+  - 外部 wiki 對 `Gatherer's Helmets` 的顯示可對上 reward 欄位型態：Experience、Cosmocredits、Lunar Credits、Cosmic Data、Class Points；但 `ResearchReward`、`Tool`、`TypeIndex` 的精確拆分仍需逐筆確認。
+- `WKSMissionUnit.csv`
+  - mission 單位或分組資料，可能用於把任務、供應物、評分項目與 reward 串起來，欄位語意尚待整理。
+  - 已知欄位包含：`Name`、`SilverStarRequirement`、`GoldStarRequirement`、`WKSMissionText`、`ClassJobCategory[0..1]`、`MissionTime`、`MissionReward`、`MissionToDo[0..2]`、`WKSMissionSupplyItem`、`PlaceName`、`LevelGroup`、`IsSynced`。
+- `WKSScoreList.csv`
+  - 可能與評分檔位或任務分數門檻相關，欄位語意尚待整理。
+
+宇宙探索 reward 對照樣本（2026-05-12，待使用者 / wiki 確認欄位語意）：
+
+```txt
+WKSMissionToDo.csv:
+102,0,0,2000000,406,0,0,28,0,0,0,383,40,0,13,100,0,105,0,3,0,0,1
+
+WKSItemInfo.csv:
+406,48675,0,1,1,False
+
+Item.csv:
+48675,Goldeye Scales,...,AdditionalData=406,...,IsCollectable=False,AlwaysCollectable=False
+
+WKSMissionUnit.csv:
+410, Multi-purpose Fiberboard Materials,1550,1700,51,18,0,100,600,410,102,0,0,0,0,0,5220,0,0,1,0,0,1,False,False
+
+WKSMissionReward.csv:
+410,0,150,10,5,2,6,0,9,0,0,0,0,10,0,0,1,0,0
+```
+
+此樣本目前可確定：
+
+- `WKSMissionUnit.MissionReward = 410` 指向 `WKSMissionReward[410]`。
+- `WKSMissionUnit.MissionToDo[0] = 102` 指向 `WKSMissionToDo[102]`。
+- `WKSMissionToDo.RequiredItem[0] = 406` 可透過 `WKSItemInfo[406].Item = 48675` 展開為 `Goldeye Scales`。
+- Reward row 410 的原始候選值為：`ExpModifier = 150 / 10 / 5`、`CosmoCredits = 2`、`PlanetCredits = 6`、`ResearchReward = 9 / 0 / 0`、`Tool[0] = 10`、`TypeIndex[0] = 1`。
+
+使用者於 2026-05-12 提供中文 wiki / 任務速查截圖，比對 `WKSMissionUnit[410]`「Multi-purpose Fiberboard Materials / 采集通用型纖維板的材料」後，已確認下列對應：
+
+- `WKSMissionUnit.Name = Multi-purpose Fiberboard Materials` 對應任務名「采集通用型纖維板的材料」。
+- `WKSMissionUnit.MissionTime = 600` 對應 UI 的「時間限制：10 分」。
+- `WKSMissionUnit.SilverStarRequirement = 1550`、`GoldStarRequirement = 1700` 對應 UI 的評價條件「銀星：1550 ~ 1699」、「金星：1700 ~」。
+- `WKSMissionUnit.ClassJobCategory[0] = 18` 在此樣本對應可領職業「園藝工」。推定 `17` 可能對應採掘師、`18` 對應園藝師，但需再用採掘師樣本確認後才能寫死。
+- `WKSMissionToDo.RequiredItem[0] = 406`、`RequiredItemQuantity[0] = 28`，透過 `WKSItemInfo[406].Item = 48675`，對應 UI 的完成條件「黃金眼的外殼 / Goldeye Scales x28」。
+- `WKSMissionReward.CosmoCredits = 2` 對應完成獎勵「宇宙信用點 2」。
+- `WKSMissionReward.PlanetCredits = 6` 對應完成獎勵「月球信用點 6」。
+- `WKSMissionReward.ResearchReward[0] = 9` 對應完成獎勵「園藝宇宙數據 9」。
+- 此樣本的星級 reward multiplier 可由 UI 確認：
+  - 完成：`base * 1`，例如 `2 / 6 / 9`。
+  - 銀星：`base * 4`，例如 `8 / 24 / 36`。
+  - 金星：`base * 5`，例如 `10 / 30 / 45`。
+
+仍待確認：
+
+- UI 顯示「園藝工技巧點 3 / 12 / 15」，但尚未能從 `WKSMissionReward[410]` 中確定是哪個欄位或公式產生。不要先把 `ExpModifier`、`Tool` 或 `TypeIndex` 命名為技巧點。
+- `ExpModifier[0..2] = 150 / 10 / 5` 的 UI 對應仍未確認；可能與經驗值或其他倍率相關，需更多 wiki / 遊戲資料對照。
+- `WKSMissionToDo.Unknown10 = 383` 的 UI 語意仍未確認。雖然它可透過 `WKSItemInfo[383].Item = 48652` 展開到 `Lunar Copper Sand`，但使用者於 2026-05-12 指出此任務與 `Lunar Copper Sand` 完全無關；截圖可見完成條件是 `Goldeye Scales x28`。因此這條關聯是研究 false lead，不可用來建立 `Lunar Copper Sand -> WKSMissionReward[410]` 或任何 item-to-reward 映射。
+
+在完成 wiki / 遊戲 UI 對照前，宇宙探索 reward vector 可暫定保留 raw 欄位，不要把 `ResearchReward[n]` 或 `Tool[n]` 硬翻譯成正式獎勵名稱。
+
+建議後續實作步驟：
+
+1. 先建立 `WKSItemInfo.# -> Item` 映射。
+2. 展開成真實 item id 後，與採掘師 / 園藝師 `GatheringItem.csv`、`Item.IsCollectable`、`Item.ItemUICategory = 63` 交集，得到宇宙探索採集收藏品候選集合。
+3. 可用 `WKSMissionSupplyItem` 與 `WKSMissionToDoEvalutionItem` 輔助確認候選是否出現在 WKS 任務資料中，但不可直接把這些引用當成 item-to-reward 映射。
+4. Reward model 必須另查 `WKSMissionReward`、`WKSMissionInfo`、`WKSMissionUnit`、`WKSScoreList` 的關聯，並由 wiki / 遊戲 UI 對照；未確認前不要把宇宙探索硬套成票據 / 經驗 / 金幣三檔模型。
 
 ### XIVAPI v2
 
@@ -788,6 +897,7 @@ interface CollectableRewardWeights {
 - 珠串萬貨大街：`scrip`，但可切 `exp` / `gil`
 - 老主顧：`scrip`，但可切 `gil` / `exp`
 - 精選：暫不使用此 reward model，獨立設計
+- 宇宙探索：暫不使用既有 `scrip` / `exp` / `gil` 預設；需先確認 `WKSMissionReward` 等資料欄位。可能的評分目標包含 Cosmocredit、Lunar Credit、Cosmic Research / job-specific research EXP、mission score 或完成檔位，但目前不可臆測。
 
 ### 不建議好感度作為目標
 
@@ -1341,6 +1451,13 @@ interface StoredCollectableTome {
 1. 研究 `GathererReductionReward.csv` 與 Teamcraft `reduction.json`。
 2. 設計精選 reward model。
 3. 評分目標不再是票據，而是靈砂/素材/期望價值。
+
+### Phase 6：宇宙探索
+
+1. 研究 `WKSItemInfo.csv`、`WKSMissionSupplyItem.csv`、`WKSMissionToDoEvalutionItem.csv` 的 item 關聯，先穩定判定 Cosmic Exploration / Stellar Mission 採集收藏品。
+2. 研究 `WKSMissionReward.csv`、`WKSMissionInfo.csv`、`WKSMissionUnit.csv`、`WKSScoreList.csv` 的 reward / score 關聯。
+3. 與 wiki 或遊戲 UI 對照欄位語意後，設計宇宙探索專用 reward vector。
+4. 若 reward 依 mission score 或星級檔位，不要用一般收藏品三檔 threshold 直接套用，需建立專用門檻映射。
 
 ## 測試策略
 
