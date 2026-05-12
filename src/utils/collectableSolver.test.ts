@@ -427,7 +427,7 @@ describe('solveCollectableRotation', () => {
         level: 100,
         gathering: 5345,
         perception: 5173,
-        gp: 930
+        gp: 300
       },
       baseValues: {
         Gathering: 1000,
@@ -439,7 +439,7 @@ describe('solveCollectableRotation', () => {
         yieldCount: 0,
         extraRate: 0
       },
-      temporaryGp: 930,
+      temporaryGp: 300,
       rewardTable: {
         itemId: 1,
         source: 'collectables',
