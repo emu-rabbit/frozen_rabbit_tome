@@ -28,6 +28,7 @@ export function useExperimentLibrary() {
   const experimentCount = computed(() => experiments.value.length);
 
   const saveExperiment = (payload: {
+    name?: string;
     itemId: number;
     stats: PlayerStats;
     temporaryGp: number;
@@ -40,6 +41,7 @@ export function useExperimentLibrary() {
     const now = new Date().toISOString();
     const experiment: StoredExperiment = {
       id: createExperimentId(),
+      name: payload.name?.trim() || undefined,
       itemId: payload.itemId,
       stats: { ...payload.stats },
       temporaryGp: payload.temporaryGp,

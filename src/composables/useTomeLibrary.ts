@@ -28,6 +28,7 @@ export function useTomeLibrary() {
   const tomeCount = computed(() => tomes.value.length);
 
   const saveTome = (payload: {
+    name?: string;
     itemId: number;
     stats: PlayerStats;
     temporaryGp: number;
@@ -40,6 +41,7 @@ export function useTomeLibrary() {
       const tome: StoredTome = {
         kind: 'collectable',
         id: createTomeId(),
+        name: payload.name?.trim() || undefined,
         itemId: payload.itemId,
         stats: { ...payload.stats },
         temporaryGp: payload.temporaryGp,
@@ -98,6 +100,7 @@ export function useTomeLibrary() {
     const tome: StoredTome = {
       id: createTomeId(),
       kind: 'regular',
+      name: payload.name?.trim() || undefined,
       itemId: payload.itemId,
       stats: { ...payload.stats },
       temporaryGp: payload.temporaryGp,

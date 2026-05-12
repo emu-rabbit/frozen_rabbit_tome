@@ -16,6 +16,20 @@ export default {
       crystalDesc: 'クリスタル採集システムは現在開発中です。公開まで今しばらくお待ちください。'
     }
   },
+  saveEntry: {
+    nameLabel: '名前',
+    cancel: 'キャンセル',
+    tome: {
+      title: '秘伝書を保存',
+      description: '後でライブラリから見分けやすいように、この秘伝書に名前を付けます。',
+      confirm: '秘伝書を保存'
+    },
+    experiment: {
+      title: '実験を保存',
+      description: '後でデータベースから見分けやすいように、この実験に名前を付けます。',
+      confirm: '実験を保存'
+    }
+  },
   macro: {
     prompts: {
       gatherCount: '{count} 回採集してください',
@@ -134,7 +148,7 @@ export default {
   experimentDatabase: {
     title: '実験データベース',
     subtitle: '保存した通常採集実験を管理し、シミュレーターへ読み戻して再分析できます。',
-    searchPlaceholder: '実験のアイテム名を検索',
+    searchPlaceholder: '実験名またはアイテム名を検索',
     emptyTitle: '実験データベースはまだ空です',
     emptyDesc: 'シミュレーターで分析したあと、「実験を保存」を押すとここに保存されます。',
     emptySearchTitle: '一致する実験がありません',
@@ -566,7 +580,7 @@ export default {
   tomeLibrary: {
     title: '秘伝書ライブラリ',
     subtitle: '保存した採集秘伝書を管理し、アイテム検索からソルバーへ読み戻せます。',
-    searchPlaceholder: '保存したアイテム名を検索',
+    searchPlaceholder: '秘伝書名またはアイテム名を検索',
     noFood: '食事なし',
     unknownDate: '不明な時刻',
     rotationPreview: '最適手順プレビュー',

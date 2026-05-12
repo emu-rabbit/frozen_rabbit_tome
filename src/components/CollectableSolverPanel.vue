@@ -86,17 +86,9 @@ async function handleSolve() {
 }
 
 function handleSave() {
-  if (!collectableResult.value || isSaved.value) return;
+  if (!collectableResult.value) return;
 
   emit('save', collectableResult.value);
-  isSaved.value = true;
-  if (savedTimer) {
-    window.clearTimeout(savedTimer);
-  }
-  savedTimer = window.setTimeout(() => {
-    isSaved.value = false;
-    savedTimer = null;
-  }, 1600);
 }
 
 async function handleExportDecisionTree() {

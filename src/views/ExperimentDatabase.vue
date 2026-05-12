@@ -34,14 +34,23 @@ const filteredExperiments = computed(() => {
   if (!query) return experiments.value;
 
   return experiments.value.filter((experiment) => {
+    const customName = (experiment.name ?? '').toLowerCase();
     const localizedName = getItemName(experiment.itemId).toLowerCase();
     const englishName = getItemEnglishName(experiment.itemId).toLowerCase();
-    return localizedName.includes(query) || englishName.includes(query);
+    return customName.includes(query) || localizedName.includes(query) || englishName.includes(query);
   });
 });
 
 function itemMeta(experiment: StoredExperiment) {
   return getGatherableItemById(experiment.itemId);
+}
+
+function experimentDisplayName(experiment: StoredExperiment) {
+  return experiment.name?.trim() || getItemName(experiment.itemId);
+}
+
+function shouldShowItemSubtitle(experiment: StoredExperiment) {
+  return !!experiment.name?.trim() && experiment.name.trim() !== getItemName(experiment.itemId);
 }
 
 function formatCreatedAt(value: string) {
@@ -203,11 +212,12 @@ function copyReportLabel(experiment: StoredExperiment) {
       >
         <div class="item-section">
           <div class="item-icon-wrap">
-            <img v-if="getItemIcon(experiment.itemId)" :src="getItemIcon(experiment.itemId)" :alt="getItemName(experiment.itemId)" class="item-icon" loading="lazy" />
+            <img v-if="getItemIcon(experiment.itemId)" :src="getItemIcon(experiment.itemId)" :alt="experimentDisplayName(experiment)" class="item-icon" loading="lazy" />
             <i v-else class="pi pi-box text-slate-400"></i>
           </div>
           <div class="item-info">
-            <h3>{{ getItemName(experiment.itemId) }}</h3>
+            <h3>{{ experimentDisplayName(experiment) }}</h3>
+            <p v-if="shouldShowItemSubtitle(experiment)" class="item-subtitle">{{ getItemName(experiment.itemId) }}</p>
             <div class="item-meta">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(experiment)?.glv ?? '-' }}</span>
               <span class="item-job-badge">{{ itemMeta(experiment)?.jobType ? t(`game.jobs.${itemMeta(experiment)?.jobType}`) : '-' }}</span>
@@ -440,8 +450,8 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .item-icon-wrap {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 10px;
   overflow: hidden;
   background: #f1f5f9;
@@ -453,8 +463,8 @@ function copyReportLabel(experiment: StoredExperiment) {
   background: #1e293b;
 }
 .item-icon {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -471,6 +481,17 @@ function copyReportLabel(experiment: StoredExperiment) {
 :global(html.dark .item-info h3) {
   color: #f8fafc;
 }
+.item-subtitle {
+  margin: 0.12rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+:global(html.dark .item-subtitle) {
+  color: #94a3b8;
+}
 .item-meta {
   display: flex;
   align-items: center;
@@ -479,16 +500,13 @@ function copyReportLabel(experiment: StoredExperiment) {
   flex-wrap: wrap;
 }
 .is-compact .item-section {
-  align-items: flex-start;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.85rem;
 }
 .is-compact .item-icon-wrap,
 .is-compact .item-icon {
-  width: 42px;
-  height: 42px;
-}
-.is-compact .item-info h3 {
-  font-size: 0.98rem;
+  width: 60px;
+  height: 60px;
 }
 .is-compact .item-meta {
   gap: 0.35rem;

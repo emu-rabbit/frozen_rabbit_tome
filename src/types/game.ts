@@ -257,6 +257,7 @@ export interface StoredTomeRotationPlan {
 export interface StoredTome {
   kind?: 'regular' | 'collectable';
   id: string;
+  name?: string;
   itemId: number;
   stats: PlayerStats;
   temporaryGp: number;
@@ -301,6 +302,7 @@ export interface SimulationResponse {
 
 export interface StoredExperiment {
   id: string;
+  name?: string;
   itemId: number;
   stats: PlayerStats;
   temporaryGp: number;

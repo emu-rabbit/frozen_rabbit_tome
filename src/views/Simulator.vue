@@ -12,6 +12,7 @@ import { useSettings } from '../composables/useSettings';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useSimulator } from '../composables/useSimulator';
 import PendingFeature from '../components/PendingFeature.vue';
+import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
@@ -57,6 +58,7 @@ const activeBlock = ref<'primary' | 'revisit'>('primary');
 const savedExperimentId = ref<string | null>(null);
 const isSaved = ref(false);
 const isReportCopied = ref(false);
+const isSaveExperimentDialogOpen = ref(false);
 const foodSuggestions = ref<FoodOption[]>([]);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -240,6 +242,34 @@ function formatFood(food: GatheringFood, quality: FoodQuality) {
   return `${getItemName(food.id)} ${t(`solver.food.${quality}`)}`;
 }
 
+function defaultExperimentName() {
+  return activeItem.value ? getItemName(activeItem.value.itemId) : '';
+}
+
+function savePreviewFood() {
+  if (!selectedFood.value.foodId || !selectedFoodItem.value) return t('tomeLibrary.noFood');
+  return formatFood(selectedFoodItem.value, selectedFood.value.quality);
+}
+
+function savePreviewRows() {
+  return [
+    { label: t('experimentDatabase.rows.playerStats'), value: `${solverStats.value.level}/${solverStats.value.gathering}/${solverStats.value.perception}` },
+    { label: t('experimentDatabase.rows.gpState'), value: `${temporaryGp.value}/${effectiveStats.value.gp}` },
+    { label: t('experimentDatabase.rows.nodeBonuses'), value: `${nodeBonuses.value.gatheringCount}/${nodeBonuses.value.yieldCount}/${nodeBonuses.value.extraRate}` },
+    { label: t('tomeLibrary.rows.food'), value: savePreviewFood() }
+  ];
+}
+
+function savePreviewMetrics() {
+  if (!analysis.value) return [];
+
+  return [
+    { label: t('experimentDatabase.rows.totalExpected'), value: analysis.value.total.expectedYield },
+    { label: t('simulator.analysis.maxYield'), value: analysis.value.total.maxYield, chance: formatProbability(analysis.value.total.maxYieldChance, false, false) },
+    { label: t('simulator.analysis.minYield'), value: analysis.value.total.minYield, chance: formatProbability(analysis.value.total.minYieldChance, false, false) }
+  ];
+}
+
 function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
   const localizedName = getItemName(food.id);
   const englishName = getItemEnglishName(food.id);
@@ -259,7 +289,15 @@ function searchFoods(event: { query: string }) {
 
 function saveCurrentExperiment() {
   if (!activeItem.value || !analysis.value) return;
+
+  isSaveExperimentDialogOpen.value = true;
+}
+
+function confirmSaveExperiment(name: string) {
+  if (!activeItem.value || !analysis.value) return;
+
   const saved = saveExperiment({
+    name,
     itemId: activeItem.value.itemId,
     stats: { ...solverStats.value },
     temporaryGp: temporaryGp.value,
@@ -705,6 +743,85 @@ function progressPercent(range: number[], maxValue: number) {
         </div>
       </section>
     </div>
+
+    <SaveEntryDialog
+      v-model="isSaveExperimentDialogOpen"
+      :title="t('saveEntry.experiment.title')"
+      :description="t('saveEntry.experiment.description')"
+      :name-label="t('saveEntry.nameLabel')"
+      :default-name="defaultExperimentName()"
+      :confirm-label="t('saveEntry.experiment.confirm')"
+      :cancel-label="t('saveEntry.cancel')"
+      @confirm="confirmSaveExperiment"
+    >
+      <article v-if="activeItem && analysis" class="save-preview-card">
+        <div class="save-preview-item">
+          <div class="save-preview-icon">
+            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" :alt="getItemName(activeItem.itemId)" />
+            <i v-else class="pi pi-box"></i>
+          </div>
+          <div class="save-preview-info">
+            <h4>{{ getItemName(activeItem.itemId) }}</h4>
+            <div class="save-preview-badges">
+              <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ activeItem.glv ?? '-' }}</span>
+              <span class="item-job-badge">{{ activeItem.jobType ? t(`game.jobs.${activeItem.jobType}`) : '-' }}</span>
+              <span v-if="activeItem.isCrystalGathering" class="item-crystal-badge">
+                <i class="pi pi-sparkles"></i>
+                {{ t('createGuide.crystalGatheringSystem') }}
+              </span>
+              <span v-else class="item-regular-badge">
+                <i class="pi pi-compass"></i>
+                {{ t('createGuide.regularSystem') }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-preview-rows">
+          <div v-for="row in savePreviewRows()" :key="row.label" class="save-preview-row">
+            <span>{{ row.label }}</span>
+            <strong>{{ row.value }}</strong>
+          </div>
+        </div>
+
+        <div class="save-preview-metrics">
+          <div v-for="metric in savePreviewMetrics()" :key="metric.label">
+            <span>{{ metric.label }}</span>
+            <strong>
+              {{ metric.value }}
+              <small v-if="metric.chance">{{ t('simulator.analysis.chance', { chance: metric.chance }) }}</small>
+            </strong>
+          </div>
+        </div>
+
+        <div class="save-preview-rotation-list">
+          <div class="save-preview-rotation">
+            <span>{{ t('experimentDatabase.rotations.primary') }}</span>
+            <div class="save-preview-icons">
+              <template v-for="(action, index) in primaryRotation" :key="`save-primary-${index}`">
+                <span class="save-preview-action-icon">
+                  <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionLabel(action)" />
+                  <i v-else class="pi pi-sparkles"></i>
+                </span>
+                <i v-if="index < primaryRotation.length - 1" class="pi pi-angle-right save-preview-arrow"></i>
+              </template>
+            </div>
+          </div>
+          <div v-if="revisitRotation.length" class="save-preview-rotation">
+            <span>{{ t('experimentDatabase.rotations.revisit') }}</span>
+            <div class="save-preview-icons">
+              <template v-for="(action, index) in revisitRotation" :key="`save-revisit-${index}`">
+                <span class="save-preview-action-icon">
+                  <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionLabel(action)" />
+                  <i v-else class="pi pi-sparkles"></i>
+                </span>
+                <i v-if="index < revisitRotation.length - 1" class="pi pi-angle-right save-preview-arrow"></i>
+              </template>
+            </div>
+          </div>
+        </div>
+      </article>
+    </SaveEntryDialog>
   </div>
 </template>
 
@@ -720,6 +837,220 @@ function progressPercent(range: number[], maxValue: number) {
   background: white;
   padding: 1rem;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.save-preview-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+:global(html.dark .save-preview-card) {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.save-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.save-preview-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+:global(html.dark .save-preview-icon) {
+  background: #1e293b;
+}
+
+.save-preview-icon img,
+.save-preview-action-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.save-preview-info {
+  min-width: 0;
+}
+
+.save-preview-info h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+:global(html.dark .save-preview-info h4) {
+  color: #f8fafc;
+}
+
+.save-preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.item-glv-badge,
+.item-job-badge,
+.item-regular-badge,
+.item-crystal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.item-glv-badge {
+  background: linear-gradient(135deg, #52a890, #3d8b75);
+}
+
+.item-job-badge {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.item-regular-badge {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.item-crystal-badge {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+}
+
+.save-preview-rows,
+.save-preview-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.save-preview-row,
+.save-preview-metrics div,
+.save-preview-rotation {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+:global(html.dark .save-preview-row),
+:global(html.dark .save-preview-metrics div),
+:global(html.dark .save-preview-rotation) {
+  background: rgb(30 41 59 / 0.55);
+}
+
+.save-preview-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.save-preview-row span,
+.save-preview-metrics span,
+.save-preview-rotation span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+:global(html.dark .save-preview-row span),
+:global(html.dark .save-preview-metrics span),
+:global(html.dark .save-preview-rotation span) {
+  color: #94a3b8;
+}
+
+.save-preview-row strong,
+.save-preview-metrics strong,
+.save-preview-rotation strong {
+  min-width: 0;
+  color: #334155;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.save-preview-row strong {
+  text-align: right;
+}
+
+.save-preview-metrics small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+:global(html.dark .save-preview-row strong),
+:global(html.dark .save-preview-metrics strong),
+:global(html.dark .save-preview-rotation strong) {
+  color: #e2e8f0;
+}
+
+.save-preview-rotation-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.save-preview-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.save-preview-action-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: #52a890;
+  color: white;
+}
+
+.save-preview-arrow {
+  color: #cbd5e1;
+  font-size: 0.78rem;
+}
+
+:global(html.dark .save-preview-arrow) {
+  color: #64748b;
+}
+
+@media (min-width: 640px) {
+  .save-preview-rows,
+  .save-preview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 :global(html.dark .panel) {
   border-color: #334155;

@@ -16,6 +16,20 @@ export default {
       crystalDesc: '水晶采集系统目前尚在开发中，敬请期待。'
     }
   },
+  saveEntry: {
+    nameLabel: '名称',
+    cancel: '取消',
+    tome: {
+      title: '保存秘籍',
+      description: '替这份秘籍取一个好认的名字，之后在书库里会更容易分辨。',
+      confirm: '保存秘籍'
+    },
+    experiment: {
+      title: '保存实验',
+      description: '替这次实验取一个好认的名字，之后在数据库里会更容易分辨。',
+      confirm: '保存实验'
+    }
+  },
   macro: {
     prompts: {
       gatherCount: '请采集 {count} 次',
@@ -134,7 +148,7 @@ export default {
   experimentDatabase: {
     title: '实验数据库',
     subtitle: '管理已保存的一般采集实验，之后可以载回模拟台重新分析。',
-    searchPlaceholder: '搜索实验中的物品名称',
+    searchPlaceholder: '搜索实验名称或物品名称',
     emptyTitle: '实验数据库目前是空的',
     emptyDesc: '在模拟台完成分析后，按下“保存实验”就会收进这里。',
     emptySearchTitle: '找不到相符的实验',
@@ -566,7 +580,7 @@ export default {
   tomeLibrary: {
     title: '秘籍书库',
     subtitle: '管理已保存的采集秘籍，搜索物品后即可快速载回求解器调整。',
-    searchPlaceholder: '搜索秘籍中的物品名称',
+    searchPlaceholder: '搜索秘籍名称或物品名称',
     noFood: '未使用食物',
     unknownDate: '未知时间',
     rotationPreview: '最佳手法预览',

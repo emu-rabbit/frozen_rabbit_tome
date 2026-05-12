@@ -16,6 +16,20 @@ export default {
       crystalDesc: 'The crystal gathering system is currently under development. Stay tuned!'
     }
   },
+  saveEntry: {
+    nameLabel: 'Name',
+    cancel: 'Cancel',
+    tome: {
+      title: 'Save Tome',
+      description: 'Give this tome a recognizable name so it is easier to find in the library later.',
+      confirm: 'Save Tome'
+    },
+    experiment: {
+      title: 'Save Experiment',
+      description: 'Give this experiment a recognizable name so it is easier to find in the database later.',
+      confirm: 'Save Experiment'
+    }
+  },
   macro: {
     prompts: {
       gatherCount: 'Gather {count} time(s)',
@@ -134,7 +148,7 @@ export default {
   experimentDatabase: {
     title: 'Experiment Database',
     subtitle: 'Manage saved regular gathering experiments and load them back into the simulator for analysis.',
-    searchPlaceholder: 'Search experiment item names',
+    searchPlaceholder: 'Search experiment or item names',
     emptyTitle: 'Your experiment database is empty',
     emptyDesc: 'After analyzing a setup in the simulator, press "Save Experiment" to keep it here.',
     emptySearchTitle: 'No matching experiments',
@@ -577,7 +591,7 @@ export default {
   tomeLibrary: {
     title: 'Tome Library',
     subtitle: 'Manage saved gathering tomes, search by item, and load a setup back into the solver.',
-    searchPlaceholder: 'Search saved item names',
+    searchPlaceholder: 'Search tome or item names',
     noFood: 'No food',
     unknownDate: 'Unknown time',
     rotationPreview: 'Best rotation preview',

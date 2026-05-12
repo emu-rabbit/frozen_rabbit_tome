@@ -42,14 +42,23 @@ const filteredTomes = computed(() => {
   if (!query) return tomes.value;
 
   return tomes.value.filter((tome) => {
+    const customName = (tome.name ?? '').toLowerCase();
     const localizedName = getItemName(tome.itemId).toLowerCase();
     const englishName = getItemEnglishName(tome.itemId).toLowerCase();
-    return localizedName.includes(query) || englishName.includes(query);
+    return customName.includes(query) || localizedName.includes(query) || englishName.includes(query);
   });
 });
 
 function itemMeta(tome: StoredTome) {
   return getGatherableItemById(tome.itemId);
+}
+
+function tomeDisplayName(tome: StoredTome) {
+  return tome.name?.trim() || getItemName(tome.itemId);
+}
+
+function shouldShowItemSubtitle(tome: StoredTome) {
+  return !!tome.name?.trim() && tome.name.trim() !== getItemName(tome.itemId);
 }
 
 function formatStats(tome: StoredTome) {
@@ -309,7 +318,7 @@ function collectableScripUnit(tome: StoredTome) {
             <img
               v-if="getItemIcon(tome.itemId)"
               :src="getItemIcon(tome.itemId)"
-              :alt="getItemName(tome.itemId)"
+              :alt="tomeDisplayName(tome)"
               class="item-icon"
               loading="lazy"
             />
@@ -317,7 +326,8 @@ function collectableScripUnit(tome: StoredTome) {
           </div>
 
           <div class="item-info">
-            <h3 class="item-name text-slate-800 dark:text-slate-100">{{ getItemName(tome.itemId) }}</h3>
+            <h3 class="item-name text-slate-800 dark:text-slate-100">{{ tomeDisplayName(tome) }}</h3>
+            <p v-if="shouldShowItemSubtitle(tome)" class="item-subtitle">{{ getItemName(tome.itemId) }}</p>
             <div class="item-meta">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(tome)?.glv ?? '-' }}</span>
               <span class="item-job-badge">{{ itemMeta(tome)?.jobType ? t(`game.jobs.${itemMeta(tome)?.jobType}`) : '-' }}</span>
@@ -671,8 +681,8 @@ function collectableScripUnit(tome: StoredTome) {
 
 .item-icon-wrap {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 10px;
   overflow: hidden;
   display: flex;
@@ -681,8 +691,8 @@ function collectableScripUnit(tome: StoredTome) {
 }
 
 .item-icon {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -697,6 +707,19 @@ function collectableScripUnit(tome: StoredTome) {
   line-height: 1.35;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.item-subtitle {
+  margin: 0.12rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+:global(html.dark .item-subtitle) {
+  color: #94a3b8;
 }
 
 .item-meta {
@@ -870,18 +893,14 @@ function collectableScripUnit(tome: StoredTome) {
 }
 
 .is-compact .item-section {
-  align-items: flex-start;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.85rem;
 }
 
 .is-compact .item-icon-wrap,
 .is-compact .item-icon {
-  width: 42px;
-  height: 42px;
-}
-
-.is-compact .item-name {
-  font-size: 0.98rem;
+  width: 60px;
+  height: 60px;
 }
 
 .is-compact .item-meta {
