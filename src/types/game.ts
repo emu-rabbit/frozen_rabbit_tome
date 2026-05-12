@@ -189,11 +189,14 @@ export interface SolverFormulaDebugInfo {
 
 export interface SolverSearchDebugInfo {
   startingGp: number;
+  workerCalculationTime?: number;
   statesSolved: number;
   memoHits: number;
+  memoHitRate?: number;
   actionsEvaluated: number;
   candidateComparisons: number;
   terminalStates: number;
+  branchCount: number;
 }
 
 export interface SolverPlanDebugInfo {

@@ -143,11 +143,17 @@ function formatProbability(probability: number, useSpacePadding = false, include
                   <div class="debug-stats">
                     <span>{{ t('solver.debug.minYield') }} {{ plan.minYield }}</span>
                     <span>{{ t('solver.debug.maxYield') }} {{ plan.maxYield }}</span>
+                    <span>{{ t('solver.debug.workerCalculationTime') }} {{ plan.search.workerCalculationTime ?? '-' }} ms</span>
                     <span>{{ t('solver.debug.statesSolved') }} {{ plan.search.statesSolved }}</span>
-                    <span>{{ t('solver.debug.memoHits') }} {{ plan.search.memoHits }}</span>
                     <span>{{ t('solver.debug.actionsEvaluated') }} {{ plan.search.actionsEvaluated }}</span>
+                    <span>{{ t('solver.debug.candidateComparisons') }} {{ plan.search.candidateComparisons }}</span>
+                    <span>{{ t('solver.debug.branchCount') }} {{ plan.search.branchCount }}</span>
+                    <span>{{ t('solver.debug.memoHits') }} {{ plan.search.memoHits }}</span>
+                    <span>{{ t('solver.debug.memoHitRate') }} {{ formatProbability(plan.search.memoHitRate ?? 0) }}</span>
+                    <span>{{ t('solver.debug.terminalStates') }} {{ plan.search.terminalStates }}</span>
                   </div>
 
+                  <h5>{{ t('solver.debug.outcomeDistribution') }}</h5>
                   <div class="debug-outcomes">
                     <div v-for="entry in plan.outcomeDistribution" :key="`${plan.kind}-${entry.yield}`" class="debug-outcome-row">
                       <span>{{ entry.yield }}</span>
@@ -289,7 +295,8 @@ function formatProbability(probability: number, useSpacePadding = false, include
 
 .debug-section h3,
 .debug-card h4,
-.debug-plan h4 {
+.debug-plan h4,
+.debug-plan h5 {
   margin: 0;
   color: #334155;
   font-weight: 900;
@@ -297,7 +304,8 @@ function formatProbability(probability: number, useSpacePadding = false, include
 
 :global(html.dark .debug-section h3),
 :global(html.dark .debug-card h4),
-:global(html.dark .debug-plan h4) {
+:global(html.dark .debug-plan h4),
+:global(html.dark .debug-plan h5) {
   color: #e2e8f0;
 }
 

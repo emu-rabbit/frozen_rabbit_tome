@@ -4,10 +4,15 @@ import type { CollectableSolverRequest, CollectableSolverResult } from '../types
 self.onmessage = (event: MessageEvent<CollectableSolverRequest>) => {
   const startTime = performance.now();
   const result = solveCollectableRotation(event.data);
+  const calculationTime = Math.floor(performance.now() - startTime);
+
+  if (result.debug) {
+    result.debug.search.workerCalculationTime = calculationTime;
+  }
 
   self.postMessage({
     ...result,
     expectedScore: Number(result.expectedScore.toFixed(6)),
-    calculationTime: Math.floor(performance.now() - startTime)
+    calculationTime
   } as CollectableSolverResult);
 };

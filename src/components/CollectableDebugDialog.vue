@@ -18,6 +18,18 @@ const stateFields = computed(() => props.debug?.optimality.stateKeyFields.join('
 function closeDialog() {
   emit('update:modelValue', false);
 }
+
+function formatProbability(probability: number, useSpacePadding = false, includePercent = true) {
+  const percentSuffix = includePercent ? '%' : '';
+  if (probability > 0 && probability < 0.01) {
+    return useSpacePadding ? `< 0.01${percentSuffix}` : `<0.01${percentSuffix}`;
+  }
+  const formatted = probability.toFixed(2);
+  if (useSpacePadding) {
+    return formatted.padStart(6, ' ') + percentSuffix;
+  }
+  return formatted + percentSuffix;
+}
 </script>
 
 <template>
@@ -67,9 +79,9 @@ function closeDialog() {
                 </article>
                 <article class="debug-card">
                   <h4>{{ t('collectableSolver.debug.rewardTable') }}</h4>
-                  <p>{{ t('collectableSolver.debug.low') }}: {{ debug.formulas.rewardTable.lowCollectability }}</p>
-                  <p>{{ t('collectableSolver.debug.mid') }}: {{ debug.formulas.rewardTable.midCollectability }}</p>
-                  <p>{{ t('collectableSolver.debug.high') }}: {{ debug.formulas.rewardTable.highCollectability ?? '-' }}</p>
+                  <p>{{ t('collectableSolver.debug.low') }}: {{ debug.formulas.rewardTable.lowCollectability }} / {{ t('collectableSolver.debug.scripAmount', { scrip: debug.formulas.rewardTable.lowScrip }) }}</p>
+                  <p>{{ t('collectableSolver.debug.mid') }}: {{ debug.formulas.rewardTable.midCollectability }} / {{ t('collectableSolver.debug.scripAmount', { scrip: debug.formulas.rewardTable.midScrip }) }}</p>
+                  <p>{{ t('collectableSolver.debug.high') }}: {{ debug.formulas.rewardTable.highCollectability ?? '-' }} / {{ debug.formulas.rewardTable.highScrip == null ? '-' : t('collectableSolver.debug.scripAmount', { scrip: debug.formulas.rewardTable.highScrip }) }}</p>
                 </article>
               </div>
             </section>
@@ -77,10 +89,27 @@ function closeDialog() {
             <section class="debug-section">
               <h3>{{ t('collectableSolver.debug.search') }}</h3>
               <div class="debug-stats">
+                <span>{{ t('solver.debug.workerCalculationTime') }} {{ debug.search.workerCalculationTime ?? '-' }} ms</span>
                 <span>{{ t('solver.debug.statesSolved') }} {{ debug.search.statesSolved }}</span>
-                <span>{{ t('solver.debug.memoHits') }} {{ debug.search.memoHits }}</span>
                 <span>{{ t('solver.debug.actionsEvaluated') }} {{ debug.search.actionsEvaluated }}</span>
-                <span>{{ t('collectableSolver.debug.branchCount') }} {{ debug.search.branchCount }}</span>
+                <span>{{ t('solver.debug.candidateComparisons') }} {{ debug.search.candidateComparisons }}</span>
+                <span>{{ t('solver.debug.branchCount') }} {{ debug.search.branchCount }}</span>
+                <span>{{ t('solver.debug.memoHits') }} {{ debug.search.memoHits }}</span>
+                <span>{{ t('solver.debug.memoHitRate') }} {{ formatProbability(debug.search.memoHitRate ?? 0) }}</span>
+                <span>{{ t('solver.debug.terminalStates') }} {{ debug.search.terminalStates }}</span>
+              </div>
+            </section>
+
+            <section class="debug-section">
+              <h3>{{ t('solver.debug.outcomeDistribution') }}</h3>
+              <div class="debug-outcomes">
+                <div v-for="entry in debug.outcomeDistribution" :key="entry.score" class="debug-outcome-row">
+                  <span>{{ entry.score }}</span>
+                  <div class="debug-outcome-track">
+                    <div :style="{ width: `${Math.min(100, entry.probability)}%` }"></div>
+                  </div>
+                  <span class="probability-text">{{ formatProbability(entry.probability, true) }}</span>
+                </div>
               </div>
             </section>
 
@@ -287,5 +316,46 @@ function closeDialog() {
 :global(html.dark .debug-code) {
   background: #020617;
   color: #99f6e4;
+}
+
+.debug-outcomes {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.debug-outcome-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 5.25rem;
+  align-items: center;
+  gap: 0.55rem;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+:global(html.dark .debug-outcome-row) {
+  color: #cbd5e1;
+}
+
+.probability-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre;
+}
+
+.debug-outcome-track {
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+:global(html.dark .debug-outcome-track) {
+  background: #334155;
+}
+
+.debug-outcome-track div {
+  height: 100%;
+  border-radius: inherit;
+  background: #52a890;
 }
 </style>

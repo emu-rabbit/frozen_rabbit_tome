@@ -116,8 +116,11 @@ export function summarizeCollectableRewardTable(
     source: rewardTable.source,
     rewardItemId: rewardTable.rewardItemId,
     lowCollectability: rewardTable.tiers.low.collectability,
+    lowScrip: rewardTable.tiers.low.reward.scrip,
     midCollectability: rewardTable.tiers.mid.collectability,
-    highCollectability: rewardTable.tiers.high?.collectability
+    midScrip: rewardTable.tiers.mid.reward.scrip,
+    highCollectability: rewardTable.tiers.high?.collectability,
+    highScrip: rewardTable.tiers.high?.reward.scrip
   };
 }
 

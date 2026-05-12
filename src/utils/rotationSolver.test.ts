@@ -285,6 +285,8 @@ describe('solveGatheringRotation', () => {
     });
     expect(debugResult.debug?.plans[0].outcomeDistribution.length).toBeGreaterThan(0);
     expect(debugResult.debug?.plans[0].search.statesSolved).toBeGreaterThan(0);
+    expect(debugResult.debug?.plans[0].search.branchCount).toBeGreaterThan(0);
+    expect(debugResult.debug?.plans[0].search.memoHitRate).toBeGreaterThanOrEqual(0);
     expect(debugResult.debug?.optimality.method).toBe('dynamic-programming-exhaustive-search');
   });
 });

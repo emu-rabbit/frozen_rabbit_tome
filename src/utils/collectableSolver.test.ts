@@ -347,7 +347,17 @@ describe('solveCollectableRotation', () => {
       scrutinyMultiplier: 125,
       scrutinyBonus: 250
     });
+    expect(result.debug?.formulas.rewardTable).toMatchObject({
+      lowCollectability: 200,
+      lowScrip: 1,
+      midCollectability: 600,
+      midScrip: 10,
+      highCollectability: 1000,
+      highScrip: 20
+    });
     expect(result.debug?.search.statesSolved).toBeGreaterThan(0);
+    expect(result.debug?.search.memoHitRate).toBeGreaterThanOrEqual(0);
+    expect(result.debug?.outcomeDistribution.length).toBeGreaterThan(0);
     expect(result.debug?.limitations).toEqual(expect.arrayContaining([
       'brazen-excluded',
       'high-standard-excluded'

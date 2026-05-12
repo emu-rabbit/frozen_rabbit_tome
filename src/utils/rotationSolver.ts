@@ -257,6 +257,11 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       nextYieldBonus: 0
     });
     const outcomes = new Map<number, number>();
+    activeSearchStats && (activeSearchStats.branchCount += [
+      1 - successRate,
+      successRate * (1 - boonChance),
+      successRate * boonChance
+    ].filter((probability) => probability > 0).length);
     addShiftedOutcomes(outcomes, next.outcomes, 0, 1 - successRate);
     addShiftedOutcomes(outcomes, next.outcomes, baseYield, successRate * (1 - boonChance));
     addShiftedOutcomes(outcomes, next.outcomes, baseYield + boonYield, successRate * boonChance);
@@ -399,6 +404,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
               }
             : noProc;
 
+          activeSearchStats && (activeSearchStats.branchCount += 2);
           return {
             expectedYield: noProc.expectedYield * 0.5 + proc.expectedYield * 0.5,
             rotation: [WISE_TO_THE_WORLD_ACTION, ...preferredBranch.rotation],
@@ -417,11 +423,14 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     actions.push({
       name: names.restore,
       priority: 90,
-      apply: (current, nextSolve) => nextSolve({
-        ...current,
-        gp: current.gp - 300,
-        integrity: current.integrity + 1
-      })
+      apply: (current, nextSolve) => {
+        activeSearchStats && (activeSearchStats.branchCount += 1);
+        return nextSolve({
+          ...current,
+          gp: current.gp - 300,
+          integrity: current.integrity + 1
+        });
+      }
     });
   }
 
@@ -434,11 +443,14 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return {
       name,
       priority,
-      apply: (state, nextSolve) => nextSolve({
-        ...state,
-        ...patch,
-        gp: state.gp - gpCost
-      })
+      apply: (state, nextSolve) => {
+        activeSearchStats && (activeSearchStats.branchCount += 1);
+        return nextSolve({
+          ...state,
+          ...patch,
+          gp: state.gp - gpCost
+        });
+      }
     };
   }
 
@@ -634,7 +646,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       memoHits: 0,
       actionsEvaluated: 0,
       candidateComparisons: 0,
-      terminalStates: 0
+      terminalStates: 0,
+      branchCount: 0
     };
     const result = solve({
       gp: Math.min(stats.gp, startingGp),
@@ -653,6 +666,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       nextYieldBonus: 0
     });
     const search = activeSearchStats;
+    search.memoHitRate = calculateMemoHitRate(search);
     activeSearchStats = null;
 
     return {
@@ -785,4 +799,10 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   return response;
+}
+
+function calculateMemoHitRate(search: SolverSearchDebugInfo): number {
+  const cacheableLookups = search.statesSolved + search.memoHits;
+  if (cacheableLookups === 0) return 0;
+  return Number(((search.memoHits / cacheableLookups) * 100).toFixed(2));
 }

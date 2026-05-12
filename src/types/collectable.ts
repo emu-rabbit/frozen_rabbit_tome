@@ -43,8 +43,11 @@ export interface CollectableRewardTableSummary {
   source: CollectableRewardTable['source'];
   rewardItemId?: number;
   lowCollectability: number;
+  lowScrip: number;
   midCollectability: number;
+  midScrip: number;
   highCollectability?: number;
+  highScrip?: number;
 }
 
 export type CollectableActionKind =
@@ -87,6 +90,11 @@ export interface CollectableOutcomeSummary {
   collectability: number;
   reward: CollectableRewardVector;
   score: number;
+}
+
+export interface CollectableOutcomeDebugEntry {
+  score: number;
+  probability: number;
 }
 
 export interface CollectablePolicyBranch {
@@ -152,8 +160,10 @@ export interface CollectableFormulaDebugInfo {
 
 export interface CollectableSearchDebugInfo {
   startingGp: number;
+  workerCalculationTime?: number;
   statesSolved: number;
   memoHits: number;
+  memoHitRate?: number;
   actionsEvaluated: number;
   candidateComparisons: number;
   terminalStates: number;
@@ -163,6 +173,7 @@ export interface CollectableSearchDebugInfo {
 export interface CollectableSolverDebugInfo {
   formulas: CollectableFormulaDebugInfo;
   search: CollectableSearchDebugInfo;
+  outcomeDistribution: CollectableOutcomeDebugEntry[];
   limitations: string[];
   optimality: {
     method: 'dynamic-programming-policy-search';

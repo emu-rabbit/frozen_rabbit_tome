@@ -4,6 +4,11 @@ import type { SolverRequest, SolverResponse } from '../types/game';
 self.onmessage = (e: MessageEvent<SolverRequest>) => {
   const startTime = performance.now();
   const result = solveGatheringRotation(e.data);
+  const calculationTime = Math.floor(performance.now() - startTime);
+
+  result.debug?.plans.forEach((plan) => {
+    plan.search.workerCalculationTime = calculationTime;
+  });
 
   self.postMessage({
     bestRotation: result.bestRotation,
@@ -15,7 +20,7 @@ self.onmessage = (e: MessageEvent<SolverRequest>) => {
     minYieldChance: result.minYieldChance,
     maxYieldChance: result.maxYieldChance,
     objectiveMode: result.objectiveMode,
-    calculationTime: Math.floor(performance.now() - startTime),
+    calculationTime,
     debug: result.debug
   } as SolverResponse);
 };

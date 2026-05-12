@@ -53,6 +53,7 @@ interface SearchState {
 interface SearchResult {
   expectedScore: number;
   expectedReward: CollectableRewardVector;
+  outcomes: Map<number, number>;
   policy: CollectablePolicyNode;
   gpSpent: number;
   actionCount: number;
@@ -204,6 +205,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       return {
         expectedScore: 0,
         expectedReward: createZeroReward(),
+        outcomes: new Map([[0, 1]]),
         policy: emptyPolicy(state),
         gpSpent: 0,
         actionCount: 0,
@@ -563,10 +565,12 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         next: result.policy.branches.length > 0 ? result.policy : undefined
       };
     });
+    const outcomes = mergeOutcomeDistributions(branches, results);
 
     return {
       expectedScore,
       expectedReward,
+      outcomes,
       gpSpent: gpSpent + weightedSum(results, branches, 'gpSpent'),
       actionCount: actionCount + weightedSum(results, branches, 'actionCount'),
       nodeCount,
@@ -583,6 +587,20 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function weightedSum(results: SearchResult[], branches: WeightedState[], field: 'gpSpent' | 'actionCount') {
     return results.reduce((sum, result, index) => sum + result[field] * branches[index].probability, 0);
+  }
+
+  function mergeOutcomeDistributions(branches: WeightedState[], results: SearchResult[]) {
+    const outcomes = new Map<number, number>();
+
+    branches.forEach((branch, index) => {
+      const immediateScore = scoreCollectableReward(branch.reward ?? createZeroReward(), objective);
+      results[index].outcomes.forEach((probability, score) => {
+        const totalScore = immediateScore + score;
+        outcomes.set(totalScore, (outcomes.get(totalScore) ?? 0) + probability * branch.probability);
+      });
+    });
+
+    return outcomes;
   }
 
   function isPreferred(candidate: SearchResult, current: SearchResult): boolean {
@@ -624,6 +642,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   return response;
 
   function buildDebugInfo(): CollectableSolverDebugInfo {
+    search.memoHitRate = calculateMemoHitRate(search);
+
     return {
       formulas: {
         success: calculateSuccessFormulaDebug(stats.gathering, baseValues.Gathering, stats.level, itemLevel),
@@ -644,6 +664,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         rewardTable: summarizeCollectableRewardTable(rewardTable)
       },
       search,
+      outcomeDistribution: serializeOutcomes(result.outcomes),
       limitations: [
         'brazen-excluded',
         'high-standard-excluded',
@@ -655,6 +676,21 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       }
     };
   }
+}
+
+function serializeOutcomes(outcomes: Map<number, number>) {
+  return [...outcomes.entries()]
+    .sort(([leftScore], [rightScore]) => leftScore - rightScore)
+    .map(([score, probability]) => ({
+      score,
+      probability: probability * 100
+    }));
+}
+
+function calculateMemoHitRate(search: CollectableSearchDebugInfo): number {
+  const cacheableLookups = search.statesSolved + search.memoHits;
+  if (cacheableLookups === 0) return 0;
+  return Number(((search.memoHits / cacheableLookups) * 100).toFixed(2));
 }
 
 function getStandardProcRate(request: CollectableSolverRequest): number {
