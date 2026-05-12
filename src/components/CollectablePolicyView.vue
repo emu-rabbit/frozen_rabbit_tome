@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CollectablePolicyBranch, CollectablePolicyNode } from '../types/collectable';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
+import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 
 const props = defineProps<{
   policy: CollectablePolicyNode;
@@ -117,11 +118,7 @@ const confluentBranch = computed(() => {
 const resolvedGuidedBranch = computed(() => selectedGuidedBranch.value ?? confluentBranch.value);
 const showsGuidedPanel = computed(() => usesGuidedQuestions.value || !!confluentBranch.value);
 const isConfluentOutcome = computed(() => !!confluentBranch.value && previewBranches.value.length > 1);
-const scripUnitKey = computed(() => {
-  if (props.rewardItemId === 34021) return 'collectableSolver.results.scripUnits.orange';
-  if (props.rewardItemId === 33914) return 'collectableSolver.results.scripUnits.purple';
-  return 'collectableSolver.results.scripUnits.generic';
-});
+const scripRewardMeta = computed(() => getCollectableScripRewardMeta(props.rewardItemId));
 
 watch(() => props.policy, (policy) => {
   nodeStack.value = [policy];
@@ -197,13 +194,19 @@ function continueGuidedBranch() {
 <template>
   <div class="collectable-policy">
     <section class="collectable-summary">
-      <div>
+      <div class="summary-value">
         <span class="summary-kicker">{{ t('collectableSolver.results.expectedScore') }}</span>
         <h3>{{ Number(expectedScore.toFixed(2)) }}</h3>
       </div>
-      <div class="summary-score">
-        <span>{{ t('collectableSolver.results.expectedScripUnit') }}</span>
-        <strong>{{ t(scripUnitKey) }}</strong>
+      <div
+        class="summary-scrip"
+        :class="`is-${scripRewardMeta.kind}`"
+        :title="t(scripRewardMeta.labelKey)"
+        :aria-label="t(scripRewardMeta.labelKey)"
+      >
+        <img v-if="scripRewardMeta.iconUrl" :src="scripRewardMeta.iconUrl" :alt="t(scripRewardMeta.labelKey)" />
+        <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
+        <span class="sr-only">{{ t(scripRewardMeta.labelKey) }}</span>
       </div>
     </section>
 
@@ -408,7 +411,6 @@ function continueGuidedBranch() {
 }
 
 .summary-kicker,
-.summary-score span,
 .current-action span,
 .branch-list-header {
   color: #3f8f79;
@@ -419,10 +421,11 @@ function continueGuidedBranch() {
 }
 
 .collectable-summary h3 {
-  margin: 0.2rem 0;
+  margin: 0.1rem 0 0;
   color: #1e293b;
-  font-size: 1.25rem;
-  font-weight: 900;
+  font-size: clamp(1.7rem, 4.1vw, 2.45rem);
+  font-weight: 950;
+  line-height: 1;
 }
 
 :global(html.dark .collectable-summary h3) {
@@ -450,20 +453,49 @@ function continueGuidedBranch() {
   color: #94a3b8;
 }
 
-.summary-score {
+.summary-value {
+  min-width: 0;
+}
+
+.summary-scrip {
+  width: 3.75rem;
+  height: 3.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  text-align: right;
+  align-self: center;
+  border: 1px solid rgb(187 247 208);
+  border-radius: 0.85rem;
+  background: white;
+  box-shadow: 0 10px 22px rgb(15 23 42 / 0.08);
+  color: #0f766e;
 }
 
-.summary-score strong {
-  display: block;
-  color: #166534;
-  font-size: 2rem;
-  font-weight: 950;
+.summary-scrip img {
+  width: 3rem;
+  height: 3rem;
+  image-rendering: pixelated;
 }
 
-:global(html.dark .summary-score strong) {
-  color: #bbf7d0;
+.summary-scrip i {
+  font-size: 1.6rem;
+}
+
+:global(html.dark .summary-scrip) {
+  border-color: rgb(51 65 85);
+  background: rgb(2 6 23 / 0.62);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  color: #99f6e4;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .current-action {
@@ -479,8 +511,8 @@ function continueGuidedBranch() {
 }
 
 .action-icon-wrap {
-  width: 3rem;
-  height: 3rem;
+  width: 3.65rem;
+  height: 3.65rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -495,8 +527,8 @@ function continueGuidedBranch() {
 }
 
 .action-icon-wrap img {
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 3rem;
+  height: 3rem;
 }
 
 .current-action strong {
@@ -794,7 +826,6 @@ function continueGuidedBranch() {
     align-items: stretch;
   }
 
-  .summary-score,
   .branch-outcome {
     text-align: left;
   }

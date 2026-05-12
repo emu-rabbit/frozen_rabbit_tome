@@ -7,7 +7,7 @@ interface CollectableActionDefinition {
   kind: CollectableActionKind;
   minerActionId: number;
   botanistActionId: number;
-  fallbackName: string;
+  fallbackName: string | Record<JobType, string>;
   gpCost: number;
 }
 
@@ -86,7 +86,10 @@ export const COLLECTABLE_ACTION_DEFINITIONS: Record<CollectableActionKind, Colle
     kind: 'restoreIntegrity',
     minerActionId: 232,
     botanistActionId: 215,
-    fallbackName: '石工之理',
+    fallbackName: {
+      miner: '石工之理',
+      botanist: '農夫之智'
+    },
     gpCost: 300
   },
   wiseToTheWorld: {
@@ -112,7 +115,10 @@ export function getCollectableActionId(kind: CollectableActionKind, jobType: Job
 
 export function getCollectableActionName(kind: CollectableActionKind, jobType: JobType): string {
   const actionId = getCollectableActionId(kind, jobType);
-  return getActionName(actionId) || COLLECTABLE_ACTION_DEFINITIONS[kind].fallbackName;
+  const fallbackName = COLLECTABLE_ACTION_DEFINITIONS[kind].fallbackName;
+  const actionName = getActionName(actionId);
+  const resolvedFallbackName = typeof fallbackName === 'string' ? fallbackName : fallbackName[jobType];
+  return actionName && actionName !== `Action #${actionId}` ? actionName : resolvedFallbackName;
 }
 
 export function getCollectableActionIcon(kind: CollectableActionKind, jobType: JobType): string {

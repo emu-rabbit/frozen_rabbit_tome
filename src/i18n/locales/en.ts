@@ -362,7 +362,7 @@ export default {
       successII: 'Gathering Rate II',
       successIII: 'Gathering Rate III',
       nextCollectSuccess: 'Next Collect Rate',
-      restoreIntegrity: 'Restore Integrity',
+      restoreIntegrity: 'Solid Reason / Ageless Words',
       wiseToTheWorld: 'Wise to the World'
     },
     results: {
@@ -374,7 +374,7 @@ export default {
       scripUnits: {
         purple: 'Purple Gatherers\' Scrip',
         orange: 'Orange Gatherers\' Scrip',
-        generic: 'Gatherers\' Scrip'
+        unknown: 'Unknown scrip type'
       },
       expectedReward: 'Expected Reward',
       rewardSummary: 'Scrip {scrip} / Gil {gil}',

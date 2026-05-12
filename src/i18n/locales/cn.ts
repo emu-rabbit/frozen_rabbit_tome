@@ -360,7 +360,7 @@ export default {
       successII: '获得率提高 II',
       successIII: '获得率提高 III',
       nextCollectSuccess: '下次收藏成功率提高',
-      restoreIntegrity: '恢复耐久',
+      restoreIntegrity: '石工之理 / 农夫之智',
       wiseToTheWorld: '理智同兴'
     },
     results: {
@@ -372,7 +372,7 @@ export default {
       scripUnits: {
         purple: '大地紫票',
         orange: '大地橘票',
-        generic: '大地票据'
+        unknown: '未知票种'
       },
       expectedReward: '期望收益',
       rewardSummary: '票据 {scrip} / 金币 {gil}',

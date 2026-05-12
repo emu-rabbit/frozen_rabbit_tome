@@ -360,7 +360,7 @@ export default {
       successII: '採集成功率アップ II',
       successIII: '採集成功率アップ III',
       nextCollectSuccess: '次回収集成功率アップ',
-      restoreIntegrity: '耐久回復',
+      restoreIntegrity: '石工の理 / 老農の知',
       wiseToTheWorld: 'Wise to the World'
     },
     results: {
@@ -372,7 +372,7 @@ export default {
       scripUnits: {
         purple: 'ギャザラー紫貨',
         orange: 'ギャザラー橙貨',
-        generic: 'ギャザラースクリップ'
+        unknown: '不明なスクリップ種別'
       },
       expectedReward: '期待報酬',
       rewardSummary: 'スクリップ {scrip} / ギル {gil}',

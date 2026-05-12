@@ -7,6 +7,8 @@ import type { CollectableSolverResult } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import CollectablePolicyView from './CollectablePolicyView.vue';
 import CollectableDebugDialog from './CollectableDebugDialog.vue';
+import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
+import { getCollectableActionName } from '../services/collectableActions';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -192,9 +194,7 @@ async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
 }
 
 function formatScripUnit(rewardItemId?: number) {
-  if (rewardItemId === 34021) return t('collectableSolver.results.scripUnits.orange');
-  if (rewardItemId === 33914) return t('collectableSolver.results.scripUnits.purple');
-  return t('collectableSolver.results.scripUnits.generic');
+  return t(getCollectableScripRewardMeta(rewardItemId).labelKey);
 }
 
 function buildDecisionTreeFileName() {
@@ -231,7 +231,7 @@ function formatPolicyNodeMarkdown(node: Awaited<ReturnType<typeof serializePolic
 }
 
 function actionName(kind: CollectableSolverResult['policy']['recommendedAction']['kind']) {
-  return t(`collectableSolver.actions.${kind}`);
+  return getCollectableActionName(kind, props.activeItem.jobType || 'miner');
 }
 
 function branchLabel(branch: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]['branches'][number]) {
