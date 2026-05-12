@@ -95,6 +95,24 @@ function findActionNode(
   return null;
 }
 
+function findActionDepth(
+  node: { id?: string; recommendedAction: { kind: string }; branches: Array<{ next?: any }> },
+  actionKind: string,
+  depth = 0,
+  visited = new Set<string>()
+): number | null {
+  if (depth > 16) return null;
+  if (node.id && visited.has(node.id)) return null;
+  if (node.id) visited.add(node.id);
+  if (node.recommendedAction.kind === actionKind) return depth;
+
+  const childDepths = node.branches
+    .map((branch) => branch.next ? findActionDepth(branch.next, actionKind, depth + 1, visited) : null)
+    .filter((childDepth): childDepth is number => childDepth !== null);
+
+  return childDepths.length > 0 ? Math.min(...childDepths) : null;
+}
+
 describe('solveCollectableRotation', () => {
   it('沒有 GP 時仍可用 0 GP 提煉與收藏建立策略', () => {
     const result = solveCollectableRotation(createRequest({
@@ -306,6 +324,40 @@ describe('solveCollectableRotation', () => {
     expect(['successI', 'successII', 'successIII', 'nextCollectSuccess']).not.toContain(result.policy.recommendedAction.kind);
   });
 
+  it('明晰視野等價時會提前到收藏品採集前段施放', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 760,
+        perception: 1000,
+        gp: 50
+      },
+      nodeBonuses: {
+        baseIntegrity: 1,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 50,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          mid: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          high: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    }));
+
+    const nextCollectSuccessDepth = findActionDepth(result.policy, 'nextCollectSuccess');
+    const collectDepth = findActionDepth(result.policy, 'collect');
+
+    expect(nextCollectSuccessDepth).not.toBeNull();
+    expect(collectDepth).not.toBeNull();
+    expect(nextCollectSuccessDepth as number).toBeLessThan(collectDepth as number);
+  });
+
   it('耐久不足時會評估石工之理恢復採集次數', () => {
     const result = solveCollectableRotation(createRequest({
       stats: {
@@ -362,8 +414,11 @@ describe('solveCollectableRotation', () => {
     }));
 
     const kinds = collectKinds(result.policy);
+    const restoreNode = findActionNode(result.policy, 'restoreIntegrity');
+
     expect(kinds).toContain('restoreIntegrity');
     expect(kinds).toContain('wiseToTheWorld');
+    expect(restoreNode?.state.integrity).toBe(1);
   });
 
   it('debug mode 回傳公式、搜尋統計與第一版限制', () => {

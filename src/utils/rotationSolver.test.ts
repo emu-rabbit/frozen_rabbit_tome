@@ -99,6 +99,42 @@ describe('solveGatheringRotation', () => {
     expect(wiseProcGatherIndex).toBeGreaterThan(wiseIndex);
   });
 
+  it('90 級以上仍會探索缺 1 使用石工之理可提高分數的邊界', () => {
+    const withRestore = solveGatheringRotation(createRequest({
+      stats: {
+        level: 90,
+        gathering: 1200,
+        perception: 1000,
+        gp: 300
+      },
+      nodeBonuses: {
+        baseIntegrity: 2,
+        gatheringCount: 0,
+        yieldCount: 50,
+        extraRate: 0
+      },
+      temporaryGp: 300
+    }));
+    const withoutRestore = solveGatheringRotation(createRequest({
+      stats: {
+        level: 90,
+        gathering: 1200,
+        perception: 1000,
+        gp: 300
+      },
+      nodeBonuses: {
+        baseIntegrity: 2,
+        gatheringCount: 0,
+        yieldCount: 50,
+        extraRate: 0
+      },
+      temporaryGp: 0
+    }));
+
+    expect(withRestore.bestRotation).toContain('石工之理');
+    expect(withRestore.expectedYield).toBeGreaterThan(withoutRestore.expectedYield);
+  });
+
   it('莫非王土系列只會選擇一種整點獲得量加成', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {

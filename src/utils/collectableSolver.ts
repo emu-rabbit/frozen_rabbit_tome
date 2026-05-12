@@ -247,6 +247,9 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function buildActions(state: SearchState): ActionOption[] {
+    const wiseAction = createWiseToTheWorldAction(state);
+    if (wiseAction) return [wiseAction];
+
     const actions: ActionOption[] = [];
 
     if (state.gp >= 200 && !state.scrutinyActive) {
@@ -311,28 +314,6 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   function addIntegrityRestoreActions(actions: ActionOption[], state: SearchState) {
     const missingIntegrity = maxIntegrity - state.integrity;
 
-    if (state.wiseToTheWorldActive && missingIntegrity >= 1) {
-      actions.push({
-        kind: 'wiseToTheWorld',
-        priority: 60,
-        apply: (current, nextSolve) => {
-          const nextState = {
-            ...current,
-            integrity: Math.min(maxIntegrity, current.integrity + 1),
-            wiseToTheWorldActive: false
-          };
-          const next = nextSolve(nextState);
-          return buildPolicyResult(current, 'wiseToTheWorld', [{
-            state: nextState,
-            probability: 1,
-            labelKey: 'collectableSolver.branches.integrityRestored',
-            conditionKey: 'collectableSolver.conditions.integrityRestored'
-          }], [next], 0, 1);
-        }
-      });
-      return;
-    }
-
     if (stats.level < 25 || state.gp < 300 || missingIntegrity < 1) return;
 
     actions.push({
@@ -378,6 +359,30 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         ], [proc, noProc], 300, 1);
       }
     });
+  }
+
+  function createWiseToTheWorldAction(state: SearchState): ActionOption | null {
+    const missingIntegrity = maxIntegrity - state.integrity;
+    if (!state.wiseToTheWorldActive || missingIntegrity < 1) return null;
+
+    return {
+      kind: 'wiseToTheWorld',
+      priority: 0,
+      apply: (current, nextSolve) => {
+        const nextState = {
+          ...current,
+          integrity: Math.min(maxIntegrity, current.integrity + 1),
+          wiseToTheWorldActive: false
+        };
+        const next = nextSolve(nextState);
+        return buildPolicyResult(current, 'wiseToTheWorld', [{
+          state: nextState,
+          probability: 1,
+          labelKey: 'collectableSolver.branches.integrityRestored',
+          conditionKey: 'collectableSolver.conditions.integrityRestored'
+        }], [next], 0, 1);
+      }
+    };
   }
 
   function buffAction(
@@ -620,7 +625,61 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     if (candidateScore < currentScore - EV_EPSILON) return false;
     if (candidate.gpSpent !== current.gpSpent) return candidate.gpSpent < current.gpSpent;
     if (candidate.actionCount !== current.actionCount) return candidate.actionCount < current.actionCount;
+    if (habitPreferenceScore(candidate) !== habitPreferenceScore(current)) {
+      return habitPreferenceScore(candidate) > habitPreferenceScore(current);
+    }
     return candidate.nodeCount < current.nodeCount;
+  }
+
+  function habitPreferenceScore(result: SearchResult): number {
+    let score = 0;
+    const nextCollectSuccessDepth = findActionDepth(result.policy, 'nextCollectSuccess');
+
+    if (nextCollectSuccessDepth !== null) {
+      score += 1000 - nextCollectSuccessDepth * 50;
+    }
+
+    score += integrityRestorePreferenceScore(result.policy);
+
+    return score;
+  }
+
+  function integrityRestorePreferenceScore(
+    node: CollectablePolicyNode,
+    depth = 0,
+    visited = new Set<string>()
+  ): number {
+    if (visited.has(node.id)) return 0;
+    visited.add(node.id);
+
+    let score = 0;
+    if (node.recommendedAction.kind === 'restoreIntegrity') {
+      const missingIntegrity = maxIntegrity - node.state.integrity;
+      const preferredMissingIntegrity = stats.level >= 90 ? 2 : 1;
+      score += missingIntegrity >= preferredMissingIntegrity ? 500 - depth * 20 : -500;
+    }
+
+    return node.branches.reduce((total, branch) => {
+      return total + (branch.next ? integrityRestorePreferenceScore(branch.next, depth + 1, visited) : 0);
+    }, score);
+  }
+
+  function findActionDepth(
+    node: CollectablePolicyNode,
+    actionKind: CollectableActionKind,
+    depth = 0,
+    visited = new Set<string>()
+  ): number | null {
+    if (visited.has(node.id)) return null;
+    visited.add(node.id);
+
+    if (node.recommendedAction.kind === actionKind) return depth;
+
+    const childDepths = node.branches
+      .map((branch) => branch.next ? findActionDepth(branch.next, actionKind, depth + 1, visited) : null)
+      .filter((childDepth): childDepth is number => childDepth !== null);
+
+    return childDepths.length > 0 ? Math.min(...childDepths) : null;
   }
 
   function scoreSearchResult(result: SearchResult): number {

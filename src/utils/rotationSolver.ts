@@ -7,6 +7,7 @@ interface SolverResult {
   expectedYield: number;
   rotation: string[];
   outcomes: Map<number, number>;
+  habitScore: number;
 }
 
 interface SearchState {
@@ -24,6 +25,7 @@ interface SearchState {
   tidings: boolean;
   nextSuccessBonus: number;
   nextYieldBonus: number;
+  wiseReady: boolean;
 }
 
 interface ActionOption {
@@ -59,7 +61,8 @@ const STATE_KEY_FIELDS = [
   'allYieldBonus',
   'tidings',
   'nextSuccessBonus',
-  'nextYieldBonus'
+  'nextYieldBonus',
+  'wiseReady'
 ];
 
 type OutcomeSummary = {
@@ -176,7 +179,8 @@ function buildMemoKey(state: SearchState): string {
     state.allYieldBonus,
     state.tidings ? 1 : 0,
     state.nextSuccessBonus,
-    state.nextYieldBonus
+    state.nextYieldBonus,
+    state.wiseReady ? 1 : 0
   ].join('|');
 }
 
@@ -203,7 +207,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   function solve(state: SearchState): SolverResult {
     if (state.integrity <= 0) {
       activeSearchStats && (activeSearchStats.terminalStates += 1);
-      return { expectedYield: 0, rotation: [], outcomes: new Map([[0, 1]]) };
+      return { expectedYield: 0, rotation: [], outcomes: new Map([[0, 1]]), habitScore: 0 };
     }
 
     const memoKey = buildMemoKey(state);
@@ -224,7 +228,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       const candidate = {
         expectedYield: result.expectedYield,
         rotation: [action.name, ...result.rotation],
-        outcomes: result.outcomes
+        outcomes: result.outcomes,
+        habitScore: result.habitScore
       };
 
       activeSearchStats && (activeSearchStats.candidateComparisons += 1);
@@ -269,11 +274,15 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return {
       expectedYield: expectedValue(outcomes),
       rotation: [GATHER_ACTION, ...next.rotation],
-      outcomes
+      outcomes,
+      habitScore: next.habitScore
     };
   }
 
   function buildActions(state: SearchState): ActionOption[] {
+    const wiseAction = createWiseToTheWorldAction(state);
+    if (wiseAction) return [wiseAction];
+
     const actions: ActionOption[] = [];
     const wholeNodeBuffAllowed = !state.hasGathered;
 
@@ -381,7 +390,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     const missingIntegrity = maxIntegrity - state.integrity;
 
     if (stats.level >= 90) {
-      if (missingIntegrity < 2) return;
+      if (missingIntegrity < 1) return;
 
       actions.push({
         name: names.restore,
@@ -390,12 +399,13 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
           const afterRestore = {
             ...current,
             gp: current.gp - 300,
-            integrity: current.integrity + 1
+            integrity: Math.min(maxIntegrity, current.integrity + 1),
+            wiseReady: false
           };
           const noProc = nextSolve(afterRestore);
           const proc = nextSolve({
             ...afterRestore,
-            integrity: afterRestore.integrity + 1
+            wiseReady: true
           });
           const preferredBranch = proc.expectedYield >= noProc.expectedYield
             ? {
@@ -407,11 +417,12 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
           activeSearchStats && (activeSearchStats.branchCount += 2);
           return {
             expectedYield: noProc.expectedYield * 0.5 + proc.expectedYield * 0.5,
-            rotation: [WISE_TO_THE_WORLD_ACTION, ...preferredBranch.rotation],
+            rotation: preferredBranch.rotation,
             outcomes: mergeWeightedOutcomes([
               { outcomes: noProc.outcomes, weight: 0.5 },
               { outcomes: proc.outcomes, weight: 0.5 }
-            ])
+            ]),
+            habitScore: preferredBranch.habitScore + restoreIntegrityHabitScore(current)
           };
         }
       });
@@ -425,13 +436,48 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       priority: 90,
       apply: (current, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
-        return nextSolve({
+        const next = nextSolve({
           ...current,
           gp: current.gp - 300,
           integrity: current.integrity + 1
         });
+
+        return {
+          ...next,
+          habitScore: next.habitScore + restoreIntegrityHabitScore(current)
+        };
       }
     });
+  }
+
+  function restoreIntegrityHabitScore(state: SearchState): number {
+    const missingIntegrity = maxIntegrity - state.integrity;
+    const preferredMissingIntegrity = stats.level >= 90 ? 2 : 1;
+
+    return missingIntegrity >= preferredMissingIntegrity ? 500 : -500;
+  }
+
+  function createWiseToTheWorldAction(state: SearchState): ActionOption | null {
+    const missingIntegrity = maxIntegrity - state.integrity;
+    if (!state.wiseReady || missingIntegrity < 1) return null;
+
+    return {
+      name: WISE_TO_THE_WORLD_ACTION,
+      priority: 0,
+      apply: (current, nextSolve) => {
+        activeSearchStats && (activeSearchStats.branchCount += 1);
+        const next = nextSolve({
+          ...current,
+          integrity: Math.min(maxIntegrity, current.integrity + 1),
+          wiseReady: false
+        });
+
+        return {
+          ...next,
+          habitScore: next.habitScore + 250
+        };
+      }
+    };
   }
 
   function setBuffAction(
@@ -463,6 +509,10 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
 
     if (objectiveMode !== 'expected' && candidate.rotation.length !== current.rotation.length) {
       return candidate.rotation.length < current.rotation.length;
+    }
+
+    if (candidate.habitScore !== current.habitScore) {
+      return candidate.habitScore > current.habitScore;
     }
 
     return rotationPreferenceScore(candidate.rotation) > rotationPreferenceScore(current.rotation);
@@ -663,7 +713,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       allYieldBonus: 0,
       tidings: false,
       nextSuccessBonus: 0,
-      nextYieldBonus: 0
+      nextYieldBonus: 0,
+      wiseReady: false
     });
     const search = activeSearchStats;
     search.memoHitRate = calculateMemoHitRate(search);
