@@ -367,6 +367,36 @@ export default {
       now: '現在の推奨',
       stateSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}',
       nextBranches: '分岐候補',
+      confirmOutcome: '今回の結果を確認',
+      confirmHint: 'ゲーム画面の状態を見ながら一つずつ確認してください。各ステップに入った時点では未選択です。',
+      confluentHint: '今回のランダム結果は同じ状態に合流するため、追加の選択は不要です。',
+      deterministicHint: 'このアクションの結果は 1 つだけです。そのまま次へ進めます。',
+      collectQuestion: '今回の収集品採集は成功しましたか？',
+      standardQuestion: 'Collector\'s Standard は発動しましたか？',
+      wiseQuestion: 'Wise to the World は発動しましたか？',
+      collectabilityQuestion: '現在の収集価値はいくつですか？',
+      integrityQuestion: '現在の耐久はいくつ残っていますか？',
+      integrityOption: '耐久 {integrity}',
+      collectOptions: {
+        success: '採集成功',
+        failed: '採集失敗'
+      },
+      standardOptions: {
+        proc: '発動した',
+        noProc: '発動していない'
+      },
+      wiseOptions: {
+        proc: '発動した',
+        noProc: '発動していない'
+      },
+      matchedOutcome: '対応した結果',
+      confluentOutcome: '結果が合流',
+      deterministicOutcome: '確定結果',
+      sameOutcome: '異なる発動結果でも同じ状態に進みます',
+      readyOutcome: 'このアクション後、次の状態へ進みます',
+      waitingSelection: '上の質問をすべて確認してください。',
+      noMatchedOutcome: 'この選択に対応する分岐がありません。ゲーム画面をもう一度確認してください。',
+      continue: '次へ',
       outcomeValue: '価値 {value}、耐久 {integrity}',
       nextAction: '次：{action}',
       terminal: 'この分岐はここで終了',

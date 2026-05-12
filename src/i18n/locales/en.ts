@@ -369,6 +369,36 @@ export default {
       now: 'Use Now',
       stateSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}',
       nextBranches: 'Possible Branches',
+      confirmOutcome: 'Confirm Current Result',
+      confirmHint: 'Check each item from the in-game UI. Nothing is preselected when you enter a step.',
+      confluentHint: 'These random outcomes converge to the same state, so no extra choice is needed.',
+      deterministicHint: 'This action has only one resulting state. Continue to the next step.',
+      collectQuestion: 'Did this Collect succeed?',
+      standardQuestion: "Did Collector's Standard proc?",
+      wiseQuestion: 'Did Wise to the World proc?',
+      collectabilityQuestion: 'What is the current collectability?',
+      integrityQuestion: 'How much integrity remains?',
+      integrityOption: '{integrity} integrity',
+      collectOptions: {
+        success: 'Collect succeeded',
+        failed: 'Collect failed'
+      },
+      standardOptions: {
+        proc: 'Standard proc',
+        noProc: 'No Standard proc'
+      },
+      wiseOptions: {
+        proc: 'Wise proc',
+        noProc: 'No Wise proc'
+      },
+      matchedOutcome: 'Matched Outcome',
+      confluentOutcome: 'Converged Outcome',
+      deterministicOutcome: 'Fixed Outcome',
+      sameOutcome: 'Different proc results enter the same state',
+      readyOutcome: 'This action moves into the next state',
+      waitingSelection: 'Confirm every question above first.',
+      noMatchedOutcome: 'No branch matches these answers. Check the in-game state again.',
+      continue: 'Next Step',
       outcomeValue: 'Value {value}, integrity {integrity}',
       nextAction: 'Next: {action}',
       terminal: 'This branch ends here',

@@ -367,6 +367,36 @@ export default {
       now: '现在建议',
       stateSummary: 'GP {gp} / 耐久 {integrity} / 收藏价值 {collectability}',
       nextBranches: '可能分支',
+      confirmOutcome: '确认这次结果',
+      confirmHint: '请依照游戏画面上的状态逐项确认；每一题进入时都不会预先选取。',
+      confluentHint: '这次的随机结果已汇流到同一个状态，不需要额外选择。',
+      deterministicHint: '这次动作会进入唯一结果，可以直接前往下一步。',
+      collectQuestion: '这次收藏品采集有成功吗？',
+      standardQuestion: '这次有触发洞察吗？',
+      wiseQuestion: '这次有触发理智同兴吗？',
+      collectabilityQuestion: '现在的收藏价值是多少？',
+      integrityQuestion: '现在耐久剩多少？',
+      integrityOption: '{integrity} 耐久',
+      collectOptions: {
+        success: '采集成功',
+        failed: '采集失败'
+      },
+      standardOptions: {
+        proc: '有触发洞察',
+        noProc: '没有触发洞察'
+      },
+      wiseOptions: {
+        proc: '有触发理智同兴',
+        noProc: '没有触发理智同兴'
+      },
+      matchedOutcome: '已对应到',
+      confluentOutcome: '结果汇流',
+      deterministicOutcome: '确定结果',
+      sameOutcome: '不同触发结果会进入相同状态',
+      readyOutcome: '此动作完成后进入下一状态',
+      waitingSelection: '请先确认上方所有问题。',
+      noMatchedOutcome: '目前选项没有对应分支，请再检查一次游戏画面。',
+      continue: '下一步',
       outcomeValue: '价值 {value}，耐久 {integrity}',
       nextAction: '下一步：{action}',
       terminal: '此分支已结束',
