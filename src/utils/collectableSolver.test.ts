@@ -421,6 +421,43 @@ describe('solveCollectableRotation', () => {
     expect(restoreNode?.state.integrity).toBe(1);
   });
 
+  it('90 級以上同分時偏好缺 2 耐久施放石工，讓理智同興可立刻接續', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 200, reward: { exp: 0, gil: 0, scrip: 1, items: {} } },
+          mid: { collectability: 600, reward: { exp: 0, gil: 0, scrip: 10, items: {} } },
+          high: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 20, items: {} } }
+        }
+      }
+    }));
+
+    const restoreNode = findActionNode(result.policy, 'restoreIntegrity');
+    const wiseBranch = restoreNode?.branches.find((branch: any) => branch.labelKey === 'collectableSolver.branches.wiseProc');
+
+    expect(restoreNode?.state.integrity).toBe(4);
+    expect(wiseBranch?.next?.recommendedAction.kind).toBe('wiseToTheWorld');
+  });
+
   it('debug mode 回傳公式、搜尋統計與第一版限制', () => {
     const result = solveCollectableRotation(createRequest({ debugMode: true }));
 

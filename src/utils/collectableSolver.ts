@@ -624,10 +624,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     if (candidateScore > currentScore + EV_EPSILON) return true;
     if (candidateScore < currentScore - EV_EPSILON) return false;
     if (candidate.gpSpent !== current.gpSpent) return candidate.gpSpent < current.gpSpent;
-    if (candidate.actionCount !== current.actionCount) return candidate.actionCount < current.actionCount;
     if (habitPreferenceScore(candidate) !== habitPreferenceScore(current)) {
       return habitPreferenceScore(candidate) > habitPreferenceScore(current);
     }
+    if (candidate.actionCount !== current.actionCount) return candidate.actionCount < current.actionCount;
     return candidate.nodeCount < current.nodeCount;
   }
 
@@ -637,6 +637,11 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
     if (nextCollectSuccessDepth !== null) {
       score += 1000 - nextCollectSuccessDepth * 50;
+    }
+
+    const wiseToTheWorldDepth = findActionDepth(result.policy, 'wiseToTheWorld');
+    if (wiseToTheWorldDepth !== null) {
+      score += 800 - wiseToTheWorldDepth * 40;
     }
 
     score += integrityRestorePreferenceScore(result.policy);
