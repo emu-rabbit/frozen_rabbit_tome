@@ -411,7 +411,7 @@ export default {
       stateSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}',
       nextBranches: '分岐候補',
       confirmOutcome: '今回の結果を確認',
-      confirmHint: 'ゲーム画面の状態を見ながら一つずつ確認してください。各ステップに入った時点では未選択です。',
+      confirmHint: 'ゲーム画面の状態を見ながら一つずつ確認し、選択してください。',
       confluentHint: '今回のランダム結果は同じ状態に合流するため、追加の選択は不要です。',
       deterministicHint: 'このアクションの結果は 1 つだけです。そのまま次へ進めます。',
       collectQuestion: '今回の収集品採集は成功しましたか？',

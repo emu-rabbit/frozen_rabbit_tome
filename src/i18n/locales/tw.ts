@@ -414,7 +414,7 @@ export default {
       stateSummary: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}',
       nextBranches: '可能分支',
       confirmOutcome: '確認這次結果',
-      confirmHint: '請依照遊戲畫面上的狀態逐項確認；每一題進入時都不會預先選取。',
+      confirmHint: '請依照遊戲畫面上的狀態逐項確認並選擇。',
       confluentHint: '這次的隨機結果已匯流到同一個狀態，不需要額外選擇。',
       deterministicHint: '這次動作會進入唯一結果，可以直接前往下一步。',
       collectQuestion: '這次收藏品採集有成功嗎？',

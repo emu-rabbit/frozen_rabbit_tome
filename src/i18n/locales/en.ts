@@ -413,7 +413,7 @@ export default {
       stateSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}',
       nextBranches: 'Possible Branches',
       confirmOutcome: 'Confirm Current Result',
-      confirmHint: 'Check each item from the in-game UI. Nothing is preselected when you enter a step.',
+      confirmHint: 'Check and choose each item from the in-game UI.',
       confluentHint: 'These random outcomes converge to the same state, so no extra choice is needed.',
       deterministicHint: 'This action has only one resulting state. Continue to the next step.',
       collectQuestion: 'Did this Collect succeed?',
