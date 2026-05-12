@@ -332,7 +332,25 @@ export default {
       branchCount: '分支总数',
       terminalStates: '终端状态',
       outcomeDistribution: '概率分布表',
-      optimality: '最优性说明',
+      optimality: '节点状态列举与最优性说明',
+      stateKeyIntro: '下列字段是一般采集求解器识别“每个搜索节点状态”时会记录的内容。只要这些值相同，就会视为同一个子问题并复用已算好的结果。',
+      stateFields: {
+        gp: '当前剩余 GP。',
+        integrity: '当前采集点剩余耐久，也就是还能执行几次采集或消耗耐久的动作。',
+        hasGathered: '是否已经在这个节点采集过，用来判断部分技能是否仍可施放。',
+        successBonus: '当前已套用在所有采集上的成功率加成总和。',
+        successIActive: '获得率提高 I 类技能是否已启用，避免同一类效果重复计算。',
+        successIIActive: '获得率提高 II 类技能是否已启用。',
+        successIIIActive: '获得率提高 III 类技能是否已启用。',
+        boonBonus: '当前已套用的额外采集率加成总和。',
+        giftIActive: '额外采集率提高 I 类技能是否已启用。',
+        giftIIActive: '额外采集率提高 II 类技能是否已启用。',
+        allYieldBonus: '整个采集点都会增加的获得数加成。',
+        tidings: '纳尔札尔福音 / 诺菲卡福音是否启用，用来计算额外采集触发时的获得数。',
+        nextSuccessBonus: '只影响下一次采集的成功率加成。',
+        nextYieldBonus: '只影响下一次采集的获得数加成。',
+        wiseReady: '理智同兴是否可用，代表耐久恢复技能后可能取得的免费恢复机会。'
+      },
       optimalityMethod: '求解器会对每个状态穷举可施放技能与直接采集分支，使用 memoization 保存子问题最佳解；因此在目前模型内，根状态取得的就是全局最佳期望值。',
       tieBreaker: '若期望值在 epsilon 内相同，使用 rotationPreferenceScore 选择更符合施放习惯的等价手法。',
       caveat: '最优性成立于目前建模的普通采集技能、GP、耐久、成功率、Boon、再起与理智同兴概率；未纳入收藏品、水晶采集与玩家手动中断。'
@@ -514,7 +532,25 @@ export default {
       primaryPlan: '当前 GP 决策树',
       revisitPlan: '再起后满 GP 决策树',
       limitations: '第一版限制',
-      optimalityNote: '求解器会对目前支持的收藏品技能与成功率补强技能进行 DP policy search；推荐成立于当前模型内。'
+      stateKeyIntro: '下列字段是收藏品求解器识别“每个决策树节点状态”时会记录的内容。节点代表你在游戏画面上可能看到的一个采集状态，求解器会根据这些值决定下一步推荐动作。',
+      stateFields: {
+        gp: '当前剩余 GP。',
+        integrity: '当前剩余耐久，也就是还能承受几次消耗耐久的动作。',
+        collectability: '当前收藏价值，会影响交付档位与后续是否值得继续提炼。',
+        scrutinyActive: '集中检查是否启用，会影响下一次提炼类动作的收藏价值提升。',
+        collectorsFocusActive: '价值瞩目是否启用，会影响价值提升率。',
+        primingTouchActive: '预备碰触是否启用，会影响慎重提炼不消耗耐久的概率。',
+        standardActive: 'Collector\'s Standard / 洞察是否启用，代表可使用对应的后续效果。',
+        hasUsedCollectableAction: '是否已使用过提炼或收藏品采集动作，用来判断部分状态与限制。',
+        hasCollected: '是否已经执行过收藏品采集，避免同一个节点重复收取收益。',
+        successBonus: '当前已套用在收藏品采集上的成功率加成总和。',
+        successIActive: '获得率提高 I 类技能是否已启用。',
+        successIIActive: '获得率提高 II 类技能是否已启用。',
+        successIIIActive: '获得率提高 III 类技能是否已启用。',
+        nextCollectSuccessBonus: '只影响下一次收藏品采集的成功率加成。',
+        wiseToTheWorldActive: '理智同兴是否可用，代表可免费恢复 1 点耐久。'
+      },
+      optimalityNote: '求解器会用上述节点状态列举进行 DP policy search：在每个状态比较目前支持的收藏品技能、成功率补强技能与收取分支，推荐成立于当前模型内。'
     },
     limitations: {
       'brazen-excluded': '未纳入大胆提炼，因随机分布尚未确认。',

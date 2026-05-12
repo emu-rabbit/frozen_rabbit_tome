@@ -332,7 +332,25 @@ export default {
       branchCount: 'Total branches',
       terminalStates: 'Terminal states',
       outcomeDistribution: 'Probability Distribution',
-      optimality: 'Optimality',
+      optimality: 'Node State Fields and Optimality',
+      stateKeyIntro: 'These fields are the state snapshot used by the regular gathering solver for each search node. When every value matches, the solver treats it as the same subproblem and reuses the computed result.',
+      stateFields: {
+        gp: 'Current remaining GP.',
+        integrity: 'Remaining node integrity, meaning how many more gathers or integrity-spending actions are possible.',
+        hasGathered: 'Whether this node has already gathered, used to decide if some actions are still legal.',
+        successBonus: 'Total success-rate bonus currently applied to all gathers.',
+        successIActive: 'Whether the Gathering Rate I style buff is active, preventing duplicate counting.',
+        successIIActive: 'Whether the Gathering Rate II style buff is active.',
+        successIIIActive: 'Whether the Gathering Rate III style buff is active.',
+        boonBonus: 'Total Gatherer\'s Boon rate bonus currently applied.',
+        giftIActive: 'Whether the Boon rate I style buff is active.',
+        giftIIActive: 'Whether the Boon rate II style buff is active.',
+        allYieldBonus: 'Yield bonus that applies to the whole gathering point.',
+        tidings: 'Whether the Tidings buff is active, used to add yield when Boon triggers.',
+        nextSuccessBonus: 'Success-rate bonus that applies only to the next gather.',
+        nextYieldBonus: 'Yield bonus that applies only to the next gather.',
+        wiseReady: 'Whether Wise to the World is available after a durability restore.'
+      },
       optimalityMethod: 'For each state, the solver exhaustively evaluates every legal action branch and the direct gather branch, then memoizes the best subproblem result. Within the current model, the root state therefore receives the globally best expected value.',
       tieBreaker: 'If expected values are equal within epsilon, rotationPreferenceScore selects the equivalent rotation that better matches practical casting habits.',
       caveat: 'Optimality holds for the currently modeled regular-gathering skills, GP, integrity, success rate, Boon, Revisit, and Wise to the World probabilities. Collectables, crystal gathering, and manual interruption are not included.'
@@ -525,7 +543,25 @@ export default {
       primaryPlan: 'Current GP Policy',
       revisitPlan: 'Full GP Revisit Policy',
       limitations: 'V1 Limitations',
-      optimalityNote: 'The solver runs DP policy search over currently supported collectable actions and success-rate buffs. The recommendation is scoped to this model.'
+      stateKeyIntro: 'These fields are the state snapshot used by the collectable solver for each decision-tree node. A node represents one possible in-game gathering state, and the solver uses these values to choose the next recommended action.',
+      stateFields: {
+        gp: 'Current remaining GP.',
+        integrity: 'Remaining integrity, meaning how many more integrity-spending actions are possible.',
+        collectability: 'Current collectability, which affects reward tiers and whether further refining is worthwhile.',
+        scrutinyActive: 'Whether Scrutiny is active, affecting the next collectable refine action.',
+        collectorsFocusActive: 'Whether Collector\'s Focus is active, affecting value increase rate.',
+        primingTouchActive: 'Whether Priming Touch is active, affecting Meticulous integrity-save chance.',
+        standardActive: 'Whether Collector\'s Standard is active for the related follow-up effect.',
+        hasUsedCollectableAction: 'Whether a refine or Collect action has already been used, for state and limitation checks.',
+        hasCollected: 'Whether Collect has already been performed, preventing repeated reward collection in the same node.',
+        successBonus: 'Total success-rate bonus currently applied to Collect.',
+        successIActive: 'Whether the Gathering Rate I style buff is active.',
+        successIIActive: 'Whether the Gathering Rate II style buff is active.',
+        successIIIActive: 'Whether the Gathering Rate III style buff is active.',
+        nextCollectSuccessBonus: 'Success-rate bonus that applies only to the next Collect action.',
+        wiseToTheWorldActive: 'Whether Wise to the World is available for a free 1 integrity restore.'
+      },
+      optimalityNote: 'The solver uses the state fields above for DP policy search: at each state it compares currently supported collectable actions, success-rate buffs, and collect branches. The recommendation is scoped to this model.'
     },
     limitations: {
       'brazen-excluded': 'Brazen is excluded because its random distribution is not confirmed.',

@@ -15,7 +15,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const plans = computed(() => props.debug?.plans ?? []);
-const stateFields = computed(() => props.debug?.optimality.stateKeyFields.join(', ') ?? '');
+const stateFields = computed(() => props.debug?.optimality.stateKeyFields ?? []);
 
 function closeDialog() {
   emit('update:modelValue', false);
@@ -169,8 +169,14 @@ function formatProbability(probability: number, useSpacePadding = false, include
 
             <section class="debug-section">
               <h3>{{ t('solver.debug.optimality') }}</h3>
+              <p class="debug-muted">{{ t('solver.debug.stateKeyIntro') }}</p>
+              <ul class="debug-state-list">
+                <li v-for="field in stateFields" :key="field">
+                  <code>{{ field }}</code>
+                  <span>{{ t(`solver.debug.stateFields.${field}`) }}</span>
+                </li>
+              </ul>
               <p>{{ t('solver.debug.optimalityMethod') }}</p>
-              <p class="debug-code">{{ stateFields }}</p>
               <p>{{ t('solver.debug.tieBreaker') }}</p>
               <p class="debug-muted">{{ t('solver.debug.caveat') }}</p>
             </section>
@@ -369,6 +375,52 @@ function formatProbability(probability: number, useSpacePadding = false, include
 :global(html.dark .debug-expression) {
   background: #020617;
   color: #99f6e4;
+}
+
+.debug-state-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.debug-state-list li {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #f8fafc;
+  padding: 0.55rem 0.65rem;
+}
+
+:global(html.dark .debug-state-list li) {
+  border-color: #334155;
+  background: rgb(2 6 23 / 0.34);
+}
+
+.debug-state-list code {
+  overflow-wrap: anywhere;
+  color: #0f766e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.debug-state-list span {
+  color: #475569;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+:global(html.dark .debug-state-list code) {
+  color: #99f6e4;
+}
+
+:global(html.dark .debug-state-list span) {
+  color: #cbd5e1;
 }
 
 .debug-plan-list {

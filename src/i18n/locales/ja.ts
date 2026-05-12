@@ -332,7 +332,25 @@ export default {
       branchCount: '総分岐数',
       terminalStates: '終端状態',
       outcomeDistribution: '確率分布表',
-      optimality: '最適性の説明',
+      optimality: 'ノード状態の一覧と最適性',
+      stateKeyIntro: '以下の項目は、通常採集ソルバーが各探索ノードの状態を識別するために記録する内容です。すべての値が同じなら同じ部分問題として扱い、計算済みの結果を再利用します。',
+      stateFields: {
+        gp: '現在の残り GP。',
+        integrity: '採集場所の残り耐久。あと何回、採集または耐久を消費する行動ができるかを表します。',
+        hasGathered: 'このノードですでに採集したかどうか。一部アクションがまだ使えるかの判定に使います。',
+        successBonus: 'すべての採集に適用される成功率ボーナスの合計。',
+        successIActive: '採集成功率アップ I 系の効果が有効かどうか。同系統の重複計算を防ぎます。',
+        successIIActive: '採集成功率アップ II 系の効果が有効かどうか。',
+        successIIIActive: '採集成功率アップ III 系の効果が有効かどうか。',
+        boonBonus: '現在適用されている Boon 発生率ボーナスの合計。',
+        giftIActive: 'Boon 発生率アップ I 系の効果が有効かどうか。',
+        giftIIActive: 'Boon 発生率アップ II 系の効果が有効かどうか。',
+        allYieldBonus: '採集場所全体に適用される獲得数ボーナス。',
+        tidings: 'Tidings 系の効果が有効かどうか。Boon 発生時の獲得数計算に使います。',
+        nextSuccessBonus: '次の 1 回の採集だけに適用される成功率ボーナス。',
+        nextYieldBonus: '次の 1 回の採集だけに適用される獲得数ボーナス。',
+        wiseReady: 'Wise to the World が使用可能かどうか。耐久回復後の無料回復機会を表します。'
+      },
       optimalityMethod: 'ソルバーは各状態で使用可能な全アクション分岐と直接採集分岐を評価し、memoization で部分問題の最良解を保存します。現在のモデル内では、根状態の解が大域的に最大の期待値になります。',
       tieBreaker: '期待値が epsilon の範囲内で同値の場合、rotationPreferenceScore により実用上の詠唱順に近い等価手順を選びます。',
       caveat: '最適性は、現在モデル化されている通常採集スキル、GP、耐久、成功率、Boon、再発見、理知興起の確率に対して成立します。収集品、クリスタル採集、手動中断は含まれません。'
@@ -514,7 +532,25 @@ export default {
       primaryPlan: '現在 GP の決定木',
       revisitPlan: '再発見後の満 GP 決定木',
       limitations: 'V1 の制限',
-      optimalityNote: 'ソルバーは現在サポートしている収集品アクションと成功率補助スキルに対して DP policy search を行います。推奨はこのモデル内で成立します。'
+      stateKeyIntro: '以下の項目は、収集品ソルバーが各決定木ノードの状態を識別するために記録する内容です。ノードはゲーム画面上で起こり得る 1 つの採集状態を表し、ソルバーはこれらの値から次の推奨アクションを決めます。',
+      stateFields: {
+        gp: '現在の残り GP。',
+        integrity: '現在の残り耐久。あと何回、耐久を消費する行動を受けられるかを表します。',
+        collectability: '現在の収集価値。報酬段階と、さらに精選を続ける価値があるかに影響します。',
+        scrutinyActive: 'Scrutiny が有効かどうか。次の収集品精選アクションの価値上昇に影響します。',
+        collectorsFocusActive: 'Collector\'s Focus が有効かどうか。価値上昇率に影響します。',
+        primingTouchActive: 'Priming Touch が有効かどうか。Meticulous の耐久保存率に影響します。',
+        standardActive: 'Collector\'s Standard / 活眼が有効かどうか。対応する後続効果に使います。',
+        hasUsedCollectableAction: '精選または収集品採集アクションをすでに使ったかどうか。状態と制限の判定に使います。',
+        hasCollected: '収集品採集をすでに実行したかどうか。同じノードで報酬を重複取得しないために使います。',
+        successBonus: '収集品採集に適用される成功率ボーナスの合計。',
+        successIActive: '採集成功率アップ I 系の効果が有効かどうか。',
+        successIIActive: '採集成功率アップ II 系の効果が有効かどうか。',
+        successIIIActive: '採集成功率アップ III 系の効果が有効かどうか。',
+        nextCollectSuccessBonus: '次の収集品採集だけに適用される成功率ボーナス。',
+        wiseToTheWorldActive: 'Wise to the World が使用可能かどうか。耐久を 1 回復できる無料効果を表します。'
+      },
+      optimalityNote: 'ソルバーは上記のノード状態を使って DP policy search を行います。各状態で、現在サポートしている収集品アクション、成功率補助スキル、収集分岐を比較します。推奨はこのモデル内で成立します。'
     },
     limitations: {
       'brazen-excluded': 'Brazen はランダム分布が未確認のため含めていません。',
