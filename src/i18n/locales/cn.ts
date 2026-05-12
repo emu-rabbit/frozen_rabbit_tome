@@ -508,6 +508,7 @@ export default {
     noFood: '未使用食物',
     unknownDate: '未知时间',
     rotationPreview: '最佳手法预览',
+    startFromAction: '从 {action} 开始',
     createdAt: '创建于 {time}',
     emptyTitle: '书库目前是空的',
     emptyDesc: '在秘籍求解器演算出手法后，按下“保存秘籍”就会收进这里。',

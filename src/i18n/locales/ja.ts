@@ -508,6 +508,7 @@ export default {
     noFood: '食事なし',
     unknownDate: '不明な時刻',
     rotationPreview: '最適手順プレビュー',
+    startFromAction: '{action} から開始',
     createdAt: '作成日時 {time}',
     emptyTitle: 'ライブラリはまだ空です',
     emptyDesc: 'ソルバーで手順を計算したあと、「秘伝書を保存」を押すとここに保存されます。',

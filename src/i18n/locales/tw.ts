@@ -520,6 +520,7 @@ export default {
     noFood: '未使用食物',
     unknownDate: '未知時間',
     rotationPreview: '最佳手法預覽',
+    startFromAction: '從 {action} 開始',
     createdAt: '建立於 {time}',
     emptyTitle: '書庫目前是空的',
     emptyDesc: '在秘笈求解器演算出手法後，按下「儲存秘笈」就會收進這裡。',

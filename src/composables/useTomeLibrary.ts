@@ -64,6 +64,7 @@ export function useTomeLibrary() {
             actionKind: branch.next?.recommendedAction.kind
           }))
         },
+        collectableRewardItemId: payload.collectableResult.rewardItemId,
         collectableExpectedScore: payload.collectableResult.expectedScore,
         collectableExpectedReward: payload.collectableResult.expectedReward,
         createdAt: new Date().toISOString()

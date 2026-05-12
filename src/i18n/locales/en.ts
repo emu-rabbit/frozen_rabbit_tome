@@ -519,6 +519,7 @@ export default {
     noFood: 'No food',
     unknownDate: 'Unknown time',
     rotationPreview: 'Best rotation preview',
+    startFromAction: 'Start with {action}',
     createdAt: 'Created {time}',
     emptyTitle: 'Your library is empty',
     emptyDesc: 'After solving a rotation, press "Save Tome" to keep it here.',

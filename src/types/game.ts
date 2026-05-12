@@ -269,6 +269,7 @@ export interface StoredTome {
   collectableObjective?: CollectableObjective;
   collectableRewardTableSummary?: CollectableRewardTableSummary;
   collectablePolicy?: StoredCollectablePolicy;
+  collectableRewardItemId?: number;
   collectableExpectedScore?: number;
   collectableExpectedReward?: CollectableRewardVector;
   createdAt: string;

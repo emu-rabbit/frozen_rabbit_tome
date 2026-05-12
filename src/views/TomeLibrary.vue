@@ -15,6 +15,7 @@ import { useSettings } from '../composables/useSettings';
 import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
+import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 
@@ -181,13 +182,13 @@ function collectableRootActionIcon(tome: StoredTome) {
   return getCollectableActionIcon(tome.collectablePolicy.rootAction.kind, itemMeta(tome)?.jobType || 'miner');
 }
 
-function collectableRewardSummary(tome: StoredTome) {
-  const reward = tome.collectableExpectedReward;
-  if (!reward) return '-';
-  return t('collectableSolver.results.rewardSummary', {
-    scrip: Number(reward.scrip.toFixed(2)),
-    gil: Number(reward.gil.toFixed(2))
-  });
+function collectableExpectedScore(tome: StoredTome) {
+  const score = tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip;
+  return typeof score === 'number' ? Number(score.toFixed(2)) : '-';
+}
+
+function collectableScripMeta(tome: StoredTome) {
+  return getCollectableScripRewardMeta(tome.collectableRewardItemId ?? tome.collectableRewardTableSummary?.rewardItemId);
 }
 </script>
 
@@ -282,17 +283,33 @@ function collectableRewardSummary(tome: StoredTome) {
         </div>
 
         <div v-if="isCollectableTome(tome)" class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
-          <div class="rotation-preview-block">
-            <div class="rotation-strip">
-              <h4 class="rotation-strip-title">{{ t('collectableSolver.results.title') }}</h4>
-              <div class="rotation-icons">
-                <span class="rotation-icon-wrap rotation-action">
-                  <img v-if="collectableRootActionIcon(tome)" :src="collectableRootActionIcon(tome)" class="rotation-icon" alt="" />
-                  <i v-else class="pi pi-sitemap text-xs"></i>
+          <div class="collectable-tome-summary">
+            <div class="collectable-method">
+              <span class="collectable-method-label">{{ t('solver.strategy.rotationTitles.primary') }}</span>
+              <div class="collectable-method-action">
+                <span class="collectable-action-icon">
+                  <img v-if="collectableRootActionIcon(tome)" :src="collectableRootActionIcon(tome)" alt="" />
+                  <i v-else class="pi pi-sitemap"></i>
                 </span>
-                <span class="collectable-preview-text">{{ collectableRootActionName(tome) }}</span>
+                <strong>{{ t('tomeLibrary.startFromAction', { action: collectableRootActionName(tome) }) }}</strong>
               </div>
-              <p class="collectable-preview-reward">{{ collectableRewardSummary(tome) }}</p>
+            </div>
+
+            <div class="collectable-score" :title="t(collectableScripMeta(tome).labelKey)">
+              <span>{{ t('collectableSolver.results.expectedScore') }}</span>
+              <strong>{{ collectableExpectedScore(tome) }}</strong>
+              <span
+                class="collectable-scrip-icon"
+                :class="`is-${collectableScripMeta(tome).kind}`"
+                :aria-label="t(collectableScripMeta(tome).labelKey)"
+              >
+                <img
+                  v-if="collectableScripMeta(tome).iconUrl"
+                  :src="collectableScripMeta(tome).iconUrl"
+                  :alt="t(collectableScripMeta(tome).labelKey)"
+                />
+                <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
+              </span>
             </div>
           </div>
         </div>
@@ -647,6 +664,141 @@ function collectableRewardSummary(tome: StoredTome) {
   image-rendering: pixelated;
 }
 
+.collectable-tome-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eefdf6 100%);
+}
+
+:global(html.dark .collectable-tome-summary) {
+  border-color: #1e293b;
+  background: linear-gradient(135deg, rgb(15 23 42 / 0.72) 0%, rgb(20 83 45 / 0.18) 100%);
+}
+
+.collectable-method {
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.collectable-method-label,
+.collectable-score span:first-child {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+:global(html.dark .collectable-method-label),
+:global(html.dark .collectable-score span:first-child) {
+  color: #94a3b8;
+}
+
+.collectable-method-action {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.collectable-action-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #dff7ec;
+  color: #3f8f79;
+  box-shadow: inset 0 0 0 1px rgb(82 168 144 / 0.16);
+}
+
+:global(html.dark .collectable-action-icon) {
+  background: rgb(20 83 45 / 0.34);
+  color: #99f6e4;
+  box-shadow: inset 0 0 0 1px rgb(94 234 212 / 0.12);
+}
+
+.collectable-action-icon img {
+  width: 2.35rem;
+  height: 2.35rem;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.collectable-method-action strong {
+  min-width: 0;
+  color: #1e293b;
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+:global(html.dark .collectable-method-action strong) {
+  color: #f8fafc;
+}
+
+.collectable-score {
+  min-width: 8rem;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: end;
+  gap: 0.15rem 0.45rem;
+  text-align: right;
+}
+
+.collectable-score span:first-child {
+  grid-column: 1 / -1;
+}
+
+.collectable-score strong {
+  color: #0f766e;
+  font-size: 1.18rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+:global(html.dark .collectable-score strong) {
+  color: #99f6e4;
+}
+
+.collectable-scrip-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #d1fae5;
+  border-radius: 8px;
+  background: white;
+  color: #64748b;
+  box-shadow: 0 5px 14px rgb(15 23 42 / 0.08);
+}
+
+:global(html.dark .collectable-scrip-icon) {
+  border-color: #334155;
+  background: rgb(2 6 23 / 0.52);
+  color: #94a3b8;
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.22);
+}
+
+.collectable-scrip-icon img {
+  width: 1.45rem;
+  height: 1.45rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
 .card-footer {
   display: flex;
   flex-direction: column;
@@ -664,6 +816,26 @@ function collectableRewardSummary(tome: StoredTome) {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  .collectable-tome-summary {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .collectable-score {
+    min-width: 0;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    text-align: left;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgb(209 250 229 / 0.72);
+  }
+
+  :global(html.dark .collectable-score) {
+    border-top-color: #334155;
   }
 }
 
