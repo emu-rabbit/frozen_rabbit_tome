@@ -361,7 +361,8 @@ export default {
       successIII: '获得率提高 III',
       nextCollectSuccess: '下次收藏成功率提高',
       restoreIntegrity: '石工之理 / 农夫之智',
-      wiseToTheWorld: '理智同兴'
+      wiseToTheWorld: '理智同兴',
+      revisitCheck: '确认再起'
     },
     results: {
       kicker: 'Recommended Policy',
@@ -376,6 +377,7 @@ export default {
       },
       expectedReward: '期望收益',
       rewardSummary: '票据 {scrip} / 金币 {gil}',
+      revisitIncluded: '总期望已纳入再起 {chance}% 概率。',
       limitationNote: '第一版未纳入大胆提炼、强化洞察、精选收益模型与实际经验值换算。'
     },
     policy: {
@@ -389,6 +391,7 @@ export default {
       collectQuestion: '这次收藏品采集有成功吗？',
       standardQuestion: '这次有触发洞察吗？',
       wiseQuestion: '这次有触发理智同兴吗？',
+      revisitQuestion: '耐久耗尽后有触发再起吗？',
       collectabilityQuestion: '现在的收藏价值是多少？',
       integrityQuestion: '现在耐久剩多少？',
       integrityOption: '{integrity} 耐久',
@@ -403,6 +406,10 @@ export default {
       wiseOptions: {
         proc: '有触发理智同兴',
         noProc: '没有触发理智同兴'
+      },
+      revisitOptions: {
+        proc: '有触发再起',
+        noProc: '没有触发再起'
       },
       matchedOutcome: '已对应到',
       confluentOutcome: '结果汇流',
@@ -431,7 +438,9 @@ export default {
       wiseProc: '触发理智同兴',
       wiseNoProc: '未触发理智同兴',
       standardProc: '触发洞察',
-      standardNoProc: '未触发洞察'
+      standardNoProc: '未触发洞察',
+      revisitProc: '触发再起',
+      revisitNoProc: '未触发再起'
     },
     conditions: {
       always: '此动作成功施放后进入下一状态。',
@@ -442,7 +451,9 @@ export default {
       wiseProc: '石工之理或农夫之智恢复耐久后，50% 机率获得可免费恢复 1 点耐久的理智同兴。',
       wiseNoProc: '石工之理或农夫之智恢复耐久后，未获得理智同兴。',
       standardProc: '提炼类动作后触发 Collector\'s Standard / 洞察。',
-      standardNoProc: '提炼类动作后未触发 Collector\'s Standard / 洞察。'
+      standardNoProc: '提炼类动作后未触发 Collector\'s Standard / 洞察。',
+      revisitProc: '再起触发时，GP 回满、耐久与采集次数恢复，并接续再起后决策树。',
+      revisitNoProc: '再起未触发，本次采集点结束。'
     },
     errors: {
       unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在第一版纯收藏品缴纳资料中，暂时无法求解。' },
@@ -492,6 +503,8 @@ export default {
       scripAmount: '{scrip} 张票',
       search: '搜索统计',
       branchCount: '分支数',
+      primaryPlan: '当前 GP 决策树',
+      revisitPlan: '再起后满 GP 决策树',
       limitations: '第一版限制',
       optimalityNote: '求解器会对目前支持的收藏品技能与成功率补强技能进行 DP policy search；推荐成立于当前模型内。'
     },

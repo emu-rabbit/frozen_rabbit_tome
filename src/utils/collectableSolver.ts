@@ -24,6 +24,7 @@ import type {
   CollectableActionSummary,
   CollectablePolicyBranch,
   CollectablePolicyNode,
+  CollectablePolicyPlan,
   CollectableRewardVector,
   CollectableSearchDebugInfo,
   CollectableSolverDebugInfo,
@@ -60,6 +61,11 @@ interface SearchResult {
   nodeCount: number;
 }
 
+interface SearchRunResult extends SearchResult {
+  startingGp: number;
+  search: CollectableSearchDebugInfo;
+}
+
 interface ActionOption {
   kind: CollectableActionKind;
   priority: number;
@@ -76,6 +82,8 @@ type WeightedState = {
 };
 
 const EV_EPSILON = 0.0000001;
+const REGULAR_REVISIT_CHANCE = 0.05;
+const TIMED_REVISIT_CHANCE = 0.08;
 const STATE_KEY_FIELDS = [
   'gp',
   'integrity',
@@ -188,20 +196,12 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const primedMeticulousRate = calculatePrimedMeticulousProcRate(meticulousRate);
   const scrutinyMultiplier = calculateScrutinyMultiplier(stats.perception, baseValues.Perception);
   const standardProcRate = getStandardProcRate(request);
-  const memo = new Map<string, SearchResult>();
-  const search: CollectableSearchDebugInfo = {
-    startingGp: Math.min(stats.gp, temporaryGp),
-    statesSolved: 0,
-    memoHits: 0,
-    actionsEvaluated: 0,
-    candidateComparisons: 0,
-    terminalStates: 0,
-    branchCount: 0
-  };
+  let memo = new Map<string, SearchResult>();
+  let activeSearchStats: CollectableSearchDebugInfo | null = null;
 
   function solve(state: SearchState): SearchResult {
     if (state.integrity <= 0) {
-      search.terminalStates += 1;
+      activeSearchStats && (activeSearchStats.terminalStates += 1);
       return {
         expectedScore: 0,
         expectedReward: createZeroReward(),
@@ -216,18 +216,18 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     const memoKey = buildMemoKey(state);
     const cached = memo.get(memoKey);
     if (cached) {
-      search.memoHits += 1;
+      activeSearchStats && (activeSearchStats.memoHits += 1);
       return cached;
     }
 
-    search.statesSolved += 1;
+    activeSearchStats && (activeSearchStats.statesSolved += 1);
     let best = applyCollect(state, solve);
     const actions = buildActions(state).sort((left, right) => left.priority - right.priority);
 
     actions.forEach((action) => {
-      search.actionsEvaluated += 1;
+      activeSearchStats && (activeSearchStats.actionsEvaluated += 1);
       const candidate = action.apply(state, solve);
-      search.candidateComparisons += 1;
+      activeSearchStats && (activeSearchStats.candidateComparisons += 1);
       if (isPreferred(candidate, best)) {
         best = candidate;
       }
@@ -548,7 +548,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       expectedReward = addCollectableRewards(expectedReward, branchReward, branch.probability);
       expectedScore += branchScore * branch.probability;
       nodeCount += result.nodeCount;
-      search.branchCount += 1;
+      activeSearchStats && (activeSearchStats.branchCount += 1);
 
       return {
         labelKey: branch.labelKey,
@@ -611,28 +611,101 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     return candidate.nodeCount < current.nodeCount;
   }
 
-  const result = solve({
-    gp: Math.min(stats.gp, temporaryGp),
-    integrity: maxIntegrity,
-    collectability: 0,
-    scrutinyActive: false,
-    collectorsFocusActive: false,
-    primingTouchActive: false,
-    standardActive: false,
-    hasUsedCollectableAction: false,
-    hasCollected: false,
-    successBonus: 0,
-    successIActive: false,
-    successIIActive: false,
-    successIIIActive: false,
-    nextCollectSuccessBonus: 0,
-    wiseToTheWorldActive: false
-  });
+  function solveWithGp(startingGp: number): SearchRunResult {
+    memo = new Map<string, SearchResult>();
+    activeSearchStats = {
+      startingGp: Math.min(stats.gp, startingGp),
+      statesSolved: 0,
+      memoHits: 0,
+      actionsEvaluated: 0,
+      candidateComparisons: 0,
+      terminalStates: 0,
+      branchCount: 0
+    };
+
+    const result = solve({
+      gp: Math.min(stats.gp, startingGp),
+      integrity: maxIntegrity,
+      collectability: 0,
+      scrutinyActive: false,
+      collectorsFocusActive: false,
+      primingTouchActive: false,
+      standardActive: false,
+      hasUsedCollectableAction: false,
+      hasCollected: false,
+      successBonus: 0,
+      successIActive: false,
+      successIIActive: false,
+      successIIIActive: false,
+      nextCollectSuccessBonus: 0,
+      wiseToTheWorldActive: false
+    });
+    const search = activeSearchStats;
+    search.memoHitRate = calculateMemoHitRate(search);
+    activeSearchStats = null;
+
+    return {
+      ...result,
+      startingGp: Math.min(stats.gp, startingGp),
+      search
+    };
+  }
+
+  const initial = solveWithGp(temporaryGp);
+  const isFullGp = Math.min(stats.gp, temporaryGp) >= stats.gp;
+  const revisitEnabled = stats.level >= 91;
+  const revisitChance = revisitEnabled ? (request.isTimedNode ? TIMED_REVISIT_CHANCE : REGULAR_REVISIT_CHANCE) : 0;
+  const fullGpResult = revisitEnabled && !isFullGp ? solveWithGp(stats.gp) : initial;
+  const revisitOutcomes = combineSequentialOutcomes(initial.outcomes, fullGpResult.outcomes);
+  const combinedOutcomes = revisitEnabled
+    ? mergeWeightedOutcomeMaps([
+        { outcomes: initial.outcomes, weight: 1 - revisitChance },
+        { outcomes: revisitOutcomes, weight: revisitChance }
+      ])
+    : initial.outcomes;
+  const expectedScore = expectedValue(combinedOutcomes);
+  const expectedReward = revisitEnabled
+    ? addCollectableRewards(initial.expectedReward, fullGpResult.expectedReward, revisitChance)
+    : initial.expectedReward;
+  const revisitPolicy = fullGpResult.policy;
+  const primaryPolicy = revisitEnabled
+    ? attachRevisitGate(initial.policy, revisitPolicy, revisitChance)
+    : initial.policy;
+  const policyPlans: CollectablePolicyPlan[] = isFullGp || !revisitEnabled
+    ? [{
+        kind: 'primary',
+        startingGp: initial.startingGp,
+        expectedScore: Number(initial.expectedScore.toFixed(6)),
+        expectedReward: initial.expectedReward,
+        policy: primaryPolicy
+      }]
+    : [
+        {
+          kind: 'primary',
+          startingGp: initial.startingGp,
+          expectedScore: Number(initial.expectedScore.toFixed(6)),
+          expectedReward: initial.expectedReward,
+          policy: primaryPolicy
+        },
+        {
+          kind: 'revisit',
+          startingGp: fullGpResult.startingGp,
+          expectedScore: Number(fullGpResult.expectedScore.toFixed(6)),
+          expectedReward: fullGpResult.expectedReward,
+          policy: revisitPolicy
+        }
+      ];
   const response: CollectableSolverResult = {
-    expectedScore: Number(result.expectedScore.toFixed(6)),
-    expectedReward: result.expectedReward,
+    expectedScore: Number(expectedScore.toFixed(6)),
+    expectedReward,
     rewardItemId: rewardTable.rewardItemId,
-    policy: result.policy,
+    policyPlans,
+    revisit: {
+      enabled: revisitEnabled,
+      chance: revisitChance,
+      isFullGp
+    },
+    policy: primaryPolicy,
     calculationTime: 0
   };
 
@@ -643,8 +716,6 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   return response;
 
   function buildDebugInfo(): CollectableSolverDebugInfo {
-    search.memoHitRate = calculateMemoHitRate(search);
-
     return {
       formulas: {
         success: calculateSuccessFormulaDebug(stats.gathering, baseValues.Gathering, stats.level, itemLevel),
@@ -664,8 +735,23 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         },
         rewardTable: summarizeCollectableRewardTable(rewardTable)
       },
-      search,
-      outcomeDistribution: serializeOutcomes(result.outcomes),
+      plans: policyPlans.map((plan) => {
+        const run = plan.kind === 'revisit' ? fullGpResult : initial;
+        return {
+          kind: plan.kind,
+          startingGp: run.startingGp,
+          expectedScore: Number(run.expectedScore.toFixed(6)),
+          outcomeDistribution: serializeOutcomes(run.outcomes),
+          search: run.search
+        };
+      }),
+      combined: {
+        expectedScore: Number(expectedScore.toFixed(6)),
+        revisitChance,
+        expression: revisitEnabled
+          ? `${Number(initial.expectedScore.toFixed(6))} + ${revisitChance} * ${Number(fullGpResult.expectedScore.toFixed(6))}`
+          : `${Number(initial.expectedScore.toFixed(6))}`
+      },
       limitations: [
         'brazen-excluded',
         'high-standard-excluded',
@@ -677,6 +763,87 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       }
     };
   }
+
+  function attachRevisitGate(
+    policy: CollectablePolicyNode,
+    nextPolicy: CollectablePolicyNode,
+    probability: number
+  ): CollectablePolicyNode {
+    const visited = new Map<string, CollectablePolicyNode>();
+
+    function clone(node: CollectablePolicyNode): CollectablePolicyNode {
+      const cached = visited.get(node.id);
+      if (cached) return cached;
+
+      const cloned: CollectablePolicyNode = {
+        ...node,
+        state: { ...node.state },
+        recommendedAction: { ...node.recommendedAction },
+        expectedReward: { ...node.expectedReward, items: { ...node.expectedReward.items } },
+        branches: []
+      };
+      visited.set(node.id, cloned);
+      cloned.branches = node.branches.map((branch, index) => ({
+        ...branch,
+        outcome: {
+          ...branch.outcome,
+          reward: {
+            ...branch.outcome.reward,
+            items: { ...branch.outcome.reward.items }
+          }
+        },
+        next: branch.next
+          ? clone(branch.next)
+          : createRevisitGateNode(node, branch, index, nextPolicy, probability)
+      }));
+
+      return cloned;
+    }
+
+    return clone(policy);
+  }
+
+  function createRevisitGateNode(
+    parent: CollectablePolicyNode,
+    branch: CollectablePolicyBranch,
+    index: number,
+    nextPolicy: CollectablePolicyNode,
+    probability: number
+  ): CollectablePolicyNode {
+    return {
+      id: `${parent.id}|revisit|${index}`,
+      state: {
+        gp: branch.outcome.gp,
+        integrity: branch.outcome.integrity,
+        collectability: branch.outcome.collectability,
+        scrutinyActive: false,
+        collectorsFocusActive: false,
+        primingTouchActive: false,
+        standardActive: false,
+        successBonus: 0,
+        nextCollectSuccessBonus: 0,
+        wiseToTheWorldActive: false
+      },
+      recommendedAction: actionSummary('revisitCheck', jobType),
+      expectedScore: Number((probability * nextPolicy.expectedScore).toFixed(6)),
+      expectedReward: addCollectableRewards(createZeroReward(), nextPolicy.expectedReward, probability),
+      branches: [
+        {
+          labelKey: 'collectableSolver.branches.revisitProc',
+          conditionKey: 'collectableSolver.conditions.revisitProc',
+          probability: Number((probability * 100).toFixed(6)),
+          outcome: branch.outcome,
+          next: nextPolicy
+        },
+        {
+          labelKey: 'collectableSolver.branches.revisitNoProc',
+          conditionKey: 'collectableSolver.conditions.revisitNoProc',
+          probability: Number(((1 - probability) * 100).toFixed(6)),
+          outcome: branch.outcome
+        }
+      ]
+    };
+  }
 }
 
 function serializeOutcomes(outcomes: Map<number, number>) {
@@ -686,6 +853,39 @@ function serializeOutcomes(outcomes: Map<number, number>) {
       score,
       probability: probability * 100
     }));
+}
+
+function combineSequentialOutcomes(left: Map<number, number>, right: Map<number, number>) {
+  const outcomes = new Map<number, number>();
+
+  left.forEach((leftProbability, leftScore) => {
+    right.forEach((rightProbability, rightScore) => {
+      const totalScore = leftScore + rightScore;
+      outcomes.set(totalScore, (outcomes.get(totalScore) ?? 0) + leftProbability * rightProbability);
+    });
+  });
+
+  return outcomes;
+}
+
+function mergeWeightedOutcomeMaps(parts: Array<{ outcomes: Map<number, number>; weight: number }>) {
+  const outcomes = new Map<number, number>();
+
+  parts.forEach((part) => {
+    part.outcomes.forEach((probability, score) => {
+      outcomes.set(score, (outcomes.get(score) ?? 0) + probability * part.weight);
+    });
+  });
+
+  return outcomes;
+}
+
+function expectedValue(outcomes: Map<number, number>): number {
+  let total = 0;
+  outcomes.forEach((probability, score) => {
+    total += score * probability;
+  });
+  return total;
 }
 
 function calculateMemoHitRate(search: CollectableSearchDebugInfo): number {

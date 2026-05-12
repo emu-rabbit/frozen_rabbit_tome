@@ -363,7 +363,8 @@ export default {
       successIII: 'Gathering Rate III',
       nextCollectSuccess: 'Next Collect Rate',
       restoreIntegrity: 'Solid Reason / Ageless Words',
-      wiseToTheWorld: 'Wise to the World'
+      wiseToTheWorld: 'Wise to the World',
+      revisitCheck: 'Check Revisit'
     },
     results: {
       kicker: 'Recommended Policy',
@@ -378,6 +379,7 @@ export default {
       },
       expectedReward: 'Expected Reward',
       rewardSummary: 'Scrip {scrip} / Gil {gil}',
+      revisitIncluded: 'Total expectation includes {chance}% Revisit chance.',
       limitationNote: 'V1 excludes Brazen, Collector\'s High Standard, aetherial reduction reward modeling, and real EXP conversion.'
     },
     policy: {
@@ -391,6 +393,7 @@ export default {
       collectQuestion: 'Did this Collect succeed?',
       standardQuestion: "Did Collector's Standard proc?",
       wiseQuestion: 'Did Wise to the World proc?',
+      revisitQuestion: 'Did Revisit trigger after the node was exhausted?',
       collectabilityQuestion: 'What is the current collectability?',
       integrityQuestion: 'How much integrity remains?',
       integrityOption: '{integrity} integrity',
@@ -405,6 +408,10 @@ export default {
       wiseOptions: {
         proc: 'Wise proc',
         noProc: 'No Wise proc'
+      },
+      revisitOptions: {
+        proc: 'Revisit triggered',
+        noProc: 'No Revisit'
       },
       matchedOutcome: 'Matched Outcome',
       confluentOutcome: 'Converged Outcome',
@@ -433,7 +440,9 @@ export default {
       wiseProc: 'Wise to the World proc',
       wiseNoProc: 'No Wise to the World',
       standardProc: "Collector's Standard proc",
-      standardNoProc: "No Collector's Standard"
+      standardNoProc: "No Collector's Standard",
+      revisitProc: 'Revisit triggered',
+      revisitNoProc: 'No Revisit'
     },
     conditions: {
       always: 'The action was applied and moves to the next state.',
@@ -444,7 +453,9 @@ export default {
       wiseProc: 'After Solid Reason or Ageless Words restores integrity, there is a 50% chance to gain a free Wise to the World restore.',
       wiseNoProc: 'After Solid Reason or Ageless Words restores integrity, Wise to the World did not proc.',
       standardProc: "Collector's Standard procs after a refine action.",
-      standardNoProc: "Collector's Standard does not proc after a refine action."
+      standardNoProc: "Collector's Standard does not proc after a refine action.",
+      revisitProc: 'When Revisit triggers, GP is fully restored, integrity and attempts are refreshed, and the after-Revisit policy continues.',
+      revisitNoProc: 'Revisit did not trigger, so this gathering point ends.'
     },
     errors: {
       unsupportedReward: {
@@ -503,6 +514,8 @@ export default {
       scripAmount: '{scrip} scrip',
       search: 'Search Stats',
       branchCount: 'Branches',
+      primaryPlan: 'Current GP Policy',
+      revisitPlan: 'Full GP Revisit Policy',
       limitations: 'V1 Limitations',
       optimalityNote: 'The solver runs DP policy search over currently supported collectable actions and success-rate buffs. The recommendation is scoped to this model.'
     },

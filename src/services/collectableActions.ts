@@ -3,6 +3,11 @@ import type { CollectableActionKind } from '../types/collectable';
 
 type JobType = 'miner' | 'botanist';
 
+const REVISIT_TRAIT_ICON_URLS: Record<JobType, string> = {
+  miner: 'https://xivapi.com/i/005000/005446.png',
+  botanist: 'https://xivapi.com/i/005000/005471.png'
+};
+
 interface CollectableActionDefinition {
   kind: CollectableActionKind;
   minerActionId: number;
@@ -98,6 +103,13 @@ export const COLLECTABLE_ACTION_DEFINITIONS: Record<CollectableActionKind, Colle
     botanistActionId: 26521,
     fallbackName: '理智同興',
     gpCost: 0
+  },
+  revisitCheck: {
+    kind: 'revisitCheck',
+    minerActionId: 0,
+    botanistActionId: 0,
+    fallbackName: '確認再起',
+    gpCost: 0
   }
 };
 
@@ -122,5 +134,8 @@ export function getCollectableActionName(kind: CollectableActionKind, jobType: J
 }
 
 export function getCollectableActionIcon(kind: CollectableActionKind, jobType: JobType): string {
-  return getActionIcon(getCollectableActionId(kind, jobType));
+  if (kind === 'revisitCheck') return REVISIT_TRAIT_ICON_URLS[jobType];
+
+  const actionId = getCollectableActionId(kind, jobType);
+  return actionId > 0 ? getActionIcon(actionId) : '';
 }

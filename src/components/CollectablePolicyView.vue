@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CollectablePolicyBranch, CollectablePolicyNode } from '../types/collectable';
+import type { CollectablePolicyBranch, CollectablePolicyNode, CollectableRevisitInfo } from '../types/collectable';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 
@@ -10,6 +10,7 @@ const props = defineProps<{
   expectedScore: number;
   rewardItemId?: number;
   jobType: 'miner' | 'botanist';
+  revisit: CollectableRevisitInfo;
 }>();
 
 const { t } = useI18n();
@@ -17,6 +18,7 @@ const nodeStack = ref<CollectablePolicyNode[]>([props.policy]);
 const selectedStandard = ref<boolean | null>(null);
 const selectedWise = ref<boolean | null>(null);
 const selectedCollectSuccess = ref<boolean | null>(null);
+const selectedRevisit = ref<boolean | null>(null);
 const selectedCollectability = ref<number | null>(null);
 const selectedIntegrity = ref<number | null>(null);
 
@@ -49,6 +51,15 @@ const wiseOptions = computed(() => {
     { value: false, label: t('collectableSolver.policy.wiseOptions.noProc') }
   ];
 });
+const revisitOptions = computed(() => {
+  const hasProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.revisitProc'));
+  const hasNoProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.revisitNoProc'));
+  if (!hasProc || !hasNoProc) return [];
+  return [
+    { value: true, label: t('collectableSolver.policy.revisitOptions.proc') },
+    { value: false, label: t('collectableSolver.policy.revisitOptions.noProc') }
+  ];
+});
 const collectabilityOptions = computed(() => {
   const hasValueOutcome = previewBranches.value.some((branch) => (
     hasBranchLabel(branch, 'collectableSolver.branches.valueNormal')
@@ -69,6 +80,7 @@ const usesGuidedQuestions = computed(() => (
   collectSuccessOptions.value.length > 0
   || standardOptions.value.length > 0
   || wiseOptions.value.length > 0
+  || revisitOptions.value.length > 0
   || collectabilityOptions.value.length > 1
   || integrityOptions.value.length > 1
 ));
@@ -76,6 +88,7 @@ const isGuidedSelectionComplete = computed(() => {
   if (collectSuccessOptions.value.length > 0 && selectedCollectSuccess.value === null) return false;
   if (standardOptions.value.length > 0 && selectedStandard.value === null) return false;
   if (wiseOptions.value.length > 0 && selectedWise.value === null) return false;
+  if (revisitOptions.value.length > 0 && selectedRevisit.value === null) return false;
   if (collectabilityOptions.value.length > 1 && selectedCollectability.value === null) return false;
   if (integrityOptions.value.length > 1 && selectedIntegrity.value === null) return false;
   return true;
@@ -94,6 +107,10 @@ const matchedGuidedBranches = computed(() => {
     if (wiseOptions.value.length > 0) {
       const isWiseProc = hasBranchLabel(branch, 'collectableSolver.branches.wiseProc');
       if (selectedWise.value !== isWiseProc) return false;
+    }
+    if (revisitOptions.value.length > 0) {
+      const isRevisitProc = hasBranchLabel(branch, 'collectableSolver.branches.revisitProc');
+      if (selectedRevisit.value !== isRevisitProc) return false;
     }
     if (collectabilityOptions.value.length > 1 && selectedCollectability.value !== branch.outcome.collectability) {
       return false;
@@ -180,6 +197,7 @@ function resetGuidedSelection() {
   selectedStandard.value = null;
   selectedWise.value = null;
   selectedCollectSuccess.value = null;
+  selectedRevisit.value = null;
   selectedCollectability.value = null;
   selectedIntegrity.value = null;
 }
@@ -197,6 +215,7 @@ function continueGuidedBranch() {
       <div class="summary-value">
         <span class="summary-kicker">{{ t('collectableSolver.results.expectedScore') }}</span>
         <h3>{{ Number(expectedScore.toFixed(2)) }}</h3>
+        <p v-if="revisit.enabled">{{ t('collectableSolver.results.revisitIncluded', { chance: (revisit.chance * 100).toFixed(0) }) }}</p>
       </div>
       <div
         class="summary-scrip"
@@ -286,6 +305,22 @@ function continueGuidedBranch() {
               class="choice-button"
               :class="{ 'is-selected': selectedWise === option.value }"
               @click="selectedWise = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset v-if="revisitOptions.length" class="guided-question">
+          <legend>{{ t('collectableSolver.policy.revisitQuestion') }}</legend>
+          <div class="option-grid two-options">
+            <button
+              v-for="option in revisitOptions"
+              :key="String(option.value)"
+              type="button"
+              class="choice-button"
+              :class="{ 'is-selected': selectedRevisit === option.value }"
+              @click="selectedRevisit = option.value"
             >
               {{ option.label }}
             </button>

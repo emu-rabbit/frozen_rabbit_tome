@@ -13,6 +13,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const plans = computed(() => props.debug?.plans ?? []);
 const stateFields = computed(() => props.debug?.optimality.stateKeyFields.join(', ') ?? '');
 
 function closeDialog() {
@@ -29,6 +30,12 @@ function formatProbability(probability: number, useSpacePadding = false, include
     return formatted.padStart(6, ' ') + percentSuffix;
   }
   return formatted + percentSuffix;
+}
+
+function planTitle(kind: string) {
+  return kind === 'revisit'
+    ? t('collectableSolver.debug.revisitPlan')
+    : t('collectableSolver.debug.primaryPlan');
 }
 </script>
 
@@ -87,29 +94,44 @@ function formatProbability(probability: number, useSpacePadding = false, include
             </section>
 
             <section class="debug-section">
-              <h3>{{ t('collectableSolver.debug.search') }}</h3>
-              <div class="debug-stats">
-                <span>{{ t('solver.debug.workerCalculationTime') }} {{ debug.search.workerCalculationTime ?? '-' }} ms</span>
-                <span>{{ t('solver.debug.statesSolved') }} {{ debug.search.statesSolved }}</span>
-                <span>{{ t('solver.debug.actionsEvaluated') }} {{ debug.search.actionsEvaluated }}</span>
-                <span>{{ t('solver.debug.candidateComparisons') }} {{ debug.search.candidateComparisons }}</span>
-                <span>{{ t('solver.debug.branchCount') }} {{ debug.search.branchCount }}</span>
-                <span>{{ t('solver.debug.memoHits') }} {{ debug.search.memoHits }}</span>
-                <span>{{ t('solver.debug.memoHitRate') }} {{ formatProbability(debug.search.memoHitRate ?? 0) }}</span>
-                <span>{{ t('solver.debug.terminalStates') }} {{ debug.search.terminalStates }}</span>
-              </div>
+              <h3>{{ t('solver.debug.expectedValue') }}</h3>
+              <p class="debug-code">E = {{ debug.combined.expression }} = {{ debug.combined.expectedScore }}</p>
+              <p>{{ t('solver.debug.revisitChance') }}: {{ (debug.combined.revisitChance * 100).toFixed(0) }}%</p>
             </section>
 
             <section class="debug-section">
-              <h3>{{ t('solver.debug.outcomeDistribution') }}</h3>
-              <div class="debug-outcomes">
-                <div v-for="entry in debug.outcomeDistribution" :key="entry.score" class="debug-outcome-row">
-                  <span>{{ entry.score }}</span>
-                  <div class="debug-outcome-track">
-                    <div :style="{ width: `${Math.min(100, entry.probability)}%` }"></div>
+              <h3>{{ t('collectableSolver.debug.search') }}</h3>
+              <div class="debug-plan-list">
+                <article v-for="plan in plans" :key="plan.kind" class="debug-card">
+                  <div class="debug-plan-header">
+                    <div>
+                      <h4>{{ planTitle(plan.kind) }}</h4>
+                      <p>{{ t('solver.debug.startingGp') }}: {{ plan.startingGp }} GP</p>
+                    </div>
+                    <strong>E = {{ Number(plan.expectedScore.toFixed(2)) }}</strong>
                   </div>
-                  <span class="probability-text">{{ formatProbability(entry.probability, true) }}</span>
-                </div>
+                  <div class="debug-stats">
+                    <span>{{ t('solver.debug.workerCalculationTime') }} {{ plan.search.workerCalculationTime ?? '-' }} ms</span>
+                    <span>{{ t('solver.debug.statesSolved') }} {{ plan.search.statesSolved }}</span>
+                    <span>{{ t('solver.debug.actionsEvaluated') }} {{ plan.search.actionsEvaluated }}</span>
+                    <span>{{ t('solver.debug.candidateComparisons') }} {{ plan.search.candidateComparisons }}</span>
+                    <span>{{ t('solver.debug.branchCount') }} {{ plan.search.branchCount }}</span>
+                    <span>{{ t('solver.debug.memoHits') }} {{ plan.search.memoHits }}</span>
+                    <span>{{ t('solver.debug.memoHitRate') }} {{ formatProbability(plan.search.memoHitRate ?? 0) }}</span>
+                    <span>{{ t('solver.debug.terminalStates') }} {{ plan.search.terminalStates }}</span>
+                  </div>
+
+                  <h5>{{ t('solver.debug.outcomeDistribution') }}</h5>
+                  <div class="debug-outcomes">
+                    <div v-for="entry in plan.outcomeDistribution" :key="`${plan.kind}-${entry.score}`" class="debug-outcome-row">
+                      <span>{{ entry.score }}</span>
+                      <div class="debug-outcome-track">
+                        <div :style="{ width: `${Math.min(100, entry.probability)}%` }"></div>
+                      </div>
+                      <span class="probability-text">{{ formatProbability(entry.probability, true) }}</span>
+                    </div>
+                  </div>
+                </article>
               </div>
             </section>
 
@@ -287,6 +309,27 @@ function formatProbability(probability: number, useSpacePadding = false, include
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+.debug-plan-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.debug-plan-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.debug-card h5 {
+  margin: 0.2rem 0 0;
+  color: #334155;
+  font-weight: 900;
+}
+
+:global(html.dark .debug-card h5) {
+  color: #e2e8f0;
 }
 
 .debug-stats span {

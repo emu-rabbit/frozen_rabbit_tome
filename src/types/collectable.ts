@@ -62,7 +62,8 @@ export type CollectableActionKind =
   | 'successIII'
   | 'nextCollectSuccess'
   | 'restoreIntegrity'
-  | 'wiseToTheWorld';
+  | 'wiseToTheWorld'
+  | 'revisitCheck';
 
 export interface CollectableActionSummary {
   kind: CollectableActionKind;
@@ -97,6 +98,14 @@ export interface CollectableOutcomeDebugEntry {
   probability: number;
 }
 
+export type CollectablePolicyPlanKind = 'primary' | 'revisit';
+
+export interface CollectableRevisitInfo {
+  enabled: boolean;
+  chance: number;
+  isFullGp: boolean;
+}
+
 export interface CollectablePolicyBranch {
   labelKey: string;
   labelKeys?: string[];
@@ -113,6 +122,14 @@ export interface CollectablePolicyNode {
   expectedScore: number;
   expectedReward: CollectableRewardVector;
   branches: CollectablePolicyBranch[];
+}
+
+export interface CollectablePolicyPlan {
+  kind: CollectablePolicyPlanKind;
+  startingGp: number;
+  expectedScore: number;
+  expectedReward: CollectableRewardVector;
+  policy: CollectablePolicyNode;
 }
 
 export interface CollectableSolverRequest {
@@ -172,8 +189,18 @@ export interface CollectableSearchDebugInfo {
 
 export interface CollectableSolverDebugInfo {
   formulas: CollectableFormulaDebugInfo;
-  search: CollectableSearchDebugInfo;
-  outcomeDistribution: CollectableOutcomeDebugEntry[];
+  plans: Array<{
+    kind: CollectablePolicyPlanKind;
+    startingGp: number;
+    expectedScore: number;
+    outcomeDistribution: CollectableOutcomeDebugEntry[];
+    search: CollectableSearchDebugInfo;
+  }>;
+  combined: {
+    expectedScore: number;
+    revisitChance: number;
+    expression: string;
+  };
   limitations: string[];
   optimality: {
     method: 'dynamic-programming-policy-search';
@@ -185,6 +212,8 @@ export interface CollectableSolverResult {
   expectedScore: number;
   expectedReward: CollectableRewardVector;
   rewardItemId?: number;
+  policyPlans: CollectablePolicyPlan[];
+  revisit: CollectableRevisitInfo;
   policy: CollectablePolicyNode;
   calculationTime: number;
   debug?: CollectableSolverDebugInfo;

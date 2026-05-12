@@ -361,7 +361,8 @@ export default {
       successIII: '採集成功率アップ III',
       nextCollectSuccess: '次回収集成功率アップ',
       restoreIntegrity: '石工の理 / 老農の知',
-      wiseToTheWorld: 'Wise to the World'
+      wiseToTheWorld: 'Wise to the World',
+      revisitCheck: '再発見確認'
     },
     results: {
       kicker: 'Recommended Policy',
@@ -376,6 +377,7 @@ export default {
       },
       expectedReward: '期待報酬',
       rewardSummary: 'スクリップ {scrip} / ギル {gil}',
+      revisitIncluded: '合計期待値には再発見 {chance}% の確率を含みます。',
       limitationNote: 'V1 では Brazen、Collector\'s High Standard、精選報酬モデル、実際の経験値換算を含みません。'
     },
     policy: {
@@ -389,6 +391,7 @@ export default {
       collectQuestion: '今回の収集品採集は成功しましたか？',
       standardQuestion: 'Collector\'s Standard は発動しましたか？',
       wiseQuestion: 'Wise to the World は発動しましたか？',
+      revisitQuestion: '耐久を使い切った後、再発見は発動しましたか？',
       collectabilityQuestion: '現在の収集価値はいくつですか？',
       integrityQuestion: '現在の耐久はいくつ残っていますか？',
       integrityOption: '耐久 {integrity}',
@@ -403,6 +406,10 @@ export default {
       wiseOptions: {
         proc: '発動した',
         noProc: '発動していない'
+      },
+      revisitOptions: {
+        proc: '再発見あり',
+        noProc: '再発見なし'
       },
       matchedOutcome: '対応した結果',
       confluentOutcome: '結果が合流',
@@ -431,7 +438,9 @@ export default {
       wiseProc: 'Wise to the World 発動',
       wiseNoProc: 'Wise to the World なし',
       standardProc: 'Collector\'s Standard 発動',
-      standardNoProc: 'Collector\'s Standard なし'
+      standardNoProc: 'Collector\'s Standard なし',
+      revisitProc: '再発見発動',
+      revisitNoProc: '再発見なし'
     },
     conditions: {
       always: 'このアクションを使用して次の状態へ進みます。',
@@ -442,7 +451,9 @@ export default {
       wiseProc: 'Solid Reason / Ageless Words で耐久を回復した後、50% の確率で無料の Wise to the World を得ます。',
       wiseNoProc: 'Solid Reason / Ageless Words で耐久を回復した後、Wise to the World は発動しません。',
       standardProc: '精選系アクション後に Collector\'s Standard が発動します。',
-      standardNoProc: '精選系アクション後に Collector\'s Standard が発動しません。'
+      standardNoProc: '精選系アクション後に Collector\'s Standard が発動しません。',
+      revisitProc: '再発見が発動すると GP が全回復し、耐久と採集回数が戻り、再発見後の決定木へ進みます。',
+      revisitNoProc: '再発見が発動しなかったため、この採集場所は終了です。'
     },
     errors: {
       unsupportedReward: { title: '報酬テーブルが見つかりません', desc: 'このアイテムは V1 の通常収集品納品データにないため、まだ計算できません。' },
@@ -492,6 +503,8 @@ export default {
       scripAmount: 'スクリップ {scrip}',
       search: '探索統計',
       branchCount: '分岐数',
+      primaryPlan: '現在 GP の決定木',
+      revisitPlan: '再発見後の満 GP 決定木',
       limitations: 'V1 の制限',
       optimalityNote: 'ソルバーは現在サポートしている収集品アクションと成功率補助スキルに対して DP policy search を行います。推奨はこのモデル内で成立します。'
     },

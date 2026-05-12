@@ -364,7 +364,8 @@ export default {
       successIII: '獲得率提高 III',
       nextCollectSuccess: '下次收藏成功率提高',
       restoreIntegrity: '石工之理 / 農夫之智',
-      wiseToTheWorld: '理智同興'
+      wiseToTheWorld: '理智同興',
+      revisitCheck: '確認再起'
     },
     results: {
       kicker: 'Recommended Policy',
@@ -379,6 +380,7 @@ export default {
       },
       expectedReward: '期望收益',
       rewardSummary: '票據 {scrip} / 金幣 {gil}',
+      revisitIncluded: '總期望已納入再起 {chance}% 機率。',
       limitationNote: '第一版未納入大膽提煉、強化洞察、精選收益模型與實際經驗值換算。'
     },
     policy: {
@@ -392,6 +394,7 @@ export default {
       collectQuestion: '這次收藏品採集有成功嗎？',
       standardQuestion: '這次有觸發洞察嗎？',
       wiseQuestion: '這次有觸發理智同興嗎？',
+      revisitQuestion: '耐久耗盡後有觸發再起嗎？',
       collectabilityQuestion: '現在的收藏價值是多少？',
       integrityQuestion: '現在耐久剩多少？',
       integrityOption: '{integrity} 耐久',
@@ -406,6 +409,10 @@ export default {
       wiseOptions: {
         proc: '有觸發理智同興',
         noProc: '沒有觸發理智同興'
+      },
+      revisitOptions: {
+        proc: '有觸發再起',
+        noProc: '沒有觸發再起'
       },
       matchedOutcome: '已對應到',
       confluentOutcome: '結果匯流',
@@ -434,7 +441,9 @@ export default {
       wiseProc: '觸發理智同興',
       wiseNoProc: '未觸發理智同興',
       standardProc: '觸發洞察',
-      standardNoProc: '未觸發洞察'
+      standardNoProc: '未觸發洞察',
+      revisitProc: '觸發再起',
+      revisitNoProc: '未觸發再起'
     },
     conditions: {
       always: '此動作成功施放後進入下一狀態。',
@@ -445,7 +454,9 @@ export default {
       wiseProc: '石工之理或農夫之智恢復耐久後，50% 機率獲得可免費恢復 1 點耐久的理智同興。',
       wiseNoProc: '石工之理或農夫之智恢復耐久後，未獲得理智同興。',
       standardProc: '提煉類動作後觸發 Collector\'s Standard / 洞察。',
-      standardNoProc: '提煉類動作後未觸發 Collector\'s Standard / 洞察。'
+      standardNoProc: '提煉類動作後未觸發 Collector\'s Standard / 洞察。',
+      revisitProc: '再起觸發時，GP 回滿、耐久與採集次數恢復，並接續再起後決策樹。',
+      revisitNoProc: '再起未觸發，本次採集點結束。'
     },
     errors: {
       unsupportedReward: {
@@ -504,6 +515,8 @@ export default {
       scripAmount: '{scrip} 張票',
       search: '搜尋統計',
       branchCount: '分支數',
+      primaryPlan: '目前 GP 決策樹',
+      revisitPlan: '再起後滿 GP 決策樹',
       limitations: '第一版限制',
       optimalityNote: '求解器會對目前支援的收藏品技能與成功率補強技能進行 DP policy search；推薦成立於目前模型內。'
     },

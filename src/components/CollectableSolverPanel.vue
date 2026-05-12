@@ -338,6 +338,7 @@ function waitForUiFrame() {
         :expected-score="collectableResult.expectedScore"
         :reward-item-id="collectableResult.rewardItemId"
         :job-type="activeItem.jobType || 'miner'"
+        :revisit="collectableResult.revisit"
       />
 
       <div class="solver-result-action-bar">

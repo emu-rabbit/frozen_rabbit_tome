@@ -7,7 +7,9 @@ self.onmessage = (event: MessageEvent<CollectableSolverRequest>) => {
   const calculationTime = Math.floor(performance.now() - startTime);
 
   if (result.debug) {
-    result.debug.search.workerCalculationTime = calculationTime;
+    result.debug.plans.forEach((plan) => {
+      plan.search.workerCalculationTime = calculationTime;
+    });
   }
 
   self.postMessage({

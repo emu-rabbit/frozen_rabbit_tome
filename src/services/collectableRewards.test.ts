@@ -83,8 +83,11 @@ describe('collectableRewards', () => {
       source: 'collectables',
       rewardItemId: 33914,
       lowCollectability: 49,
+      lowScrip: 6,
       midCollectability: 81,
-      highCollectability: 114
+      midScrip: 7,
+      highCollectability: 114,
+      highScrip: 11
     });
   });
 });

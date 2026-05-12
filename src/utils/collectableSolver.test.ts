@@ -355,12 +355,40 @@ describe('solveCollectableRotation', () => {
       highCollectability: 1000,
       highScrip: 20
     });
-    expect(result.debug?.search.statesSolved).toBeGreaterThan(0);
-    expect(result.debug?.search.memoHitRate).toBeGreaterThanOrEqual(0);
-    expect(result.debug?.outcomeDistribution.length).toBeGreaterThan(0);
+    expect(result.debug?.plans[0].search.statesSolved).toBeGreaterThan(0);
+    expect(result.debug?.plans[0].search.memoHitRate).toBeGreaterThanOrEqual(0);
+    expect(result.debug?.plans[0].outcomeDistribution.length).toBeGreaterThan(0);
     expect(result.debug?.limitations).toEqual(expect.arrayContaining([
       'brazen-excluded',
       'high-standard-excluded'
     ]));
+  });
+
+  it('滿 GP 時只回傳一棵收藏品決策樹，但總期望納入再起機率', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 91,
+        gathering: 1000,
+        perception: 1000,
+        gp: 930
+      },
+      temporaryGp: 930
+    }));
+
+    expect(result.policyPlans).toHaveLength(1);
+    expect(result.revisit).toMatchObject({ enabled: true, chance: 0.05, isFullGp: true });
+    expect(result.expectedScore).toBeGreaterThan(result.policyPlans[0].expectedScore);
+    expect(collectKinds(result.policy)).toContain('revisitCheck');
+  });
+
+  it('GP 不滿時會建立原始與再起後滿 GP 收藏品決策樹', () => {
+    const result = solveCollectableRotation(createRequest({
+      temporaryGp: 0
+    }));
+
+    expect(result.policyPlans.map((plan) => plan.kind)).toEqual(['primary', 'revisit']);
+    expect(result.policyPlans[1].startingGp).toBe(930);
+    expect(result.expectedScore).toBeGreaterThan(result.policyPlans[0].expectedScore);
+    expect(collectBranchLabels(result.policy)).toContain('collectableSolver.branches.revisitProc');
   });
 });
