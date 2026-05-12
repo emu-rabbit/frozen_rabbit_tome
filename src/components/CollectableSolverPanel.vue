@@ -42,6 +42,7 @@ let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId);
+const isWorkerError = computed(() => collectableError.value === 'workerStale' || collectableError.value === 'workerFailed');
 
 onBeforeUnmount(() => {
   if (savedTimer) {
@@ -89,6 +90,11 @@ function handleSave() {
   if (!collectableResult.value) return;
 
   emit('save', collectableResult.value);
+}
+
+function reloadPage() {
+  if (typeof window === 'undefined') return;
+  window.location.reload();
 }
 
 async function handleExportDecisionTree() {
@@ -325,6 +331,13 @@ function waitForUiFrame() {
         <strong>{{ t(`collectableSolver.errors.${collectableError}.title`) }}</strong>
         <p>{{ t(`collectableSolver.errors.${collectableError}.desc`) }}</p>
       </div>
+      <Button
+        v-if="isWorkerError"
+        class="p-button-sm p-button-warning collectable-alert-action"
+        :label="t('solver.strategy.workerErrors.reload')"
+        icon="pi pi-refresh"
+        @click="reloadPage"
+      />
     </div>
 
     <div v-if="collectableResult" class="collectable-result">
@@ -508,6 +521,7 @@ function waitForUiFrame() {
 
 .collectable-alert {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: flex-start;
   border: 1px solid #fed7aa;
@@ -526,6 +540,17 @@ function waitForUiFrame() {
 .collectable-alert strong {
   display: block;
   margin-bottom: 0.15rem;
+}
+
+.collectable-alert > div {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+:deep(.collectable-alert-action) {
+  flex: 0 0 auto;
+  border-radius: 0.75rem;
+  font-weight: 800;
 }
 
 .collectable-result {

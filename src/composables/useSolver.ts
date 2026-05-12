@@ -342,7 +342,16 @@ export function useSolver() {
         debugMode: debugSettings.value.solverDebugMode
       };
 
-      worker.postMessage(request);
+      try {
+        worker.postMessage(request);
+      } catch (err) {
+        console.error('Worker postMessage failed:', err);
+        worker.terminate();
+        activeWorker = null;
+        isSolving.value = false;
+        solverError.value = 'workerFailed';
+        return;
+      }
       
       worker.onmessage = (e: MessageEvent<SolverResponse>) => {
         if (currentSolveVersion !== solveVersion || activeWorker !== worker) {
