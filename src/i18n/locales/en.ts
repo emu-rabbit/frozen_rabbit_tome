@@ -486,7 +486,7 @@ export default {
     errors: {
       unsupportedReward: {
         title: 'Reward table not found',
-        desc: 'This item is not in the V1 pure collectable turn-in data, so it cannot be solved yet.'
+        desc: 'This item is not in the supported collectable turn-in, custom delivery, Studium, or Wachumeqimeqi data yet.'
       },
       workerStale: {
         title: 'Solver needs reload',

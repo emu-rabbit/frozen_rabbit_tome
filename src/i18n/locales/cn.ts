@@ -482,7 +482,7 @@ export default {
       revisitNoProc: '再起未触发，本次采集点结束。'
     },
     errors: {
-      unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在第一版纯收藏品缴纳资料中，暂时无法求解。' },
+      unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在已支持的收藏品缴纳、老主顾、魔法大学或万货街资料中，暂时无法求解。' },
       workerStale: { title: '求解器需要重新载入', desc: '网站可能刚更新完成，刷新后即可继续。' },
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }
     },

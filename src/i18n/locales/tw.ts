@@ -487,7 +487,7 @@ export default {
     errors: {
       unsupportedReward: {
         title: '找不到收藏品獎勵表',
-        desc: '此物品目前不在第一版純收藏品繳納資料中，暫時無法求解。'
+        desc: '此物品目前不在已支援的收藏品繳納、老主顧、魔法大學或萬貨街資料中，暫時無法求解。'
       },
       workerStale: {
         title: '求解器需要重新載入',

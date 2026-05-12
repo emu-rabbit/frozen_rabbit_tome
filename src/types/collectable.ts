@@ -30,7 +30,7 @@ export interface CollectableRewardTier {
 
 export interface CollectableRewardTable {
   itemId: number;
-  source: 'collectables';
+  source: 'collectables' | 'customDelivery' | 'sharlayanStudium' | 'wachumeqimeqi';
   rewardItemId?: number;
   tiers: {
     low: CollectableRewardTier;
