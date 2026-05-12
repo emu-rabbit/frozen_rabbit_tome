@@ -563,6 +563,14 @@ export default {
         failed: '複製失敗'
       },
       delete: '刪除秘笈'
+    },
+    editModeConflict: {
+      kicker: '求解模式不同',
+      title: '要用哪一種人格進入求解台？',
+      desc: '這張秘笈使用「{tomeMode}」，目前設定頁是「{currentMode}」。你可以覆蓋設定頁的人格，也可以保留現有設定進入。',
+      useTomeMode: '覆蓋為秘笈模式',
+      useCurrentMode: '保留現有模式',
+      cancel: '取消'
     }
   },
   game: {

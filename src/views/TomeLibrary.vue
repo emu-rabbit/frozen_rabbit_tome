@@ -23,9 +23,10 @@ const { t, locale } = useI18n();
 const router = useRouter();
 const { tomes, deleteTome } = useTomeLibrary();
 const { loadTomeForEditing } = useSolver();
-const { macroSettings } = useSettings();
+const { macroSettings, solverSettings } = useSettings();
 const searchQuery = ref('');
 const isMacroPreviewOpen = ref(false);
+const pendingEditTome = ref<StoredTome | null>(null);
 const macroPreview = ref<MacroBuildResult | null>(null);
 
 const filteredTomes = computed(() => {
@@ -121,8 +122,32 @@ function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
 }
 
 function handleEdit(tome: StoredTome) {
-  if (!loadTomeForEditing(tome)) return;
+  if (tomeObjectiveMode(tome) !== solverSettings.value.objectiveMode) {
+    pendingEditTome.value = tome;
+    return;
+  }
+
+  loadTomeAndOpen(tome, true);
+}
+
+function loadTomeAndOpen(tome: StoredTome, syncObjectiveMode: boolean) {
+  if (!loadTomeForEditing(tome, { syncObjectiveMode })) return;
+  pendingEditTome.value = null;
   router.push('/solver');
+}
+
+function handleEditWithTomeMode() {
+  if (!pendingEditTome.value) return;
+  loadTomeAndOpen(pendingEditTome.value, true);
+}
+
+function handleEditWithCurrentMode() {
+  if (!pendingEditTome.value) return;
+  loadTomeAndOpen(pendingEditTome.value, false);
+}
+
+function cancelEditModeChoice() {
+  pendingEditTome.value = null;
 }
 
 function handlePreviewMacro(tome: StoredTome) {
@@ -181,9 +206,37 @@ function collectableRootActionIcon(tome: StoredTome) {
   return getCollectableActionIcon(tome.collectablePolicy.rootAction.kind, itemMeta(tome)?.jobType || 'miner');
 }
 
-function collectableExpectedScore(tome: StoredTome) {
-  const score = tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip;
+function collectableScoreLabel(tome: StoredTome) {
+  return t(`collectableSolver.results.${collectableScoreKey(tome)}Score`, { unit: collectableScripUnit(tome) });
+}
+
+function collectableScoreKey(tome: StoredTome) {
+  const mode = tomeObjectiveMode(tome);
+  if (mode === 'max' && typeof tome.collectableMaxScore === 'number') return 'max';
+  if (mode === 'min' && typeof tome.collectableMinScore === 'number') return 'min';
+  return 'expected';
+}
+
+function collectableScore(tome: StoredTome) {
+  const mode = tomeObjectiveMode(tome);
+  const score = mode === 'max'
+    ? tome.collectableMaxScore ?? tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip
+    : mode === 'min'
+      ? tome.collectableMinScore ?? tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip
+      : tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip;
   return typeof score === 'number' ? Number(score.toFixed(2)) : '-';
+}
+
+function collectableScoreChance(tome: StoredTome) {
+  const mode = tomeObjectiveMode(tome);
+  if (mode === 'max') return tome.collectableMaxScoreChance;
+  if (mode === 'min') return tome.collectableMinScoreChance;
+  return undefined;
+}
+
+function formatChance(chance: number) {
+  if (chance < 0.01) return '<0.01%';
+  return `${chance.toFixed(2)}%`;
 }
 
 function collectableScripMeta(tome: StoredTome) {
@@ -299,8 +352,8 @@ function collectableScripUnit(tome: StoredTome) {
             </div>
 
             <div class="collectable-score" :title="t(collectableScripMeta(tome).labelKey)">
-              <span>{{ t('collectableSolver.results.expectedScore', { unit: collectableScripUnit(tome) }) }}</span>
-              <strong>{{ collectableExpectedScore(tome) }}</strong>
+              <span>{{ collectableScoreLabel(tome) }}</span>
+              <strong>{{ collectableScore(tome) }}</strong>
               <span
                 class="collectable-scrip-icon"
                 :class="`is-${collectableScripMeta(tome).kind}`"
@@ -313,6 +366,9 @@ function collectableScripUnit(tome: StoredTome) {
                 />
                 <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
               </span>
+              <small v-if="collectableScoreChance(tome) !== undefined" class="collectable-score-chance">
+                {{ t('collectableSolver.results.scoreChance', { chance: formatChance(collectableScoreChance(tome) as number) }) }}
+              </small>
             </div>
           </div>
         </div>
@@ -365,6 +421,54 @@ function collectableScripUnit(tome: StoredTome) {
     </div>
 
     <MacroPreviewDialog v-model="isMacroPreviewOpen" :macro="macroPreview" />
+
+    <Teleport to="body">
+      <Transition name="mode-choice">
+        <div v-if="pendingEditTome" class="mode-choice-dialog" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            class="mode-choice-backdrop"
+            :aria-label="t('tomeLibrary.editModeConflict.cancel')"
+            @click="cancelEditModeChoice"
+          ></button>
+          <section class="mode-choice-panel">
+            <div class="mode-choice-icon">
+              <i class="pi pi-compass"></i>
+            </div>
+            <div class="mode-choice-content">
+              <p class="mode-choice-kicker">{{ t('tomeLibrary.editModeConflict.kicker') }}</p>
+              <h3>{{ t('tomeLibrary.editModeConflict.title') }}</h3>
+              <p>
+                {{ t('tomeLibrary.editModeConflict.desc', {
+                  tomeMode: formatObjectiveMode(pendingEditTome),
+                  currentMode: t(`settings.solverModes.${solverSettings.objectiveMode}`)
+                }) }}
+              </p>
+            </div>
+            <div class="mode-choice-actions">
+              <Button
+                icon="pi pi-refresh"
+                :label="t('tomeLibrary.editModeConflict.useTomeMode')"
+                class="p-button-sm p-button-primary mode-choice-action"
+                @click="handleEditWithTomeMode"
+              />
+              <Button
+                icon="pi pi-arrow-right"
+                :label="t('tomeLibrary.editModeConflict.useCurrentMode')"
+                class="p-button-sm p-button-outlined mode-choice-action"
+                @click="handleEditWithCurrentMode"
+              />
+              <Button
+                icon="pi pi-times"
+                :label="t('tomeLibrary.editModeConflict.cancel')"
+                class="p-button-sm p-button-text mode-choice-action"
+                @click="cancelEditModeChoice"
+              />
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -770,6 +874,18 @@ function collectableScripUnit(tome: StoredTome) {
   line-height: 1;
 }
 
+.collectable-score-chance {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+:global(html.dark .collectable-score-chance) {
+  color: #cbd5e1;
+}
+
 :global(html.dark .collectable-score strong) {
   color: #99f6e4;
 }
@@ -856,6 +972,137 @@ function collectableScripUnit(tome: StoredTome) {
 
 :deep(.library-action) {
   min-height: 2rem;
+}
+
+.mode-choice-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mode-choice-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(15 23 42 / 0.42);
+  backdrop-filter: blur(5px);
+}
+
+.mode-choice-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 31rem);
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 18px;
+  border: 1px solid #dbeafe;
+  background: white;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 0.22);
+}
+
+:global(html.dark .mode-choice-panel) {
+  border-color: #334155;
+  background: #0f172a;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 0.5);
+}
+
+.mode-choice-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 1.15rem;
+}
+
+:global(html.dark .mode-choice-icon) {
+  background: rgb(20 83 45 / 0.34);
+  color: #bbf7d0;
+}
+
+.mode-choice-content {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mode-choice-kicker {
+  margin: 0;
+  color: #52a890;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.mode-choice-content h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+:global(html.dark .mode-choice-content h3) {
+  color: #f8fafc;
+}
+
+.mode-choice-content p:last-child {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+:global(html.dark .mode-choice-content p:last-child) {
+  color: #cbd5e1;
+}
+
+.mode-choice-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+:deep(.mode-choice-action) {
+  width: 100%;
+  justify-content: center;
+  border-radius: 0.8rem;
+  min-height: 2.5rem;
+  font-weight: 800;
+}
+
+.mode-choice-enter-active,
+.mode-choice-leave-active {
+  transition: opacity 0.16s ease;
+}
+
+.mode-choice-enter-active .mode-choice-panel,
+.mode-choice-leave-active .mode-choice-panel {
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.mode-choice-enter-from,
+.mode-choice-leave-to {
+  opacity: 0;
+}
+
+.mode-choice-enter-from .mode-choice-panel,
+.mode-choice-leave-to .mode-choice-panel {
+  opacity: 0;
+  transform: translateY(0.4rem) scale(0.98);
+}
+
+@media (min-width: 560px) {
+  .mode-choice-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .empty-state {
   display: flex;

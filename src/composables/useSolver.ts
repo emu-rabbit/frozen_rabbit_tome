@@ -8,6 +8,9 @@ import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMat
 import type { SolverRequest, SolverResponse } from '../types/game';
 
 type GatheringJob = NonNullable<GatherableItem['jobType']>;
+type TomeEditingOptions = {
+  syncObjectiveMode?: boolean;
+};
 type SyncFromSettingsOptions = {
   forceStats?: boolean;
   resetTemporaryGp?: boolean;
@@ -174,11 +177,12 @@ export function useSolver() {
     lastSyncedSettingsStats[job] = cloneStats(solverStats.value);
   };
 
-  const loadTomeForEditing = (tome: StoredTome) => {
+  const loadTomeForEditing = (tome: StoredTome, options: TomeEditingOptions = {}) => {
     const item = getGatherableItemById(tome.itemId);
     if (!item) return false;
 
     const tomeObjectiveMode = tome.objectiveMode ?? 'expected';
+    const shouldSyncObjectiveMode = options.syncObjectiveMode ?? true;
 
     cancelActiveSolve();
     activeItem.value = tome.kind === 'collectable' ? { ...item, isCollectable: true } : item;
@@ -191,7 +195,9 @@ export function useSolver() {
       extraRate: tome.nodeBonuses.extraRate
     };
     temporaryGp.value = tome.temporaryGp;
-    solverSettings.value.objectiveMode = tomeObjectiveMode;
+    if (shouldSyncObjectiveMode) {
+      solverSettings.value.objectiveMode = tomeObjectiveMode;
+    }
     rotationResult.value = null;
     latestSolveInputSignature = createSolveInputSignature();
     const job: GatheringJob = item.jobType || 'miner';

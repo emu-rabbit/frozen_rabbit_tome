@@ -551,6 +551,14 @@ export default {
         failed: '复制失败'
       },
       delete: '删除秘籍'
+    },
+    editModeConflict: {
+      kicker: '求解模式不同',
+      title: '要用哪一种人格进入求解台？',
+      desc: '这张秘籍使用“{tomeMode}”，当前设置页是“{currentMode}”。你可以覆盖设置页的人格，也可以保留现有设置进入。',
+      useTomeMode: '覆盖为秘籍模式',
+      useCurrentMode: '保留现有模式',
+      cancel: '取消'
     }
   },
   game: {

@@ -271,6 +271,10 @@ export interface StoredTome {
   collectablePolicy?: StoredCollectablePolicy;
   collectableRewardItemId?: number;
   collectableExpectedScore?: number;
+  collectableMinScore?: number;
+  collectableMaxScore?: number;
+  collectableMinScoreChance?: number;
+  collectableMaxScoreChance?: number;
   collectableExpectedReward?: CollectableRewardVector;
   createdAt: string;
 }

@@ -562,6 +562,14 @@ export default {
         failed: 'Copy failed'
       },
       delete: 'Delete'
+    },
+    editModeConflict: {
+      kicker: 'Solver mode mismatch',
+      title: 'Which mode should open the solver?',
+      desc: 'This guide uses "{tomeMode}", while Settings currently uses "{currentMode}". You can overwrite the Settings mode, or keep the current mode for this edit.',
+      useTomeMode: 'Overwrite Settings',
+      useCurrentMode: 'Keep Current Mode',
+      cancel: 'Cancel'
     }
   },
   game: {

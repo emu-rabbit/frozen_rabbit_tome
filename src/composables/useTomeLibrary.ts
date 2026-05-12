@@ -67,6 +67,10 @@ export function useTomeLibrary() {
         },
         collectableRewardItemId: payload.collectableResult.rewardItemId,
         collectableExpectedScore: payload.collectableResult.expectedScore,
+        collectableMinScore: payload.collectableResult.minScore,
+        collectableMaxScore: payload.collectableResult.maxScore,
+        collectableMinScoreChance: payload.collectableResult.minScoreChance,
+        collectableMaxScoreChance: payload.collectableResult.maxScoreChance,
         collectableExpectedReward: payload.collectableResult.expectedReward,
         createdAt: new Date().toISOString()
       };

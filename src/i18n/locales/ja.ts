@@ -551,6 +551,14 @@ export default {
         failed: 'コピー失敗'
       },
       delete: '削除'
+    },
+    editModeConflict: {
+      kicker: 'ソルバーモードが異なります',
+      title: 'どのモードでソルバーへ入りますか？',
+      desc: 'この秘伝書は「{tomeMode}」、現在の設定は「{currentMode}」です。設定側のモードを上書きするか、現在の設定のまま入れます。',
+      useTomeMode: '秘伝書モードで上書き',
+      useCurrentMode: '現在のモードを使う',
+      cancel: 'キャンセル'
     }
   },
   game: {
