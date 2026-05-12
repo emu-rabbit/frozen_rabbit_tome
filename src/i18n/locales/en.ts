@@ -6,6 +6,11 @@ export default {
   },
   common: {
     backToSelection: 'Back to Selection',
+    displayMode: 'Display Mode',
+    displayModes: {
+      compact: 'Compact',
+      detailed: 'Detailed'
+    },
     pending: {
       collectableDesc: 'The collectable gathering system is currently under development. Stay tuned!',
       crystalDesc: 'The crystal gathering system is currently under development. Stay tuned!'

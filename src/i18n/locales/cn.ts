@@ -6,6 +6,11 @@ export default {
   },
   common: {
     backToSelection: '返回物品选择',
+    displayMode: '显示模式',
+    displayModes: {
+      compact: '简洁',
+      detailed: '详细'
+    },
     pending: {
       collectableDesc: '收藏品采集系统目前尚在开发中，敬请期待。',
       crystalDesc: '水晶采集系统目前尚在开发中，敬请期待。'

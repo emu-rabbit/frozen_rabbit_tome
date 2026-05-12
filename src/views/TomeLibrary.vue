@@ -4,10 +4,12 @@ defineOptions({ name: 'TomeLibrary' });
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { useLocalStorage } from '@vueuse/core';
 import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import SelectButton from 'primevue/selectbutton';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useSolver } from '../composables/useSolver';
@@ -28,6 +30,11 @@ const searchQuery = ref('');
 const isMacroPreviewOpen = ref(false);
 const pendingEditTome = ref<StoredTome | null>(null);
 const macroPreview = ref<MacroBuildResult | null>(null);
+const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-library-display-mode', 'detailed');
+const displayModeOptions = computed(() => [
+  { label: t('common.displayModes.compact'), value: 'compact' },
+  { label: t('common.displayModes.detailed'), value: 'detailed' }
+]);
 
 const filteredTomes = computed(() => {
   currentLanguage.value;
@@ -60,7 +67,7 @@ function formatFood(tome: StoredTome) {
 
 function formatNodeBonuses(tome: StoredTome) {
   if (isCollectableTome(tome)) {
-    return `${tome.nodeBonuses.baseIntegrity ?? '-'}/${tome.nodeBonuses.gatheringCount}`;
+    return null;
   }
 
   return `${tome.nodeBonuses.gatheringCount}/${tome.nodeBonuses.yieldCount}/${tome.nodeBonuses.extraRate}`;
@@ -270,6 +277,16 @@ function collectableScripUnit(tome: StoredTome) {
           <i class="pi pi-times clear-icon"></i>
         </InputIcon>
       </IconField>
+
+      <div class="display-mode-toolbar" :aria-label="t('common.displayMode')">
+        <SelectButton
+          v-model="displayMode"
+          :options="displayModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="display-mode-toggle"
+        />
+      </div>
     </header>
 
     <div v-if="filteredTomes.length === 0" class="empty-state">
@@ -281,7 +298,12 @@ function collectableScripUnit(tome: StoredTome) {
     </div>
 
     <div v-else class="tome-list">
-      <article v-for="tome in filteredTomes" :key="tome.id" class="tome-card">
+      <article
+        v-for="tome in filteredTomes"
+        :key="tome.id"
+        class="tome-card"
+        :class="{ 'is-compact': displayMode === 'compact' }"
+      >
         <div class="item-section">
           <div class="item-icon-wrap bg-slate-100 dark:bg-slate-900">
             <img
@@ -315,7 +337,29 @@ function collectableScripUnit(tome: StoredTome) {
           </div>
         </div>
 
-        <div class="summary-grid">
+        <div v-if="displayMode === 'compact'" class="compact-action-bar action-bar">
+          <Button
+            icon="pi pi-pencil"
+            :label="t('tomeLibrary.actions.edit')"
+            class="p-button-sm p-button-text library-action"
+            @click="handleEdit(tome)"
+          />
+          <Button
+            v-if="!isCollectableTome(tome)"
+            :icon="copyMacroIcon()"
+            :label="copyMacroLabel()"
+            class="p-button-sm p-button-text library-action"
+            @click="handlePreviewMacro(tome)"
+          />
+          <Button
+            icon="pi pi-trash"
+            :label="t('tomeLibrary.actions.delete')"
+            class="p-button-sm p-button-text p-button-danger library-action"
+            @click="deleteTome(tome.id)"
+          />
+        </div>
+
+        <div v-if="displayMode === 'detailed'" class="summary-grid">
           <div class="summary-row">
             <span>{{ t('tomeLibrary.rows.playerStats') }}</span>
             <strong>{{ formatStats(tome) }}</strong>
@@ -328,7 +372,7 @@ function collectableScripUnit(tome: StoredTome) {
             <span>{{ t('tomeLibrary.rows.food') }}</span>
             <strong>{{ formatFood(tome) }}</strong>
           </div>
-          <div class="summary-row">
+          <div v-if="formatNodeBonuses(tome)" class="summary-row">
             <span>{{ t('tomeLibrary.rows.nodeBonuses') }}</span>
             <strong>{{ formatNodeBonuses(tome) }}</strong>
           </div>
@@ -338,7 +382,7 @@ function collectableScripUnit(tome: StoredTome) {
           </div>
         </div>
 
-        <div v-if="isCollectableTome(tome)" class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
+        <div v-if="displayMode === 'detailed' && isCollectableTome(tome)" class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
           <div class="collectable-tome-summary">
             <div class="collectable-method">
               <span class="collectable-method-label">{{ t('solver.strategy.rotationTitles.primary') }}</span>
@@ -373,7 +417,7 @@ function collectableScripUnit(tome: StoredTome) {
           </div>
         </div>
 
-        <div v-else class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
+        <div v-else-if="displayMode === 'detailed'" class="rotation-preview-list" :aria-label="t('tomeLibrary.rotationPreview')">
           <div v-for="plan in tomeRotationPlans(tome)" :key="`${tome.id}-${plan.kind}`" class="rotation-preview-block">
             <div class="rotation-strip">
               <h4 class="rotation-strip-title">{{ rotationCardTitle(tome, plan.kind) }}</h4>
@@ -393,7 +437,7 @@ function collectableScripUnit(tome: StoredTome) {
           </div>
         </div>
 
-        <div class="card-footer">
+        <div v-if="displayMode === 'detailed'" class="card-footer">
           <span class="created-at">{{ t('tomeLibrary.createdAt', { time: formatCreatedAt(tome.createdAt) }) }}</span>
           <div class="action-bar">
             <Button
@@ -511,6 +555,54 @@ function collectableScripUnit(tome: StoredTome) {
   width: 100%;
 }
 
+.display-mode-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+:deep(.display-mode-toggle) {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem;
+}
+
+:deep(.display-mode-toggle .p-button) {
+  border: 0 !important;
+  border-radius: 0.65rem !important;
+  padding: 0.45rem 0.85rem !important;
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  background: transparent !important;
+}
+
+:deep(.display-mode-toggle .p-button.p-highlight) {
+  color: #0f766e !important;
+  background: white !important;
+  box-shadow: 0 1px 5px rgb(15 23 42 / 0.08) !important;
+}
+
+:global(html.dark .display-mode-toggle) {
+  background: rgb(15 23 42 / 0.72);
+  border-color: #334155;
+}
+
+:global(html.dark .display-mode-toggle .p-button) {
+  color: #94a3b8 !important;
+}
+
+:global(html.dark .display-mode-toggle .p-button.p-highlight) {
+  color: #99f6e4 !important;
+  background: rgb(30 41 59 / 0.95) !important;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 0.24) !important;
+}
+
 .search-icon,
 .clear-icon {
   color: #94a3b8;
@@ -556,6 +648,12 @@ function collectableScripUnit(tome: StoredTome) {
   background: white;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.tome-card.is-compact {
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
 }
 
 :global(html.dark .tome-card) {
@@ -769,6 +867,40 @@ function collectableScripUnit(tome: StoredTome) {
   height: 34px;
   object-fit: cover;
   image-rendering: pixelated;
+}
+
+.is-compact .item-section {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.is-compact .item-icon-wrap,
+.is-compact .item-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.is-compact .item-name {
+  font-size: 0.98rem;
+}
+
+.is-compact .item-meta {
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.is-compact .item-glv-badge,
+.is-compact .item-job-badge,
+.is-compact .item-regular-badge,
+.is-compact .item-collectable-badge,
+.is-compact .item-crystal-badge {
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.compact-action-bar {
+  padding-top: 0.1rem;
 }
 
 .collectable-tome-summary {

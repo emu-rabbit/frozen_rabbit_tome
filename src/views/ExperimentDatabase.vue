@@ -4,12 +4,14 @@ defineOptions({ name: 'ExperimentDatabase' });
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useLocalStorage } from '@vueuse/core';
 import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import SelectButton from 'primevue/selectbutton';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
-import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage, getItemBaseIntegrity } from '../services/gameData';
+import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getGatheringFood } from '../services/foodData';
 import { getRotationActionIconById, getRotationActionName } from '../services/actionIcons';
 import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
@@ -19,6 +21,11 @@ const router = useRouter();
 const { experiments, deleteExperiment, searchQuery, fromStoredRotationStep } = useExperimentLibrary();
 
 const copiedExperimentId = ref<string | null>(null);
+const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-experiment-database-display-mode', 'detailed');
+const displayModeOptions = computed(() => [
+  { label: t('common.displayModes.compact'), value: 'compact' },
+  { label: t('common.displayModes.detailed'), value: 'detailed' }
+]);
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const filteredExperiments = computed(() => {
@@ -78,6 +85,12 @@ function foodInfo(experiment: StoredExperiment) {
     name: getItemName(food.id),
     quality: t(`solver.food.${experiment.food.quality}`)
   };
+}
+
+function formatFood(experiment: StoredExperiment) {
+  const food = foodInfo(experiment);
+  if (!food) return t('tomeLibrary.noFood');
+  return `${food.name} ${food.quality}`;
 }
 
 function formatChance(chance: number) {
@@ -145,6 +158,7 @@ function copyReportIcon(experiment: StoredExperiment) {
 function copyReportLabel(experiment: StoredExperiment) {
   return copiedExperimentId.value === experiment.id ? t('experimentDatabase.actions.copied') : t('experimentDatabase.actions.copyReport');
 }
+
 </script>
 
 <template>
@@ -162,6 +176,16 @@ function copyReportLabel(experiment: StoredExperiment) {
           <i class="pi pi-times clear-icon"></i>
         </InputIcon>
       </IconField>
+
+      <div class="display-mode-toolbar" :aria-label="t('common.displayMode')">
+        <SelectButton
+          v-model="displayMode"
+          :options="displayModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="display-mode-toggle"
+        />
+      </div>
     </header>
 
     <div v-if="filteredExperiments.length === 0" class="empty-state">
@@ -171,7 +195,12 @@ function copyReportLabel(experiment: StoredExperiment) {
     </div>
 
     <div v-else class="experiment-list">
-      <article v-for="experiment in filteredExperiments" :key="experiment.id" class="experiment-card">
+      <article
+        v-for="experiment in filteredExperiments"
+        :key="experiment.id"
+        class="experiment-card"
+        :class="{ 'is-compact': displayMode === 'compact' }"
+      >
         <div class="item-section">
           <div class="item-icon-wrap">
             <img v-if="getItemIcon(experiment.itemId)" :src="getItemIcon(experiment.itemId)" :alt="getItemName(experiment.itemId)" class="item-icon" loading="lazy" />
@@ -198,7 +227,13 @@ function copyReportLabel(experiment: StoredExperiment) {
           </div>
         </div>
 
-        <div class="summary-info-strip">
+        <div v-if="displayMode === 'compact'" class="compact-action-bar action-bar">
+          <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
+          <Button :icon="copyReportIcon(experiment)" :label="copyReportLabel(experiment)" class="p-button-sm p-button-text library-action" @click="copyReportFromDb(experiment)" />
+          <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
+        </div>
+
+        <div v-if="displayMode === 'detailed'" class="summary-info-strip">
           <div class="info-group">
             <span>{{ t('experimentDatabase.rows.playerStats') }}</span>
             <strong>{{ formatStats(experiment) }}</strong>
@@ -217,7 +252,7 @@ function copyReportLabel(experiment: StoredExperiment) {
           </div>
         </div>
 
-        <div class="rotation-plan-stats">
+        <div v-if="displayMode === 'detailed'" class="rotation-plan-stats">
           <div class="is-primary-metric">
             <span>{{ t('experimentDatabase.rows.totalExpected') }}</span>
             <strong>
@@ -243,7 +278,7 @@ function copyReportLabel(experiment: StoredExperiment) {
           </div>
         </div>
 
-        <div class="rotation-preview-list">
+        <div v-if="displayMode === 'detailed'" class="rotation-preview-list">
           <div class="rotation-strip">
             <h4>{{ t('experimentDatabase.rotations.primary') }}</h4>
             <div class="rotation-icons">
@@ -270,7 +305,7 @@ function copyReportLabel(experiment: StoredExperiment) {
           </div>
         </div>
 
-        <div class="card-footer">
+        <div v-if="displayMode === 'detailed'" class="card-footer">
           <span>{{ t('experimentDatabase.createdAt', { time: formatCreatedAt(experiment.createdAt) }) }}</span>
           <div class="action-bar">
             <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
@@ -311,6 +346,47 @@ function copyReportLabel(experiment: StoredExperiment) {
 .search-field {
   width: 100%;
 }
+.display-mode-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+}
+:deep(.display-mode-toggle) {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem;
+}
+:deep(.display-mode-toggle .p-button) {
+  border: 0 !important;
+  border-radius: 0.65rem !important;
+  padding: 0.45rem 0.85rem !important;
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  background: transparent !important;
+}
+:deep(.display-mode-toggle .p-button.p-highlight) {
+  color: #0f766e !important;
+  background: white !important;
+  box-shadow: 0 1px 5px rgb(15 23 42 / 0.08) !important;
+}
+:global(html.dark .display-mode-toggle) {
+  background: rgb(15 23 42 / 0.72);
+  border-color: #334155;
+}
+:global(html.dark .display-mode-toggle .p-button) {
+  color: #94a3b8 !important;
+}
+:global(html.dark .display-mode-toggle .p-button.p-highlight) {
+  color: #99f6e4 !important;
+  background: rgb(30 41 59 / 0.95) !important;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 0.24) !important;
+}
 .search-icon,
 .clear-icon {
   color: #94a3b8;
@@ -346,6 +422,11 @@ function copyReportLabel(experiment: StoredExperiment) {
   background: white;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.experiment-card.is-compact {
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
 }
 :global(html.dark .experiment-card) {
   background: #0f172a;
@@ -396,6 +477,34 @@ function copyReportLabel(experiment: StoredExperiment) {
   gap: 0.5rem;
   margin-top: 0.45rem;
   flex-wrap: wrap;
+}
+.is-compact .item-section {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.is-compact .item-icon-wrap,
+.is-compact .item-icon {
+  width: 42px;
+  height: 42px;
+}
+.is-compact .item-info h3 {
+  font-size: 0.98rem;
+}
+.is-compact .item-meta {
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.is-compact .item-glv-badge,
+.is-compact .item-job-badge,
+.is-compact .item-regular-badge,
+.is-compact .item-collectable-badge,
+.is-compact .item-crystal-badge {
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.compact-action-bar {
+  padding-top: 0.1rem;
 }
 .item-glv-badge,
 .item-job-badge,

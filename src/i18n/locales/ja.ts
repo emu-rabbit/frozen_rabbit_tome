@@ -6,6 +6,11 @@ export default {
   },
   common: {
     backToSelection: 'アイテム選択に戻る',
+    displayMode: '表示モード',
+    displayModes: {
+      compact: '簡潔',
+      detailed: '詳細'
+    },
     pending: {
       collectableDesc: '収集品採集システムは現在開発中です。公開まで今しばらくお待ちください。',
       crystalDesc: 'クリスタル採集システムは現在開発中です。公開まで今しばらくお待ちください。'
