@@ -61,6 +61,40 @@ function collectKinds(
   ];
 }
 
+function collectBranchLabels(
+  node: { id?: string; branches: Array<{ labelKey: string; next?: any }> },
+  depth = 0,
+  visited = new Set<string>()
+): string[] {
+  if (depth > 16) return [];
+  if (node.id && visited.has(node.id)) return [];
+  if (node.id) visited.add(node.id);
+
+  return [
+    ...node.branches.map((branch) => branch.labelKey),
+    ...node.branches.flatMap((branch) => branch.next ? collectBranchLabels(branch.next, depth + 1, visited) : [])
+  ];
+}
+
+function findActionNode(
+  node: { id?: string; recommendedAction: { kind: string }; branches: Array<{ next?: any }> },
+  actionKind: string,
+  depth = 0,
+  visited = new Set<string>()
+): any | null {
+  if (depth > 16) return null;
+  if (node.id && visited.has(node.id)) return null;
+  if (node.id) visited.add(node.id);
+  if (node.recommendedAction.kind === actionKind) return node;
+
+  for (const branch of node.branches) {
+    const found = branch.next ? findActionNode(branch.next, actionKind, depth + 1, visited) : null;
+    if (found) return found;
+  }
+
+  return null;
+}
+
 describe('solveCollectableRotation', () => {
   it('沒有 GP 時仍可用 0 GP 提煉與收藏建立策略', () => {
     const result = solveCollectableRotation(createRequest({
@@ -77,6 +111,47 @@ describe('solveCollectableRotation', () => {
     expect(kinds).toContain('scour');
     expect(kinds).toContain('collect');
     expect(result.expectedScore).toBeGreaterThan(0);
+  });
+
+  it('第一個提煉類動作結算後就會建立洞察分支', () => {
+    const result = solveCollectableRotation(createRequest({
+      temporaryGp: 0,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          mid: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          high: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    }));
+
+    expect(['scour', 'meticulous']).toContain(result.policy.recommendedAction.kind);
+    expect(collectBranchLabels(result.policy)).toContain('collectableSolver.branches.standardProc');
+  });
+
+  it('慎重提煉會把價值提升、耐久消耗與洞察建成 8 個獨立組合分支', () => {
+    const result = solveCollectableRotation(createRequest({
+      temporaryGp: 0
+    }));
+    const meticulousNode = findActionNode(result.policy, 'meticulous');
+
+    expect(meticulousNode).not.toBeNull();
+    expect(meticulousNode.branches).toHaveLength(8);
+    expect(meticulousNode.branches).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        labelKeys: [
+          'collectableSolver.branches.valueIncreased',
+          'collectableSolver.branches.meticulousConsumed',
+          'collectableSolver.branches.standardNoProc'
+        ],
+        outcome: expect.objectContaining({
+          collectability: 250,
+          integrity: 3
+        })
+      })
+    ]));
   });
 
   it('GP 足夠時會考慮集中檢查或價值矚目等 buff', () => {

@@ -91,6 +91,7 @@ export interface CollectableOutcomeSummary {
 
 export interface CollectablePolicyBranch {
   labelKey: string;
+  labelKeys?: string[];
   conditionKey: string;
   probability: number;
   outcome: CollectableOutcomeSummary;

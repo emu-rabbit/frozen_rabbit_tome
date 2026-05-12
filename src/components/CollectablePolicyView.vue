@@ -15,7 +15,7 @@ const { t } = useI18n();
 const nodeStack = ref<CollectablePolicyNode[]>([props.policy]);
 
 const currentNode = computed(() => nodeStack.value[nodeStack.value.length - 1] ?? props.policy);
-const previewBranches = computed(() => currentNode.value.branches.slice(0, 6));
+const previewBranches = computed(() => currentNode.value.branches);
 
 watch(() => props.policy, (policy) => {
   nodeStack.value = [policy];
@@ -32,6 +32,10 @@ function actionIcon(kind: typeof props.policy.recommendedAction.kind) {
 function formatProbability(branch: CollectablePolicyBranch) {
   if (branch.probability > 0 && branch.probability < 0.01) return '<0.01%';
   return `${branch.probability.toFixed(2)}%`;
+}
+
+function branchLabels(branch: CollectablePolicyBranch) {
+  return (branch.labelKeys?.length ? branch.labelKeys : [branch.labelKey]).map((key) => t(key)).join(' / ');
 }
 
 function openBranch(branch: CollectablePolicyBranch) {
@@ -118,7 +122,7 @@ function rewardSummary(reward: CollectableRewardVector) {
         @click="openBranch(branch)"
       >
         <div>
-          <strong>{{ t(branch.labelKey) }}</strong>
+          <strong>{{ branchLabels(branch) }}</strong>
           <p>{{ t(branch.conditionKey) }}</p>
           <small v-if="branch.next">
             {{ t('collectableSolver.policy.nextAction', { action: actionName(branch.next.recommendedAction.kind) }) }}

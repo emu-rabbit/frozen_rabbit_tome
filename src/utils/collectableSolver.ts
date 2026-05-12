@@ -69,6 +69,7 @@ type WeightedState = {
   state: SearchState;
   probability: number;
   labelKey: string;
+  labelKeys?: string[];
   conditionKey: string;
   reward?: CollectableRewardVector;
 };
@@ -486,7 +487,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           hasUsedCollectableAction: true
         };
         const baseProbability = valueBranch.probability * durabilityBranch.probability;
-        const canProcStandard = state.hasUsedCollectableAction
+        const canProcStandard = nextBase.hasUsedCollectableAction
           && nextBase.integrity > 0
           && nextBase.collectability < COLLECTABILITY_CAP
           && !nextBase.standardActive
@@ -497,6 +498,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
             state: nextBase,
             probability: baseProbability,
             labelKey: valueBranch.labelKey,
+            labelKeys: [valueBranch.labelKey, durabilityBranch.labelKey],
             conditionKey: 'collectableSolver.conditions.refineOutcome'
           });
           return;
@@ -509,12 +511,14 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           },
           probability: baseProbability * standardProcRate,
           labelKey: 'collectableSolver.branches.standardProc',
+          labelKeys: [valueBranch.labelKey, durabilityBranch.labelKey, 'collectableSolver.branches.standardProc'],
           conditionKey: 'collectableSolver.conditions.standardProc'
         });
         branches.push({
           state: nextBase,
           probability: baseProbability * (1 - standardProcRate),
           labelKey: 'collectableSolver.branches.standardNoProc',
+          labelKeys: [valueBranch.labelKey, durabilityBranch.labelKey, 'collectableSolver.branches.standardNoProc'],
           conditionKey: 'collectableSolver.conditions.standardNoProc'
         });
       });
@@ -546,6 +550,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
       return {
         labelKey: branch.labelKey,
+        labelKeys: branch.labelKeys,
         conditionKey: branch.conditionKey,
         probability: Number((branch.probability * 100).toFixed(6)),
         outcome: {
