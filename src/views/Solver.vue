@@ -145,6 +145,10 @@ const collectableScourValue = computed(() => {
   if (!baseValues.value?.Gathering) return null;
   return calculateCollectableScourValue(effectiveStats.value.gathering, baseValues.value.Gathering);
 });
+const collectableScourProgress = computed(() => {
+  if (collectableScourValue.value === null) return 0;
+  return Math.min(100, Math.max(0, (collectableScourValue.value / 200) * 100));
+});
 
 function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
   const localizedName = foodName(food);
@@ -551,18 +555,37 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           </div>
         </div>
         <div class="flex flex-col gap-4">
-          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col justify-center">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group flex-1 flex flex-col justify-center">
+            <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <i class="pi pi-percentage text-6xl text-soft-green-500"></i>
+            </div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('solver.results.gatheringRate') }}</p>
-            <div class="flex items-baseline gap-1">
+            <div class="flex items-baseline gap-1 relative z-10">
               <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ successRate }}</span>
               <span class="text-xl font-bold text-slate-400">%</span>
             </div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
+              <div
+                class="h-full rounded-full"
+                :style="`width: ${successRate}%; background-color: #52a890;`"
+              ></div>
+            </div>
           </div>
-          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col justify-center">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group flex-1 flex flex-col justify-center">
+            <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <i class="pi pi-filter text-6xl text-amber-500"></i>
+            </div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">{{ t('collectableSolver.stats.scourValue') }}</p>
-            <div class="flex items-baseline gap-1">
+            <div class="flex items-baseline gap-1 relative z-10">
               <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ collectableScourValue ?? '-' }}</span>
             </div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
+              <div
+                class="h-full rounded-full"
+                :style="`width: ${collectableScourProgress.toFixed(1)}%; background-color: #f59e0b;`"
+              ></div>
+            </div>
+            <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">MAX 200</p>
           </div>
         </div>
       </div>
@@ -572,20 +595,24 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           <i class="pi pi-gift text-amber-500"></i>
           {{ t('solver.nodeBonusesTitle') }}
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
-            <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
-              <span>{{ t('solver.nodeBonuses.baseIntegrity') }}</span>
-              <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
-            </label>
-            <InputNumber v-model="nodeBonuses.baseIntegrity" :min="1" :max="10" fluid class="p-inputtext-sm mt-auto" />
+        <div class="flex flex-col lg:flex-row gap-4">
+          <div class="lg:w-1/3 flex flex-col">
+            <div class="h-full py-3 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col items-center justify-center text-center">
+              <span class="font-bold text-slate-400 uppercase tracking-widest mb-1 text-sm">{{ t('solver.nodeBonuses.baseIntegrity') }}</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black text-slate-700 dark:text-slate-200">{{ nodeBonuses.baseIntegrity }}</span>
+                <span class="text-sm font-bold text-slate-400">{{ t('game.units.times') }}</span>
+              </div>
+            </div>
           </div>
-          <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
-            <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
-              <span>{{ t('solver.nodeBonuses.gatheringCount') }}</span>
-              <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
-            </label>
-            <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
+          <div class="lg:w-2/3 grid grid-cols-1 gap-3">
+            <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+              <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
+                <span>{{ t('solver.nodeBonuses.gatheringCount') }}</span>
+                <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
+              </label>
+              <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
+            </div>
           </div>
         </div>
       </div>
