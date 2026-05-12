@@ -184,6 +184,7 @@ export interface CollectableSolverDebugInfo {
 export interface CollectableSolverResult {
   expectedScore: number;
   expectedReward: CollectableRewardVector;
+  rewardItemId?: number;
   policy: CollectablePolicyNode;
   calculationTime: number;
   debug?: CollectableSolverDebugInfo;

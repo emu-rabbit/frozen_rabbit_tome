@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
@@ -32,9 +32,21 @@ const {
 } = useCollectableSolver();
 const isDebugDialogOpen = ref(false);
 const isSaved = ref(false);
+const isDecisionTreeExported = ref(false);
+const isDecisionTreeExporting = ref(false);
 let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
+let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId);
+
+onBeforeUnmount(() => {
+  if (savedTimer) {
+    window.clearTimeout(savedTimer);
+  }
+  if (exportedTimer) {
+    window.clearTimeout(exportedTimer);
+  }
+});
 
 watch(() => [
   props.activeItem.itemId,
@@ -48,6 +60,7 @@ watch(() => [
 ], () => {
   clearCollectableResult();
   isSaved.value = false;
+  isDecisionTreeExported.value = false;
 }, { deep: true });
 
 async function handleSolve() {
@@ -80,24 +93,235 @@ function handleSave() {
     savedTimer = null;
   }, 1600);
 }
+
+async function handleExportDecisionTree() {
+  if (!collectableResult.value || isDecisionTreeExported.value || isDecisionTreeExporting.value) return;
+
+  isDecisionTreeExporting.value = true;
+  await nextTick();
+  await waitForUiFrame();
+
+  try {
+    downloadTextFile(
+      await buildDecisionTreeMarkdown(collectableResult.value),
+      buildDecisionTreeFileName()
+    );
+
+    isDecisionTreeExported.value = true;
+    if (exportedTimer) {
+      window.clearTimeout(exportedTimer);
+    }
+    exportedTimer = window.setTimeout(() => {
+      isDecisionTreeExported.value = false;
+      exportedTimer = null;
+    }, 1600);
+  } finally {
+    isDecisionTreeExporting.value = false;
+  }
+}
+
+async function buildDecisionTreeMarkdown(result: CollectableSolverResult) {
+  const policyGraph = await serializePolicyGraph(result.policy);
+  const chunks = [
+    `# ${t('collectableSolver.export.title', { item: props.activeItem.nameLocale || props.activeItem.nameEn })}\n\n`,
+    `- ${t('collectableSolver.export.exportedAt')}：${new Date().toISOString()}\n`,
+    `- ${t('collectableSolver.export.itemId')}：${props.activeItem.itemId}\n`,
+    `- ${t('collectableSolver.export.job')}：${props.activeItem.jobType ? t(`game.jobs.${props.activeItem.jobType}`) : '-'}\n`,
+    `- ${t('collectableSolver.results.expectedScore')}：${Number(result.expectedScore.toFixed(2))} ${formatScripUnit(result.rewardItemId)}\n`,
+    `- ${t('collectableSolver.export.rootNode')}：\`${policyGraph.rootId}\`\n`,
+    `- ${t('collectableSolver.export.nodeCount')}：${policyGraph.nodeCount}\n\n`,
+    `## ${t('collectableSolver.export.howToReadTitle')}\n\n`,
+    `${t('collectableSolver.export.howToReadDesc')}\n\n`,
+    `## ${t('collectableSolver.export.nodeIndexTitle')}\n\n`
+  ];
+
+  for (let index = 0; index < policyGraph.nodes.length; index += 1) {
+    chunks.push(formatPolicyNodeMarkdown(policyGraph.nodes[index]));
+    if ((index + 1) % 200 === 0) {
+      await waitForUiFrame();
+    }
+  }
+
+  return chunks;
+}
+
+async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
+  const nodes = [];
+  const visited = new Set<string>();
+  const stack = [root];
+  let processed = 0;
+
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || visited.has(node.id)) continue;
+
+    visited.add(node.id);
+    nodes.push({
+      id: node.id,
+      state: node.state,
+      recommendedAction: node.recommendedAction,
+      expectedScore: node.expectedScore,
+      expectedReward: node.expectedReward,
+      branches: node.branches.map((branch) => {
+        if (branch.next && !visited.has(branch.next.id)) {
+          stack.push(branch.next);
+        }
+
+        return {
+          labelKey: branch.labelKey,
+          labelKeys: branch.labelKeys,
+          conditionKey: branch.conditionKey,
+          probability: branch.probability,
+          outcome: branch.outcome,
+          nextId: branch.next?.id ?? null
+        };
+      })
+    });
+
+    processed += 1;
+    if (processed % 200 === 0) {
+      await waitForUiFrame();
+    }
+  }
+
+  return {
+    rootId: root.id,
+    nodeCount: nodes.length,
+    nodes
+  };
+}
+
+function formatScripUnit(rewardItemId?: number) {
+  if (rewardItemId === 34021) return t('collectableSolver.results.scripUnits.orange');
+  if (rewardItemId === 33914) return t('collectableSolver.results.scripUnits.purple');
+  return t('collectableSolver.results.scripUnits.generic');
+}
+
+function buildDecisionTreeFileName() {
+  const itemName = props.activeItem.nameLocale || props.activeItem.nameEn || `item-${props.activeItem.itemId}`;
+  const date = new Date().toISOString().slice(0, 10);
+  return sanitizeFileName(`${itemName} - ${t('collectableSolver.actions.exportDecisionTree')} - ${date}.md`);
+}
+
+function formatPolicyNodeMarkdown(node: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]) {
+  const chunks = [
+    `### ${t('collectableSolver.export.node')} \`${node.id}\`\n\n`,
+    `- ${t('collectableSolver.export.state')}：${formatState(node.state)}\n`,
+    `- ${t('collectableSolver.export.recommendedAction')}：${actionName(node.recommendedAction.kind)}\n`,
+    `- ${t('collectableSolver.export.nodeExpectedScore')}：${Number(node.expectedScore.toFixed(2))}\n\n`,
+    `${t('collectableSolver.export.resultBranches')}：\n`
+  ];
+
+  if (node.branches.length === 0) {
+    chunks.push(`- ${t('collectableSolver.export.noBranches')}\n\n`);
+    return chunks.join('');
+  }
+
+  node.branches.forEach((branch) => {
+    chunks.push(
+      `- ${branchLabel(branch)}（${formatProbability(branch.probability)}）\n`,
+      `  - ${t('collectableSolver.export.outcome')}：${formatOutcome(branch.outcome)}\n`,
+      `  - ${t('collectableSolver.export.branchScore')}：${Number(branch.outcome.score.toFixed(2))}\n`,
+      `  - ${t('collectableSolver.export.nextStep')}：${branch.nextId ? `${t('collectableSolver.export.node')} \`${branch.nextId}\`` : t('collectableSolver.export.end')}\n`
+    );
+  });
+
+  chunks.push('\n');
+  return chunks.join('');
+}
+
+function actionName(kind: CollectableSolverResult['policy']['recommendedAction']['kind']) {
+  return t(`collectableSolver.actions.${kind}`);
+}
+
+function branchLabel(branch: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]['branches'][number]) {
+  return (branch.labelKeys?.length ? branch.labelKeys : [branch.labelKey]).map((key) => t(key)).join(' / ');
+}
+
+function formatProbability(probability: number) {
+  if (probability > 0 && probability < 0.01) return '<0.01%';
+  return `${probability.toFixed(2)}%`;
+}
+
+function formatState(state: CollectableSolverResult['policy']['state']) {
+  return t('collectableSolver.export.stateSummary', {
+    gp: state.gp,
+    integrity: state.integrity,
+    collectability: state.collectability
+  });
+}
+
+function formatOutcome(outcome: CollectableSolverResult['policy']['branches'][number]['outcome']) {
+  return t('collectableSolver.export.outcomeSummary', {
+    gp: outcome.gp,
+    integrity: outcome.integrity,
+    collectability: outcome.collectability
+  });
+}
+
+function sanitizeFileName(fileName: string) {
+  return fileName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/[. ]+$/g, '')
+    .slice(0, 160);
+}
+
+function downloadTextFile(chunks: string[], fileName: string) {
+  const blob = new Blob(chunks, { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function waitForUiFrame() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.setTimeout(resolve, 0);
+    });
+  });
+}
 </script>
 
 <template>
   <div class="collectable-panel">
     <header class="collectable-panel-header">
-      <div>
-        <span>{{ t('collectableSolver.badge') }}</span>
-        <h2>{{ t('collectableSolver.title') }}</h2>
+      <div class="collectable-panel-title">
+        <h2>
+          <i class="pi pi-bolt text-amber-500"></i>
+          {{ t('solver.strategy.title') }}
+          <button
+            v-if="debugMode && collectableResult?.debug"
+            type="button"
+            class="solver-debug-info-button"
+            :title="t('collectableSolver.debug.open')"
+            :aria-label="t('collectableSolver.debug.open')"
+            @click="isDebugDialogOpen = true"
+          >
+            <i class="pi pi-info-circle"></i>
+          </button>
+        </h2>
         <p>{{ t('collectableSolver.description') }}</p>
       </div>
-      <Button
-        class="p-button-primary collectable-solve-button"
-        :label="t('collectableSolver.actions.solve')"
-        :icon="isCollectableSolving ? 'pi pi-spin pi-spinner' : 'pi pi-play'"
-        :loading="isCollectableSolving"
-        :disabled="!canSolve"
-        @click="handleSolve"
-      />
+      <div class="solver-action-bar solver-action-bar-primary">
+        <Button
+          class="solver-action-button p-button-primary rounded-xl shadow-md"
+          :aria-label="t('collectableSolver.actions.solve')"
+          :loading="isCollectableSolving"
+          :disabled="!canSolve"
+          @click="handleSolve"
+        >
+          <i class="p-button-icon p-button-icon-left" :class="isCollectableSolving ? 'pi pi-spin pi-spinner' : 'pi pi-play'"></i>
+          <span class="solver-action-label p-button-label">{{ t('collectableSolver.actions.solve') }}</span>
+        </Button>
+      </div>
     </header>
 
     <div v-if="collectableError" class="collectable-alert" role="alert">
@@ -109,32 +333,36 @@ function handleSave() {
     </div>
 
     <div v-if="collectableResult" class="collectable-result">
-      <div class="collectable-toolbar">
-        <button
-          v-if="debugMode && collectableResult.debug"
-          type="button"
-          class="collectable-tool-button"
-          :title="t('collectableSolver.debug.open')"
-          :aria-label="t('collectableSolver.debug.open')"
-          @click="isDebugDialogOpen = true"
-        >
-          <i class="pi pi-info-circle"></i>
-        </button>
-        <Button
-          class="p-button-outlined collectable-save-button"
-          :icon="isSaved ? 'pi pi-check' : 'pi pi-bookmark'"
-          :label="isSaved ? t('solver.strategy.savedTome') : t('solver.strategy.saveTome')"
-          :disabled="isSaved"
-          @click="handleSave"
-        />
-      </div>
-
       <CollectablePolicyView
         :policy="collectableResult.policy"
-        :expected-reward="collectableResult.expectedReward"
         :expected-score="collectableResult.expectedScore"
+        :reward-item-id="collectableResult.rewardItemId"
         :job-type="activeItem.jobType || 'miner'"
       />
+
+      <div class="solver-result-action-bar">
+        <Button
+          class="solver-action-button p-button-outlined rounded-xl"
+          :class="{ 'is-tome-saved': isDecisionTreeExported }"
+          :aria-label="t('collectableSolver.actions.exportDecisionTree')"
+          :loading="isDecisionTreeExporting"
+          :disabled="isDecisionTreeExported || isDecisionTreeExporting"
+          @click="handleExportDecisionTree"
+        >
+          <i class="p-button-icon p-button-icon-left" :class="isDecisionTreeExporting ? 'pi pi-spin pi-spinner' : isDecisionTreeExported ? 'pi pi-check' : 'pi pi-download'"></i>
+          <span class="solver-action-label p-button-label">{{ isDecisionTreeExporting ? t('collectableSolver.actions.exportingDecisionTree') : isDecisionTreeExported ? t('collectableSolver.actions.exportedDecisionTree') : t('collectableSolver.actions.exportDecisionTree') }}</span>
+        </Button>
+        <Button
+          class="solver-action-button p-button-outlined rounded-xl"
+          :class="{ 'is-tome-saved': isSaved }"
+          :aria-label="t('solver.strategy.saveTome')"
+          :disabled="isSaved"
+          @click="handleSave"
+        >
+          <i class="p-button-icon p-button-icon-left" :class="isSaved ? 'pi pi-check' : 'pi pi-bookmark'"></i>
+          <span class="solver-action-label p-button-label">{{ isSaved ? t('solver.strategy.savedTome') : t('solver.strategy.saveTome') }}</span>
+        </Button>
+      </div>
     </div>
 
     <div v-else-if="isCollectableSolving" class="collectable-empty">
@@ -171,18 +399,15 @@ function handleSave() {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-}
-
-.collectable-panel-header span {
-  color: #52a890;
-  font-size: 0.75rem;
-  font-weight: 900;
-  text-transform: uppercase;
+  gap: 1.25rem;
 }
 
 .collectable-panel-header h2 {
-  margin: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin: 0;
   color: #1e293b;
   font-size: 1.25rem;
   font-weight: 900;
@@ -207,10 +432,77 @@ function handleSave() {
   color: #94a3b8;
 }
 
-.collectable-solve-button,
-.collectable-save-button {
-  flex-shrink: 0;
-  border-radius: 0.85rem;
+.collectable-panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.solver-action-bar {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .solver-action-bar-primary {
+    width: min(100%, 10rem);
+  }
+}
+
+:deep(.solver-action-button) {
+  width: 100%;
+  min-height: 42px;
+  justify-content: center;
+}
+
+:deep(.solver-action-button.is-tome-saved) {
+  color: #15803d;
+  border-color: rgb(134 239 172);
+  background: rgb(220 252 231 / 0.75);
+  box-shadow: 0 0 0 1px rgb(34 197 94 / 0.12);
+}
+
+:global(.dark .solver-action-button.is-tome-saved) {
+  color: #bbf7d0;
+  border-color: rgb(21 128 61 / 0.55);
+  background: rgb(20 83 45 / 0.22);
+  box-shadow: 0 0 0 1px rgb(74 222 128 / 0.08);
+}
+
+.solver-action-label {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.solver-debug-info-button {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(187 247 208);
+  border-radius: 0.75rem;
+  background: rgb(240 253 244);
+  color: #15803d;
+  font-size: 0.9rem;
+  transition: all 0.18s ease;
+}
+
+.solver-debug-info-button:hover {
+  transform: translateY(-1px);
+  border-color: #52a890;
+  background: rgb(220 252 231);
+}
+
+:global(html.dark .solver-debug-info-button) {
+  border-color: rgb(21 128 61 / 0.55);
+  background: rgb(20 83 45 / 0.22);
+  color: #bbf7d0;
 }
 
 .collectable-alert {
@@ -237,28 +529,13 @@ function handleSave() {
 
 .collectable-result {
   display: grid;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 
-.collectable-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.collectable-tool-button {
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 1px solid #d1fae5;
-  border-radius: 0.85rem;
-  background: #f0fdf4;
-  color: #0f766e;
-}
-
-:global(html.dark .collectable-tool-button) {
-  border-color: rgb(51 65 85);
-  background: rgb(2 6 23 / 0.38);
-  color: #99f6e4;
+.solver-result-action-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .collectable-empty {
@@ -282,9 +559,25 @@ function handleSave() {
 
 @media (max-width: 640px) {
   .collectable-panel-header,
-  .collectable-toolbar {
+  .solver-result-action-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .collectable-panel-header {
+    display: flex;
+  }
+
+  .collectable-panel-title {
+    text-align: center;
+  }
+
+  .collectable-panel-header h2 {
+    justify-content: center;
+  }
+
+  .solver-result-action-bar {
+    grid-template-columns: 1fr;
   }
 }
 </style>

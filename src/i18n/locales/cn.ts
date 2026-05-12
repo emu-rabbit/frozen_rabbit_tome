@@ -341,12 +341,15 @@ export default {
   collectableSolver: {
     badge: '收藏品秘籍',
     title: '收藏品求解台',
-    description: '依当前支持模型推算收藏品采集的推荐判断策略。',
+    description: '算法未纳入大胆提炼、强化洞察，以大地紫橘票获得量为评分依据。',
     solving: '正在推算收藏品推荐策略...',
     empty: '点击求解后，这里会显示可依状态判断的推荐策略。',
     stats: { scourValue: '提炼基础值' },
     actions: {
       solve: '求解',
+      exportDecisionTree: '导出决策树',
+      exportingDecisionTree: '导出中',
+      exportedDecisionTree: '已导出',
       collect: '收藏品采集',
       scour: '提炼',
       meticulous: '慎重提炼',
@@ -365,6 +368,12 @@ export default {
       title: '推荐策略',
       subtitle: '这不是固定宏，而是依照随机结果与收藏价值做判断的策略。',
       expectedScore: '期望分数',
+      expectedScripUnit: '评分单位',
+      scripUnits: {
+        purple: '大地紫票',
+        orange: '大地橘票',
+        generic: '大地票据'
+      },
       expectedReward: '期望收益',
       rewardSummary: '票据 {scrip} / 金币 {gil}',
       limitationNote: '第一版未纳入大胆提炼、强化洞察、精选收益模型与实际经验值换算。'
@@ -439,6 +448,29 @@ export default {
       unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在第一版纯收藏品缴纳资料中，暂时无法求解。' },
       workerStale: { title: '求解器需要重新载入', desc: '网站可能刚更新完成，刷新后即可继续。' },
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }
+    },
+    export: {
+      title: '{item} 收藏品决策树',
+      exportedAt: '导出时间',
+      itemId: '物品 ID',
+      job: '职业',
+      rootNode: '起始节点',
+      nodeCount: '节点数',
+      howToReadTitle: '阅读方式',
+      howToReadDesc: '每个节点代表一个采集状态，请依照“建议动作”执行后，在“结果分支”中找到游戏实际发生的结果，再前往该分支标示的下一个节点。',
+      nodeIndexTitle: '节点索引',
+      node: '节点',
+      state: '状态',
+      recommendedAction: '建议动作',
+      nodeExpectedScore: '节点期望分数',
+      resultBranches: '结果分支',
+      noBranches: '此节点没有后续分支。',
+      outcome: '结果',
+      branchScore: '分支分数',
+      nextStep: '下一步',
+      end: '结束',
+      stateSummary: 'GP {gp} / 耐久 {integrity} / 收藏价值 {collectability}',
+      outcomeSummary: 'GP {gp} / 耐久 {integrity} / 收藏价值 {collectability}'
     },
     debug: {
       open: '查看收藏品求解器调试信息',

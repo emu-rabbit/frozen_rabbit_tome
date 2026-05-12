@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CollectablePolicyBranch, CollectablePolicyNode, CollectableRewardVector } from '../types/collectable';
+import type { CollectablePolicyBranch, CollectablePolicyNode } from '../types/collectable';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 
 const props = defineProps<{
   policy: CollectablePolicyNode;
-  expectedReward: CollectableRewardVector;
   expectedScore: number;
+  rewardItemId?: number;
   jobType: 'miner' | 'botanist';
 }>();
 
@@ -117,6 +117,11 @@ const confluentBranch = computed(() => {
 const resolvedGuidedBranch = computed(() => selectedGuidedBranch.value ?? confluentBranch.value);
 const showsGuidedPanel = computed(() => usesGuidedQuestions.value || !!confluentBranch.value);
 const isConfluentOutcome = computed(() => !!confluentBranch.value && previewBranches.value.length > 1);
+const scripUnitKey = computed(() => {
+  if (props.rewardItemId === 34021) return 'collectableSolver.results.scripUnits.orange';
+  if (props.rewardItemId === 33914) return 'collectableSolver.results.scripUnits.purple';
+  return 'collectableSolver.results.scripUnits.generic';
+});
 
 watch(() => props.policy, (policy) => {
   nodeStack.value = [policy];
@@ -187,25 +192,18 @@ function continueGuidedBranch() {
   openBranch(resolvedGuidedBranch.value);
 }
 
-function rewardSummary(reward: CollectableRewardVector) {
-  return t('collectableSolver.results.rewardSummary', {
-    scrip: Number(reward.scrip.toFixed(2)),
-    gil: Number(reward.gil.toFixed(2))
-  });
-}
 </script>
 
 <template>
   <div class="collectable-policy">
     <section class="collectable-summary">
       <div>
-        <span class="summary-kicker">{{ t('collectableSolver.results.kicker') }}</span>
-        <h3>{{ t('collectableSolver.results.title') }}</h3>
-        <p>{{ t('collectableSolver.results.subtitle') }}</p>
+        <span class="summary-kicker">{{ t('collectableSolver.results.expectedScore') }}</span>
+        <h3>{{ Number(expectedScore.toFixed(2)) }}</h3>
       </div>
       <div class="summary-score">
-        <span>{{ t('collectableSolver.results.expectedScore') }}</span>
-        <strong>{{ Number(expectedScore.toFixed(2)) }}</strong>
+        <span>{{ t('collectableSolver.results.expectedScripUnit') }}</span>
+        <strong>{{ t(scripUnitKey) }}</strong>
       </div>
     </section>
 
@@ -223,14 +221,6 @@ function rewardSummary(reward: CollectableRewardVector) {
           collectability: currentNode.state.collectability
         }) }}</p>
       </div>
-    </section>
-
-    <section class="reward-strip">
-      <div>
-        <span>{{ t('collectableSolver.results.expectedReward') }}</span>
-        <strong>{{ rewardSummary(expectedReward) }}</strong>
-      </div>
-      <p>{{ t('collectableSolver.results.limitationNote') }}</p>
     </section>
 
     <section class="branch-list">
@@ -395,7 +385,6 @@ function rewardSummary(reward: CollectableRewardVector) {
 
 .collectable-summary,
 .current-action,
-.reward-strip,
 .guided-panel,
 .branch-row {
   border: 1px solid #d1fae5;
@@ -405,7 +394,6 @@ function rewardSummary(reward: CollectableRewardVector) {
 
 :global(html.dark .collectable-summary),
 :global(html.dark .current-action),
-:global(html.dark .reward-strip),
 :global(html.dark .guided-panel),
 :global(html.dark .branch-row) {
   border-color: rgb(51 65 85);
@@ -421,7 +409,6 @@ function rewardSummary(reward: CollectableRewardVector) {
 
 .summary-kicker,
 .summary-score span,
-.reward-strip span,
 .current-action span,
 .branch-list-header {
   color: #3f8f79;
@@ -443,7 +430,6 @@ function rewardSummary(reward: CollectableRewardVector) {
 }
 
 .collectable-summary p,
-.reward-strip p,
 .current-action p,
 .guided-hint,
 .guided-result p,
@@ -456,7 +442,6 @@ function rewardSummary(reward: CollectableRewardVector) {
 }
 
 :global(html.dark .collectable-summary p),
-:global(html.dark .reward-strip p),
 :global(html.dark .current-action p),
 :global(html.dark .guided-hint),
 :global(html.dark .guided-result p),
@@ -523,22 +508,6 @@ function rewardSummary(reward: CollectableRewardVector) {
 
 :global(html.dark .current-action strong) {
   color: #f8fafc;
-}
-
-.reward-strip {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.9rem 1rem;
-}
-
-.reward-strip strong {
-  display: block;
-  color: #334155;
-  font-size: 0.95rem;
-}
-
-:global(html.dark .reward-strip strong) {
-  color: #e2e8f0;
 }
 
 .branch-list {

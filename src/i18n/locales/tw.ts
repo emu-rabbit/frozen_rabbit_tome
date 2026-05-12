@@ -342,7 +342,7 @@ export default {
   collectableSolver: {
     badge: '收藏品秘笈',
     title: '收藏品求解台',
-    description: '依目前支援模型推算收藏品採集的推薦判斷策略。',
+    description: '演算法未納入大膽提煉、強化洞察，以大地紫橘票獲得量為評分依據。',
     solving: '正在推算收藏品推薦策略...',
     empty: '點擊求解後，這裡會顯示可依狀態判斷的推薦策略。',
     stats: {
@@ -350,6 +350,9 @@ export default {
     },
     actions: {
       solve: '求解',
+      exportDecisionTree: '匯出決策樹',
+      exportingDecisionTree: '匯出中',
+      exportedDecisionTree: '已匯出',
       collect: '收藏品採集',
       scour: '提煉',
       meticulous: '慎重提煉',
@@ -368,6 +371,12 @@ export default {
       title: '推薦策略',
       subtitle: '這不是固定巨集，而是依照隨機結果與收藏價值做判斷的策略。',
       expectedScore: '期望分數',
+      expectedScripUnit: '評分單位',
+      scripUnits: {
+        purple: '大地紫票',
+        orange: '大地橘票',
+        generic: '大地票據'
+      },
       expectedReward: '期望收益',
       rewardSummary: '票據 {scrip} / 金幣 {gil}',
       limitationNote: '第一版未納入大膽提煉、強化洞察、精選收益模型與實際經驗值換算。'
@@ -451,6 +460,29 @@ export default {
         title: '收藏品求解器暫時無法啟動',
         desc: '請重新整理頁面後再試一次。'
       }
+    },
+    export: {
+      title: '{item} 收藏品決策樹',
+      exportedAt: '匯出時間',
+      itemId: '物品 ID',
+      job: '職業',
+      rootNode: '起始節點',
+      nodeCount: '節點數',
+      howToReadTitle: '閱讀方式',
+      howToReadDesc: '每個節點代表一個採集狀態，請依照「建議動作」執行後，在「結果分支」中找到遊戲實際發生的結果，再前往該分支標示的下一個節點。',
+      nodeIndexTitle: '節點索引',
+      node: '節點',
+      state: '狀態',
+      recommendedAction: '建議動作',
+      nodeExpectedScore: '節點期望分數',
+      resultBranches: '結果分支',
+      noBranches: '此節點沒有後續分支。',
+      outcome: '結果',
+      branchScore: '分支分數',
+      nextStep: '下一步',
+      end: '結束',
+      stateSummary: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}',
+      outcomeSummary: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}'
     },
     debug: {
       open: '查看收藏品求解器偵錯資訊',

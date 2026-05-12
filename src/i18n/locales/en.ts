@@ -341,7 +341,7 @@ export default {
   collectableSolver: {
     badge: 'Collectable Tome',
     title: 'Collectable Solver',
-    description: 'Recommends a collectable gathering decision policy from the currently supported model.',
+    description: 'Brazen and Collector\'s High Standard are excluded; scoring uses expected purple/orange gatherers\' scrip.',
     solving: 'Calculating collectable policy...',
     empty: 'Solve to show a state-based recommended policy here.',
     stats: {
@@ -349,6 +349,9 @@ export default {
     },
     actions: {
       solve: 'Solve',
+      exportDecisionTree: 'Export Decision Tree',
+      exportingDecisionTree: 'Exporting',
+      exportedDecisionTree: 'Exported',
       collect: 'Collect',
       scour: 'Scour',
       meticulous: 'Meticulous',
@@ -367,6 +370,12 @@ export default {
       title: 'Recommended Policy',
       subtitle: 'This is not a fixed macro. Follow the policy based on procs and collectability.',
       expectedScore: 'Expected Score',
+      expectedScripUnit: 'Scoring Unit',
+      scripUnits: {
+        purple: 'Purple Gatherers\' Scrip',
+        orange: 'Orange Gatherers\' Scrip',
+        generic: 'Gatherers\' Scrip'
+      },
       expectedReward: 'Expected Reward',
       rewardSummary: 'Scrip {scrip} / Gil {gil}',
       limitationNote: 'V1 excludes Brazen, Collector\'s High Standard, aetherial reduction reward modeling, and real EXP conversion.'
@@ -450,6 +459,29 @@ export default {
         title: 'Collectable solver could not start',
         desc: 'Please refresh the page and try again.'
       }
+    },
+    export: {
+      title: '{item} Collectable Decision Tree',
+      exportedAt: 'Exported At',
+      itemId: 'Item ID',
+      job: 'Job',
+      rootNode: 'Root Node',
+      nodeCount: 'Node Count',
+      howToReadTitle: 'How To Read',
+      howToReadDesc: 'Each node represents a gathering state. Use the recommended action, find the actual in-game outcome under Result Branches, then move to the next node shown by that branch.',
+      nodeIndexTitle: 'Node Index',
+      node: 'Node',
+      state: 'State',
+      recommendedAction: 'Recommended Action',
+      nodeExpectedScore: 'Node Expected Score',
+      resultBranches: 'Result Branches',
+      noBranches: 'This node has no further branches.',
+      outcome: 'Outcome',
+      branchScore: 'Branch Score',
+      nextStep: 'Next Step',
+      end: 'End',
+      stateSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}',
+      outcomeSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}'
     },
     debug: {
       open: 'Open collectable solver debug info',

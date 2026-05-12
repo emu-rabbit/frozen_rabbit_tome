@@ -631,6 +631,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const response: CollectableSolverResult = {
     expectedScore: Number(result.expectedScore.toFixed(6)),
     expectedReward: result.expectedReward,
+    rewardItemId: rewardTable.rewardItemId,
     policy: result.policy,
     calculationTime: 0
   };

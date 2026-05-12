@@ -341,12 +341,15 @@ export default {
   collectableSolver: {
     badge: '収集品秘伝書',
     title: '収集品ソルバー',
-    description: '現在サポートしているモデルに基づき、収集品採集の推奨判断方針を計算します。',
+    description: 'Brazen と Collector\'s High Standard は未対応です。採集系の紫貨／橙貨の期待量で評価します。',
     solving: '収集品の推奨方針を計算中...',
     empty: '計算すると、状態に応じた推奨方針がここに表示されます。',
     stats: { scourValue: 'Scour 値' },
     actions: {
       solve: '計算',
+      exportDecisionTree: '決定木を書き出す',
+      exportingDecisionTree: '書き出し中',
+      exportedDecisionTree: '書き出し済み',
       collect: '収集品採集',
       scour: 'Scour',
       meticulous: 'Meticulous',
@@ -365,6 +368,12 @@ export default {
       title: '推奨方針',
       subtitle: '固定マクロではなく、proc と収集価値に応じて判断する方針です。',
       expectedScore: '期待スコア',
+      expectedScripUnit: '評価単位',
+      scripUnits: {
+        purple: 'ギャザラー紫貨',
+        orange: 'ギャザラー橙貨',
+        generic: 'ギャザラースクリップ'
+      },
       expectedReward: '期待報酬',
       rewardSummary: 'スクリップ {scrip} / ギル {gil}',
       limitationNote: 'V1 では Brazen、Collector\'s High Standard、精選報酬モデル、実際の経験値換算を含みません。'
@@ -439,6 +448,29 @@ export default {
       unsupportedReward: { title: '報酬テーブルが見つかりません', desc: 'このアイテムは V1 の通常収集品納品データにないため、まだ計算できません。' },
       workerStale: { title: 'ソルバーの再読み込みが必要です', desc: 'サイト更新直後の可能性があります。再読み込みしてからお試しください。' },
       workerFailed: { title: '収集品ソルバーを起動できません', desc: 'ページを再読み込みしてもう一度お試しください。' }
+    },
+    export: {
+      title: '{item} 収集品決定木',
+      exportedAt: '書き出し日時',
+      itemId: 'アイテム ID',
+      job: 'ジョブ',
+      rootNode: '起点ノード',
+      nodeCount: 'ノード数',
+      howToReadTitle: '読み方',
+      howToReadDesc: '各ノードは採集状態を表します。「推奨アクション」を実行した後、ゲーム内で実際に起きた結果を「結果分岐」から探し、その分岐に示された次のノードへ進みます。',
+      nodeIndexTitle: 'ノード索引',
+      node: 'ノード',
+      state: '状態',
+      recommendedAction: '推奨アクション',
+      nodeExpectedScore: 'ノード期待スコア',
+      resultBranches: '結果分岐',
+      noBranches: 'このノードには後続分岐がありません。',
+      outcome: '結果',
+      branchScore: '分岐スコア',
+      nextStep: '次',
+      end: '終了',
+      stateSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}',
+      outcomeSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}'
     },
     debug: {
       open: '収集品ソルバーのデバッグ情報を開く',
