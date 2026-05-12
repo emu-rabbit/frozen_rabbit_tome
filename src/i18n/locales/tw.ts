@@ -371,7 +371,7 @@ export default {
       kicker: 'Recommended Policy',
       title: '推薦策略',
       subtitle: '這不是固定巨集，而是依照隨機結果與收藏價值做判斷的策略。',
-      expectedScore: '期望分數',
+      expectedScore: '期望{unit}',
       expectedScripUnit: '評分單位',
       scripUnits: {
         purple: '大地紫票',
@@ -380,7 +380,15 @@ export default {
       },
       expectedReward: '期望收益',
       rewardSummary: '票據 {scrip} / 金幣 {gil}',
-      revisitIncluded: '總期望已納入再起 {chance}% 機率。',
+      summary: {
+        expected: '總期望{unit}',
+        max: '總最高{unit}',
+        min: '總最低{unit}'
+      },
+      maxScore: '最高{unit}',
+      minScore: '最低{unit}',
+      scoreChance: '機率 {chance}',
+      revisitIncluded: '總分數已納入再起 {chance}% 機率。',
       limitationNote: '第一版未納入大膽提煉、強化洞察、精選收益模型與實際經驗值換算。'
     },
     policy: {

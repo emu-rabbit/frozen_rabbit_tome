@@ -525,8 +525,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return {
       minYield,
       maxYield,
-      minYieldChance: Number(((outcomes.get(minYield) ?? 0) * 100).toFixed(6)),
-      maxYieldChance: Number(((outcomes.get(maxYield) ?? 0) * 100).toFixed(6))
+      minYieldChance: (outcomes.get(minYield) ?? 0) * 100,
+      maxYieldChance: (outcomes.get(maxYield) ?? 0) * 100
     };
   }
 

@@ -9,6 +9,7 @@ import CollectablePolicyView from './CollectablePolicyView.vue';
 import CollectableDebugDialog from './CollectableDebugDialog.vue';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { getCollectableActionName } from '../services/collectableActions';
+import { useSettings } from '../composables/useSettings';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -25,6 +26,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { solverSettings } = useSettings();
 const {
   collectableResult,
   isCollectableSolving,
@@ -58,7 +60,8 @@ watch(() => [
   props.effectiveStats.gp,
   props.temporaryGp,
   props.nodeBonuses.baseIntegrity,
-  props.nodeBonuses.gatheringCount
+  props.nodeBonuses.gatheringCount,
+  solverSettings.value.objectiveMode
 ], () => {
   clearCollectableResult();
   isSaved.value = false;
@@ -129,7 +132,7 @@ async function buildDecisionTreeMarkdown(result: CollectableSolverResult) {
     `- ${t('collectableSolver.export.exportedAt')}：${new Date().toISOString()}\n`,
     `- ${t('collectableSolver.export.itemId')}：${props.activeItem.itemId}\n`,
     `- ${t('collectableSolver.export.job')}：${props.activeItem.jobType ? t(`game.jobs.${props.activeItem.jobType}`) : '-'}\n`,
-    `- ${t('collectableSolver.results.expectedScore')}：${Number(result.expectedScore.toFixed(2))} ${formatScripUnit(result.rewardItemId)}\n`,
+    `- ${t('collectableSolver.results.expectedScore', { unit: formatScripUnit(result.rewardItemId) })}：${Number(result.expectedScore.toFixed(2))}\n`,
     `- ${t('collectableSolver.export.rootNode')}：\`${policyGraph.rootId}\`\n`,
     `- ${t('collectableSolver.export.nodeCount')}：${policyGraph.nodeCount}\n\n`,
     `## ${t('collectableSolver.export.howToReadTitle')}\n\n`,
@@ -336,6 +339,11 @@ function waitForUiFrame() {
       <CollectablePolicyView
         :policy="collectableResult.policy"
         :expected-score="collectableResult.expectedScore"
+        :min-score="collectableResult.minScore"
+        :max-score="collectableResult.maxScore"
+        :min-score-chance="collectableResult.minScoreChance"
+        :max-score-chance="collectableResult.maxScoreChance"
+        :objective-mode="collectableResult.objectiveMode"
         :reward-item-id="collectableResult.rewardItemId"
         :job-type="activeItem.jobType || 'miner'"
         :revisit="collectableResult.revisit"

@@ -70,7 +70,6 @@ function tomeObjectiveMode(tome: StoredTome): SolverObjectiveMode {
 }
 
 function formatObjectiveMode(tome: StoredTome) {
-  if (isCollectableTome(tome)) return t('collectableSolver.results.expectedScore');
   return t(`settings.solverModes.${tomeObjectiveMode(tome)}`);
 }
 
@@ -190,6 +189,10 @@ function collectableExpectedScore(tome: StoredTome) {
 function collectableScripMeta(tome: StoredTome) {
   return getCollectableScripRewardMeta(tome.collectableRewardItemId ?? tome.collectableRewardTableSummary?.rewardItemId);
 }
+
+function collectableScripUnit(tome: StoredTome) {
+  return t(collectableScripMeta(tome).labelKey);
+}
 </script>
 
 <template>
@@ -296,7 +299,7 @@ function collectableScripMeta(tome: StoredTome) {
             </div>
 
             <div class="collectable-score" :title="t(collectableScripMeta(tome).labelKey)">
-              <span>{{ t('collectableSolver.results.expectedScore') }}</span>
+              <span>{{ t('collectableSolver.results.expectedScore', { unit: collectableScripUnit(tome) }) }}</span>
               <strong>{{ collectableExpectedScore(tome) }}</strong>
               <span
                 class="collectable-scrip-icon"

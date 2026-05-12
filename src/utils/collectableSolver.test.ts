@@ -247,6 +247,37 @@ describe('solveCollectableRotation', () => {
     expect(['successI', 'successII', 'successIII', 'nextCollectSuccess']).toContain(result.policy.recommendedAction.kind);
   });
 
+  it('天選人模式只用最高分數評分，不為相同峰值施放成功率技能', () => {
+    const result = solveCollectableRotation(createRequest({
+      objectiveMode: 'max',
+      stats: {
+        level: 100,
+        gathering: 760,
+        perception: 1000,
+        gp: 930
+      },
+      nodeBonuses: {
+        baseIntegrity: 1,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          mid: { collectability: 1, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          high: { collectability: 2, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    }));
+
+    expect(result.objectiveMode).toBe('max');
+    expect(result.maxScore).toBe(200);
+    expect(['successI', 'successII', 'successIII', 'nextCollectSuccess']).not.toContain(result.policy.recommendedAction.kind);
+  });
+
   it('成功率已 100% 時不施放成功率補強技能', () => {
     const result = solveCollectableRotation(createRequest({
       stats: {
@@ -378,6 +409,8 @@ describe('solveCollectableRotation', () => {
     expect(result.policyPlans).toHaveLength(1);
     expect(result.revisit).toMatchObject({ enabled: true, chance: 0.05, isFullGp: true });
     expect(result.expectedScore).toBeGreaterThan(result.policyPlans[0].expectedScore);
+    expect(result.maxScore).toBeGreaterThanOrEqual(result.policyPlans[0].maxScore);
+    expect(result.maxScoreChance).toBeLessThanOrEqual(result.policyPlans[0].maxScoreChance);
     expect(collectKinds(result.policy)).toContain('revisitCheck');
   });
 

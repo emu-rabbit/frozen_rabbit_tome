@@ -368,7 +368,7 @@ export default {
       kicker: 'Recommended Policy',
       title: '推荐策略',
       subtitle: '这不是固定宏，而是依照随机结果与收藏价值做判断的策略。',
-      expectedScore: '期望分数',
+      expectedScore: '期望{unit}',
       expectedScripUnit: '评分单位',
       scripUnits: {
         purple: '大地紫票',
@@ -377,7 +377,15 @@ export default {
       },
       expectedReward: '期望收益',
       rewardSummary: '票据 {scrip} / 金币 {gil}',
-      revisitIncluded: '总期望已纳入再起 {chance}% 概率。',
+      summary: {
+        expected: '总期望{unit}',
+        max: '总最高{unit}',
+        min: '总最低{unit}'
+      },
+      maxScore: '最高{unit}',
+      minScore: '最低{unit}',
+      scoreChance: '概率 {chance}',
+      revisitIncluded: '总分数已纳入再起 {chance}% 概率。',
       limitationNote: '第一版未纳入大胆提炼、强化洞察、精选收益模型与实际经验值换算。'
     },
     policy: {

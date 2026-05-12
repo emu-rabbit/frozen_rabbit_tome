@@ -270,8 +270,8 @@ function summarizeRun(kind: SimulationRotationAnalysis['kind'], rotation: string
     expectedYield: Number(states.reduce((sum, state) => sum + state.yield * state.probability, 0).toFixed(2)),
     minYield,
     maxYield,
-    minYieldChance: Number(((distribution.get(minYield) ?? 0) * 100).toFixed(6)),
-    maxYieldChance: Number(((distribution.get(maxYield) ?? 0) * 100).toFixed(6)),
+    minYieldChance: (distribution.get(minYield) ?? 0) * 100,
+    maxYieldChance: (distribution.get(maxYield) ?? 0) * 100,
     outcomeDistribution: [...distribution.entries()].sort(([a], [b]) => a - b).map(([totalYield, probability]) => ({
       yield: totalYield,
       probability: probability * 100

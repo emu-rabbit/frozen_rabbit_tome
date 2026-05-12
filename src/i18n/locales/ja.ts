@@ -368,7 +368,7 @@ export default {
       kicker: 'Recommended Policy',
       title: '推奨方針',
       subtitle: '固定マクロではなく、proc と収集価値に応じて判断する方針です。',
-      expectedScore: '期待スコア',
+      expectedScore: '期待{unit}',
       expectedScripUnit: '評価単位',
       scripUnits: {
         purple: 'ギャザラー紫貨',
@@ -377,7 +377,15 @@ export default {
       },
       expectedReward: '期待報酬',
       rewardSummary: 'スクリップ {scrip} / ギル {gil}',
-      revisitIncluded: '合計期待値には再発見 {chance}% の確率を含みます。',
+      summary: {
+        expected: '合計期待{unit}',
+        max: '合計最大{unit}',
+        min: '合計最小{unit}'
+      },
+      maxScore: '最大{unit}',
+      minScore: '最小{unit}',
+      scoreChance: '確率 {chance}',
+      revisitIncluded: '合計スコアには再発見 {chance}% の確率を含みます。',
       limitationNote: 'V1 では Brazen、強活眼、精選報酬モデル、実際の経験値換算を含みません。'
     },
     policy: {

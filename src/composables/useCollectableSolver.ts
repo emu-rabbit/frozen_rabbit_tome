@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import type { CollectableObjective, CollectableSolverRequest, CollectableSolverResult } from '../types/collectable';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import { getCollectableRewardTable } from '../services/collectableRewards';
+import { useSettings } from './useSettings';
 
 const collectableResult = ref<CollectableSolverResult | null>(null);
 const isCollectableSolving = ref(false);
@@ -11,6 +12,8 @@ let activeCollectableWorker: Worker | null = null;
 let collectableSolveVersion = 0;
 
 export function useCollectableSolver() {
+  const { solverSettings } = useSettings();
+
   const cancelCollectableSolve = () => {
     collectableSolveVersion += 1;
     activeCollectableWorker?.terminate();
@@ -75,6 +78,7 @@ export function useCollectableSolver() {
       jobType: payload.activeItem.jobType || 'miner',
       rewardTable,
       objective: collectableObjective.value,
+      objectiveMode: solverSettings.value.objectiveMode,
       isTimedNode: payload.activeItem.isTimedNode ?? false,
       debugMode: payload.debugMode
     };

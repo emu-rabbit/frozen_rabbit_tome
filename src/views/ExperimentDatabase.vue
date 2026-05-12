@@ -81,7 +81,7 @@ function foodInfo(experiment: StoredExperiment) {
 }
 
 function formatChance(chance: number) {
-  if (chance > 0 && chance < 0.01) return '<0.01';
+  if (chance < 0.01) return '<0.01';
   return Number(chance.toFixed(2)).toString();
 }
 

@@ -51,6 +51,7 @@ export function useTomeLibrary() {
           extraRate: payload.nodeBonuses.extraRate
         },
         rotation: [],
+        objectiveMode: payload.collectableResult.objectiveMode,
         collectableObjective: { kind: 'scrip' },
         collectableRewardTableSummary: payload.collectableResult.debug
           ? payload.collectableResult.debug.formulas.rewardTable

@@ -370,7 +370,7 @@ export default {
       kicker: 'Recommended Policy',
       title: 'Recommended Policy',
       subtitle: 'This is not a fixed macro. Follow the policy based on procs and collectability.',
-      expectedScore: 'Expected Score',
+      expectedScore: 'Expected {unit}',
       expectedScripUnit: 'Scoring Unit',
       scripUnits: {
         purple: 'Purple Gatherers\' Scrip',
@@ -379,7 +379,15 @@ export default {
       },
       expectedReward: 'Expected Reward',
       rewardSummary: 'Scrip {scrip} / Gil {gil}',
-      revisitIncluded: 'Total expectation includes {chance}% Revisit chance.',
+      summary: {
+        expected: 'Total Expected {unit}',
+        max: 'Total Maximum {unit}',
+        min: 'Total Minimum {unit}'
+      },
+      maxScore: 'Maximum {unit}',
+      minScore: 'Minimum {unit}',
+      scoreChance: '{chance} chance',
+      revisitIncluded: 'Total score includes {chance}% Revisit chance.',
       limitationNote: 'V1 excludes Brazen, Collector\'s High Standard, aetherial reduction reward modeling, and real EXP conversion.'
     },
     policy: {

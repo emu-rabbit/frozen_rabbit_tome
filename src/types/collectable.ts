@@ -1,4 +1,4 @@
-import type { NodeBonuses, PlayerStats } from './game';
+import type { NodeBonuses, PlayerStats, SolverObjectiveMode } from './game';
 
 export type CollectableObjectiveKind = 'scrip' | 'exp' | 'gil' | 'custom';
 
@@ -128,6 +128,10 @@ export interface CollectablePolicyPlan {
   kind: CollectablePolicyPlanKind;
   startingGp: number;
   expectedScore: number;
+  minScore: number;
+  maxScore: number;
+  minScoreChance: number;
+  maxScoreChance: number;
   expectedReward: CollectableRewardVector;
   policy: CollectablePolicyNode;
 }
@@ -144,6 +148,7 @@ export interface CollectableSolverRequest {
   jobType: 'miner' | 'botanist';
   rewardTable: CollectableRewardTable;
   objective: CollectableObjective;
+  objectiveMode?: SolverObjectiveMode;
   isTimedNode?: boolean;
   debugMode?: boolean;
 }
@@ -210,6 +215,11 @@ export interface CollectableSolverDebugInfo {
 
 export interface CollectableSolverResult {
   expectedScore: number;
+  minScore: number;
+  maxScore: number;
+  minScoreChance: number;
+  maxScoreChance: number;
+  objectiveMode: SolverObjectiveMode;
   expectedReward: CollectableRewardVector;
   rewardItemId?: number;
   policyPlans: CollectablePolicyPlan[];

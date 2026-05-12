@@ -2,12 +2,18 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CollectablePolicyBranch, CollectablePolicyNode, CollectableRevisitInfo } from '../types/collectable';
+import type { SolverObjectiveMode } from '../types/game';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 
 const props = defineProps<{
   policy: CollectablePolicyNode;
   expectedScore: number;
+  minScore: number;
+  maxScore: number;
+  minScoreChance: number;
+  maxScoreChance: number;
+  objectiveMode: SolverObjectiveMode;
   rewardItemId?: number;
   jobType: 'miner' | 'botanist';
   revisit: CollectableRevisitInfo;
@@ -136,6 +142,13 @@ const resolvedGuidedBranch = computed(() => selectedGuidedBranch.value ?? conflu
 const showsGuidedPanel = computed(() => usesGuidedQuestions.value || !!confluentBranch.value);
 const isConfluentOutcome = computed(() => !!confluentBranch.value && previewBranches.value.length > 1);
 const scripRewardMeta = computed(() => getCollectableScripRewardMeta(props.rewardItemId));
+const summaryMetrics = computed(() => [
+  buildScoreMetric('expected'),
+  buildScoreMetric('max'),
+  buildScoreMetric('min')
+]);
+const primaryMetric = computed(() => buildScoreMetric(props.objectiveMode));
+const secondaryMetrics = computed(() => summaryMetrics.value.filter((metric) => metric.key !== props.objectiveMode));
 
 watch(() => props.policy, (policy) => {
   nodeStack.value = [policy];
@@ -151,8 +164,45 @@ function actionIcon(kind: typeof props.policy.recommendedAction.kind) {
 }
 
 function formatProbability(branch: CollectablePolicyBranch) {
-  if (branch.probability > 0 && branch.probability < 0.01) return '<0.01%';
+  if (branch.probability < 0.01) return '<0.01%';
   return `${branch.probability.toFixed(2)}%`;
+}
+
+function formatChance(chance: number) {
+  if (chance < 0.01) return '<0.01%';
+  return `${chance.toFixed(2)}%`;
+}
+
+function buildScoreMetric(key: SolverObjectiveMode) {
+  const unit = t(scripRewardMeta.value.labelKey);
+
+  if (key === 'max') {
+    return {
+      key,
+      label: t('collectableSolver.results.maxScore', { unit }),
+      summaryLabel: t('collectableSolver.results.summary.max', { unit }),
+      value: props.maxScore,
+      chance: props.maxScoreChance
+    };
+  }
+
+  if (key === 'min') {
+    return {
+      key,
+      label: t('collectableSolver.results.minScore', { unit }),
+      summaryLabel: t('collectableSolver.results.summary.min', { unit }),
+      value: props.minScore,
+      chance: props.minScoreChance
+    };
+  }
+
+  return {
+    key,
+    label: t('collectableSolver.results.expectedScore', { unit }),
+    summaryLabel: t('collectableSolver.results.summary.expected', { unit }),
+    value: Number(props.expectedScore.toFixed(2)),
+    chance: undefined
+  };
 }
 
 function uniqueNumbers(values: number[]) {
@@ -213,8 +263,11 @@ function continueGuidedBranch() {
   <div class="collectable-policy">
     <section class="collectable-summary">
       <div class="summary-value">
-        <span class="summary-kicker">{{ t('collectableSolver.results.expectedScore') }}</span>
-        <h3>{{ Number(expectedScore.toFixed(2)) }}</h3>
+        <span class="summary-kicker">{{ primaryMetric.summaryLabel }}</span>
+        <h3>{{ Number(primaryMetric.value.toFixed(2)) }}</h3>
+        <p v-if="primaryMetric.chance !== undefined">
+          {{ t('collectableSolver.results.scoreChance', { chance: formatChance(primaryMetric.chance) }) }}
+        </p>
         <p v-if="revisit.enabled">{{ t('collectableSolver.results.revisitIncluded', { chance: (revisit.chance * 100).toFixed(0) }) }}</p>
       </div>
       <div
@@ -226,6 +279,20 @@ function continueGuidedBranch() {
         <img v-if="scripRewardMeta.iconUrl" :src="scripRewardMeta.iconUrl" :alt="t(scripRewardMeta.labelKey)" />
         <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
         <span class="sr-only">{{ t(scripRewardMeta.labelKey) }}</span>
+      </div>
+    </section>
+
+    <section class="score-metric-grid">
+      <div
+        v-for="metric in secondaryMetrics"
+        :key="metric.key"
+        class="score-metric-card"
+      >
+        <span>{{ metric.label }}</span>
+        <strong>{{ Number(metric.value.toFixed(2)) }}</strong>
+        <small v-if="metric.chance !== undefined">
+          {{ t('collectableSolver.results.scoreChance', { chance: formatChance(metric.chance) }) }}
+        </small>
       </div>
     </section>
 
@@ -422,6 +489,7 @@ function continueGuidedBranch() {
 }
 
 .collectable-summary,
+.score-metric-card,
 .current-action,
 .guided-panel,
 .branch-row {
@@ -431,6 +499,7 @@ function continueGuidedBranch() {
 }
 
 :global(html.dark .collectable-summary),
+:global(html.dark .score-metric-card),
 :global(html.dark .current-action),
 :global(html.dark .guided-panel),
 :global(html.dark .branch-row) {
@@ -446,6 +515,7 @@ function continueGuidedBranch() {
 }
 
 .summary-kicker,
+.score-metric-card span,
 .current-action span,
 .branch-list-header {
   color: #3f8f79;
@@ -461,6 +531,47 @@ function continueGuidedBranch() {
   font-size: clamp(1.7rem, 4.1vw, 2.45rem);
   font-weight: 950;
   line-height: 1;
+}
+
+.score-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.score-metric-card {
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  background: white;
+}
+
+:global(html.dark .score-metric-card) {
+  background: rgb(2 6 23 / 0.38);
+}
+
+.score-metric-card strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.score-metric-card small {
+  display: block;
+  margin-top: 0.3rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+:global(html.dark .score-metric-card strong) {
+  color: #f8fafc;
+}
+
+:global(html.dark .score-metric-card small) {
+  color: #94a3b8;
 }
 
 :global(html.dark .collectable-summary h3) {
@@ -856,9 +967,14 @@ function continueGuidedBranch() {
 
 @media (max-width: 640px) {
   .collectable-summary,
+  .score-metric-grid,
   .branch-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .score-metric-grid {
+    grid-template-columns: 1fr;
   }
 
   .branch-outcome {

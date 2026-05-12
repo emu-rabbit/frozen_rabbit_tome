@@ -349,7 +349,7 @@ function formatMetricValue(metric: YieldMetric) {
 
 function formatChance(chance: number, useSpacePadding = false, includePercent = false) {
   const percentSuffix = includePercent ? '%' : '';
-  if (chance > 0 && chance < 0.01) {
+  if (chance < 0.01) {
     return useSpacePadding ? `< 0.01${percentSuffix}` : `<0.01${percentSuffix}`;
   }
   const formatted = chance.toFixed(2);

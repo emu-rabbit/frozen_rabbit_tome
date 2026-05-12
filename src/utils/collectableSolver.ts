@@ -32,6 +32,7 @@ import type {
   CollectableSolverResult,
   CollectableStateSummary
 } from '../types/collectable';
+import type { SolverObjectiveMode } from '../types/game';
 
 interface SearchState {
   gp: number;
@@ -79,6 +80,13 @@ type WeightedState = {
   labelKeys?: string[];
   conditionKey: string;
   reward?: CollectableRewardVector;
+};
+
+type ScoreSummary = {
+  minScore: number;
+  maxScore: number;
+  minScoreChance: number;
+  maxScoreChance: number;
 };
 
 const EV_EPSILON = 0.0000001;
@@ -187,6 +195,7 @@ function calculateSuccessFormulaDebug(
 
 export function solveCollectableRotation(request: CollectableSolverRequest): CollectableSolverResult {
   const { stats, baseValues, itemLevel, nodeBonuses, temporaryGp, jobType, rewardTable, objective } = request;
+  const objectiveMode: SolverObjectiveMode = request.objectiveMode ?? 'expected';
   const maxIntegrity = nodeBonuses.baseIntegrity + nodeBonuses.gatheringCount;
   const baseSuccessRate = calculateSuccessRate(stats.gathering, baseValues.Gathering, stats.level, itemLevel);
   const scourValue = calculateCollectableScourValue(stats.gathering, baseValues.Gathering);
@@ -554,7 +563,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         labelKey: branch.labelKey,
         labelKeys: branch.labelKeys,
         conditionKey: branch.conditionKey,
-        probability: Number((branch.probability * 100).toFixed(6)),
+        probability: branch.probability * 100,
         outcome: {
           gp: branch.state.gp,
           integrity: branch.state.integrity,
@@ -604,11 +613,21 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function isPreferred(candidate: SearchResult, current: SearchResult): boolean {
-    if (candidate.expectedScore > current.expectedScore + EV_EPSILON) return true;
-    if (candidate.expectedScore < current.expectedScore - EV_EPSILON) return false;
+    const candidateScore = scoreSearchResult(candidate);
+    const currentScore = scoreSearchResult(current);
+
+    if (candidateScore > currentScore + EV_EPSILON) return true;
+    if (candidateScore < currentScore - EV_EPSILON) return false;
     if (candidate.gpSpent !== current.gpSpent) return candidate.gpSpent < current.gpSpent;
     if (candidate.actionCount !== current.actionCount) return candidate.actionCount < current.actionCount;
     return candidate.nodeCount < current.nodeCount;
+  }
+
+  function scoreSearchResult(result: SearchResult): number {
+    if (objectiveMode === 'max') return getMaxScore(result.outcomes);
+    if (objectiveMode === 'min') return getMinScore(result.outcomes);
+
+    return result.expectedScore;
   }
 
   function solveWithGp(startingGp: number): SearchRunResult {
@@ -656,6 +675,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const revisitEnabled = stats.level >= 91;
   const revisitChance = revisitEnabled ? (request.isTimedNode ? TIMED_REVISIT_CHANCE : REGULAR_REVISIT_CHANCE) : 0;
   const fullGpResult = revisitEnabled && !isFullGp ? solveWithGp(stats.gp) : initial;
+  const initialSummary = summarizeOutcomes(initial.outcomes);
+  const fullGpSummary = summarizeOutcomes(fullGpResult.outcomes);
   const revisitOutcomes = combineSequentialOutcomes(initial.outcomes, fullGpResult.outcomes);
   const combinedOutcomes = revisitEnabled
     ? mergeWeightedOutcomeMaps([
@@ -663,6 +684,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         { outcomes: revisitOutcomes, weight: revisitChance }
       ])
     : initial.outcomes;
+  const combinedSummary = summarizeOutcomes(combinedOutcomes);
   const expectedScore = expectedValue(combinedOutcomes);
   const expectedReward = revisitEnabled
     ? addCollectableRewards(initial.expectedReward, fullGpResult.expectedReward, revisitChance)
@@ -676,6 +698,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         kind: 'primary',
         startingGp: initial.startingGp,
         expectedScore: Number(initial.expectedScore.toFixed(6)),
+        minScore: initialSummary.minScore,
+        maxScore: initialSummary.maxScore,
+        minScoreChance: initialSummary.minScoreChance,
+        maxScoreChance: initialSummary.maxScoreChance,
         expectedReward: initial.expectedReward,
         policy: primaryPolicy
       }]
@@ -684,6 +710,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           kind: 'primary',
           startingGp: initial.startingGp,
           expectedScore: Number(initial.expectedScore.toFixed(6)),
+          minScore: initialSummary.minScore,
+          maxScore: initialSummary.maxScore,
+          minScoreChance: initialSummary.minScoreChance,
+          maxScoreChance: initialSummary.maxScoreChance,
           expectedReward: initial.expectedReward,
           policy: primaryPolicy
         },
@@ -691,12 +721,21 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           kind: 'revisit',
           startingGp: fullGpResult.startingGp,
           expectedScore: Number(fullGpResult.expectedScore.toFixed(6)),
+          minScore: fullGpSummary.minScore,
+          maxScore: fullGpSummary.maxScore,
+          minScoreChance: fullGpSummary.minScoreChance,
+          maxScoreChance: fullGpSummary.maxScoreChance,
           expectedReward: fullGpResult.expectedReward,
           policy: revisitPolicy
         }
       ];
   const response: CollectableSolverResult = {
     expectedScore: Number(expectedScore.toFixed(6)),
+    minScore: combinedSummary.minScore,
+    maxScore: combinedSummary.maxScore,
+    minScoreChance: combinedSummary.minScoreChance,
+    maxScoreChance: combinedSummary.maxScoreChance,
+    objectiveMode,
     expectedReward,
     rewardItemId: rewardTable.rewardItemId,
     policyPlans,
@@ -831,19 +870,40 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         {
           labelKey: 'collectableSolver.branches.revisitProc',
           conditionKey: 'collectableSolver.conditions.revisitProc',
-          probability: Number((probability * 100).toFixed(6)),
+          probability: probability * 100,
           outcome: branch.outcome,
           next: nextPolicy
         },
         {
           labelKey: 'collectableSolver.branches.revisitNoProc',
           conditionKey: 'collectableSolver.conditions.revisitNoProc',
-          probability: Number(((1 - probability) * 100).toFixed(6)),
+          probability: (1 - probability) * 100,
           outcome: branch.outcome
         }
       ]
     };
   }
+}
+
+function getMinScore(outcomes: Map<number, number>): number {
+  return Math.min(...outcomes.keys());
+}
+
+function getMaxScore(outcomes: Map<number, number>): number {
+  return Math.max(...outcomes.keys());
+}
+
+function summarizeOutcomes(outcomes: Map<number, number>): ScoreSummary {
+  const scores = [...outcomes.keys()].sort((left, right) => left - right);
+  const minScore = scores[0] ?? 0;
+  const maxScore = scores[scores.length - 1] ?? 0;
+
+  return {
+    minScore,
+    maxScore,
+    minScoreChance: (outcomes.get(minScore) ?? 0) * 100,
+    maxScoreChance: (outcomes.get(maxScore) ?? 0) * 100
+  };
 }
 
 function serializeOutcomes(outcomes: Map<number, number>) {
