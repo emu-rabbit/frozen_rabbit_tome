@@ -85,7 +85,7 @@ export default {
       },
       {
         q: 'Why are macros described as semi-automatic?',
-        a: 'Gathering itself still requires the player to click the in-game gathering menu, so unfortunately a macro cannot complete the entire gathering session for you. Collectable gathering also does not support macros because it depends on judging the current on-screen state and choosing the next action accordingly.'
+        a: 'Gathering itself still requires the player to click the in-game gathering menu, so a macro cannot complete the entire gathering session for you. Collectable gathering also does not support macros because it depends on judging the current on-screen state and choosing the next action accordingly.'
       },
       {
         q: 'Why freeze the rabbit? Can I roast it instead?',
