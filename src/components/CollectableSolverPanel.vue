@@ -166,7 +166,9 @@ async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
       expectedScore: node.expectedScore,
       expectedReward: node.expectedReward,
       branches: node.branches.map((branch) => {
-        if (branch.next && !visited.has(branch.next.id)) {
+        const revisitGate = getInlineRevisitGate(branch.next);
+
+        if (branch.next && !revisitGate && !visited.has(branch.next.id)) {
           stack.push(branch.next);
         }
 
@@ -176,7 +178,8 @@ async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
           conditionKey: branch.conditionKey,
           probability: branch.probability,
           outcome: branch.outcome,
-          nextId: branch.next?.id ?? null
+          nextId: revisitGate ? null : branch.next?.id ?? null,
+          revisitGate
         };
       })
     });
@@ -191,6 +194,20 @@ async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
     rootId: root.id,
     nodeCount: nodes.length,
     nodes
+  };
+}
+
+function getInlineRevisitGate(node?: CollectableSolverResult['policy']) {
+  if (!node || node.recommendedAction.kind !== 'revisitCheck') return null;
+
+  const procBranch = node.branches.find((branch) => branch.next);
+  const noProcBranch = node.branches.find((branch) => !branch.next);
+  if (!procBranch?.next || !noProcBranch) return null;
+
+  return {
+    procProbability: procBranch.probability,
+    procNextId: procBranch.next.id,
+    noProcProbability: noProcBranch.probability
   };
 }
 
@@ -223,12 +240,24 @@ function formatPolicyNodeMarkdown(node: Awaited<ReturnType<typeof serializePolic
       `- ${branchLabel(branch)}（${formatProbability(branch.probability)}）\n`,
       `  - ${t('collectableSolver.export.outcome')}：${formatOutcome(branch.outcome)}\n`,
       `  - ${t('collectableSolver.export.branchScore')}：${Number(branch.outcome.score.toFixed(2))}\n`,
-      `  - ${t('collectableSolver.export.nextStep')}：${branch.nextId ? `${t('collectableSolver.export.node')} \`${branch.nextId}\`` : t('collectableSolver.export.end')}\n`
+      `  - ${t('collectableSolver.export.nextStep')}：${formatNextStep(branch)}\n`
     );
   });
 
   chunks.push('\n');
   return chunks.join('');
+}
+
+function formatNextStep(branch: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]['branches'][number]) {
+  if (branch.revisitGate) {
+    return t('collectableSolver.export.revisitGateSummary', {
+      procProbability: formatProbability(branch.revisitGate.procProbability),
+      procNext: `${t('collectableSolver.export.node')} \`${branch.revisitGate.procNextId}\``,
+      noProcProbability: formatProbability(branch.revisitGate.noProcProbability)
+    });
+  }
+
+  return branch.nextId ? `${t('collectableSolver.export.node')} \`${branch.nextId}\`` : t('collectableSolver.export.end');
 }
 
 function actionName(kind: CollectableSolverResult['policy']['recommendedAction']['kind']) {

@@ -251,16 +251,17 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     if (wiseAction) return [wiseAction];
 
     const actions: ActionOption[] = [];
+    const canRefineCollectability = state.collectability < COLLECTABILITY_CAP;
 
-    if (state.gp >= 200 && !state.scrutinyActive) {
+    if (canRefineCollectability && state.gp >= 200 && !state.scrutinyActive) {
       actions.push(buffAction('scrutiny', 10, 200, { scrutinyActive: true }));
     }
 
-    if (state.gp >= 100 && !state.collectorsFocusActive) {
+    if (canRefineCollectability && state.gp >= 100 && !state.collectorsFocusActive) {
       actions.push(buffAction('collectorsFocus', 20, 100, { collectorsFocusActive: true }));
     }
 
-    if (state.gp >= 100 && !state.primingTouchActive) {
+    if (canRefineCollectability && state.gp >= 100 && !state.primingTouchActive) {
       actions.push(buffAction('primingTouch', 30, 100, { primingTouchActive: true }));
     }
 
@@ -295,7 +296,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
     addIntegrityRestoreActions(actions, state);
 
-    if (state.collectability < COLLECTABILITY_CAP) {
+    if (canRefineCollectability) {
       actions.push({
         kind: 'scour',
         priority: 70,

@@ -117,6 +117,7 @@
 已確認且必須保留的邊界：
 
 - `Collect` 後收藏價值維持，不會重置為 0；因此可連續採集同一收藏價值的收藏品。
+- 收藏價值達 1000 時，遊戲內不可施放 `Scour`、`Brazen`、`Meticulous` 與提煉 Buff（`Scrutiny`、`Collector's Focus`、`Priming Touch`）；求解器不可把目前支援的這些 action 納入合法候選。
 - `Priming Touch` 不會被 `Scour` 消耗，只在下一次 `Meticulous` 後消耗。
 - `Scrutiny` 與 `Collector's Focus` 在下一次提煉類技能後消耗。
 - `Collector's Standard` 只能在已使用過收藏品技能、耐久仍大於 0、收藏價值未達 1000 且目前沒有洞察狀態時觸發。

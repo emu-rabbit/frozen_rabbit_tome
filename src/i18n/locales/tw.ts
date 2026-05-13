@@ -536,6 +536,7 @@ export default {
       outcome: '結果',
       branchScore: '分支分數',
       nextStep: '下一步',
+      revisitGateSummary: '確認再起：觸發（{procProbability}）前往 {procNext}；未觸發（{noProcProbability}）結束',
       end: '結束',
       stateSummary: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}',
       outcomeSummary: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}'

@@ -524,6 +524,7 @@ export default {
       outcome: '結果',
       branchScore: '分岐スコア',
       nextStep: '次',
+      revisitGateSummary: '再発見確認：発生（{procProbability}）なら {procNext} へ、未発生（{noProcProbability}）なら終了',
       end: '終了',
       stateSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}',
       outcomeSummary: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}'

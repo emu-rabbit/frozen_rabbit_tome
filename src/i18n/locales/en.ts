@@ -535,6 +535,7 @@ export default {
       outcome: 'Outcome',
       branchScore: 'Branch Score',
       nextStep: 'Next Step',
+      revisitGateSummary: 'Check Revisit: if it triggers ({procProbability}), go to {procNext}; if it does not trigger ({noProcProbability}), end',
       end: 'End',
       stateSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}',
       outcomeSummary: 'GP {gp} / Integrity {integrity} / Collectability {collectability}'

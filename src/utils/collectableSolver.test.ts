@@ -113,6 +113,21 @@ function findActionDepth(
   return childDepths.length > 0 ? Math.min(...childDepths) : null;
 }
 
+function collectNodes(
+  node: { id?: string; recommendedAction: { kind: string }; state: { collectability: number }; branches: Array<{ next?: any }> },
+  depth = 0,
+  visited = new Set<string>()
+): any[] {
+  if (depth > 24) return [];
+  if (node.id && visited.has(node.id)) return [];
+  if (node.id) visited.add(node.id);
+
+  return [
+    node,
+    ...node.branches.flatMap((branch) => branch.next ? collectNodes(branch.next, depth + 1, visited) : [])
+  ];
+}
+
 describe('solveCollectableRotation', () => {
   it('沒有 GP 時仍可用 0 GP 提煉與收藏建立策略', () => {
     const result = solveCollectableRotation(createRequest({
@@ -191,6 +206,41 @@ describe('solveCollectableRotation', () => {
 
     const kinds = collectKinds(result.policy);
     expect(kinds.some((kind) => ['scrutiny', 'collectorsFocus', 'primingTouch'].includes(kind))).toBe(true);
+  });
+
+  it('收藏價值已滿時不會推薦遊戲內無法使用的提煉與提煉 buff', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 5000,
+        perception: 5000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 1, items: {} } },
+          mid: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 1, items: {} } },
+          high: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    }));
+    const illegalRefineActions = new Set(['scrutiny', 'collectorsFocus', 'primingTouch', 'scour', 'meticulous']);
+    const cappedNodes = collectNodes(result.policy).filter((node) => node.state.collectability >= 1000);
+
+    expect(cappedNodes.length).toBeGreaterThan(0);
+    expect(cappedNodes.every((node) => !illegalRefineActions.has(node.recommendedAction.kind))).toBe(true);
   });
 
   it('預備碰觸會在 Meticulous 後被消耗', () => {
