@@ -67,6 +67,20 @@ export default {
     github: 'GitHub Project',
     sponsor: 'Sponsor the Freezer bill'
   },
+  faq: {
+    title: 'FAQ',
+    description: 'Quick notes about the Tome support scope and the details worth checking before use.',
+    items: [
+      {
+        q: 'Which patch are the supported actions and items based on?',
+        a: 'The supported actions and items are based on Final Fantasy XIV Patch 7.5 content.'
+      },
+      {
+        q: 'Does the solver output the best possible answer?',
+        a: 'The site recommends a skill sequence based on most situations and the goal you selected. Each sequence still has its own strengths and tradeoffs, much like different playstyle schools, so there may not be one perfect answer. For deeper analysis, we strongly recommend using the Experiment area to simulate and compare rotations.'
+      }
+    ]
+  },
   createGuide: {
     title: 'Select Item to Gather',
     description: 'Search and select an item here to enter the solver and calculate the recommended gathering rotation.',

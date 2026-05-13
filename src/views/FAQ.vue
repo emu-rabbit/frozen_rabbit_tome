@@ -1,15 +1,59 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
+const { t, tm } = useI18n();
+
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+const faqItems = computed(() => tm('faq.items') as FaqItem[]);
 </script>
 
 <template>
-  <div class="faq-page p-6">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-soft-green-100 dark:border-slate-800 text-center">
-      <div class="text-4xl mb-4">🚧</div>
-      <h2 class="text-2xl font-bold text-soft-green-800 dark:text-soft-green-400 mb-2">常見問題</h2>
-      <p class="text-slate-500 dark:text-slate-400">系統施工中，敬請期待...</p>
+  <div class="px-4 py-8 md:p-8 max-w-3xl w-full mx-auto pb-24">
+    <header class="mb-6 md:mb-8">
+      <p class="text-xs font-black uppercase tracking-[0.24em] text-soft-green-600 dark:text-soft-green-400 mb-2">
+        Frozen Rabbit Tome
+      </p>
+      <h2 class="text-2xl md:text-3xl font-bold text-soft-green-800 dark:text-soft-green-400 mb-2">
+        {{ t('faq.title') }}
+      </h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        {{ t('faq.description') }}
+      </p>
+    </header>
+
+    <div class="flex flex-col gap-6">
+      <article
+        v-for="(item, index) in faqItems"
+        :key="index"
+        class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 overflow-hidden hover:shadow-md transition-all duration-300"
+      >
+        <div class="p-5 md:p-6">
+          <div class="flex gap-4">
+            <div class="w-10 h-10 rounded-xl bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-600 dark:text-soft-green-400 flex items-center justify-center shrink-0 font-bold text-lg">
+              Q
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-lg font-bold text-soft-green-900 dark:text-soft-green-300 leading-tight mb-4">
+                {{ item.q }}
+              </h3>
+
+              <div class="flex gap-4 pt-4 border-t border-soft-green-50 dark:border-slate-800">
+                <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0 font-bold text-lg">
+                  A
+                </div>
+                <p class="flex-1 text-slate-600 dark:text-slate-400 leading-relaxed py-1">
+                  {{ item.a }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
     </div>
   </div>
 </template>
