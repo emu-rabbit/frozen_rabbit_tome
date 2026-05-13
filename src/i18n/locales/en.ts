@@ -78,6 +78,18 @@ export default {
       {
         q: 'Does the solver output the best possible answer?',
         a: 'The site recommends a skill sequence based on most situations and the goal you selected. Each sequence still has its own strengths and tradeoffs, much like different playstyle schools, so there may not be one perfect answer. For deeper analysis, we strongly recommend using the Experiment area to simulate and compare rotations.'
+      },
+      {
+        q: 'Can you explain how the solver works?',
+        a: 'The solver expands every possible action branch, scores each branch against your selected goal, then chooses from the highest-scoring results. When multiple sequences tie, it prefers the casting order that better matches common player habits.'
+      },
+      {
+        q: 'Why are macros described as semi-automatic?',
+        a: 'Gathering itself still requires the player to click the in-game gathering menu, so unfortunately a macro cannot complete the entire gathering session for you. Collectable gathering also does not support macros because it depends on judging the current on-screen state and choosing the next action accordingly.'
+      },
+      {
+        q: 'Why freeze the rabbit? Can I roast it instead?',
+        a: 'No.'
       }
     ]
   },
