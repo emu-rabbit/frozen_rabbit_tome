@@ -434,7 +434,7 @@ export default {
       confluentHint: '这次的随机结果已汇流到同一个状态，不需要额外选择。',
       deterministicHint: '这次动作会进入唯一结果，可以直接前往下一步。',
       collectQuestion: '这次收藏品采集有成功吗？',
-      standardQuestion: '这次有触发洞察吗？',
+      standardQuestion: '这次有触发(强化)洞察吗？',
       wiseQuestion: '这次有触发理智同兴吗？',
       revisitQuestion: '耐久耗尽后有触发再起吗？',
       collectabilityQuestion: '现在的收藏价值是多少？',

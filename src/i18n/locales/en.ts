@@ -436,7 +436,7 @@ export default {
       confluentHint: 'These random outcomes converge to the same state, so no extra choice is needed.',
       deterministicHint: 'This action has only one resulting state. Continue to the next step.',
       collectQuestion: 'Did this Collect succeed?',
-      standardQuestion: "Did Collector's Standard proc?",
+      standardQuestion: "Did Collector's (High) Standard proc?",
       wiseQuestion: 'Did Wise to the World proc?',
       revisitQuestion: 'Did Revisit trigger after the node was exhausted?',
       collectabilityQuestion: 'What is the current collectability?',

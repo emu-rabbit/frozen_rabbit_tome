@@ -434,7 +434,7 @@ export default {
       confluentHint: '今回のランダム結果は同じ状態に合流するため、追加の選択は不要です。',
       deterministicHint: 'このアクションの結果は 1 つだけです。そのまま次へ進めます。',
       collectQuestion: '今回の収集品採集は成功しましたか？',
-      standardQuestion: '活眼は発生しましたか？',
+      standardQuestion: '(強)活眼は発生しましたか？',
       wiseQuestion: '理知興起は発動しましたか？',
       revisitQuestion: '耐久を使い切った後、再発見は発動しましたか？',
       collectabilityQuestion: '現在の収集価値はいくつですか？',
