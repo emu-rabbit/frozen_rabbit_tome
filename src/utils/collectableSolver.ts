@@ -3,6 +3,7 @@ import {
   COLLECTABILITY_CAP,
   COLLECTORS_STANDARD_PROC_RATES,
   addCollectableRewards,
+  applyRelicToolValueIncreaseBonus,
   calculateCollectableMeticulousGain,
   calculateCollectableScourGain,
   calculateCollectableScourValue,
@@ -199,7 +200,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const maxIntegrity = nodeBonuses.baseIntegrity + nodeBonuses.gatheringCount;
   const baseSuccessRate = calculateSuccessRate(stats.gathering, baseValues.Gathering, stats.level, itemLevel);
   const scourValue = calculateCollectableScourValue(stats.gathering, baseValues.Gathering);
-  const valueIncreaseRate = calculateValueIncreaseRate(stats.gathering, baseValues.Gathering);
+  const baseValueIncreaseRate = calculateValueIncreaseRate(stats.gathering, baseValues.Gathering);
+  const valueIncreaseRate = request.hasRelicToolBonus
+    ? applyRelicToolValueIncreaseBonus(baseValueIncreaseRate)
+    : baseValueIncreaseRate;
   const focusedValueIncreaseRate = calculateFocusedValueIncreaseRate(valueIncreaseRate);
   const meticulousRate = calculateMeticulousProcRate(stats.gathering, baseValues.Gathering);
   const primedMeticulousRate = calculatePrimedMeticulousProcRate(meticulousRate);
@@ -829,8 +833,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           perception: stats.perception,
           basePerception: baseValues.Perception,
           scourValue,
+          baseValueIncreaseRate,
           valueIncreaseRate,
           focusedValueIncreaseRate,
+          hasRelicToolBonus: !!request.hasRelicToolBonus,
           meticulousRate,
           primedMeticulousRate,
           scrutinyMultiplier,

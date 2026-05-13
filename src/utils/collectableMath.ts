@@ -6,6 +6,7 @@ import type {
 } from '../types/collectable';
 
 export const COLLECTABILITY_CAP = 1000;
+export const RELIC_TOOL_VALUE_INCREASE_BONUS = 20;
 export const COLLECTORS_STANDARD_PROC_RATES = {
   level55: 0,
   regular: 0.25,
@@ -41,6 +42,10 @@ export function calculateValueIncreaseRate(gathering: number, baseGathering: num
   if (rateScore <= 66) return 10;
   if (rateScore <= 85) return Math.floor(((rateScore - 66) * 10) / 19 + 10);
   return Math.floor(((rateScore - 85) * 20) / 15 + 20);
+}
+
+export function applyRelicToolValueIncreaseBonus(valueIncreaseRate: number): number {
+  return Math.min(100, valueIncreaseRate + RELIC_TOOL_VALUE_INCREASE_BONUS);
 }
 
 export function calculateFocusedValueIncreaseRate(valueIncreaseRate: number): number {

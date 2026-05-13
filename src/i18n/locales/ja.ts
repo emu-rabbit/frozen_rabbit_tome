@@ -270,7 +270,9 @@ export default {
       baseIntegrity: '採集場所の基礎耐久',
       gatheringCount: '採集回数増加',
       yieldCount: '獲得数増加',
-      extraRate: '特殊採集発生率増加'
+      extraRate: '特殊採集発生率増加',
+      collectableRelicToolBonus: 'レリック道具効果',
+      collectableRelicToolBonusDesc: '収集品の価値上昇率 +20%。'
     },
     strategy: {
       title: 'おすすめ採集手順',
@@ -565,6 +567,7 @@ export default {
       success: '収集品採集成功率',
       collectableFormula: '収集品公式',
       valueIncreaseRate: '価値上昇率',
+      relicToolBonus: 'レリック道具加算',
       meticulousRate: '慎重純化の耐久保存率',
       scrutiny: '集中検分',
       standardRate: '活眼発生率',

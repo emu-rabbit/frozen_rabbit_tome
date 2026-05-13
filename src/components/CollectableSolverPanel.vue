@@ -62,7 +62,8 @@ watch(() => [
   props.temporaryGp,
   props.nodeBonuses.baseIntegrity,
   props.nodeBonuses.gatheringCount,
-  solverSettings.value.objectiveMode
+  solverSettings.value.objectiveMode,
+  solverSettings.value.collectableRelicToolBonus
 ], () => {
   clearCollectableResult();
   isSaved.value = false;

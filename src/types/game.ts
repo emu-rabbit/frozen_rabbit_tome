@@ -106,6 +106,7 @@ export type SolverObjectiveMode = 'expected' | 'max' | 'min';
 
 export interface SolverSettings {
   objectiveMode: SolverObjectiveMode;
+  collectableRelicToolBonus: boolean;
 }
 
 export interface DebugSettings {

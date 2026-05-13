@@ -25,8 +25,12 @@ const macroSettings = useLocalStorage<MacroSettings>('frozen-rabbit-tome-macro-s
 });
 
 const solverSettings = useLocalStorage<SolverSettings>('frozen-rabbit-tome-solver-settings', {
-  objectiveMode: 'expected'
+  objectiveMode: 'expected',
+  collectableRelicToolBonus: false
 });
+if (typeof solverSettings.value.collectableRelicToolBonus !== 'boolean') {
+  solverSettings.value.collectableRelicToolBonus = false;
+}
 
 const debugSettings = useLocalStorage<DebugSettings>('frozen-rabbit-tome-debug-settings', {
   solverDebugMode: false

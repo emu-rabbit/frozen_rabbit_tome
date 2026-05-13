@@ -3,6 +3,7 @@ import {
   calculateCollectableMeticulousGain,
   calculateCollectableScourGain,
   calculateCollectableScourValue,
+  applyRelicToolValueIncreaseBonus,
   calculateFocusedValueIncreaseRate,
   calculateMeticulousProcRate,
   calculatePrimedMeticulousProcRate,
@@ -30,6 +31,8 @@ describe('collectable math', () => {
     expect(calculateValueIncreaseRate(86, 100)).toBe(21);
     expect(calculateValueIncreaseRate(100, 100)).toBe(40);
     expect(calculateFocusedValueIncreaseRate(40)).toBe(70);
+    expect(applyRelicToolValueIncreaseBonus(40)).toBe(60);
+    expect(calculateFocusedValueIncreaseRate(applyRelicToolValueIncreaseBonus(40))).toBe(100);
   });
 
   it('依獲得力分段計算慎重提煉不耗耐久率與預備碰觸倍率', () => {

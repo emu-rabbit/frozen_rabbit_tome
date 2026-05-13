@@ -80,6 +80,9 @@ function planTitle(kind: string) {
                   <h4>{{ t('collectableSolver.debug.collectableFormula') }}</h4>
                   <p>Scour: {{ debug.formulas.collectable.scourValue }}</p>
                   <p>{{ t('collectableSolver.debug.valueIncreaseRate') }}: {{ debug.formulas.collectable.valueIncreaseRate }}% / {{ debug.formulas.collectable.focusedValueIncreaseRate }}%</p>
+                  <p v-if="debug.formulas.collectable.hasRelicToolBonus">
+                    {{ t('collectableSolver.debug.relicToolBonus') }}: {{ debug.formulas.collectable.baseValueIncreaseRate }}% +20%
+                  </p>
                   <p>{{ t('collectableSolver.debug.meticulousRate') }}: {{ debug.formulas.collectable.meticulousRate }}% / {{ debug.formulas.collectable.primedMeticulousRate }}%</p>
                   <p>{{ t('collectableSolver.debug.scrutiny') }}: {{ debug.formulas.collectable.scrutinyMultiplier }}%, +{{ debug.formulas.collectable.scrutinyBonus }}</p>
                   <strong>{{ t('collectableSolver.debug.standardRate') }}: {{ (debug.formulas.collectable.standardProcRate * 100).toFixed(0) }}%</strong>

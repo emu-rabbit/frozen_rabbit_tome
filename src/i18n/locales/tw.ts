@@ -271,7 +271,9 @@ export default {
       baseIntegrity: '節點基礎耐久',
       gatheringCount: '採集次數增加',
       yieldCount: '獲得數增加',
-      extraRate: '額外率增加'
+      extraRate: '額外率增加',
+      collectableRelicToolBonus: '遺物工具效果',
+      collectableRelicToolBonusDesc: '收藏品價值提升率 +20%。'
     },
     strategy: {
       title: '建議採集手法',
@@ -577,6 +579,7 @@ export default {
       success: '收藏品採集成功率',
       collectableFormula: '收藏品公式',
       valueIncreaseRate: '價值提升率',
+      relicToolBonus: '遺物工具加算',
       meticulousRate: '慎重不耗率',
       scrutiny: '集中檢查',
       standardRate: 'Collector\'s Standard 機率',

@@ -271,6 +271,8 @@ export default {
       gatheringCount: 'Durability +',
       yieldCount: 'Yield +',
       extraRate: 'Extra Rate +',
+      collectableRelicToolBonus: 'Relic Tool Effect',
+      collectableRelicToolBonusDesc: 'Collectable value increase rate +20%.',
     },
     strategy: {
       title: 'Recommended Rotation',
@@ -576,6 +578,7 @@ export default {
       success: 'Collect Success Rate',
       collectableFormula: 'Collectable Formula',
       valueIncreaseRate: 'Value Increase Rate',
+      relicToolBonus: 'Relic tool bonus',
       meticulousRate: 'Meticulous Save Rate',
       scrutiny: 'Scrutiny',
       standardRate: "Collector's Standard Rate",

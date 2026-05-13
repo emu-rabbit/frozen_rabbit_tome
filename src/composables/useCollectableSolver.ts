@@ -79,6 +79,7 @@ export function useCollectableSolver() {
       rewardTable,
       objective: collectableObjective.value,
       objectiveMode: solverSettings.value.objectiveMode,
+      hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
       isTimedNode: payload.activeItem.isTimedNode ?? false,
       debugMode: payload.debugMode
     };

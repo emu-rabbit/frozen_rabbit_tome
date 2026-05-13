@@ -270,7 +270,9 @@ export default {
       baseIntegrity: '节点基礎耐久',
       gatheringCount: '采集次数增加',
       yieldCount: '获得数增加',
-      extraRate: '额外率增加'
+      extraRate: '额外率增加',
+      collectableRelicToolBonus: '遗物工具效果',
+      collectableRelicToolBonusDesc: '收藏品价值提升率 +20%。'
     },
     strategy: {
       title: '推荐采集手法',
@@ -565,6 +567,7 @@ export default {
       success: '收藏品采集成功率',
       collectableFormula: '收藏品公式',
       valueIncreaseRate: '价值提升率',
+      relicToolBonus: '遗物工具加算',
       meticulousRate: '慎重不耗率',
       scrutiny: '集中检查',
       standardRate: 'Collector\'s Standard 机率',

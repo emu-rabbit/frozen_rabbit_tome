@@ -133,6 +133,8 @@ const totalSummaryMetric = computed<YieldMetric | null>(() => {
   });
 });
 
+const collectableRelicToolBonusEnabled = computed(() => !!solverSettings.value.collectableRelicToolBonus);
+
 const hasUnsavedStats = computed(() => {
   const job = activeItem.value?.jobType;
   if (!job) return false;
@@ -316,6 +318,10 @@ function handleOpenDebugDialog() {
   isDebugDialogOpen.value = true;
 }
 
+function toggleCollectableRelicToolBonus() {
+  solverSettings.value.collectableRelicToolBonus = !solverSettings.value.collectableRelicToolBonus;
+}
+
 function rotationPlanTitle(plan: SolverRotationPlan) {
   return plan.kind === 'revisit'
     ? t('solver.strategy.revisitRotation')
@@ -411,7 +417,10 @@ function formatMacroGatherPrompt(context: {
 }
 
 function defaultTomeName() {
-  return activeItem.value ? getItemName(activeItem.value.itemId) : '';
+  if (!activeItem.value) return '';
+  return activeItem.value.itemId
+    ? getItemName(activeItem.value.itemId)
+    : activeItem.value.nameLocale || activeItem.value.nameEn || '';
 }
 
 function savePreviewFood() {
@@ -667,8 +676,8 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           <i class="pi pi-gift text-amber-500"></i>
           {{ t('solver.nodeBonusesTitle') }}
         </h3>
-        <div class="flex flex-col lg:flex-row gap-4">
-          <div class="lg:w-1/3 flex flex-col">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex flex-col">
             <div class="h-full py-3 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex flex-col items-center justify-center text-center">
               <span class="font-bold text-slate-400 uppercase tracking-widest mb-1 text-sm">{{ t('solver.nodeBonuses.baseIntegrity') }}</span>
               <div class="flex items-baseline gap-1">
@@ -677,15 +686,33 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               </div>
             </div>
           </div>
-          <div class="lg:w-2/3 grid grid-cols-1 gap-3">
-            <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
-              <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
-                <span>{{ t('solver.nodeBonuses.gatheringCount') }}</span>
-                <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
-              </label>
-              <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
-            </div>
+
+          <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+            <label class="font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center mb-2 text-sm">
+              <span>{{ t('solver.nodeBonuses.gatheringCount') }}</span>
+              <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
+            </label>
+            <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
           </div>
+
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="collectableRelicToolBonusEnabled"
+            class="collectable-relic-toggle"
+            :class="{ 'is-active': collectableRelicToolBonusEnabled }"
+            @click="toggleCollectableRelicToolBonus"
+          >
+            <span class="collectable-relic-toggle-copy">
+              <span class="collectable-relic-toggle-title">{{ t('solver.nodeBonuses.collectableRelicToolBonus') }}</span>
+              <span class="collectable-relic-toggle-desc">{{ t('solver.nodeBonuses.collectableRelicToolBonusDesc') }}</span>
+            </span>
+            <span class="collectable-relic-toggle-control" aria-hidden="true">
+              <span class="collectable-relic-toggle-thumb">
+                <i :class="collectableRelicToolBonusEnabled ? 'pi pi-check' : 'pi pi-times'"></i>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -1093,11 +1120,11 @@ function strategyActionLabelLines(key: StrategyActionKey) {
       <article v-if="activeItem" class="save-preview-card">
         <div class="save-preview-item">
           <div class="save-preview-icon">
-            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" :alt="getItemName(activeItem.itemId)" />
+            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" :alt="defaultTomeName()" />
             <i v-else class="pi pi-box"></i>
           </div>
           <div class="save-preview-info">
-            <h4>{{ getItemName(activeItem.itemId) }}</h4>
+            <h4>{{ defaultTomeName() }}</h4>
             <div class="save-preview-badges">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ activeItem.glv ?? '-' }}</span>
               <span class="item-job-badge">{{ activeItem.jobType ? t(`game.jobs.${activeItem.jobType}`) : '-' }}</span>
@@ -1171,6 +1198,127 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
+}
+
+.collectable-relic-toggle {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #334155;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.collectable-relic-toggle:hover,
+.collectable-relic-toggle:focus-visible {
+  border-color: #9fd8ca;
+  box-shadow: 0 0 0 3px rgba(82, 168, 144, 0.14);
+  outline: none;
+}
+
+.collectable-relic-toggle.is-active {
+  border-color: rgba(82, 168, 144, 0.45);
+  background: #f0fdf8;
+}
+
+:global(html.dark .collectable-relic-toggle) {
+  border-color: rgba(51, 65, 85, 0.7);
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+:global(html.dark .collectable-relic-toggle:hover),
+:global(html.dark .collectable-relic-toggle:focus-visible) {
+  border-color: rgba(82, 168, 144, 0.7);
+  box-shadow: 0 0 0 3px rgba(82, 168, 144, 0.18);
+}
+
+:global(html.dark .collectable-relic-toggle.is-active) {
+  border-color: rgba(82, 168, 144, 0.7);
+  background: rgba(6, 78, 59, 0.22);
+}
+
+.collectable-relic-toggle-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.collectable-relic-toggle-title {
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.collectable-relic-toggle.is-active .collectable-relic-toggle-title {
+  color: #047857;
+}
+
+:global(html.dark .collectable-relic-toggle-title) {
+  color: #cbd5e1;
+}
+
+:global(html.dark .collectable-relic-toggle.is-active .collectable-relic-toggle-title) {
+  color: #6ee7b7;
+}
+
+.collectable-relic-toggle-desc {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.collectable-relic-toggle-control {
+  width: 66px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.2s ease;
+}
+
+.collectable-relic-toggle.is-active .collectable-relic-toggle-control {
+  background: #52a890;
+}
+
+.collectable-relic-toggle-thumb {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  line-height: 1;
+  transform: translateX(0);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.collectable-relic-toggle-thumb i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+}
+
+.collectable-relic-toggle.is-active .collectable-relic-toggle-thumb {
+  color: #047857;
+  transform: translateX(30px);
 }
 
 .save-preview-card {

@@ -80,7 +80,9 @@
 - `RateScore <= 66`：10%
 - `66 < RateScore <= 85`：`Floor((RateScore - 66) * 10 / 19 + 10)` (%)
 - `85 < RateScore <= 100`：`Floor((RateScore - 85) * 20 / 15 + 20)` (%)，最高 40%
-- `Collector's Focus / 價值矚目`：`Floor(IntuitionRate * 175 / 100)`，最大值 case 40% 會變 70%。
+- 遺物工具效果（後期 Splendorous / Cosmic 採掘師、園藝師主手）：「採集收藏品時，Collector's Intuition 觸發機率 +20%」以 **直接加 20 個百分點** 處理。最大值 case 40% 會先變 60%。
+- `Collector's Focus / 價值矚目`：在遺物工具加算後再套用 `Floor(IntuitionRate * 175 / 100)` 並以 100% 為上限。最大值 case 無遺物為 `Floor(40 * 1.75) = 70%`；有遺物為 `Min(100, Floor(60 * 1.75)) = 100%`。
+- 來源 survey（2026-05-13）：官方 Lodestone Cosmic Tools hotfix 確認正確效果文字為 `Increases the chance to trigger Collector's Intuition by 20% when gathering collectables`，且效果本身運作正常；Gamer Escape 的 Crystalline Pickaxe 物品資料同樣列出此效果；FFXIV Community Wiki 的 Collector's Focus 備註明確示例 `40% -> 60%` 後再乘 1.75 到 100%。因此本專案採用「遺物 +20 percentage points，再由 Collector's Focus 乘算」。
 
 ### 慎重提煉 (Meticulous)
 - 收藏價值基礎提升量：`Floor(Scour * 75 / 100)`。

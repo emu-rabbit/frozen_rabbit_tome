@@ -149,6 +149,7 @@ export interface CollectableSolverRequest {
   rewardTable: CollectableRewardTable;
   objective: CollectableObjective;
   objectiveMode?: SolverObjectiveMode;
+  hasRelicToolBonus?: boolean;
   isTimedNode?: boolean;
   debugMode?: boolean;
 }
@@ -169,8 +170,10 @@ export interface CollectableFormulaDebugInfo {
     perception: number;
     basePerception: number;
     scourValue: number;
+    baseValueIncreaseRate: number;
     valueIncreaseRate: number;
     focusedValueIncreaseRate: number;
+    hasRelicToolBonus: boolean;
     meticulousRate: number;
     primedMeticulousRate: number;
     scrutinyMultiplier: number;

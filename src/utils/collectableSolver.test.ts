@@ -513,8 +513,10 @@ describe('solveCollectableRotation', () => {
 
     expect(result.debug?.formulas.collectable).toMatchObject({
       scourValue: 200,
+      baseValueIncreaseRate: 40,
       valueIncreaseRate: 40,
       focusedValueIncreaseRate: 70,
+      hasRelicToolBonus: false,
       meticulousRate: 25,
       primedMeticulousRate: 50,
       scrutinyMultiplier: 125,
@@ -554,6 +556,20 @@ describe('solveCollectableRotation', () => {
     expect(result.maxScore).toBeGreaterThanOrEqual(result.policyPlans[0].maxScore);
     expect(result.maxScoreChance).toBeLessThanOrEqual(result.policyPlans[0].maxScoreChance);
     expect(collectKinds(result.policy)).toContain('revisitCheck');
+  });
+
+  it('遺物工具效果會先把價值提升率直接加 20 點，再套用價值矚目倍率', () => {
+    const result = solveCollectableRotation(createRequest({
+      hasRelicToolBonus: true,
+      debugMode: true
+    }));
+
+    expect(result.debug?.formulas.collectable).toMatchObject({
+      baseValueIncreaseRate: 40,
+      valueIncreaseRate: 60,
+      focusedValueIncreaseRate: 100,
+      hasRelicToolBonus: true
+    });
   });
 
   it('GP 不滿時會建立原始與再起後滿 GP 收藏品決策樹', () => {
