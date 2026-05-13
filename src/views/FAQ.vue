@@ -15,9 +15,6 @@ const faqItems = computed(() => tm('faq.items') as FaqItem[]);
 <template>
   <div class="px-4 py-8 md:p-8 max-w-3xl w-full mx-auto pb-24">
     <header class="mb-6 md:mb-8">
-      <p class="text-xs font-black uppercase tracking-[0.24em] text-soft-green-600 dark:text-soft-green-400 mb-2">
-        Frozen Rabbit Tome
-      </p>
       <h2 class="text-2xl md:text-3xl font-bold text-soft-green-800 dark:text-soft-green-400 mb-2">
         {{ t('faq.title') }}
       </h2>
