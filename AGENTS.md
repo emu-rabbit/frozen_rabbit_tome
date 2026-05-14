@@ -35,6 +35,10 @@
 - `.agents/skills/business/ffxiv_gathering_skills.md`
 - `.agents/skills/business/gathering_math_formulas.md`
 
+若任務涉及核心演算法測試、debug trace、可復現輸出、第三方驗證、golden scenario、oracle 或研究用途資料，另讀：
+
+- `.agents/skills/business/algorithm_verification.md`
+
 若使用者要求提交 git 變更，另讀：
 
 - `.agents/workflows/add-commit-all.md`

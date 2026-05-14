@@ -24,6 +24,7 @@
 - [FFXIV 採集知識 (ffxiv_gathering_knowledge.md)](./business/ffxiv_gathering_knowledge.md)：遊戲內採集系統的背景資訊。
 - [採掘師與園藝師技能列表 (ffxiv_gathering_skills.md)](./business/ffxiv_gathering_skills.md)：普通採集與收藏品 action model 的技能清單、GP 成本、支援範圍與排除項目。
 - [採集數學公式 (gathering_math_formulas.md)](./business/gathering_math_formulas.md)：用於計算成功率、產量、收藏品提煉、隨機 proc 與目前未知邊界的核心算法。
+- [演算法驗證與第三方復現規範 (algorithm_verification.md)](./business/algorithm_verification.md)：定義核心演算法測試分層、golden scenario、oracle、debug trace 與第三方驗證資料範圍。
 
 ### 4. 專案使命 (Mission)
 - [品牌識別 (brand_identity.md)](./mission/brand_identity.md)：定義 Frozen Rabbit 的視覺與人格設定。

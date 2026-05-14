@@ -1,0 +1,184 @@
+# 演算法驗證與第三方復現規範
+
+## 目的
+
+本文件定義 Frozen Rabbit Tome 的演算法品質門檻與第三方驗證範圍。只要任務涉及普通採集求解器、收藏品求解器、模擬器、底層公式、reward model、debug trace、測試 fixture 或演算法輸出格式，Agent 都必須讀取本文件。
+
+核心原則：
+
+- 演算法結果必須可重現、可追蹤、可定位。
+- 對外可驗證的內容必須明確標示資料來源、公式版本、輸入、輸出與已知限制。
+- 不可把尚未驗證的遊戲機制包裝成已確認事實。
+- 測試不只驗證單一答案，也要驗證公式邊界、機率分布、搜尋狀態與可接受的效能範圍。
+
+## Unit Test 分層
+
+### 1. 公式表測試
+
+底層公式必須用 table-driven tests 覆蓋每個分段邊界與 clamp 行為。
+
+目前必要範圍：
+
+- `src/utils/gatheringMath.ts`
+  - `calculateSuccessRate`
+  - `calculateBoonChance`
+  - `calculateBountifulYield`
+- `src/utils/collectableMath.ts`
+  - `calculateCollectableScourValue`
+  - `calculateValueIncreaseRate`
+  - `calculateMeticulousProcRate`
+  - `calculateScrutinyMultiplier`
+  - `calculateCollectableScourGain`
+  - `calculateCollectableMeticulousGain`
+  - reward tier 與 objective scoring
+
+測試必須至少包含：
+
+- 每個分段左右邊界。
+- 上限與下限 clamp。
+- base value 為 0 或資料缺失時的防禦行為。
+- 取整順序會影響結果的案例。
+
+### 2. 演算法 invariant 測試
+
+求解器與模擬器必須驗證永遠成立的性質，而不是只比對某一組手法字串。
+
+必要 invariant：
+
+- outcome distribution 機率總和約等於 100%。
+- `expectedYield` / `expectedScore` 等於 outcome distribution 加權平均。
+- `min <= expected <= max`。
+- GP 不為負且不超過玩家最大 GP。
+- 耐久不為負且不超過節點最大耐久。
+- 收藏價值介於 0 到 1000。
+- 收藏價值已滿時不可推薦遊戲內不能施放的提煉與提煉 buff。
+- 一次性 buff 不可重複施放。
+
+### 3. Golden Scenario Corpus
+
+代表性情境必須有固定輸入與固定輸出，作為重構與版本升級的回歸樣本。
+
+必要情境類型：
+
+- 普通採集：無技能、只使用下一次採集技能、全域 buff、恢復耐久、再起。
+- 收藏品：Scour 基準、Meticulous 多分支、Scrutiny、Collector's Focus、Priming Touch、Collector's Standard、成功率補強、再起。
+- 目標模式：`expected`、`max`、`min`。
+- 資料邊界：缺 reward high tier、成功率不足、1000 收藏價值、0 GP、低等級不可用技能。
+
+Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/utils/__fixtures__/` 或 `tests/fixtures/`，並保持 JSON 可被第三方讀取。
+
+### 4. Cross-check Oracle
+
+對小狀態空間，應提供獨立於正式 solver 的慢速 brute-force oracle。Oracle 不需要快，但邏輯必須簡單、容易審查。
+
+用途：
+
+- 證明 DP / memo / 剪枝沒有漏掉合法分支。
+- 在正式 solver 進行效能優化後，仍能用小案例確認結果一致。
+- 對同分結果，oracle 應允許多個等價最優解；正式 solver 可再用 habit tie-break 決定使用者看到的順序。
+
+## 效能與狀態數門檻
+
+`debugMode` 已提供搜尋統計，例如：
+
+- `statesSolved`
+- `memoHits`
+- `memoHitRate`
+- `actionsEvaluated`
+- `candidateComparisons`
+- `terminalStates`
+- `branchCount`
+
+代表性案例應設寬鬆上限，目標是防止搜尋空間意外爆炸，而不是限制合理的演算法調整。若重構後狀態數增加，Agent 必須判斷：
+
+- 增加是否來自新增合法模型分支。
+- 增加是否只出現在極端輸入。
+- 是否需要改善 state key、剪枝或預先計算。
+- 是否需要同步更新效能門檻與說明。
+
+不可只因測試門檻失敗就盲目放寬；放寬前要能說明狀態數增加的原因。
+
+## 第三方驗證範圍
+
+### 目前應可提供給第三方驗證的內容
+
+- 演算法版本資訊
+  - git commit 或 release tag。
+  - `package.json` version。
+  - 使用的資料來源版本或檔案來源。
+  - 已知排除項目。
+- 輸入資料
+  - 玩家 `level/gathering/perception/gp`。
+  - `baseValues.Gathering` 與 `baseValues.Perception`。
+  - `itemLevel`。
+  - `nodeBonuses`。
+  - `temporaryGp`。
+  - `jobType`。
+  - `isTimedNode`。
+  - `objectiveMode`。
+  - 收藏品 `rewardTable`、`objective`、`hasRelicToolBonus`。
+- 公式中間值
+  - 成功率 score、raw rate、level modifier、final rate。
+  - boon score 與 final rate。
+  - bountiful 門檻與加成量。
+  - 收藏品 Scour、value increase、focused value increase、Meticulous rate、Scrutiny multiplier、Scrutiny bonus。
+  - Collector's Standard proc rate 與來源分類。
+- 搜尋與分布
+  - 主要與再起分支的起始 GP。
+  - 每個 plan 的 outcome distribution。
+  - `expected/min/max` 與 endpoint chance。
+  - 搜尋統計。
+  - policy tree 或 rotation plans。
+- 限制聲明
+  - 普通採集與收藏品各自的支援技能。
+  - `Brazen` 排除。
+  - `Collector's High Standard` 排除。
+  - 精選 reward model 排除。
+  - 宇宙探索 / Stellar Mission 專用模型排除。
+
+### 暫時不應宣稱第三方可完整驗證的內容
+
+- `Brazen` 隨機分布、檔位與取整順序。
+- `Collector's High Standard` 完整觸發模型與疊加順序。
+- 節點特殊效果對慎重不耗耐久率的完整疊加順序。
+- 精選 reduction reward model。
+- 宇宙探索 mission score 與 reward model。
+- 任何未由 `.agents/skills/business/gathering_math_formulas.md` 或可靠來源確認的推測公式。
+
+## 建議輸出格式
+
+未來若新增研究者匯出功能，建議輸出單一 JSON 檔，結構如下：
+
+```json
+{
+  "manifest": {
+    "app": "frozen_rabbit_tome",
+    "version": "0.1.0",
+    "commit": "<git commit>",
+    "algorithm": "regular-gathering | collectable",
+    "generatedAt": "<ISO timestamp>",
+    "limitations": []
+  },
+  "input": {},
+  "formulaDebug": {},
+  "plans": [],
+  "combined": {},
+  "search": {},
+  "policy": {},
+  "rotationPlans": []
+}
+```
+
+JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 changelog 說明。
+
+## Agent 維護規則
+
+- 修改核心演算法時，至少跑 `npm run test:unit`。
+- 若修改普通採集或收藏品求解器，必須檢查公式表測試、invariant 測試、golden scenario 與 oracle 是否仍符合模型。
+- 若新增支援技能或新 reward model，必須同步更新：
+  - `.agents/skills/business/ffxiv_gathering_skills.md`
+  - `.agents/skills/business/gathering_math_formulas.md`
+  - 本文件的驗證範圍與排除項目
+  - 對應 unit tests
+- 若 debug 輸出新增或改名欄位，應評估是否影響第三方驗證資料格式。
+- 對外文案仍只能稱為「推薦」、「依目前模型推算」，不可宣稱「最佳」、「最優」或「唯一正解」。
