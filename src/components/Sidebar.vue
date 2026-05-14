@@ -2,12 +2,14 @@
 import { useRoute } from 'vue-router';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
+import { useFavoriteItems } from '../composables/useFavoriteItems';
 
 const route = useRoute();
 const version = '0.1.0';
 const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tome';
 const { tomeCount } = useTomeLibrary();
 const { experimentCount } = useExperimentLibrary();
+const { favoriteCount } = useFavoriteItems();
 
 defineEmits(['close-mobile', 'open-sponsor']);
 </script>
@@ -49,6 +51,17 @@ defineEmits(['close-mobile', 'open-sponsor']);
       </router-link>
 
       <hr class="border-soft-green-100 dark:border-slate-800 my-2" />
+
+      <router-link
+        to="/favorite-items"
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-medium"
+        :class="route.path === '/favorite-items' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-heart shrink-0"></i>
+        <span class="leading-tight flex-1">{{ $t('nav.favoriteItems') }}</span>
+        <span class="ml-2 bg-soft-green-200 dark:bg-soft-green-900 text-soft-green-800 dark:text-soft-green-300 text-xs px-2 py-0.5 rounded-full shrink-0">{{ favoriteCount }}</span>
+      </router-link>
 
       <router-link
         to="/library"

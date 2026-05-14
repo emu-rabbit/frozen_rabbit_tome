@@ -315,3 +315,10 @@ export interface StoredExperiment {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface StoredFavoriteItem {
+  itemId: number;
+  isCollectable?: boolean;
+  isCrystalGathering?: boolean;
+  createdAt: string;
+}

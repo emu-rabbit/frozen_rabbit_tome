@@ -3,6 +3,7 @@ import CreateGuide from '../views/CreateGuide.vue';
 import Settings from '../views/Settings.vue';
 import Solver from '../views/Solver.vue';
 import TomeLibrary from '../views/TomeLibrary.vue';
+import FavoriteItems from '../views/FavoriteItems.vue';
 import CreateExperiment from '../views/CreateExperiment.vue';
 import Simulator from '../views/Simulator.vue';
 import ExperimentDatabase from '../views/ExperimentDatabase.vue';
@@ -18,6 +19,11 @@ const routes = [
     path: '/solver',
     name: 'Solver',
     component: Solver,
+  },
+  {
+    path: '/favorite-items',
+    name: 'FavoriteItems',
+    component: FavoriteItems,
   },
   {
     path: '/library',

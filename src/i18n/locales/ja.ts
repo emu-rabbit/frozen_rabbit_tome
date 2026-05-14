@@ -60,6 +60,7 @@ export default {
     createGuide: '新しい秘伝書を作成',
     solver: '秘伝書ソルバー',
     createExperiment: '新しい実験を作成',
+    favoriteItems: 'お気に入りアイテム',
     tomeLibrary: '秘伝書庫',
     experimentDatabase: '実験データベース',
     faq: 'よくある質問',
@@ -114,6 +115,44 @@ export default {
     title: '採集アイテムの選択',
     description: 'ここでアイテムを検索・選択し、シミュレーターに入って実験と分析を行います。',
     dataScope: '採掘師と園芸師の採集アイテムのみを表示します。'
+  },
+  favoriteItems: {
+    title: 'お気に入りアイテム',
+    subtitle: 'よく使う採集アイテムを保存し、必要なときに秘伝書や実験へすぐ移動できます。',
+    count: '{count} 件',
+    addAction: 'お気に入りに追加',
+    removeAction: 'お気に入りから削除',
+    emptyTitle: 'お気に入りアイテムはまだありません',
+    emptyDesc: '新しい秘伝書または新しい実験の検索結果でハートを押すと、ここに追加されます。',
+    dialog: {
+      kicker: '次の操作を選択',
+      title: '{item} を使う',
+      close: '選択ウィンドウを閉じる',
+      guideDesc: 'ソルバーに入っておすすめの採集手順を計算します',
+      experimentDesc: 'シミュレーターに入って実験と分析を行います'
+    },
+    filters: {
+      open: 'お気に入りアイテムを絞り込む',
+      close: '絞り込みウィンドウを閉じる',
+      kicker: '絞り込み条件',
+      title: 'お気に入りアイテムを絞り込む',
+      text: 'テキスト検索',
+      textPlaceholder: '名前で検索、見つからない場合は英語での検索をお試しください',
+      glvMin: 'Glv 下限',
+      glvMax: 'Glv 上限',
+      noLimit: '制限なし',
+      jobs: '採集可能ジョブ',
+      systems: '採集システム',
+      clear: '絞り込みをクリア',
+      done: '完了',
+      emptyTitle: '条件に一致するお気に入りアイテムがありません',
+      emptyDesc: 'テキスト、Glv、ジョブ、採集システムの条件を調整できます。',
+      systemOptions: {
+        regular: '通常',
+        collectable: '収集品',
+        crystal: 'クリスタル'
+      }
+    }
   },
   simulator: {
     noItemTitle: '実験アイテム未選択',

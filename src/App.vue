@@ -101,7 +101,7 @@ watch(() => route.fullPath, (_newPath, oldPath) => {
 
       <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
-          <KeepAlive include="CreateGuide,Solver,TomeLibrary,Settings,CreateExperiment,Simulator,ExperimentDatabase">
+          <KeepAlive include="CreateGuide,Solver,FavoriteItems,TomeLibrary,Settings,CreateExperiment,Simulator,ExperimentDatabase">
             <component :is="Component" />
           </KeepAlive>
         </router-view>

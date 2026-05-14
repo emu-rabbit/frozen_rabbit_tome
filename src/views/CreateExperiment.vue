@@ -17,10 +17,12 @@ import type { GatherableItem } from '../types/game';
 import { useRouter } from 'vue-router';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useSearchStore } from '../composables/useSearchStore';
+import { useFavoriteItems } from '../composables/useFavoriteItems';
 
 const { t } = useI18n();
 const router = useRouter();
 const { setSelectedItem } = useSimulatorStats();
+const { isFavorite, toggleFavorite } = useFavoriteItems();
 
 function handleItemSelect(item: GatherableItem) {
   setSelectedItem(item);
@@ -215,6 +217,9 @@ function getUiState() {
               v-for="item in searchResults"
               :key="item.itemId"
               :item="item"
+              favoriteable
+              :is-favorite="isFavorite(item.itemId)"
+              @toggle-favorite="toggleFavorite"
               @select="handleItemSelect"
             />
           </div>

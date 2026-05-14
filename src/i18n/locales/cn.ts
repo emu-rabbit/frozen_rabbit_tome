@@ -60,6 +60,7 @@ export default {
     createGuide: '创建新秘籍',
     solver: '秘籍求解器',
     createExperiment: '创建新实验',
+    favoriteItems: '最爱的物品',
     tomeLibrary: '秘籍藏书库',
     experimentDatabase: '实验数据库',
     faq: '常见问题',
@@ -114,6 +115,44 @@ export default {
     title: '请选择待采集物品',
     description: '在这里搜索并选择物品，以进入模拟台进行实验与分析。',
     dataScope: '仅显示「采矿工」与「园艺工」可采集的物品'
+  },
+  favoriteItems: {
+    title: '最爱的物品',
+    subtitle: '收藏常用采集物品，需要时可以直接前往秘籍或实验。',
+    count: '{count} 件',
+    addAction: '加入最爱',
+    removeAction: '移除最爱',
+    emptyTitle: '还没有收藏物品',
+    emptyDesc: '在创建秘籍或创建实验的搜索结果中，按下爱心就能加入这里。',
+    dialog: {
+      kicker: '选择下一步',
+      title: '使用 {item}',
+      close: '关闭选择窗口',
+      guideDesc: '进入求解台计算推荐采集手法',
+      experimentDesc: '进入模拟台进行实验与分析'
+    },
+    filters: {
+      open: '筛选最爱物品',
+      close: '关闭筛选窗口',
+      kicker: '筛选条件',
+      title: '筛选最爱物品',
+      text: '文字搜索',
+      textPlaceholder: '输入物品名称，如果搜索不到可以尝试使用英文',
+      glvMin: 'Glv 下限',
+      glvMax: 'Glv 上限',
+      noLimit: '不限制',
+      jobs: '可采集职业',
+      systems: '采集系统',
+      clear: '清除筛选',
+      done: '完成',
+      emptyTitle: '没有符合筛选的最爱物品',
+      emptyDesc: '可以调整文字、Glv、职业或采集系统筛选。',
+      systemOptions: {
+        regular: '一般',
+        collectable: '收藏品',
+        crystal: '水晶'
+      }
+    }
   },
   simulator: {
     noItemTitle: '尚未选择实验物品',

@@ -60,6 +60,7 @@ export default {
     createGuide: 'Create New Guide',
     solver: 'Tome Solver',
     createExperiment: 'Create New Experiment',
+    favoriteItems: 'Favorite Items',
     tomeLibrary: 'Guide Library',
     experimentDatabase: 'Experiment Database',
     faq: 'FAQ',
@@ -114,6 +115,44 @@ export default {
     title: 'Select Item to Gather',
     description: 'Search and select an item here to enter the simulator for experiments and analysis.',
     dataScope: 'Only Miner & Botanist items are shown.'
+  },
+  favoriteItems: {
+    title: 'Favorite Items',
+    subtitle: 'Keep commonly used gathering items here and jump straight into a guide or experiment.',
+    count: '{count} items',
+    addAction: 'Add to favorites',
+    removeAction: 'Remove from favorites',
+    emptyTitle: 'No favorite items yet',
+    emptyDesc: 'Press the heart on search results in Create New Guide or Create New Experiment to add items here.',
+    dialog: {
+      kicker: 'Choose next step',
+      title: 'Use {item}',
+      close: 'Close choice dialog',
+      guideDesc: 'Enter the solver to calculate a recommended gathering rotation',
+      experimentDesc: 'Enter the simulator for experiments and analysis'
+    },
+    filters: {
+      open: 'Filter favorite items',
+      close: 'Close filter dialog',
+      kicker: 'Filter conditions',
+      title: 'Filter Favorite Items',
+      text: 'Text Search',
+      textPlaceholder: 'Search by name, or try English if not found',
+      glvMin: 'Min Glv',
+      glvMax: 'Max Glv',
+      noLimit: 'No limit',
+      jobs: 'Gatherable By',
+      systems: 'Gathering System',
+      clear: 'Clear Filters',
+      done: 'Done',
+      emptyTitle: 'No favorite items match these filters',
+      emptyDesc: 'Try adjusting the text, Glv, job, or gathering system filters.',
+      systemOptions: {
+        regular: 'Regular',
+        collectable: 'Collectable',
+        crystal: 'Crystal'
+      }
+    }
   },
   simulator: {
     noItemTitle: 'No Experiment Item Selected',

@@ -61,6 +61,7 @@ export default {
     createGuide: '創建新秘笈',
     solver: '秘笈求解器',
     createExperiment: '創建新實驗',
+    favoriteItems: '最愛的物品',
     tomeLibrary: '秘笈藏書庫',
     experimentDatabase: '實驗數據庫',
     faq: '常見問題',
@@ -115,6 +116,44 @@ export default {
     title: '請選擇待採集物品',
     description: '在這裡搜尋並選擇物品，以進入模擬台進行實驗與分析。',
     dataScope: '僅顯示「採掘師」與「園藝師」可採集的物品'
+  },
+  favoriteItems: {
+    title: '最愛的物品',
+    subtitle: '收藏常用採集物品，需要時可以直接前往秘笈或實驗。',
+    count: '{count} 件',
+    addAction: '加入最愛',
+    removeAction: '移除最愛',
+    emptyTitle: '還沒有收藏物品',
+    emptyDesc: '在創建秘笈或創建實驗的搜尋結果中，按下愛心就能加入這裡。',
+    dialog: {
+      kicker: '選擇下一步',
+      title: '使用 {item}',
+      close: '關閉選擇視窗',
+      guideDesc: '進入求解台計算推薦採集手法',
+      experimentDesc: '進入模擬台進行實驗與分析'
+    },
+    filters: {
+      open: '篩選最愛物品',
+      close: '關閉篩選視窗',
+      kicker: '篩選條件',
+      title: '篩選最愛物品',
+      text: '文字搜尋',
+      textPlaceholder: '輸入物品名稱，倘若搜尋不到可以嘗試使用英文',
+      glvMin: 'Glv 下限',
+      glvMax: 'Glv 上限',
+      noLimit: '不限制',
+      jobs: '可採集職業',
+      systems: '採集系統',
+      clear: '清除篩選',
+      done: '完成',
+      emptyTitle: '沒有符合篩選的最愛物品',
+      emptyDesc: '可以調整文字、Glv、職業或採集系統篩選。',
+      systemOptions: {
+        regular: '一般',
+        collectable: '收藏品',
+        crystal: '水晶'
+      }
+    }
   },
   simulator: {
     noItemTitle: '尚未選擇實驗物品',
