@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import LanguageModal from './components/LanguageModal.vue';
 import SponsorModal from './components/SponsorModal.vue';
+import AnalyticsConsentBanner from './components/AnalyticsConsentBanner.vue';
 import { useSettings } from './composables/useSettings';
-import { loadGameData } from './services/gameData';
+import { loadGameData } from './services/gameData';
+import { initializeAnalytics, setAnalyticsLanguage, trackRouteChange } from './services/analytics';
 
 const { locale, t } = useI18n();
+const route = useRoute();
 const isMobileMenuOpen = ref(false);
 const isSponsorModalOpen = ref(false);
-const { isDarkMode, language } = useSettings();
+const { isDarkMode, language, initialized } = useSettings();
 
 // 同步語系
 watch(language, (newLang) => {
   locale.value = newLang;
   // 語言切換時同步更新遊戲資料語系字典（背景執行）
   loadGameData(newLang);
+  setAnalyticsLanguage(newLang);
+  initializeAnalytics();
 }, { immediate: true });
 
 // App 啟動時立即在背景預載靜態資料
@@ -37,12 +43,21 @@ watch(isDarkMode, (newVal) => {
 watch(language, () => {
   document.title = `${t('app.title')} | ${t('app.description')}`;
 }, { immediate: true });
+
+// 追蹤 Vue Router hash route 切換；初始 page_view 由 GA 載入完成後送出。
+watch(() => route.fullPath, (_newPath, oldPath) => {
+  if (!oldPath) return;
+
+  window.requestAnimationFrame(() => {
+    trackRouteChange(String(route.name || route.path));
+  });
+});
 </script>
 
 <template>
   <LanguageModal />
   <div class="flex h-screen w-screen bg-soft-green-50 dark:bg-slate-950 overflow-hidden text-slate-800 dark:text-slate-100 font-sans relative">
-    
+
     <!-- Mobile Header -->
     <header class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-soft-green-100/50 dark:border-slate-800/50 flex items-center justify-between px-6 z-50">
       <div class="flex items-center gap-2">
@@ -56,7 +71,7 @@ watch(language, () => {
           <span class="font-black text-soft-green-800 dark:text-soft-green-400 tracking-tight leading-none uppercase">{{ $t('app.title') }}</span>
         </div>
       </div>
-      
+
       <!-- Logo as Menu Toggle on mobile (optional, but keep the bar for now) -->
       <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="w-10 h-10 rounded-xl bg-soft-green-50/50 dark:bg-slate-800/50 text-soft-green-600 dark:text-soft-green-400 flex items-center justify-center border border-soft-green-100/50 dark:border-slate-700/50 active:scale-95 transition-all">
         <i class="pi" :class="isMobileMenuOpen ? 'pi-times' : 'pi-bars'"></i>
@@ -64,14 +79,14 @@ watch(language, () => {
     </header>
 
     <!-- Sidebar Overlay (Mobile) -->
-    <div 
+    <div
       class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
       :class="isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
       @click="isMobileMenuOpen = false"
     ></div>
 
     <!-- Sidebar -->
-    <aside 
+    <aside
       class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 z-[70] lg:relative lg:w-72 lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-in-out flex shadow-2xl lg:shadow-none"
       :class="isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'"
     >
@@ -95,6 +110,7 @@ watch(language, () => {
 
     <!-- Global Modals -->
     <SponsorModal v-model:visible="isSponsorModalOpen" />
+    <AnalyticsConsentBanner :paused="!initialized" />
   </div>
 </template>
 
