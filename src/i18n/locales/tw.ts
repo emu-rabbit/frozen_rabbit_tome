@@ -219,6 +219,12 @@ export default {
     },
     aboutTitle: '關於本專案',
     aboutDesc: '這是「冷凍兔肉的秘笈」，專為 FFXIV 採集玩家設計的工具箱。',
+    about: {
+      title: '關於與致謝',
+      description: '秘笈背後的採集資料、圖示與技術支援',
+      teamcraft: 'Teamcraft - 採集物品、收藏品獎勵與技能顯示資料',
+      xivapi: 'XIVAPI - 採集資料表、收藏品判定與圖示 API 支援'
+    },
     statsTitle: '採集玩家數值',
     statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。',
     macroTitle: '採集巨集',

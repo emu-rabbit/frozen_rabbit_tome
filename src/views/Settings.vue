@@ -233,6 +233,36 @@ const solverModeOptions = computed<Array<{ label: string; value: SolverObjective
               </div>
           </div>
       </div>
+
+      <!-- About & Credits Section -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-6">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400">
+                <i class="pi pi-info-circle text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.about.title') }}</label>
+              </div>
+
+              <p class="text-slate-500 dark:text-slate-400 text-sm -mt-3 leading-relaxed">{{ $t('settings.about.description') }}</p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mt-2">
+                <a href="https://ffxivteamcraft.com" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800/50 hover:border-soft-green-200 dark:hover:border-soft-green-900 hover:shadow-sm transition-all group">
+                  <div class="flex flex-col gap-0.5 min-w-0">
+                    <span class="font-black text-slate-700 dark:text-slate-200 text-sm tracking-tight group-hover:text-soft-green-700 dark:group-hover:text-soft-green-400 truncate">Teamcraft</span>
+                    <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate">{{ $t('settings.about.teamcraft') }}</span>
+                  </div>
+                  <i class="pi pi-external-link text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-soft-green-500 shrink-0"></i>
+                </a>
+
+                <a href="https://xivapi.com" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800/50 hover:border-soft-green-200 dark:hover:border-soft-green-900 hover:shadow-sm transition-all group">
+                  <div class="flex flex-col gap-0.5 min-w-0">
+                    <span class="font-black text-slate-700 dark:text-slate-200 text-sm tracking-tight group-hover:text-soft-green-700 dark:group-hover:text-soft-green-400 truncate">XIVAPI</span>
+                    <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate">{{ $t('settings.about.xivapi') }}</span>
+                  </div>
+                  <i class="pi pi-external-link text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-soft-green-500 shrink-0"></i>
+                </a>
+              </div>
+          </div>
+      </div>
     </div>
   </div>
 </template>

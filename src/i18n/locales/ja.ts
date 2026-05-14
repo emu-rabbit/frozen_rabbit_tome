@@ -218,6 +218,12 @@ export default {
     },
     aboutTitle: 'このプロジェクトについて',
     aboutDesc: '「冷凍兔肉の秘伝書」は、FFXIV の採集プレイヤー向けに設計されたツールボックスです。',
+    about: {
+      title: '概要と謝辞',
+      description: '秘伝書を支える採集データ、アイコン、技術サポート',
+      teamcraft: 'Teamcraft - 採集アイテム、収集品報酬、アクション表示データ',
+      xivapi: 'XIVAPI - 採集データ表、収集品判定、アイコン API サポート'
+    },
     statsTitle: 'ステータス設定',
     statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。',
     macroTitle: '採集マクロ',

@@ -218,6 +218,12 @@ export default {
     },
     aboutTitle: '关于本项目',
     aboutDesc: '这是"冷冻兔肉的秘籍"，专为 FFXIV 采集玩家设计的工具箱。',
+    about: {
+      title: '关于与致谢',
+      description: '秘籍背后的采集数据、图标与技术支持',
+      teamcraft: 'Teamcraft - 采集物品、收藏品奖励与技能显示数据',
+      xivapi: 'XIVAPI - 采集数据表、收藏品判定与图标 API 支持'
+    },
     statsTitle: '玩家装备数值',
     statsDesc: '请填入你在游戏中真实的装备数值，以便获得更精确的演算建议。',
     macroTitle: '采集宏',

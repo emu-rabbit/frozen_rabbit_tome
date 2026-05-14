@@ -218,6 +218,12 @@ export default {
     },
     aboutTitle: 'About Project',
     aboutDesc: 'Frozen Rabbit Tome is a specialized toolkit for FFXIV gatherers.',
+    about: {
+      title: 'About & Credits',
+      description: 'Gathering data, icons, and technical support behind the tome',
+      teamcraft: 'Teamcraft - Gatherable items, collectable rewards, and action display data',
+      xivapi: 'XIVAPI - Gathering tables, collectable checks, and icon API support'
+    },
     statsTitle: 'Player Equipment Stats',
     statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.',
     macroTitle: 'Gathering Macro',
