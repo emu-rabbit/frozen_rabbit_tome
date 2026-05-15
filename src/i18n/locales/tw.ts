@@ -6,6 +6,7 @@ export default {
   },
   common: {
     getStarted: '立即開始',
+    cancel: '取消',
     backToSelection: '返回物品選擇',
     displayMode: '顯示模式',
     displayModes: {
@@ -270,6 +271,11 @@ export default {
     },
     statsTitle: '採集玩家數值',
     statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。',
+    gearProfilesTitle: '裝備數值設定檔',
+    gearProfilesDesc: '預先整理多組採集數值，之後可在求解台或模擬台快速套用。',
+    gearProfilesEntryTitle: '管理裝備設定檔',
+    gearProfilesEntryDesc: '設定等級、獲得力、鑑別力、GP、食物與收藏品遺物效果。',
+    gearProfilesManage: '前往設定',
     macroTitle: '採集巨集',
     macroDesc: '調整巨集提醒玩家手動採集時的等待時間。預設每個物品 4 秒，外加 2 秒緩衝。',
     macroSecondsPerGather: '每個物品等待',
@@ -705,6 +711,47 @@ export default {
       useTomeMode: '覆蓋為秘笈模式',
       useCurrentMode: '保留現有模式',
       cancel: '取消'
+    }
+  },
+  gearProfiles: {
+    title: '裝備數值設定檔設定',
+    description: '把常用的採集數值先存成設定檔，需要求解或模擬時再單向套用。',
+    back: '返回',
+    listTitle: '設定檔列表',
+    unnamed: '未命名設定檔',
+    defaultBadge: '預設',
+    loadProfile: '載入設定檔',
+    relicShort: '遺物',
+    defaults: {
+      miner: '預設採掘師',
+      botanist: '預設園藝師'
+    },
+    jobs: {
+      universal: '採掘師 / 園藝師'
+    },
+    actions: {
+      add: '新增',
+      save: '儲存設定檔',
+      saved: '已儲存',
+      delete: '刪除設定檔'
+    },
+    editor: {
+      newTitle: '新增設定檔',
+      editTitle: '編輯設定檔',
+      defaultLocked: '預設設定檔不可刪除，職業類別固定。',
+      name: '設定檔名稱',
+      namePlaceholder: '例如：滿禁斷採集裝',
+      jobs: '可套用職業',
+      currentGp: '當前 GP',
+      maxGp: '裝備 GP 上限',
+      relic: '遺物工具效果',
+      relicDesc: '僅影響收藏品系統的價值提升率。'
+    },
+    picker: {
+      title: '載入裝備設定檔',
+      description: '只會列出可套用到目前物品職業的設定檔。',
+      empty: '目前沒有可套用到此職業的設定檔。',
+      manage: '管理設定檔'
     }
   },
   game: {

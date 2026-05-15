@@ -1,23 +1,13 @@
 import { useLocalStorage } from '@vueuse/core';
+import { computed } from 'vue';
 import type { DebugSettings, MacroSettings, SolverSettings, UserStats } from '../types/game';
+import { profileToStats, useGearProfiles } from './useGearProfiles';
 
 export type Language = 'tw' | 'en' | 'ja' | 'cn';
-
-const DEFAULT_STATS = {
-  level: 100,
-  gathering: 5345,
-  perception: 5173,
-  gp: 930
-};
 
 const language = useLocalStorage<Language>('frozen-rabbit-tome-lang', 'tw');
 const isDarkMode = useLocalStorage<boolean>('frozen-rabbit-tome-dark-mode', false);
 const initialized = useLocalStorage<boolean>('frozen-rabbit-tome-initialized', false);
-
-const userStats = useLocalStorage<UserStats>('frozen-rabbit-tome-user-stats', {
-  miner: { ...DEFAULT_STATS },
-  botanist: { ...DEFAULT_STATS }
-});
 
 const macroSettings = useLocalStorage<MacroSettings>('frozen-rabbit-tome-macro-settings', {
   secondsPerGather: 4,
@@ -37,6 +27,30 @@ const debugSettings = useLocalStorage<DebugSettings>('frozen-rabbit-tome-debug-s
 });
 
 export function useSettings() {
+  const { defaultProfileForJob, updateProfile } = useGearProfiles();
+  const userStats = computed<UserStats>({
+    get: () => ({
+      miner: profileToStats(defaultProfileForJob('miner')),
+      botanist: profileToStats(defaultProfileForJob('botanist'))
+    }),
+    set: (nextStats) => {
+      updateProfile('default-miner', {
+        level: nextStats.miner.level,
+        gathering: nextStats.miner.gathering,
+        perception: nextStats.miner.perception,
+        currentGp: nextStats.miner.gp,
+        maxGp: nextStats.miner.gp
+      });
+      updateProfile('default-botanist', {
+        level: nextStats.botanist.level,
+        gathering: nextStats.botanist.gathering,
+        perception: nextStats.botanist.perception,
+        currentGp: nextStats.botanist.gp,
+        maxGp: nextStats.botanist.gp
+      });
+    }
+  });
+
   return {
     language,
     isDarkMode,

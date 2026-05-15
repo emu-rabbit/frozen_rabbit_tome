@@ -8,17 +8,17 @@ import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
-import { useSettings } from '../composables/useSettings';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useSimulator } from '../composables/useSimulator';
 import PendingFeature from '../components/PendingFeature.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
+import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
 import { GATHERING_FOODS } from '../services/foodData';
 import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import type { SimulationRequest } from '../utils/rotationSimulator';
-import type { FoodQuality, GatheringFood, SimulationResponse } from '../types/game';
+import type { FoodQuality, GearStatProfile, GatheringFood, SimulationResponse } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 type FoodOption = {
@@ -47,9 +47,9 @@ const {
   isPerceptionMet,
   fetchItemLevelData,
   syncFromSettings,
+  applyGearProfile,
   setSelectedItem
 } = useSimulatorStats();
-const { userStats } = useSettings();
 const { saveExperiment, getExperiment, fromStoredRotationStep } = useExperimentLibrary();
 const { primaryRotation, revisitRotation, simulatorAnalysis: analysis, reset: resetSimulator } = useSimulator();
 // 模擬台內部使用 simStats 作為屬性操作的目標（等同 Solver 的 solverStats）
@@ -60,6 +60,7 @@ const savedExperimentId = ref<string | null>(null);
 const isSaved = ref(false);
 const isReportCopied = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
+const isGearProfilePickerOpen = ref(false);
 const foodSuggestions = ref<FoodOption[]>([]);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -151,11 +152,14 @@ onActivated(() => {
   }
 });
 
-watch(userStats, () => syncFromSettings(), { deep: true });
 watch([primaryRotation, revisitRotation, solverStats, nodeBonuses, temporaryGp, selectedFood], () => {
   analysis.value = null;
   isSaved.value = false;
 }, { deep: true });
+
+function handleApplyGearProfile(profile: GearStatProfile) {
+  applyGearProfile(profile);
+}
 
 function buildRequest(startingGp = temporaryGp.value): Omit<SimulationRequest, 'primaryRotation' | 'revisitRotation'> | null {
   if (!activeItem.value || !baseValues.value) return null;
@@ -479,9 +483,17 @@ function progressPercent(range: number[], maxValue: number) {
       </section>
 
       <section class="panel">
-        <div class="section-title">
-          <i class="pi pi-sliders-h text-soft-green-500"></i>
-          <h2>{{ t('simulator.statsTitle') }}</h2>
+        <div class="section-title stats-section-title">
+          <span>
+            <i class="pi pi-sliders-h text-soft-green-500"></i>
+            <h2>{{ t('simulator.statsTitle') }}</h2>
+          </span>
+          <Button
+            icon="pi pi-download"
+            :label="t('gearProfiles.loadProfile')"
+            class="p-button-text p-button-sm"
+            @click="isGearProfilePickerOpen = true"
+          />
         </div>
         <div class="input-grid">
           <label><span>{{ t('game.stats.level') }}</span><InputNumber v-model="solverStats.level" :min="1" :max="100" fluid /></label>
@@ -831,6 +843,11 @@ function progressPercent(range: number[], maxValue: number) {
         </div>
       </article>
     </SaveEntryDialog>
+    <GearProfilePickerDialog
+      v-model="isGearProfilePickerOpen"
+      :jobs="activeItemJobs"
+      @apply="handleApplyGearProfile"
+    />
   </div>
 </template>
 
@@ -1165,6 +1182,15 @@ function progressPercent(range: number[], maxValue: number) {
 .section-title {
   align-items: center;
   margin-bottom: 1rem;
+}
+.stats-section-title {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.stats-section-title > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
 }
 .section-title h2 {
   margin: 0;

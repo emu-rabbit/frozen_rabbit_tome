@@ -5,6 +5,7 @@ export default {
     description: 'FFXIV 大地使者技能推荐工具'
   },
   common: {
+    cancel: '取消',
     backToSelection: '返回物品选择',
     displayMode: '显示模式',
     displayModes: {
@@ -269,6 +270,11 @@ export default {
     },
     statsTitle: '玩家装备数值',
     statsDesc: '请填入你在游戏中真实的装备数值，以便获得更精确的演算建议。',
+    gearProfilesTitle: '装备数值设置档',
+    gearProfilesDesc: '预先整理多组采集数值，之后可在求解台或模拟台快速套用。',
+    gearProfilesEntryTitle: '管理装备设置档',
+    gearProfilesEntryDesc: '设置等级、获得力、鉴别力、GP、食物与收藏品遗物效果。',
+    gearProfilesManage: '前往设置',
     macroTitle: '采集宏',
     macroDesc: '调整宏提醒玩家手动采集时的等待时间。默认每个物品 4 秒，外加 2 秒缓冲。',
     macroSecondsPerGather: '每个物品等待',
@@ -693,6 +699,47 @@ export default {
       useTomeMode: '覆盖为秘籍模式',
       useCurrentMode: '保留现有模式',
       cancel: '取消'
+    }
+  },
+  gearProfiles: {
+    title: '装备数值设置档设置',
+    description: '把常用的采集数值先存成设置档，需要求解或模拟时再单向套用。',
+    back: '返回',
+    listTitle: '设置档列表',
+    unnamed: '未命名设置档',
+    defaultBadge: '默认',
+    loadProfile: '载入设置档',
+    relicShort: '遗物',
+    defaults: {
+      miner: '默认采掘师',
+      botanist: '默认园艺师'
+    },
+    jobs: {
+      universal: '采掘师 / 园艺师'
+    },
+    actions: {
+      add: '新增',
+      save: '保存设置档',
+      saved: '已保存',
+      delete: '删除设置档'
+    },
+    editor: {
+      newTitle: '新增设置档',
+      editTitle: '编辑设置档',
+      defaultLocked: '默认设置档不可删除，职业类别固定。',
+      name: '设置档名称',
+      namePlaceholder: '例如：满禁断采集装',
+      jobs: '可套用职业',
+      currentGp: '当前 GP',
+      maxGp: '装备 GP 上限',
+      relic: '遗物工具效果',
+      relicDesc: '仅影响收藏品系统的价值提升率。'
+    },
+    picker: {
+      title: '载入装备设置档',
+      description: '只会列出可套用到当前物品职业的设置档。',
+      empty: '目前没有可套用到此职业的设置档。',
+      manage: '管理设置档'
     }
   },
   game: {

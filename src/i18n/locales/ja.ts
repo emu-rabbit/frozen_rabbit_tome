@@ -5,6 +5,7 @@ export default {
     description: 'FFXIV 大地使者スキル推奨ツール'
   },
   common: {
+    cancel: 'キャンセル',
     backToSelection: 'アイテム選択に戻る',
     displayMode: '表示モード',
     displayModes: {
@@ -269,6 +270,11 @@ export default {
     },
     statsTitle: 'ステータス設定',
     statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。',
+    gearProfilesTitle: '装備ステータスプロファイル',
+    gearProfilesDesc: '複数の採集ステータスを用意し、ソルバーやシミュレーターで素早く読み込めます。',
+    gearProfilesEntryTitle: '装備プロファイルを管理',
+    gearProfilesEntryDesc: 'レベル、獲得力、識質力、GP、食事、収集品向けレリック効果を設定します。',
+    gearProfilesManage: '設定へ進む',
     macroTitle: '採集マクロ',
     macroDesc: '手動採集を促す時の待機時間を調整します。初期値はアイテム 1 個につき 4 秒、追加バッファ 2 秒です。',
     macroSecondsPerGather: '1 個ごとの待機',
@@ -693,6 +699,47 @@ export default {
       useTomeMode: '秘伝書モードで上書き',
       useCurrentMode: '現在のモードを使う',
       cancel: 'キャンセル'
+    }
+  },
+  gearProfiles: {
+    title: '装備ステータスプロファイル設定',
+    description: 'よく使う採集ステータスをプロファイルとして保存し、必要な時に一方向で読み込めます。',
+    back: '戻る',
+    listTitle: 'プロファイル一覧',
+    unnamed: '無名プロファイル',
+    defaultBadge: '既定',
+    loadProfile: 'プロファイル読込',
+    relicShort: 'レリック',
+    defaults: {
+      miner: '既定の採掘師',
+      botanist: '既定の園芸師'
+    },
+    jobs: {
+      universal: '採掘師 / 園芸師'
+    },
+    actions: {
+      add: '追加',
+      save: 'プロファイルを保存',
+      saved: '保存しました',
+      delete: 'プロファイルを削除'
+    },
+    editor: {
+      newTitle: '新規プロファイル',
+      editTitle: 'プロファイル編集',
+      defaultLocked: '既定プロファイルは削除できず、職業も固定です。',
+      name: 'プロファイル名',
+      namePlaceholder: '例：禁断済み採集装備',
+      jobs: '適用できる職業',
+      currentGp: '現在 GP',
+      maxGp: '装備 GP 上限',
+      relic: 'レリック道具効果',
+      relicDesc: '収集品システムの価値上昇率にのみ影響します。'
+    },
+    picker: {
+      title: '装備プロファイルを読み込む',
+      description: '現在のアイテム職業に適用できるプロファイルだけを表示します。',
+      empty: 'この職業に適用できるプロファイルはまだありません。',
+      manage: 'プロファイル管理'
     }
   },
   game: {

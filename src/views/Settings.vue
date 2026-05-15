@@ -1,14 +1,17 @@
 <script setup lang="ts">
 defineOptions({ name: 'Settings' });
 import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useSettings } from '../composables/useSettings';
 import SelectButton from 'primevue/selectbutton';
 import InputNumber from 'primevue/inputnumber';
 import { useI18n } from 'vue-i18n';
 import type { SolverObjectiveMode } from '../types/game';
 
-const { isDarkMode, language, userStats, macroSettings, solverSettings, debugSettings } = useSettings();
+const { isDarkMode, language, macroSettings, solverSettings, debugSettings } = useSettings();
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 
 const langOptions = [
   { label: '繁體中文', value: 'tw' },
@@ -22,6 +25,13 @@ const solverModeOptions = computed<Array<{ label: string; value: SolverObjective
   { label: t('settings.solverModes.max'), value: 'max' },
   { label: t('settings.solverModes.min'), value: 'min' },
 ]);
+
+function goGearProfiles() {
+  router.push({
+    path: '/settings/gear-profiles',
+    query: { returnTo: route.fullPath }
+  });
+}
 </script>
 
 <template>
@@ -112,68 +122,29 @@ const solverModeOptions = computed<Array<{ label: string; value: SolverObjective
           </div>
       </div>
 
-      <!-- Player Stats Settings -->
+      <!-- Gear Profile Settings -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
           <div class="flex flex-col gap-4">
               <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
                 <i class="pi pi-user text-xl"></i>
-                <label class="font-bold text-lg">{{ $t('settings.statsTitle') }}</label>
+                <label class="font-bold text-lg">{{ $t('settings.gearProfilesTitle') }}</label>
               </div>
 
-              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.statsDesc') }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.gearProfilesDesc') }}</p>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                  <!-- Miner -->
-                  <div class="flex flex-col gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
-                      <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 mb-1">
-                          <i class="pi pi-hammer text-slate-600 dark:text-slate-400"></i>
-                          <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('game.jobs.miner') }}</span>
-                      </div>
-                      <div class="grid grid-cols-1 gap-3">
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.level') }}</label>
-                              <InputNumber v-model="userStats.miner.level" :min="1" :max="100" :useGrouping="false" class="w-full" />
-                          </div>
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.gathering') }}</label>
-                              <InputNumber v-model="userStats.miner.gathering" :min="0" :useGrouping="false" class="w-full" />
-                          </div>
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.perception') }}</label>
-                              <InputNumber v-model="userStats.miner.perception" :min="0" :useGrouping="false" class="w-full" />
-                          </div>
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.gp') }}</label>
-                              <InputNumber v-model="userStats.miner.gp" :min="0" :useGrouping="false" class="w-full" />
-                          </div>
-                      </div>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                  <div class="flex flex-col">
+                      <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('settings.gearProfilesEntryTitle') }}</span>
+                      <span class="text-xs text-slate-500 dark:text-slate-400">{{ $t('settings.gearProfilesEntryDesc') }}</span>
                   </div>
-
-                  <!-- Botanist -->
-                  <div class="flex flex-col gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
-                      <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 mb-1">
-                          <i class="pi pi-box text-slate-600 dark:text-slate-400"></i>
-                          <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('game.jobs.botanist') }}</span>
-                      </div>
-                      <div class="grid grid-cols-1 gap-3">
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.level') }}</label>
-                              <InputNumber v-model="userStats.botanist.level" :min="1" :max="100" :useGrouping="false" class="w-full" />
-                          </div>
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.gathering') }}</label>
-                              <InputNumber v-model="userStats.botanist.gathering" :min="0" :useGrouping="false" class="w-full" />
-                          </div>
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.perception') }}</label>
-                              <InputNumber v-model="userStats.botanist.perception" :min="0" :useGrouping="false" class="w-full" />
-                          </div>
-                          <div class="flex flex-col gap-1">
-                              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('game.stats.gp') }}</label>
-                              <InputNumber v-model="userStats.botanist.gp" :min="0" :useGrouping="false" class="w-full" />
-                          </div>
-                      </div>
-                  </div>
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-soft-green-500 text-white font-black hover:bg-soft-green-600 transition-colors"
+                    @click="goGearProfiles"
+                  >
+                    <i class="pi pi-arrow-right"></i>
+                    <span>{{ $t('settings.gearProfilesManage') }}</span>
+                  </button>
               </div>
           </div>
       </div>

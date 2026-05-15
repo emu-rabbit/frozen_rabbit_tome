@@ -1,7 +1,8 @@
 import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { FoodSelection, GatherableItem, GatheringJob, PlayerStats, NodeBonuses, StoredTome } from '../types/game';
+import type { FoodSelection, GatherableItem, GearStatProfile, GatheringJob, PlayerStats, NodeBonuses, StoredTome } from '../types/game';
 import { useSettings } from './useSettings';
+import { profileToStats, useGearProfiles } from './useGearProfiles';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity, getGatherableItemById } from '../services/gameData';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
@@ -49,6 +50,7 @@ let activeWorker: Worker | null = null;
 let solveVersion = 0;
 let latestSolveInputSignature = '';
 const lastSyncedSettingsStats: Partial<Record<GatheringJob, PlayerStats>> = {};
+const lastSyncedSettingsProfileSignatures: Partial<Record<GatheringJob, string>> = {};
 const { solverSettings: globalSolverSettings } = useSettings();
 
 const createSolveInputSignature = () => {
@@ -73,9 +75,20 @@ const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
 );
 
 const cloneStats = (stats: PlayerStats): PlayerStats => ({ ...stats });
+const createProfileSignature = (profile: GearStatProfile) => JSON.stringify({
+  jobs: profile.jobs,
+  level: profile.level,
+  gathering: profile.gathering,
+  perception: profile.perception,
+  currentGp: profile.currentGp,
+  maxGp: profile.maxGp,
+  food: profile.food,
+  collectableRelicToolBonus: profile.collectableRelicToolBonus
+});
 
 export function useSolver() {
-  const { userStats, debugSettings, solverSettings } = useSettings();
+  const { debugSettings, solverSettings } = useSettings();
+  const { defaultProfileForJob } = useGearProfiles();
 
   const fetchItemLevelData = async () => {
     const levels = getItemLevelData();
@@ -151,30 +164,41 @@ export function useSolver() {
     if (!activeItem.value) return;
 
     const job: GatheringJob = activeItem.value.jobType || 'miner';
-    const stats = userStats.value[job];
+    const profile = defaultProfileForJob(job);
+    const stats = profileToStats(profile);
+    const profileSignature = createProfileSignature(profile);
     const previousSyncedStats = lastSyncedSettingsStats[job];
+    const previousProfileSignature = lastSyncedSettingsProfileSignatures[job];
     const shouldSyncStats = options.forceStats
       || !previousSyncedStats
-      || !areStatsEqual(previousSyncedStats, stats);
+      || !areStatsEqual(previousSyncedStats, stats)
+      || previousProfileSignature !== profileSignature;
 
     if (shouldSyncStats) {
       lastSyncedSettingsStats[job] = cloneStats(stats);
+      lastSyncedSettingsProfileSignatures[job] = profileSignature;
       if (!areStatsEqual(solverStats.value, stats)) {
         solverStats.value = cloneStats(stats);
       }
+      selectedFood.value = { ...profile.food };
+      solverSettings.value.collectableRelicToolBonus = profile.collectableRelicToolBonus;
     }
 
     if (options.resetTemporaryGp) {
-      temporaryGp.value = effectiveStats.value.gp;
+      temporaryGp.value = Math.min(profile.currentGp, effectiveStats.value.gp);
     }
   };
 
-  const saveToSettings = () => {
-    if (!activeItem.value) return;
-    const job: GatheringJob = activeItem.value.jobType || 'miner';
-    // 將 solverStats (包含修改後的 max GP) 寫回全域設定
-    userStats.value[job] = cloneStats(solverStats.value);
-    lastSyncedSettingsStats[job] = cloneStats(solverStats.value);
+  const applyGearProfile = (profile: GearStatProfile) => {
+    solverStats.value = profileToStats(profile);
+    selectedFood.value = { ...profile.food };
+    solverSettings.value.collectableRelicToolBonus = profile.collectableRelicToolBonus;
+    temporaryGp.value = Math.min(profile.currentGp, effectiveStats.value.gp);
+
+    for (const job of profile.jobs) {
+      lastSyncedSettingsStats[job] = profileToStats(profile);
+      lastSyncedSettingsProfileSignatures[job] = createProfileSignature(profile);
+    }
   };
 
   const loadTomeForEditing = (tome: StoredTome, options: TomeEditingOptions = {}) => {
@@ -201,7 +225,9 @@ export function useSolver() {
     rotationResult.value = null;
     latestSolveInputSignature = createSolveInputSignature();
     const job: GatheringJob = item.jobType || 'miner';
-    lastSyncedSettingsStats[job] = cloneStats(userStats.value[job]);
+    const defaultProfile = defaultProfileForJob(job);
+    lastSyncedSettingsStats[job] = profileToStats(defaultProfile);
+    lastSyncedSettingsProfileSignatures[job] = createProfileSignature(defaultProfile);
 
     return true;
   };
@@ -300,7 +326,7 @@ export function useSolver() {
     setSelectedItem,
     loadTomeForEditing,
     syncFromSettings,
-    saveToSettings,
+    applyGearProfile,
     successRate,
     boonChance,
     isPerceptionMet,

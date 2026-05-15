@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue';
-import type { FoodSelection, GatherableItem, GatheringJob, PlayerStats, NodeBonuses } from '../types/game';
+import type { FoodSelection, GatherableItem, GearStatProfile, GatheringJob, PlayerStats, NodeBonuses } from '../types/game';
 import { useSettings } from './useSettings';
+import { profileToStats, useGearProfiles } from './useGearProfiles';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
@@ -36,14 +37,26 @@ const gatheringItemsData = ref<Record<string, any> | null>(null);
 
 // 追蹤「上次同步設定時的屬性值」，以判斷是否需要更新
 const lastSyncedSettingsStats: Partial<Record<GatheringJob, PlayerStats>> = {};
+const lastSyncedSettingsProfileSignatures: Partial<Record<GatheringJob, string>> = {};
 
 const areStatsEqual = (a: PlayerStats, b: PlayerStats) =>
   a.level === b.level && a.gathering === b.gathering && a.perception === b.perception && a.gp === b.gp;
 
 const cloneStats = (s: PlayerStats): PlayerStats => ({ ...s });
+const createProfileSignature = (profile: GearStatProfile) => JSON.stringify({
+  jobs: profile.jobs,
+  level: profile.level,
+  gathering: profile.gathering,
+  perception: profile.perception,
+  currentGp: profile.currentGp,
+  maxGp: profile.maxGp,
+  food: profile.food,
+  collectableRelicToolBonus: profile.collectableRelicToolBonus
+});
 
 export function useSimulatorStats() {
-  const { userStats } = useSettings();
+  const { solverSettings } = useSettings();
+  const { defaultProfileForJob } = useGearProfiles();
 
   // ── 遊戲資料載入 ──
   const fetchItemLevelData = async () => {
@@ -64,19 +77,37 @@ export function useSimulatorStats() {
   const syncFromSettings = (options: SyncFromSettingsOptions = {}) => {
     if (!activeItem.value) return;
     const job: GatheringJob = activeItem.value.jobType || 'miner';
-    const stats = userStats.value[job];
+    const profile = defaultProfileForJob(job);
+    const stats = profileToStats(profile);
+    const profileSignature = createProfileSignature(profile);
     const prev = lastSyncedSettingsStats[job];
-    const shouldSync = options.forceStats || !prev || !areStatsEqual(prev, stats);
+    const prevProfileSignature = lastSyncedSettingsProfileSignatures[job];
+    const shouldSync = options.forceStats || !prev || !areStatsEqual(prev, stats) || prevProfileSignature !== profileSignature;
 
     if (shouldSync) {
       lastSyncedSettingsStats[job] = cloneStats(stats);
+      lastSyncedSettingsProfileSignatures[job] = profileSignature;
       if (!areStatsEqual(simStats.value, stats)) {
         simStats.value = cloneStats(stats);
       }
+      selectedFood.value = { ...profile.food };
+      solverSettings.value.collectableRelicToolBonus = profile.collectableRelicToolBonus;
     }
 
     if (options.resetTemporaryGp) {
-      temporaryGp.value = effectiveStats.value.gp;
+      temporaryGp.value = Math.min(profile.currentGp, effectiveStats.value.gp);
+    }
+  };
+
+  const applyGearProfile = (profile: GearStatProfile) => {
+    simStats.value = profileToStats(profile);
+    selectedFood.value = { ...profile.food };
+    solverSettings.value.collectableRelicToolBonus = profile.collectableRelicToolBonus;
+    temporaryGp.value = Math.min(profile.currentGp, effectiveStats.value.gp);
+
+    for (const job of profile.jobs) {
+      lastSyncedSettingsStats[job] = profileToStats(profile);
+      lastSyncedSettingsProfileSignatures[job] = createProfileSignature(profile);
     }
   };
 
@@ -167,6 +198,7 @@ export function useSimulatorStats() {
     fetchItemLevelData,
     setSelectedItem,
     syncFromSettings,
+    applyGearProfile,
     displayName,
     baseValues,
     itemRealLevel,

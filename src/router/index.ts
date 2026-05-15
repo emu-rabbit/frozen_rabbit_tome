@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import CreateGuide from '../views/CreateGuide.vue';
 import Settings from '../views/Settings.vue';
+import GearProfiles from '../views/GearProfiles.vue';
 import Solver from '../views/Solver.vue';
 import TomeLibrary from '../views/TomeLibrary.vue';
 import FavoriteItems from '../views/FavoriteItems.vue';
@@ -54,6 +55,11 @@ const routes = [
     path: '/settings',
     name: 'Settings',
     component: Settings,
+  },
+  {
+    path: '/settings/gear-profiles',
+    name: 'GearProfiles',
+    component: GearProfiles,
   },
   {
     path: '/:pathMatch(.*)*',

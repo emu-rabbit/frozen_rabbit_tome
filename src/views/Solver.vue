@@ -7,7 +7,7 @@ import { GATHERING_FOODS } from '../services/foodData';
 import { getActionName, getItemEnglishName, getItemName } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import { getCollectableActionName } from '../services/collectableActions';
-import type { FoodQuality, GatheringFood, SolverObjectiveMode, SolverRotationPlan } from '../types/game';
+import type { FoodQuality, GearStatProfile, GatheringFood, SolverObjectiveMode, SolverRotationPlan } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
@@ -16,6 +16,7 @@ import SolverDebugDialog from '../components/SolverDebugDialog.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import PendingFeature from '../components/PendingFeature.vue';
 import CollectableSolverPanel from '../components/CollectableSolverPanel.vue';
+import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
@@ -33,7 +34,7 @@ const {
   effectiveStats,
   isDataLoading,
   fetchItemLevelData,
-  saveToSettings,
+  applyGearProfile,
   successRate,
   boonChance,
   isPerceptionMet,
@@ -50,7 +51,7 @@ const {
   reloadPage
 } = useSolver();
 
-const { userStats, macroSettings, solverSettings, debugSettings } = useSettings();
+const { macroSettings, solverSettings, debugSettings } = useSettings();
 const { saveTome } = useTomeLibrary();
 type FoodOption = {
   food: GatheringFood;
@@ -68,14 +69,13 @@ type YieldMetric = {
 };
 
 const foodSuggestions = ref<FoodOption[]>([]);
-const isSettingsSaved = ref(false);
+const isGearProfilePickerOpen = ref(false);
 const isTomeSaved = ref(false);
 const isMacroPreviewOpen = ref(false);
 const isDebugDialogOpen = ref(false);
 const isSaveTomeDialogOpen = ref(false);
 const macroPreview = ref<MacroBuildResult | null>(null);
 const pendingCollectableSaveResult = ref<CollectableSolverResult | null>(null);
-let settingsSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let tomeSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
@@ -136,18 +136,6 @@ const totalSummaryMetric = computed<YieldMetric | null>(() => {
 
 const collectableRelicToolBonusEnabled = computed(() => !!solverSettings.value.collectableRelicToolBonus);
 
-const hasUnsavedStats = computed(() => {
-  const job = activeItem.value?.jobType;
-  if (!job) return false;
-
-  const savedStats = userStats.value[job];
-  return savedStats.level !== solverStats.value.level
-    || savedStats.gathering !== solverStats.value.gathering
-    || savedStats.perception !== solverStats.value.perception
-    || savedStats.gp !== solverStats.value.gp;
-});
-
-const shouldShowSaveSettingsButton = computed(() => hasUnsavedStats.value || isSettingsSaved.value);
 const collectableScourValue = computed(() => {
   if (!baseValues.value?.Gathering) return null;
   return calculateCollectableScourValue(effectiveStats.value.gathering, baseValues.value.Gathering);
@@ -219,25 +207,8 @@ onActivated(() => {
   syncFromSettings();
 });
 
-// 當全域設定變更時，若在求解器頁面，也應觸發同步
-watch(userStats, () => {
-  syncFromSettings();
-}, { deep: true });
-
-function handleSync() {
-  if (!hasUnsavedStats.value) return;
-
-  saveToSettings();
-  isSettingsSaved.value = true;
-
-  if (settingsSavedTimer) {
-    window.clearTimeout(settingsSavedTimer);
-  }
-
-  settingsSavedTimer = window.setTimeout(() => {
-    isSettingsSaved.value = false;
-    settingsSavedTimer = null;
-  }, 1900);
+function handleApplyGearProfile(profile: GearStatProfile) {
+  applyGearProfile(profile);
 }
 
 function handleSaveTome() {
@@ -469,20 +440,7 @@ function savePreviewMetrics() {
   ];
 }
 
-watch(hasUnsavedStats, (hasChanges) => {
-  if (!hasChanges) return;
-
-  isSettingsSaved.value = false;
-  if (settingsSavedTimer) {
-    window.clearTimeout(settingsSavedTimer);
-    settingsSavedTimer = null;
-  }
-});
-
 onBeforeUnmount(() => {
-  if (settingsSavedTimer) {
-    window.clearTimeout(settingsSavedTimer);
-  }
   if (tomeSavedTimer) {
     window.clearTimeout(tomeSavedTimer);
   }
@@ -580,17 +538,12 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 {{ t('solver.statsTitle') }}
               </h3>
               <div class="solver-save-settings-slot">
-                <Transition name="save-settings">
-                  <Button
-                    v-if="shouldShowSaveSettingsButton"
-                    :icon="isSettingsSaved ? 'pi pi-check' : 'pi pi-save'"
-                    :label="isSettingsSaved ? t('solver.syncSuccess') : t('solver.syncToSettings', { job: t(`game.jobs.${activeItem.jobType}`) })"
-                    class="p-button-text p-button-sm text-xs solver-save-settings-button"
-                    :class="{ 'is-saved': isSettingsSaved }"
-                    :disabled="isSettingsSaved"
-                    @click="handleSync"
-                  />
-                </Transition>
+                <Button
+                  icon="pi pi-download"
+                  :label="t('gearProfiles.loadProfile')"
+                  class="p-button-text p-button-sm text-xs solver-save-settings-button"
+                  @click="isGearProfilePickerOpen = true"
+                />
               </div>
             </div>
             <div class="flex flex-col sm:grid sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
@@ -785,17 +738,12 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 {{ t('solver.statsTitle') }}
               </h3>
               <div class="solver-save-settings-slot">
-                <Transition name="save-settings">
-                  <Button
-                    v-if="shouldShowSaveSettingsButton"
-                    :icon="isSettingsSaved ? 'pi pi-check' : 'pi pi-save'"
-                    :label="isSettingsSaved ? t('solver.syncSuccess') : t('solver.syncToSettings', { job: t(`game.jobs.${activeItem.jobType}`) })"
-                    class="p-button-text p-button-sm text-xs solver-save-settings-button"
-                    :class="{ 'is-saved': isSettingsSaved }"
-                    :disabled="isSettingsSaved"
-                    @click="handleSync"
-                  />
-                </Transition>
+                <Button
+                  icon="pi pi-download"
+                  :label="t('gearProfiles.loadProfile')"
+                  class="p-button-text p-button-sm text-xs solver-save-settings-button"
+                  @click="isGearProfilePickerOpen = true"
+                />
               </div>
             </div>
             
@@ -1120,6 +1068,11 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 
     <MacroPreviewDialog v-model="isMacroPreviewOpen" :macro="macroPreview" />
     <SolverDebugDialog v-model="isDebugDialogOpen" :debug="rotationResult?.debug" />
+    <GearProfilePickerDialog
+      v-model="isGearProfilePickerOpen"
+      :jobs="activeItemJobs()"
+      @apply="handleApplyGearProfile"
+    />
     <SaveEntryDialog
       v-model="isSaveTomeDialogOpen"
       :title="t('saveEntry.tome.title')"

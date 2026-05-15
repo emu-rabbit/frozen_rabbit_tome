@@ -111,6 +111,24 @@ export interface UserStats {
   botanist: PlayerStats;
 }
 
+export type GearProfileKind = 'default-miner' | 'default-botanist' | 'custom';
+
+export interface GearStatProfile {
+  id: string;
+  kind: GearProfileKind;
+  name: string;
+  jobs: GatheringJob[];
+  level: number;
+  gathering: number;
+  perception: number;
+  currentGp: number;
+  maxGp: number;
+  food: FoodSelection;
+  collectableRelicToolBonus: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MacroSettings {
   secondsPerGather: number;
   bufferSeconds: number;

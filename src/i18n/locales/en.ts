@@ -5,6 +5,7 @@ export default {
     description: 'FFXIV Gatherer skill recommendation tool'
   },
   common: {
+    cancel: 'Cancel',
     backToSelection: 'Back to Selection',
     displayMode: 'Display Mode',
     displayModes: {
@@ -269,6 +270,11 @@ export default {
     },
     statsTitle: 'Player Equipment Stats',
     statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.',
+    gearProfilesTitle: 'Gear Stat Profiles',
+    gearProfilesDesc: 'Prepare multiple gatherer stat profiles and load them later in the solver or simulator.',
+    gearProfilesEntryTitle: 'Manage Gear Profiles',
+    gearProfilesEntryDesc: 'Set level, Gathering, Perception, GP, food, and collectable relic tool effect.',
+    gearProfilesManage: 'Open Profiles',
     macroTitle: 'Gathering Macro',
     macroDesc: 'Adjust how long the macro waits while asking you to manually gather. Default is 4 seconds per item plus a 2-second buffer.',
     macroSecondsPerGather: 'Wait per item',
@@ -704,6 +710,47 @@ export default {
       useTomeMode: 'Overwrite Settings',
       useCurrentMode: 'Keep Current Mode',
       cancel: 'Cancel'
+    }
+  },
+  gearProfiles: {
+    title: 'Gear Stat Profile Settings',
+    description: 'Save commonly used gatherer stats as profiles, then load them one-way when solving or simulating.',
+    back: 'Back',
+    listTitle: 'Profiles',
+    unnamed: 'Unnamed Profile',
+    defaultBadge: 'Default',
+    loadProfile: 'Load Profile',
+    relicShort: 'Relic',
+    defaults: {
+      miner: 'Default Miner',
+      botanist: 'Default Botanist'
+    },
+    jobs: {
+      universal: 'Miner / Botanist'
+    },
+    actions: {
+      add: 'Add',
+      save: 'Save Profile',
+      saved: 'Saved',
+      delete: 'Delete Profile'
+    },
+    editor: {
+      newTitle: 'New Profile',
+      editTitle: 'Edit Profile',
+      defaultLocked: 'Default profiles cannot be deleted and their job type is fixed.',
+      name: 'Profile Name',
+      namePlaceholder: 'Example: pentamelded gatherer set',
+      jobs: 'Applicable Jobs',
+      currentGp: 'Current GP',
+      maxGp: 'Equipment GP Cap',
+      relic: 'Relic Tool Effect',
+      relicDesc: 'Only affects collectable value increase in the collectable system.'
+    },
+    picker: {
+      title: 'Load Gear Profile',
+      description: 'Only profiles that apply to the current item job are shown.',
+      empty: 'No profile can be applied to this job yet.',
+      manage: 'Manage Profiles'
     }
   },
   game: {
