@@ -827,5 +827,13 @@ onMounted(async () => {
     flex-direction: row;
     justify-content: end;
   }
+
+  .gear-delete-button {
+    order: 1;
+  }
+
+  .gear-save-button {
+    order: 2;
+  }
 }
 </style>
