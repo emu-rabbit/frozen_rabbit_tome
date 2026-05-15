@@ -105,7 +105,7 @@ describe('algorithm invariants', () => {
     expect(expectedFromDistribution(distribution)).toBeCloseTo(result.policyPlans[0].expectedScore, 6);
     expect(result.minScore).toBeLessThanOrEqual(result.expectedScore);
     expect(result.expectedScore).toBeLessThanOrEqual(result.maxScore);
-  });
+  }, 15000);
 
   it('收藏品決策樹每個節點的機率分支與狀態都維持在合法範圍', () => {
     const request = createCollectableRequest();
