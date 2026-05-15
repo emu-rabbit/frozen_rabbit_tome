@@ -19,6 +19,7 @@ import { getRotationActionIcon, getRotationActionName, getRotationActionId } fro
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import type { SimulationRequest } from '../utils/rotationSimulator';
 import type { FoodQuality, GatheringFood, SimulationResponse } from '../types/game';
+import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 type FoodOption = {
   food: GatheringFood;
@@ -80,6 +81,7 @@ const selectedFoodModel = computed<FoodOption | null>({
     if (option) selectedFood.value.quality = option.quality;
   }
 });
+const activeItemJobs = computed(() => gatherableItemJobs(activeItem.value));
 
 const primaryPreviewStates = computed(() => {
   const request = buildRequest();
@@ -462,7 +464,7 @@ function progressPercent(range: number[], maxValue: number) {
           </div>
           <div class="min-w-0">
             <div class="item-badges">
-              <span>{{ t(`game.jobs.${activeItem.jobType}`) }}</span>
+              <span v-for="job in activeItemJobs" :key="job">{{ t(`game.jobs.${job}`) }}</span>
               <span>{{ t('createGuide.glv') }} {{ activeItem.glv }}</span>
               <span>Lv {{ itemRealLevel || '-' }}</span>
             </div>
@@ -764,7 +766,14 @@ function progressPercent(range: number[], maxValue: number) {
             <h4>{{ getItemName(activeItem.itemId) }}</h4>
             <div class="save-preview-badges">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ activeItem.glv ?? '-' }}</span>
-              <span class="item-job-badge">{{ activeItem.jobType ? t(`game.jobs.${activeItem.jobType}`) : '-' }}</span>
+              <span
+                v-for="job in activeItemJobs"
+                :key="job"
+                class="item-job-badge"
+              >
+                {{ t(`game.jobs.${job}`) }}
+              </span>
+              <span v-if="activeItemJobs.length === 0" class="item-job-badge">-</span>
               <span v-if="activeItem.isCrystalGathering" class="item-crystal-badge">
                 <i class="pi pi-sparkles"></i>
                 {{ t('createGuide.crystalGatheringSystem') }}

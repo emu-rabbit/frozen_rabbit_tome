@@ -7,6 +7,16 @@ import type {
   StoredCollectablePolicy
 } from './collectable';
 
+export type GatheringJob = 'miner' | 'botanist';
+
+export interface GatherableItemJobInfo {
+  jobType: GatheringJob;
+  glv: number;
+  perceptionReq: number;
+  gatheringItemId: number;
+  isTimedNode: boolean;
+}
+
 /** 可採集物品（僅限採礦師/園藝師，排除漁師與收藏品） */
 export interface GatherableItem {
   /** FFXIV 物品 ID */
@@ -25,8 +35,12 @@ export interface GatherableItem {
   isCollectable?: boolean;
   /** 是否為碎晶、水晶或晶簇的水晶採集系統物品 */
   isCrystalGathering?: boolean;
-  /** 採集職業類型 */
-  jobType?: 'miner' | 'botanist';
+  /** 目前選用的採集職業類型；雙職業物品仍保留此欄位給既有求解流程使用 */
+  jobType?: GatheringJob;
+  /** 此物品支援的採集職業類型 */
+  jobTypes?: GatheringJob[];
+  /** 各職業對應的採集資料 */
+  jobInfos?: Partial<Record<GatheringJob, GatherableItemJobInfo>>;
   perceptionReq?: number;
   /** GatheringItem ID (用於關聯 GatheringPointBase) */
   gatheringItemId?: number;

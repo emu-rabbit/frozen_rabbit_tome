@@ -1,12 +1,11 @@
 import { ref, computed, watch } from 'vue';
-import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses } from '../types/game';
+import type { FoodSelection, GatherableItem, GatheringJob, PlayerStats, NodeBonuses } from '../types/game';
 import { useSettings } from './useSettings';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import { useSimulator } from './useSimulator';
 
-type GatheringJob = NonNullable<GatherableItem['jobType']>;
 type SyncFromSettingsOptions = {
   forceStats?: boolean;
   resetTemporaryGp?: boolean;

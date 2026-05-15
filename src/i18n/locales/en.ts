@@ -285,10 +285,10 @@ export default {
       max: 'Scores only by the highest possible yield. Probability does not affect scoring.',
       min: 'Scores only by the lowest possible yield for more conservative planning.'
     },
-    debugTitle: 'Expert Debug Mode',
-    debugDesc: 'When enabled, solved results expose formulas, probability distributions, and optimality checks.',
-    solverDebugMode: 'Show solver debug info',
-    solverDebugModeDesc: 'Useful for validating rotations, expected values, and the search process. Keep it off for normal use.',
+    debugTitle: 'Expert Check Mode',
+    debugDesc: 'When enabled, solved results show formulas, probability distributions, and search statistics.',
+    solverDebugMode: 'Show solver check info',
+    solverDebugModeDesc: 'Useful for checking action plans, expected values, and the search process. Keep it off for normal use.',
   },
   solver: {
     title: 'Tome Solver',
@@ -448,7 +448,7 @@ export default {
         wiseReady: 'Whether Wise to the World is available after a durability restore.'
       },
       optimalityMethod: 'For each state, the solver exhaustively evaluates every legal action branch and the direct gather branch, then memoizes the best subproblem result. Within the current model, the root state therefore receives the globally best expected value.',
-      tieBreaker: 'If expected values are equal within epsilon, rotationPreferenceScore selects the equivalent rotation that better matches practical casting habits.',
+      tieBreaker: 'If expected values are equal within epsilon, the solver selects the equivalent action plan that better matches practical casting habits.',
       caveat: 'Optimality holds for the currently modeled regular-gathering skills, GP, integrity, success rate, Boon, Revisit, and Wise to the World probabilities. Collectables, crystal gathering, and manual interruption are not included.'
     }
   },

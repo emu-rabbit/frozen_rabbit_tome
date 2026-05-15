@@ -21,6 +21,7 @@ import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 import type { CollectableSolverResult } from '../types/collectable';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
+import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
 const {
@@ -190,6 +191,10 @@ function foodStatKey(stat: string) {
   if (stat === 'Gathering') return 'gathering';
   if (stat === 'Perception') return 'perception';
   return 'gp';
+}
+
+function activeItemJobs() {
+  return gatherableItemJobs(activeItem.value);
 }
 
 function searchFoods(event: { query: string }) {
@@ -547,8 +552,12 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           </div>
           <div class="flex-1">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <span class="text-xs font-bold px-2 py-0.5 bg-soft-green-500 text-white rounded-md uppercase tracking-wider">
-                {{ t(`game.jobs.${activeItem.jobType}`) }}
+              <span
+                v-for="job in activeItemJobs()"
+                :key="job"
+                class="text-xs font-bold px-2 py-0.5 bg-soft-green-500 text-white rounded-md uppercase tracking-wider"
+              >
+                {{ t(`game.jobs.${job}`) }}
               </span>
               <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
                 {{ t('createGuide.glv') }} {{ activeItem.glv }}
@@ -739,8 +748,12 @@ function strategyActionLabelLines(key: StrategyActionKey) {
           </div>
           <div class="flex-1">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <span class="text-xs font-bold px-2 py-0.5 bg-soft-green-500 text-white rounded-md uppercase tracking-wider">
-                {{ t(`game.jobs.${activeItem.jobType}`) }}
+              <span
+                v-for="job in activeItemJobs()"
+                :key="job"
+                class="text-xs font-bold px-2 py-0.5 bg-soft-green-500 text-white rounded-md uppercase tracking-wider"
+              >
+                {{ t(`game.jobs.${job}`) }}
               </span>
               <span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-slate-100 rounded-md">
                 {{ t('createGuide.glv') }} {{ activeItem.glv }}
@@ -1127,7 +1140,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             <h4>{{ defaultTomeName() }}</h4>
             <div class="save-preview-badges">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ activeItem.glv ?? '-' }}</span>
-              <span class="item-job-badge">{{ activeItem.jobType ? t(`game.jobs.${activeItem.jobType}`) : '-' }}</span>
+              <span
+                v-for="job in activeItemJobs()"
+                :key="job"
+                class="item-job-badge"
+              >
+                {{ t(`game.jobs.${job}`) }}
+              </span>
+              <span v-if="activeItemJobs().length === 0" class="item-job-badge">-</span>
               <span v-if="pendingCollectableSaveResult || activeItem.isCollectable" class="item-collectable-badge">
                 <i class="pi pi-box"></i>
                 {{ t('createGuide.collectableSystem') }}

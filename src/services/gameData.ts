@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import type { GatherableItem } from '../types/game';
+import type { GatherableItem, GatherableItemJobInfo, GatheringJob } from '../types/game';
 
 // ─── 常數設定 ───────────────────────────────────────────────────────────────
 
@@ -38,7 +38,17 @@ let rawEnglishActionNames: Record<string, any> = {};
 let rawTargetActionNames: Record<string, any> = {};
 let rawIcons: Record<string, string> = {};
 let rawActionIcons: Record<string, string | number | { icon?: string | number; Icon?: string | number }> = {};
-let itemInfoMap = new Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number; gatheringItemId: number; isTimedNode: boolean }>();
+type GatherableItemInfo = {
+  glv: number;
+  jobType: GatheringJob;
+  jobTypes: GatheringJob[];
+  jobInfos: Partial<Record<GatheringJob, GatherableItemJobInfo>>;
+  perceptionReq: number;
+  gatheringItemId: number;
+  isTimedNode: boolean;
+};
+
+let itemInfoMap = new Map<number, GatherableItemInfo>();
 let rawItemLevels: Record<string, any> = {};
 let rawGatheringItems: Record<string, any> = {};
 let rawGatheringSearchIndex: Record<string, { types: number[] }> = {};
@@ -111,9 +121,69 @@ function isCrystalGatheringItem(itemId: number): boolean {
   return CRYSTAL_GATHERING_ITEM_IDS.has(itemId);
 }
 
+function gatheringTypeToJob(typeId: number): GatheringJob {
+  return (typeId === 0 || typeId === 1) ? 'miner' : 'botanist';
+}
+
+function gatheringSearchTypesToJobs(types: number[] | undefined): GatheringJob[] {
+  const jobs = (types ?? []).map(gatheringTypeToJob);
+  return (['miner', 'botanist'] as GatheringJob[]).filter((job) => jobs.includes(job));
+}
+
+function pickPrimaryJob(jobTypes: GatheringJob[]): GatheringJob {
+  return jobTypes.includes('miner') ? 'miner' : 'botanist';
+}
+
+function mergeGatherableItemInfo(
+  current: GatherableItemInfo | undefined,
+  jobInfo: GatherableItemJobInfo
+): GatherableItemInfo {
+  const jobInfos = {
+    ...(current?.jobInfos ?? {}),
+    [jobInfo.jobType]: jobInfo
+  };
+  const jobTypes = (['miner', 'botanist'] as GatheringJob[]).filter((job) => !!jobInfos[job]);
+  const primaryJob = current ? pickPrimaryJob(jobTypes) : jobInfo.jobType;
+  const primaryInfo = jobInfos[primaryJob] ?? jobInfo;
+  const glv = Math.max(current?.glv ?? 0, jobInfo.glv);
+
+  return {
+    glv,
+    jobType: primaryJob,
+    jobTypes,
+    jobInfos,
+    perceptionReq: primaryInfo.perceptionReq,
+    gatheringItemId: primaryInfo.gatheringItemId,
+    isTimedNode: jobTypes.some((job) => !!jobInfos[job]?.isTimedNode)
+  };
+}
+
+function toGatherableItem(itemId: number, info: GatherableItemInfo): GatherableItem {
+  const localeRaw = extractName(rawTargetNames[itemId.toString()], currentLanguage.value);
+  const enRaw = extractName(rawEnglishNames[itemId.toString()], 'en');
+  const nameLocale = localeRaw || enRaw || `Item #${itemId}`;
+  const nameEn = enRaw || localeRaw || `Item #${itemId}`;
+
+  return {
+    itemId,
+    nameLocale,
+    nameEn,
+    glv: info.glv,
+    jobType: info.jobType,
+    jobTypes: info.jobTypes,
+    jobInfos: info.jobInfos,
+    perceptionReq: info.perceptionReq,
+    gatheringItemId: info.gatheringItemId,
+    isTimedNode: info.isTimedNode,
+    iconUrl: getItemIcon(itemId),
+    isFallback: !localeRaw && !!enRaw,
+    isCrystalGathering: isCrystalGatheringItem(itemId)
+  };
+}
+
 /** 1. 解析 GatheringItem.csv (ItemID -> GatheringItemID) */
-async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number; gatheringItemId: number; isTimedNode: boolean }>> {
-  const map = new Map<number, { glv: number; jobType: 'miner' | 'botanist'; perceptionReq: number; gatheringItemId: number; isTimedNode: boolean }>();
+async function parseGatheringItemCsv(csvText: string): Promise<Map<number, GatherableItemInfo>> {
+  const map = new Map<number, GatherableItemInfo>();
   const lines = csvText.split('\n');
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -128,21 +198,20 @@ async function parseGatheringItemCsv(csvText: string): Promise<Map<number, { glv
     const typeId = cleanInt(parts[7]);
 
     if (itemId > 0) {
-      const searchEntry = rawGatheringSearchIndex[itemId.toString()];
       const gatheringItem = rawGatheringItems[gItemId.toString()];
-      let jobType: 'miner' | 'botanist';
-      if (searchEntry && searchEntry.types && searchEntry.types.length > 0) {
-        const firstType = searchEntry.types[0];
-        jobType = (firstType === 0 || firstType === 1) ? 'miner' : 'botanist';
-      } else {
-        jobType = (typeId === 0 || typeId === 1) ? 'miner' : 'botanist';
-      }
-      map.set(itemId, {
-        glv: glvId,
-        jobType,
-        perceptionReq,
-        gatheringItemId: gItemId,
-        isTimedNode: isTimedGatheringItem(gatheringItem)
+      const searchEntry = rawGatheringSearchIndex[itemId.toString()];
+      const entryJobs = gatheringSearchTypesToJobs(searchEntry?.types);
+      const jobTypes = entryJobs.length > 0 ? entryJobs : [gatheringTypeToJob(typeId)];
+
+      jobTypes.forEach((jobType) => {
+        const jobInfo: GatherableItemJobInfo = {
+          jobType,
+          glv: glvId,
+          perceptionReq,
+          gatheringItemId: gItemId,
+          isTimedNode: isTimedGatheringItem(gatheringItem)
+        };
+        map.set(itemId, mergeGatherableItemInfo(map.get(itemId), jobInfo));
       });
     }
   }
@@ -320,19 +389,7 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
     const nameEn = enRaw || localeRaw;
     if (!nameLocale && !nameEn) continue;
     if (nameLocale.toLowerCase().includes(q) || nameEn.toLowerCase().includes(q)) {
-      results.push({
-        itemId,
-        nameLocale,
-        nameEn,
-        glv: info.glv,
-        jobType: info.jobType,
-        perceptionReq: info.perceptionReq,
-        gatheringItemId: info.gatheringItemId,
-        isTimedNode: info.isTimedNode,
-        iconUrl: rawIcons[itemId.toString()] ? `https://xivapi.com${rawIcons[itemId.toString()]}` : '',
-        isFallback: !localeRaw && !!enRaw,
-        isCrystalGathering: isCrystalGatheringItem(itemId)
-      });
+      results.push(toGatherableItem(itemId, info));
     }
   }
   results.sort((a, b) => b.glv - a.glv || a.itemId - b.itemId);
@@ -368,24 +425,7 @@ export function getGatherableItemById(itemId: number): GatherableItem | null {
   const info = itemInfoMap.get(itemId);
   if (!info) return null;
 
-  const localeRaw = extractName(rawTargetNames[itemId.toString()], currentLanguage.value);
-  const enRaw = extractName(rawEnglishNames[itemId.toString()], 'en');
-  const nameLocale = localeRaw || enRaw || `Item #${itemId}`;
-  const nameEn = enRaw || localeRaw || `Item #${itemId}`;
-
-  return {
-    itemId,
-    nameLocale,
-    nameEn,
-    glv: info.glv,
-    jobType: info.jobType,
-    perceptionReq: info.perceptionReq,
-    gatheringItemId: info.gatheringItemId,
-    isTimedNode: info.isTimedNode,
-    iconUrl: getItemIcon(itemId),
-    isFallback: !localeRaw && !!enRaw,
-    isCrystalGathering: isCrystalGatheringItem(itemId)
-  };
+  return toGatherableItem(itemId, info);
 }
 
 export function getActionIcon(actionId: number): string {

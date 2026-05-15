@@ -15,6 +15,7 @@ import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, cu
 import { getGatheringFood } from '../services/foodData';
 import { getRotationActionIconById, getRotationActionName } from '../services/actionIcons';
 import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
+import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -43,6 +44,10 @@ const filteredExperiments = computed(() => {
 
 function itemMeta(experiment: StoredExperiment) {
   return getGatherableItemById(experiment.itemId);
+}
+
+function itemJobs(experiment: StoredExperiment) {
+  return gatherableItemJobs(itemMeta(experiment));
 }
 
 function experimentDisplayName(experiment: StoredExperiment) {
@@ -220,7 +225,14 @@ function copyReportLabel(experiment: StoredExperiment) {
             <p v-if="shouldShowItemSubtitle(experiment)" class="item-subtitle">{{ getItemName(experiment.itemId) }}</p>
             <div class="item-meta">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(experiment)?.glv ?? '-' }}</span>
-              <span class="item-job-badge">{{ itemMeta(experiment)?.jobType ? t(`game.jobs.${itemMeta(experiment)?.jobType}`) : '-' }}</span>
+              <span
+                v-for="job in itemJobs(experiment)"
+                :key="job"
+                class="item-job-badge"
+              >
+                {{ t(`game.jobs.${job}`) }}
+              </span>
+              <span v-if="itemJobs(experiment).length === 0" class="item-job-badge">-</span>
               <span v-if="itemMeta(experiment)?.isCollectable" class="item-collectable-badge">
                 <i class="pi pi-box"></i>
                 {{ t('createGuide.collectableSystem') }}

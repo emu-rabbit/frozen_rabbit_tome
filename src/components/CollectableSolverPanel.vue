@@ -10,6 +10,7 @@ import CollectableDebugDialog from './CollectableDebugDialog.vue';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { getCollectableActionName } from '../services/collectableActions';
 import { useSettings } from '../composables/useSettings';
+import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -43,6 +44,10 @@ let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId);
 const isWorkerError = computed(() => collectableError.value === 'workerStale' || collectableError.value === 'workerFailed');
+const activeItemJobLabel = computed(() => {
+  const jobs = gatherableItemJobs(props.activeItem);
+  return jobs.length > 0 ? jobs.map((job) => t(`game.jobs.${job}`)).join(' / ') : '-';
+});
 
 onBeforeUnmount(() => {
   if (savedTimer) {
@@ -130,7 +135,7 @@ async function buildDecisionTreeMarkdown(result: CollectableSolverResult) {
     `# ${t('collectableSolver.export.title', { item: props.activeItem.nameLocale || props.activeItem.nameEn })}\n\n`,
     `- ${t('collectableSolver.export.exportedAt')}：${new Date().toISOString()}\n`,
     `- ${t('collectableSolver.export.itemId')}：${props.activeItem.itemId}\n`,
-    `- ${t('collectableSolver.export.job')}：${props.activeItem.jobType ? t(`game.jobs.${props.activeItem.jobType}`) : '-'}\n`,
+    `- ${t('collectableSolver.export.job')}：${activeItemJobLabel.value}\n`,
     `- ${t('collectableSolver.results.expectedScore', { unit: formatScripUnit(result.rewardItemId) })}：${Number(result.expectedScore.toFixed(2))}\n`,
     `- ${t('collectableSolver.export.rootNode')}：\`${policyGraph.rootId}\`\n`,
     `- ${t('collectableSolver.export.nodeCount')}：${policyGraph.nodeCount}\n\n`,

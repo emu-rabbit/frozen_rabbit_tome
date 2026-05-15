@@ -20,6 +20,7 @@ import { getCollectableActionIcon, getCollectableActionName } from '../services/
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
+import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -51,6 +52,10 @@ const filteredTomes = computed(() => {
 
 function itemMeta(tome: StoredTome) {
   return getGatherableItemById(tome.itemId);
+}
+
+function itemJobs(tome: StoredTome) {
+  return gatherableItemJobs(itemMeta(tome));
 }
 
 function tomeDisplayName(tome: StoredTome) {
@@ -330,7 +335,14 @@ function collectableScripUnit(tome: StoredTome) {
             <p v-if="shouldShowItemSubtitle(tome)" class="item-subtitle">{{ getItemName(tome.itemId) }}</p>
             <div class="item-meta">
               <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ itemMeta(tome)?.glv ?? '-' }}</span>
-              <span class="item-job-badge">{{ itemMeta(tome)?.jobType ? t(`game.jobs.${itemMeta(tome)?.jobType}`) : '-' }}</span>
+              <span
+                v-for="job in itemJobs(tome)"
+                :key="job"
+                class="item-job-badge"
+              >
+                {{ t(`game.jobs.${job}`) }}
+              </span>
+              <span v-if="itemJobs(tome).length === 0" class="item-job-badge">-</span>
               <span v-if="isCollectableTome(tome) || itemMeta(tome)?.isCollectable" class="item-collectable-badge">
                 <i class="pi pi-box"></i>
                 {{ t('createGuide.collectableSystem') }}

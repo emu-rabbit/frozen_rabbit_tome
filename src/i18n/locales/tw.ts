@@ -286,10 +286,10 @@ export default {
       max: '只看手法可達到的最高獲得量，機率不會進入評分。',
       min: '只看手法最差情況下的最低獲得量，適合想要保底的採集規劃。'
     },
-    debugTitle: '專家偵錯模式',
-    debugDesc: '開啟後，求解結果會提供公式、機率分布與最優性檢查資訊。',
-    solverDebugMode: '顯示求解器偵錯資訊',
-    solverDebugModeDesc: '適合驗證 rotation、期望值與搜尋過程；一般採集時可保持關閉。',
+    debugTitle: '專家檢查模式',
+    debugDesc: '開啟後，求解結果會顯示公式、機率分布與搜尋統計。',
+    solverDebugMode: '顯示求解器檢查資訊',
+    solverDebugModeDesc: '適合核對技能手法、期望值與搜尋過程；一般採集時可保持關閉。',
   },
   solver: {
     title: '秘笈求解器',
@@ -449,7 +449,7 @@ export default {
         wiseReady: '理智同興是否可用，代表耐久恢復技能後可能取得的免費恢復機會。'
       },
       optimalityMethod: '求解器會對每個狀態窮舉可施放技能與直接採集分支，使用 memoization 保存子問題最佳解；因此在目前模型內，根狀態取得的就是全域最佳期望值。',
-      tieBreaker: '若期望值在 epsilon 內相同，使用 rotationPreferenceScore 選擇更符合施放習慣的等價手法。',
+      tieBreaker: '若期望值在 epsilon 內相同，會選擇更符合施放習慣的等價手法。',
       caveat: '最優性成立於目前建模的普通採集技能、GP、耐久、成功率、Boon、再起與理智同興機率；未納入收藏品、水晶採集與玩家手動中斷。'
     }
   },

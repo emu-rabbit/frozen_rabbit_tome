@@ -285,10 +285,10 @@ export default {
       max: '只看手法可达到的最高获得量，概率不会进入评分。',
       min: '只看手法最差情况下的最低获得量，适合想要保底的采集规划。'
     },
-    debugTitle: '专家调试模式',
-    debugDesc: '开启后，求解结果会提供公式、概率分布与最优性检查信息。',
-    solverDebugMode: '显示求解器调试信息',
-    solverDebugModeDesc: '适合验证 rotation、期望值与搜索过程；一般采集时可保持关闭。',
+    debugTitle: '专家检查模式',
+    debugDesc: '开启后，求解结果会显示公式、概率分布与搜索统计。',
+    solverDebugMode: '显示求解器检查信息',
+    solverDebugModeDesc: '适合核对技能手法、期望值与搜索过程；一般采集时可保持关闭。',
   },
   solver: {
     title: '秘籍求解器',
@@ -448,7 +448,7 @@ export default {
         wiseReady: '理智同兴是否可用，代表耐久恢复技能后可能取得的免费恢复机会。'
       },
       optimalityMethod: '求解器会对每个状态穷举可施放技能与直接采集分支，使用 memoization 保存子问题最佳解；因此在目前模型内，根状态取得的就是全局最佳期望值。',
-      tieBreaker: '若期望值在 epsilon 内相同，使用 rotationPreferenceScore 选择更符合施放习惯的等价手法。',
+      tieBreaker: '若期望值在 epsilon 内相同，会选择更符合施放习惯的等价手法。',
       caveat: '最优性成立于目前建模的普通采集技能、GP、耐久、成功率、Boon、再起与理智同兴概率；未纳入收藏品、水晶采集与玩家手动中断。'
     }
   },

@@ -1,13 +1,12 @@
 import { ref, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { FoodSelection, GatherableItem, PlayerStats, NodeBonuses, StoredTome } from '../types/game';
+import type { FoodSelection, GatherableItem, GatheringJob, PlayerStats, NodeBonuses, StoredTome } from '../types/game';
 import { useSettings } from './useSettings';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity, getGatherableItemById } from '../services/gameData';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse } from '../types/game';
 
-type GatheringJob = NonNullable<GatherableItem['jobType']>;
 type TomeEditingOptions = {
   syncObjectiveMode?: boolean;
 };
@@ -56,6 +55,7 @@ const createSolveInputSignature = () => {
   return JSON.stringify({
     itemId: activeItem.value?.itemId ?? null,
     jobType: activeItem.value?.jobType ?? null,
+    jobTypes: activeItem.value?.jobTypes ?? [],
     isTimedNode: activeItem.value?.isTimedNode ?? false,
     stats: solverStats.value,
     selectedFood: selectedFood.value,

@@ -10,9 +10,10 @@ import { useFavoriteItems } from '../composables/useFavoriteItems';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useSolver } from '../composables/useSolver';
 import { getGatherableItemById, isGameDataLoading } from '../services/gameData';
-import type { GatherableItem } from '../types/game';
+import type { GatherableItem, GatheringJob } from '../types/game';
+import { gatherableItemSupportsJob } from '../utils/gatherableItemJobs';
 
-type FavoriteFilterJob = 'miner' | 'botanist';
+type FavoriteFilterJob = GatheringJob;
 type FavoriteFilterSystem = 'regular' | 'collectable' | 'crystal';
 
 interface FavoriteItemFilters {
@@ -68,7 +69,7 @@ const filteredItems = computed(() => displayItems.value.filter((item) => {
   if (maxGlv !== null && item.glv > maxGlv) return false;
 
   const selectedJobs = filterJobs();
-  if (isLimitedSelection(selectedJobs, ALL_JOBS) && (!item.jobType || !selectedJobs.includes(item.jobType))) {
+  if (isLimitedSelection(selectedJobs, ALL_JOBS) && !selectedJobs.some((job) => gatherableItemSupportsJob(item, job))) {
     return false;
   }
 
