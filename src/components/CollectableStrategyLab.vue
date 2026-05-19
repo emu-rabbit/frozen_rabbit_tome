@@ -29,7 +29,7 @@ const props = defineProps<{
 }>();
 
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
-const expandedRuleId = ref(rules.value[0]?.id ?? '');
+const editingRuleId = ref('');
 const selectedUncoveredId = ref('');
 const internalMaxNodes = 1200;
 
@@ -53,6 +53,7 @@ const treeResult = computed(() => {
 });
 const summary = computed(() => treeResult.value?.summary);
 const uncoveredNodes = computed(() => treeResult.value?.uncoveredNodes ?? []);
+const editingRule = computed(() => rules.value.find((rule) => rule.id === editingRuleId.value) ?? null);
 const selectedUncoveredNode = computed(() => (
   uncoveredNodes.value.find((node) => node.id === selectedUncoveredId.value) ?? uncoveredNodes.value[0]
 ));
@@ -98,14 +99,12 @@ function addRule() {
       actions: ['collect']
     }
   ];
-  expandedRuleId.value = id;
+  editingRuleId.value = id;
 }
 
 function removeRule(ruleId: string) {
   rules.value = rules.value.filter((rule) => rule.id !== ruleId);
-  if (expandedRuleId.value === ruleId) {
-    expandedRuleId.value = rules.value[0]?.id ?? '';
-  }
+  if (editingRuleId.value === ruleId) editingRuleId.value = '';
 }
 
 function moveRule(ruleId: string, direction: -1 | 1) {
@@ -118,12 +117,12 @@ function moveRule(ruleId: string, direction: -1 | 1) {
   rules.value = nextRules;
 }
 
-function expandRule(ruleId: string) {
-  expandedRuleId.value = ruleId;
+function openRuleEditor(ruleId: string) {
+  editingRuleId.value = ruleId;
 }
 
-function isRuleExpanded(ruleId: string) {
-  return expandedRuleId.value === ruleId;
+function closeRuleEditor() {
+  editingRuleId.value = '';
 }
 
 function addCondition(rule: CollectableStrategyRule) {
@@ -257,7 +256,7 @@ function makeId() {
       <div class="strategy-column">
         <div class="column-header">
           <div>
-            <span>策略編輯器</span>
+            <span>策略列表</span>
             <h2>規則由上而下套用</h2>
           </div>
           <Button icon="pi pi-plus" label="新增策略" class="p-button-sm rounded-xl" @click="addRule" />
@@ -269,128 +268,43 @@ function makeId() {
           <p>新增第一條策略後，右側會立刻展開決策樹並顯示尚待決策的狀態。</p>
         </div>
 
-        <article
-          v-for="(rule, ruleIndex) in rules"
-          :key="rule.id"
-          class="rule-card"
-          :class="{ 'is-expanded': isRuleExpanded(rule.id) }"
-          tabindex="0"
-          @click="expandRule(rule.id)"
-          @focusin="expandRule(rule.id)"
-        >
-          <header class="rule-card-header">
-            <label class="rule-enabled">
-              <input v-model="rule.enabled" type="checkbox" />
-              <span>#{{ ruleIndex + 1 }}</span>
-            </label>
-            <input v-model="rule.name" class="rule-name-input" />
-            <span class="coverage-pill">{{ coverageText(rule) }}</span>
-            <div class="rule-tools">
-              <button type="button" :disabled="ruleIndex === 0" title="上移" @click.stop="moveRule(rule.id, -1)">
-                <i class="pi pi-arrow-up"></i>
-              </button>
-              <button type="button" :disabled="ruleIndex === rules.length - 1" title="下移" @click.stop="moveRule(rule.id, 1)">
-                <i class="pi pi-arrow-down"></i>
-              </button>
-              <button type="button" title="刪除" @click.stop="removeRule(rule.id)">
-                <i class="pi pi-trash"></i>
-              </button>
-            </div>
-          </header>
-
-          <div class="rule-summary-row" :class="{ muted: !rule.enabled }">
-            <span>{{ conditionSummary(rule) }}</span>
-            <i class="pi pi-arrow-right"></i>
-            <strong>{{ actionSummary(rule) }}</strong>
-          </div>
-
-          <div v-if="isRuleExpanded(rule.id)" class="rule-editor-body">
-            <div class="rule-mode-row">
-              <span>符合</span>
-              <select v-model="rule.mode">
-                <option value="all">全部條件</option>
-                <option value="any">任一條件</option>
-              </select>
-              <span>時執行</span>
-            </div>
-
-            <div class="condition-list">
-            <div
-              v-for="condition in rule.conditions"
-              :key="condition.id"
-              class="condition-row"
-              :class="{ 'is-boolean': !isNumericStrategyField(condition.field) }"
-            >
-              <select
-                :value="condition.field"
-                @change="updateConditionField(condition, ($event.target as HTMLSelectElement).value as CollectableStrategyField)"
-              >
-                <option v-for="option in stateFieldOptions" :key="option.field" :value="option.field">
-                  {{ option.label }}
-                </option>
-              </select>
-
-              <template v-if="isNumericStrategyField(condition.field)">
-                <select v-model="condition.comparator">
-                  <option v-for="comparator in ['<', '<=', '=', '>=', '>']" :key="comparator" :value="comparator">
-                    {{ comparatorLabel(comparator as CollectableStrategyComparator) }}
-                  </option>
-                </select>
-                <input v-model.number="condition.value" type="number" />
-              </template>
-
-              <template v-else>
-                <select v-model="condition.value">
-                  <option :value="true">有</option>
-                  <option :value="false">無</option>
-                </select>
-              </template>
-
-              <button type="button" class="icon-button" title="移除條件" @click="removeCondition(rule, condition.id)">
-                <i class="pi pi-times"></i>
-              </button>
-            </div>
-            <button type="button" class="text-tool" @click="addCondition(rule)">
-              <i class="pi pi-plus"></i>
-              加條件
-            </button>
-            </div>
-
-            <div class="action-chain">
-            <div class="action-chain-header">
-              <span>{{ rule.actions.length > 1 ? '串聯技能' : '單一技能' }}</span>
-              <button type="button" class="text-tool" @click="addAction(rule)">
-                <i class="pi pi-plus"></i>
-                加技能
-              </button>
-            </div>
-            <div class="action-list">
-              <div v-for="(action, actionIndex) in rule.actions" :key="`${rule.id}-${actionIndex}`" class="action-chip">
-                <div class="selected-action">
-                  <img v-if="actionIcon(action)" :src="actionIcon(action)" alt="" />
-                  <strong>{{ actionName(action) }}</strong>
-                </div>
-                <button type="button" :disabled="rule.actions.length <= 1" title="移除技能" @click="removeAction(rule, actionIndex)">
-                  <i class="pi pi-times"></i>
+        <div v-if="rules.length > 0" class="strategy-list" aria-label="收藏品策略列表">
+          <article
+            v-for="(rule, ruleIndex) in rules"
+            :key="rule.id"
+            class="rule-card"
+            :class="{ 'is-disabled': !rule.enabled }"
+          >
+            <header class="rule-card-header">
+              <label class="rule-enabled">
+                <input v-model="rule.enabled" type="checkbox" />
+                <span>#{{ ruleIndex + 1 }}</span>
+              </label>
+              <strong class="rule-name-display">{{ rule.name }}</strong>
+              <span class="coverage-pill">{{ coverageText(rule) }}</span>
+              <div class="rule-tools">
+                <button type="button" :disabled="ruleIndex === 0" title="上移" @click="moveRule(rule.id, -1)">
+                  <i class="pi pi-arrow-up"></i>
                 </button>
-                <div class="action-option-list">
-                  <button
-                    v-for="option in collectableStrategyActionKinds"
-                    :key="option"
-                    type="button"
-                    class="action-option"
-                    :class="{ active: action === option }"
-                    @click="setAction(rule, actionIndex, option)"
-                  >
-                    <img v-if="actionIcon(option)" :src="actionIcon(option)" alt="" />
-                    <span>{{ actionName(option) }}</span>
-                  </button>
-                </div>
+                <button type="button" :disabled="ruleIndex === rules.length - 1" title="下移" @click="moveRule(rule.id, 1)">
+                  <i class="pi pi-arrow-down"></i>
+                </button>
+                <button type="button" title="編輯" @click="openRuleEditor(rule.id)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button type="button" title="刪除" @click="removeRule(rule.id)">
+                  <i class="pi pi-trash"></i>
+                </button>
               </div>
+            </header>
+
+            <div class="rule-summary-row" :class="{ muted: !rule.enabled }">
+              <span>{{ conditionSummary(rule) }}</span>
+              <i class="pi pi-arrow-right"></i>
+              <strong>{{ actionSummary(rule) }}</strong>
             </div>
-            </div>
-          </div>
-        </article>
+          </article>
+        </div>
       </div>
 
       <aside class="tree-column">
@@ -471,22 +385,136 @@ function makeId() {
         </template>
       </aside>
     </section>
+
+    <Teleport to="body">
+      <div v-if="editingRule" class="rule-editor-overlay" role="presentation" @click.self="closeRuleEditor">
+        <section class="rule-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="collectable-rule-editor-title">
+          <header class="rule-editor-dialog-header">
+            <div>
+              <span>策略設定</span>
+              <h2 id="collectable-rule-editor-title">{{ editingRule.name }}</h2>
+            </div>
+            <button type="button" class="dialog-close-button" aria-label="關閉策略設定" @click="closeRuleEditor">
+              <i class="pi pi-times"></i>
+            </button>
+          </header>
+
+          <div class="rule-editor-body">
+            <label class="dialog-name-field">
+              <span>策略名稱</span>
+              <input v-model="editingRule.name" type="text" />
+            </label>
+
+            <div class="rule-mode-row">
+              <span>符合</span>
+              <select v-model="editingRule.mode">
+                <option value="all">全部條件</option>
+                <option value="any">任一條件</option>
+              </select>
+              <span>時執行</span>
+            </div>
+
+            <div class="condition-list">
+              <div
+                v-for="condition in editingRule.conditions"
+                :key="condition.id"
+                class="condition-row"
+                :class="{ 'is-boolean': !isNumericStrategyField(condition.field) }"
+              >
+                <select
+                  :value="condition.field"
+                  @change="updateConditionField(condition, ($event.target as HTMLSelectElement).value as CollectableStrategyField)"
+                >
+                  <option v-for="option in stateFieldOptions" :key="option.field" :value="option.field">
+                    {{ option.label }}
+                  </option>
+                </select>
+
+                <template v-if="isNumericStrategyField(condition.field)">
+                  <select v-model="condition.comparator">
+                    <option v-for="comparator in ['<', '<=', '=', '>=', '>']" :key="comparator" :value="comparator">
+                      {{ comparatorLabel(comparator as CollectableStrategyComparator) }}
+                    </option>
+                  </select>
+                  <input v-model.number="condition.value" type="number" />
+                </template>
+
+                <template v-else>
+                  <select v-model="condition.value">
+                    <option :value="true">有</option>
+                    <option :value="false">無</option>
+                  </select>
+                </template>
+
+                <button type="button" class="icon-button" title="移除條件" @click="removeCondition(editingRule, condition.id)">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <button type="button" class="text-tool" @click="addCondition(editingRule)">
+                <i class="pi pi-plus"></i>
+                加條件
+              </button>
+            </div>
+
+            <div class="action-chain">
+              <div class="action-chain-header">
+                <span>{{ editingRule.actions.length > 1 ? '串聯技能' : '單一技能' }}</span>
+                <button type="button" class="text-tool" @click="addAction(editingRule)">
+                  <i class="pi pi-plus"></i>
+                  加技能
+                </button>
+              </div>
+              <div class="action-list">
+                <div v-for="(action, actionIndex) in editingRule.actions" :key="`${editingRule.id}-${actionIndex}`" class="action-chip">
+                  <div class="selected-action">
+                    <img v-if="actionIcon(action)" :src="actionIcon(action)" alt="" />
+                    <strong>{{ actionName(action) }}</strong>
+                  </div>
+                  <button type="button" :disabled="editingRule.actions.length <= 1" title="移除技能" @click="removeAction(editingRule, actionIndex)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                  <div class="action-option-list">
+                    <button
+                      v-for="option in collectableStrategyActionKinds"
+                      :key="option"
+                      type="button"
+                      class="action-option"
+                      :class="{ active: action === option }"
+                      @click="setAction(editingRule, actionIndex, option)"
+                    >
+                      <img v-if="actionIcon(option)" :src="actionIcon(option)" alt="" />
+                      <span>{{ actionName(option) }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="rule-editor-dialog-footer">
+            <Button label="完成" icon="pi pi-check" class="p-button-sm rounded-xl" @click="closeRuleEditor" />
+          </footer>
+        </section>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .collectable-lab {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 1rem 1rem 3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 3rem;
   display: grid;
   gap: 1rem;
+  --strategy-workspace-height: clamp(34rem, 62vh, 46rem);
 }
 
 .strategy-column,
 .tree-column,
 .rule-card,
-.uncovered-detail {
+.uncovered-detail,
+.rule-editor-dialog {
   border: 1px solid #e2e8f0;
   border-radius: 1rem;
   background: white;
@@ -496,7 +524,8 @@ function makeId() {
 :global(html.dark .strategy-column),
 :global(html.dark .tree-column),
 :global(html.dark .rule-card),
-:global(html.dark .uncovered-detail) {
+:global(html.dark .uncovered-detail),
+:global(html.dark .rule-editor-dialog) {
   border-color: #334155;
   background: #0f172a;
 }
@@ -528,6 +557,7 @@ function makeId() {
 }
 
 :global(html.dark .column-header h2),
+:global(html.dark .rule-editor-dialog-header h2),
 :global(html.dark .uncovered-detail h4),
 :global(html.dark .path-box strong) {
   color: #f8fafc;
@@ -540,6 +570,7 @@ function makeId() {
 }
 
 .column-header span,
+.rule-editor-dialog-header span,
 .summary-grid span,
 .uncovered-detail > span {
   color: #64748b;
@@ -551,7 +582,7 @@ function makeId() {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(22rem, 0.85fr);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .strategy-column,
@@ -559,18 +590,28 @@ function makeId() {
   display: grid;
   gap: 0.85rem;
   padding: 1rem;
+  height: var(--strategy-workspace-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.strategy-column {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
 }
 
 .tree-column {
-  position: sticky;
-  top: 1rem;
+  align-content: start;
+  overflow-y: auto;
 }
 
 .column-header,
 .rule-card-header,
 .rule-mode-row,
 .action-chain-header,
-.panel-title-row {
+.panel-title-row,
+.rule-editor-dialog-header,
+.rule-editor-dialog-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -578,35 +619,48 @@ function makeId() {
 }
 
 .column-header h2,
-.uncovered-panel h3 {
+.uncovered-panel h3,
+.rule-editor-dialog-header h2 {
   margin: 0.1rem 0 0;
   color: #334155;
   font-size: 1.05rem;
   font-weight: 900;
 }
 
+.strategy-list {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-gutter: stable;
+}
+
 .rule-card {
   display: grid;
   gap: 0.8rem;
   padding: 0.85rem;
-  cursor: pointer;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .rule-card:hover,
-.rule-card:focus-within,
-.rule-card.is-expanded {
+.rule-card:focus-within {
   border-color: #52a890;
   box-shadow: 0 10px 28px rgb(82 168 144 / 0.12);
 }
 
-.rule-card:focus {
-  outline: none;
+.rule-card.is-disabled {
+  opacity: 0.72;
 }
 
 .strategy-empty {
+  min-height: 0;
+  height: 100%;
   display: grid;
   justify-items: center;
+  align-content: center;
   gap: 0.45rem;
   border: 2px dashed #d1fae5;
   border-radius: 1rem;
@@ -654,7 +708,21 @@ function makeId() {
   font-weight: 900;
 }
 
-.rule-name-input,
+.rule-name-display {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #334155;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(html.dark .rule-name-display) {
+  color: #f8fafc;
+}
+
+.dialog-name-field input,
 .condition-row input,
 .condition-row select,
 .rule-mode-row select {
@@ -667,7 +735,7 @@ function makeId() {
   font-weight: 800;
 }
 
-:global(html.dark .rule-name-input),
+:global(html.dark .dialog-name-field input),
 :global(html.dark .condition-row input),
 :global(html.dark .condition-row select),
 :global(html.dark .rule-mode-row select) {
@@ -676,8 +744,19 @@ function makeId() {
   color: #e2e8f0;
 }
 
-.rule-name-input {
-  flex: 1 1 auto;
+.dialog-name-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dialog-name-field span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.dialog-name-field input {
+  width: 100%;
 }
 
 .rule-tools {
@@ -763,12 +842,9 @@ function makeId() {
 .rule-editor-body {
   display: grid;
   gap: 0.8rem;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 0.8rem;
-}
-
-:global(html.dark .rule-editor-body) {
-  border-top-color: #334155;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .condition-list,
@@ -1097,14 +1173,77 @@ function makeId() {
   color: #cbd5e1;
 }
 
+.rule-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgb(15 23 42 / 0.42);
+  padding: 1rem;
+}
+
+.rule-editor-dialog {
+  width: min(100%, 58rem);
+  max-height: min(88vh, 48rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.rule-editor-dialog-header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.85rem;
+}
+
+:global(html.dark .rule-editor-dialog-header) {
+  border-bottom-color: #334155;
+}
+
+.dialog-close-button {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1fae5;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  color: #0f766e;
+}
+
+:global(html.dark .dialog-close-button) {
+  border-color: #334155;
+  background: rgb(2 6 23 / 0.5);
+  color: #99f6e4;
+}
+
+.rule-editor-dialog-footer {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.85rem;
+  justify-content: flex-end;
+}
+
+:global(html.dark .rule-editor-dialog-footer) {
+  border-top-color: #334155;
+}
+
 @media (max-width: 1040px) {
   .lab-layout,
   .uncovered-layout {
     grid-template-columns: 1fr;
   }
 
+  .strategy-column,
   .tree-column {
-    position: static;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .strategy-list {
+    max-height: 32rem;
   }
 }
 
