@@ -40,7 +40,8 @@ interface SearchResult {
   expectedScore: number;
   expectedReward: CollectableRewardVector;
   outcomes: Map<number, number>;
-  policy: CollectablePolicyNode;
+  recommendedActionKind: CollectableActionKind;
+  habit: SearchHabitMetrics;
   gpSpent: number;
   actionCount: number;
   nodeCount: number;
@@ -49,6 +50,7 @@ interface SearchResult {
 interface SearchRunResult extends SearchResult {
   startingGp: number;
   search: CollectableSearchDebugInfo;
+  policy: CollectablePolicyNode;
 }
 
 interface ActionOption {
@@ -71,6 +73,13 @@ type ScoreSummary = {
   maxScore: number;
   minScoreChance: number;
   maxScoreChance: number;
+};
+
+type SearchHabitMetrics = {
+  nextCollectSuccessDepth: number | null;
+  wiseToTheWorldDepth: number | null;
+  restorePreferenceScore: number;
+  preferredRestoreCount: number;
 };
 
 const EV_EPSILON = 0.0000001;
@@ -156,7 +165,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         expectedScore: 0,
         expectedReward: createZeroReward(),
         outcomes: new Map([[0, 1]]),
-        policy: emptyPolicy(state),
+        recommendedActionKind: 'collect',
+        habit: emptyHabitMetrics(),
         gpSpent: 0,
         actionCount: 0,
         nodeCount: 1
@@ -296,6 +306,17 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     actionCount: number,
     rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward()
   ): SearchResult {
+    const branchesWithReward = createBranchesWithReward(state, kind, rewardForBranch);
+    const results = branchesWithReward.map((branch) => nextSolve(branch.state));
+
+    return buildSearchResult(state, kind, branchesWithReward, results, gpSpent, actionCount);
+  }
+
+  function createBranchesWithReward(
+    state: SearchState,
+    kind: CollectableActionKind,
+    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward()
+  ): WeightedState[] {
     const branches: WeightedState[] = applyCollectableAction(kind, state, mechanics).map((transition) => ({
       state: transition.state,
       probability: transition.probability,
@@ -303,16 +324,13 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       labelKeys: transition.labelKeys,
       conditionKey: transition.conditionKey
     }));
-    const branchesWithReward = branches.map((branch) => ({
+    return branches.map((branch) => ({
       ...branch,
       reward: rewardForBranch(branch)
     }));
-    const results = branchesWithReward.map((branch) => nextSolve(branch.state));
-
-    return buildPolicyResult(state, kind, branchesWithReward, results, gpSpent, actionCount);
   }
 
-  function buildPolicyResult(
+  function buildSearchResult(
     state: SearchState,
     kind: CollectableActionKind,
     branches: WeightedState[],
@@ -323,7 +341,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     let expectedReward = createZeroReward();
     let expectedScore = 0;
     let nodeCount = 1;
-    const policyBranches: CollectablePolicyBranch[] = branches.map((branch, index) => {
+    branches.forEach((branch, index) => {
       const result = results[index];
       const branchReward = addCollectableRewards(branch.reward ?? createZeroReward(), result.expectedReward);
       const branchScore = scoreCollectableReward(branchReward, objective);
@@ -331,21 +349,6 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       expectedScore += branchScore * branch.probability;
       nodeCount += result.nodeCount;
       activeSearchStats && (activeSearchStats.branchCount += 1);
-
-      return {
-        labelKey: branch.labelKey,
-        labelKeys: branch.labelKeys,
-        conditionKey: branch.conditionKey,
-        probability: branch.probability * 100,
-        outcome: {
-          gp: branch.state.gp,
-          integrity: branch.state.integrity,
-          collectability: branch.state.collectability,
-          reward: branchReward,
-          score: branchScore
-        },
-        next: result.policy.branches.length > 0 ? result.policy : undefined
-      };
     });
     const outcomes = mergeOutcomeDistributions(branches, results);
 
@@ -353,17 +356,11 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       expectedScore,
       expectedReward,
       outcomes,
+      recommendedActionKind: kind,
+      habit: buildHabitMetrics(state, kind, results),
       gpSpent: gpSpent + weightedSum(results, branches, 'gpSpent'),
       actionCount: actionCount + weightedSum(results, branches, 'actionCount'),
-      nodeCount,
-      policy: {
-        id: buildMemoKey(state),
-        state: summarizeState(state),
-        recommendedAction: actionSummary(kind, jobType),
-        expectedScore: Number(expectedScore.toFixed(6)),
-        expectedReward,
-        branches: policyBranches
-      }
+      nodeCount
     };
   }
 
@@ -400,59 +397,74 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function habitPreferenceScore(result: SearchResult): number {
-    let score = 0;
-    const nextCollectSuccessDepth = findActionDepth(result.policy, 'nextCollectSuccess');
+    let score = result.habit.restorePreferenceScore;
+    const nextCollectSuccessDepth = result.habit.nextCollectSuccessDepth;
 
     if (nextCollectSuccessDepth !== null) {
       score += 1000 - nextCollectSuccessDepth * 50;
     }
 
-    const wiseToTheWorldDepth = findActionDepth(result.policy, 'wiseToTheWorld');
+    const wiseToTheWorldDepth = result.habit.wiseToTheWorldDepth;
     if (wiseToTheWorldDepth !== null) {
       score += 800 - wiseToTheWorldDepth * 40;
     }
 
-    score += integrityRestorePreferenceScore(result.policy);
-
     return score;
   }
 
-  function integrityRestorePreferenceScore(
-    node: CollectablePolicyNode,
-    depth = 0,
-    visited = new Set<string>()
-  ): number {
-    if (visited.has(node.id)) return 0;
-    visited.add(node.id);
-
-    let score = 0;
-    if (node.recommendedAction.kind === 'restoreIntegrity') {
-      const missingIntegrity = mechanics.maxIntegrity - node.state.integrity;
-      const preferredMissingIntegrity = stats.level >= 90 ? 2 : 1;
-      score += missingIntegrity >= preferredMissingIntegrity ? 500 - depth * 20 : -500;
-    }
-
-    return node.branches.reduce((total, branch) => {
-      return total + (branch.next ? integrityRestorePreferenceScore(branch.next, depth + 1, visited) : 0);
-    }, score);
+  function emptyHabitMetrics(): SearchHabitMetrics {
+    return {
+      nextCollectSuccessDepth: null,
+      wiseToTheWorldDepth: null,
+      restorePreferenceScore: 0,
+      preferredRestoreCount: 0
+    };
   }
 
-  function findActionDepth(
-    node: CollectablePolicyNode,
-    actionKind: CollectableActionKind,
-    depth = 0,
-    visited = new Set<string>()
+  function buildHabitMetrics(
+    state: SearchState,
+    kind: CollectableActionKind,
+    results: SearchResult[]
+  ): SearchHabitMetrics {
+    const childHabits = results.map((result) => result.habit);
+    const currentRestore = getImmediateRestorePreference(state, kind);
+    const childRestoreScore = childHabits.reduce((total, habit) => (
+      total + habit.restorePreferenceScore - habit.preferredRestoreCount * 20
+    ), 0);
+    const childPreferredRestoreCount = childHabits.reduce((total, habit) => total + habit.preferredRestoreCount, 0);
+
+    return {
+      nextCollectSuccessDepth: getActionDepthFromChildHabits(kind, 'nextCollectSuccess', childHabits),
+      wiseToTheWorldDepth: getActionDepthFromChildHabits(kind, 'wiseToTheWorld', childHabits),
+      restorePreferenceScore: currentRestore.score + childRestoreScore,
+      preferredRestoreCount: (currentRestore.preferred ? 1 : 0) + childPreferredRestoreCount
+    };
+  }
+
+  function getActionDepthFromChildHabits(
+    kind: CollectableActionKind,
+    target: 'nextCollectSuccess' | 'wiseToTheWorld',
+    childHabits: SearchHabitMetrics[]
   ): number | null {
-    if (visited.has(node.id)) return null;
-    visited.add(node.id);
+    if (kind === target) return 0;
 
-    if (node.recommendedAction.kind === actionKind) return depth;
-
-    const childDepths = node.branches
-      .map((branch) => branch.next ? findActionDepth(branch.next, actionKind, depth + 1, visited) : null)
-      .filter((childDepth): childDepth is number => childDepth !== null);
+    const childDepths = childHabits
+      .map((habit) => target === 'nextCollectSuccess' ? habit.nextCollectSuccessDepth : habit.wiseToTheWorldDepth)
+      .filter((depth): depth is number => depth !== null)
+      .map((depth) => depth + 1);
 
     return childDepths.length > 0 ? Math.min(...childDepths) : null;
+  }
+
+  function getImmediateRestorePreference(state: SearchState, kind: CollectableActionKind) {
+    if (kind !== 'restoreIntegrity') return { score: 0, preferred: false };
+
+    const missingIntegrity = mechanics.maxIntegrity - state.integrity;
+    const preferredMissingIntegrity = stats.level >= 90 ? 2 : 1;
+
+    return missingIntegrity >= preferredMissingIntegrity
+      ? { score: 500, preferred: true }
+      : { score: -500, preferred: false };
   }
 
   function scoreSearchResult(result: SearchResult): number {
@@ -460,6 +472,58 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     if (objectiveMode === 'min') return getMinScore(result.outcomes);
 
     return result.expectedScore;
+  }
+
+  function buildPolicyFromState(
+    state: SearchState,
+    visited = new Map<string, CollectablePolicyNode>()
+  ): CollectablePolicyNode {
+    if (state.integrity <= 0) return emptyPolicy(state);
+
+    const memoKey = buildMemoKey(state);
+    const cached = visited.get(memoKey);
+    if (cached) return cached;
+
+    const result = solve(state);
+    const policy: CollectablePolicyNode = {
+      id: memoKey,
+      state: summarizeState(state),
+      recommendedAction: actionSummary(result.recommendedActionKind, jobType),
+      expectedScore: Number(result.expectedScore.toFixed(6)),
+      expectedReward: result.expectedReward,
+      branches: []
+    };
+    visited.set(memoKey, policy);
+
+    const branches = createBranchesWithReward(state, result.recommendedActionKind, (branch) => (
+      result.recommendedActionKind === 'collect' && branch.labelKey === 'collectableSolver.branches.collectSuccess'
+        ? getCollectableRewardForValue(state.collectability, rewardTable)
+        : createZeroReward()
+    ));
+
+    policy.branches = branches.map((branch) => {
+      const nextResult = solve(branch.state);
+      const branchReward = addCollectableRewards(branch.reward ?? createZeroReward(), nextResult.expectedReward);
+      const branchScore = scoreCollectableReward(branchReward, objective);
+      const childPolicy = buildPolicyFromState(branch.state, visited);
+
+      return {
+        labelKey: branch.labelKey,
+        labelKeys: branch.labelKeys,
+        conditionKey: branch.conditionKey,
+        probability: branch.probability * 100,
+        outcome: {
+          gp: branch.state.gp,
+          integrity: branch.state.integrity,
+          collectability: branch.state.collectability,
+          reward: branchReward,
+          score: branchScore
+        },
+        next: childPolicy.branches.length > 0 ? childPolicy : undefined
+      };
+    });
+
+    return policy;
   }
 
   function solveWithGp(startingGp: number): SearchRunResult {
@@ -474,15 +538,18 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       branchCount: 0
     };
 
-    const result = solve(createInitialCollectableMechanicsState(mechanics, startingGp));
+    const initialState = createInitialCollectableMechanicsState(mechanics, startingGp);
+    const result = solve(initialState);
     const search = activeSearchStats;
     search.memoHitRate = calculateMemoHitRate(search);
     activeSearchStats = null;
+    const policy = buildPolicyFromState(initialState);
 
     return {
       ...result,
       startingGp: Math.min(stats.gp, startingGp),
-      search
+      search,
+      policy
     };
   }
 

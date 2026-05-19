@@ -374,6 +374,45 @@ describe('solveCollectableRotation', () => {
     expect(['successI', 'successII', 'successIII', 'nextCollectSuccess']).not.toContain(result.policy.recommendedAction.kind);
   });
 
+  it('低成功率多次採集仍能用 memo 結果重建決策圖，不因路徑數暴漲', () => {
+    const result = solveCollectableRotation(createRequest({
+      debugMode: true,
+      stats: {
+        level: 100,
+        gathering: 450,
+        perception: 1000,
+        gp: 0
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 0,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          mid: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          high: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    }));
+    const policyNodes = collectNodes(result.policy);
+    const distribution = result.debug?.plans[0].outcomeDistribution ?? [];
+    const totalProbability = distribution.reduce((sum, entry) => sum + entry.probability, 0);
+
+    expect(policyNodes.length).toBeLessThan(80);
+    expect(result.debug?.plans[0].search.statesSolved).toBeLessThan(2000);
+    expect(totalProbability).toBeCloseTo(100, 6);
+  });
+
   it('明晰視野等價時會提前到收藏品採集前段施放', () => {
     const result = solveCollectableRotation(createRequest({
       stats: {
