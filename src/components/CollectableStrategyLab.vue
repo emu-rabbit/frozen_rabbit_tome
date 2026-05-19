@@ -3,7 +3,11 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
-import type { CollectableActionKind } from '../types/collectable';
+import type { CollectableActionKind, CollectableRewardTable } from '../types/collectable';
+import { useCollectableSolver } from '../composables/useCollectableSolver';
+import { getCollectableRewardTable } from '../services/collectableRewards';
+import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
+import { analyzeCollectableStrategyTree, type CollectableStrategyAnalysis } from '../utils/collectableStrategyAnalysis';
 import {
   buildCollectableStrategyTree,
   collectableStrategyActionKinds,
@@ -33,7 +37,11 @@ const props = defineProps<{
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
 const editingRuleId = ref('');
 const selectedUncoveredId = ref('');
+const analysis = ref<CollectableStrategyAnalysis | null>(null);
+const rewardTable = ref<CollectableRewardTable | null>(null);
+const rewardError = ref(false);
 const internalMaxNodes = 1200;
+const { collectableObjective } = useCollectableSolver();
 
 const jobType = computed(() => props.activeItem.jobType || 'miner');
 const canBuildTree = computed(() => !!props.baseValues);
@@ -86,12 +94,50 @@ const ruleCoverage = computed(() => {
   walk(treeResult.value?.root);
   return counts;
 });
+const analysisUnit = computed(() => t(getCollectableScripRewardMeta(rewardTable.value?.rewardItemId).labelKey));
 
 watch(uncoveredNodes, (nodes) => {
   if (!nodes.some((node) => node.id === selectedUncoveredId.value)) {
     selectedUncoveredId.value = nodes[0]?.id ?? '';
   }
 }, { immediate: true });
+
+watch(() => props.activeItem.itemId, async () => {
+  analysis.value = null;
+  rewardTable.value = null;
+  rewardError.value = false;
+
+  try {
+    rewardTable.value = await getCollectableRewardTable(props.activeItem.itemId);
+    rewardError.value = !rewardTable.value;
+  } catch (error) {
+    console.error('Collectable strategy reward table loading failed:', error);
+    rewardError.value = true;
+  }
+}, { immediate: true });
+
+watch([
+  rules,
+  () => props.effectiveStats,
+  () => props.baseValues,
+  () => props.itemRealLevel,
+  () => props.nodeBonuses,
+  () => props.temporaryGp,
+  () => props.hasRelicToolBonus,
+  collectableObjective
+], () => {
+  analysis.value = null;
+}, { deep: true });
+
+function runAnalysis() {
+  if (!treeResult.value?.root || !rewardTable.value) return;
+
+  analysis.value = analyzeCollectableStrategyTree(
+    treeResult.value.root,
+    rewardTable.value,
+    collectableObjective.value
+  );
+}
 
 function addRule() {
   const id = makeId();
@@ -188,6 +234,18 @@ function formatNodeState(node: CollectableStrategyNode) {
     integrity: node.state.integrity,
     collectability: node.state.collectability
   });
+}
+
+function formatProbability(chance: number, useSpacePadding = false, includePercent = true) {
+  const percentSuffix = includePercent ? '%' : '';
+  if (chance > 0 && chance < 0.01) {
+    return useSpacePadding ? `< 0.01${percentSuffix}` : `<0.01${percentSuffix}`;
+  }
+  const formatted = chance.toFixed(2);
+  if (useSpacePadding) {
+    return formatted.padStart(6, ' ') + percentSuffix;
+  }
+  return formatted + percentSuffix;
 }
 
 function formatStateChips(node: CollectableStrategyNode) {
@@ -385,6 +443,67 @@ function makeId() {
       </aside>
     </section>
 
+    <section class="collectable-analysis-panel">
+      <div class="analysis-header">
+        <div>
+          <div class="analysis-title">
+            <i class="pi pi-chart-bar"></i>
+            <h2>{{ t('collectableStrategyLab.analysis.title') }}</h2>
+          </div>
+          <p>{{ t('collectableStrategyLab.analysis.subtitle') }}</p>
+        </div>
+        <Button
+          class="analysis-run-button p-button-primary rounded-xl"
+          :aria-label="t('collectableStrategyLab.analysis.run')"
+          :disabled="!treeResult?.root || !rewardTable || rewardError"
+          @click="runAnalysis"
+        >
+          <i class="pi pi-play"></i>
+          <span>{{ t('collectableStrategyLab.analysis.run') }}</span>
+        </Button>
+      </div>
+
+      <div v-if="rewardError" class="analysis-empty" role="alert">
+        <i class="pi pi-exclamation-circle"></i>
+        <p>{{ t('collectableStrategyLab.analysis.unsupportedReward') }}</p>
+      </div>
+
+      <div v-else-if="!analysis" class="analysis-empty">
+        <i class="pi pi-chart-line"></i>
+        <p>{{ t('collectableStrategyLab.analysis.empty') }}</p>
+      </div>
+
+      <article v-else class="analysis-card total">
+        <h3>{{ t('collectableStrategyLab.analysis.summary') }}</h3>
+        <div class="metric-grid">
+          <div>
+            <span>{{ t('collectableStrategyLab.analysis.expectedScore', { unit: analysisUnit }) }}</span>
+            <strong>{{ analysis.expectedScore }}</strong>
+          </div>
+          <div>
+            <span>{{ t('collectableStrategyLab.analysis.maxScore', { unit: analysisUnit }) }}</span>
+            <strong>{{ analysis.maxScore }}</strong>
+            <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.maxScoreChance, false, false) }) }}</small>
+          </div>
+          <div>
+            <span>{{ t('collectableStrategyLab.analysis.minScore', { unit: analysisUnit }) }}</span>
+            <strong>{{ analysis.minScore }}</strong>
+            <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.minScoreChance, false, false) }) }}</small>
+          </div>
+        </div>
+        <div class="distribution" :aria-label="t('collectableStrategyLab.analysis.distribution')">
+          <div v-for="entry in analysis.outcomeDistribution" :key="`collectable-score-${entry.score}`" class="bar-row">
+            <span>{{ entry.score }}</span>
+            <div class="bar-track">
+              <div class="bar-fill" :style="{ width: `${Math.max(2, Math.min(100, entry.probability))}%` }"></div>
+            </div>
+            <small class="probability-text">{{ formatProbability(entry.probability, true, true) }}</small>
+          </div>
+        </div>
+        <p class="analysis-note">{{ t('collectableStrategyLab.analysis.revisitExcluded') }}</p>
+      </article>
+    </section>
+
     <Teleport to="body">
       <div v-if="editingRule" class="rule-editor-overlay" role="presentation" @click.self="closeRuleEditor">
         <section class="rule-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="collectable-rule-editor-title">
@@ -555,15 +674,26 @@ function makeId() {
   line-height: 1.5;
 }
 
+:global(html.dark .collectable-analysis-panel),
+:global(html.dark .analysis-card) {
+  border-color: #334155;
+  background: #0f172a;
+}
+
 :global(html.dark .column-header h2),
 :global(html.dark .uncovered-panel h3),
 :global(html.dark .rule-editor-dialog-header h2),
 :global(html.dark .uncovered-detail h4),
+:global(html.dark .analysis-title h2),
+:global(html.dark .analysis-card h3),
 :global(html.dark .path-box strong) {
   color: #f8fafc;
 }
 
 :global(html.dark .tree-empty p),
+:global(html.dark .analysis-header p),
+:global(html.dark .analysis-empty p),
+:global(html.dark .analysis-note),
 :global(html.dark .limit-warning),
 :global(html.dark .path-box p) {
   color: #94a3b8;
@@ -572,10 +702,187 @@ function makeId() {
 .column-header span,
 .rule-editor-dialog-header span,
 .summary-grid span,
+.metric-grid span,
 .uncovered-detail > span {
   color: #64748b;
   font-size: 0.74rem;
   font-weight: 900;
+}
+
+.collectable-analysis-panel {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: white;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 0.04);
+}
+
+.analysis-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.analysis-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.analysis-title i {
+  color: #52a890;
+}
+
+.analysis-title h2,
+.analysis-card h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.analysis-header p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.analysis-run-button {
+  min-width: 11rem;
+  min-height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-weight: 900;
+}
+
+.analysis-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  border: 2px dashed #e2e8f0;
+  border-radius: 1rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+:global(html.dark .analysis-empty) {
+  border-color: #334155;
+}
+
+.analysis-empty i {
+  color: #94a3b8;
+  font-size: 1.8rem;
+}
+
+.analysis-empty p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.analysis-card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #f8fafc;
+  padding: 1.25rem;
+}
+
+.analysis-card.total {
+  border-color: rgb(82 168 144 / 0.5);
+  background: #f0fdf4;
+}
+
+:global(html.dark .analysis-card.total) {
+  background: rgb(20 83 45 / 0.2);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric-grid div {
+  min-width: 0;
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.8rem;
+}
+
+:global(html.dark .metric-grid div) {
+  background: rgb(30 41 59 / 0.65);
+}
+
+.metric-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+:global(html.dark .metric-grid strong) {
+  color: #f8fafc;
+}
+
+.metric-grid small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.distribution {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(3rem, auto) 1fr 3.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.bar-track {
+  height: 0.6rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+:global(html.dark .bar-track) {
+  background: #1e293b;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #52a890;
+}
+
+.probability-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre;
+}
+
+.analysis-note {
+  margin: 0;
+  color: #15803d;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .lab-layout {
@@ -1256,6 +1563,7 @@ function makeId() {
 
 @media (max-width: 700px) {
   .column-header,
+  .analysis-header,
   .rule-card-header {
     flex-direction: column;
     align-items: stretch;
@@ -1267,6 +1575,10 @@ function makeId() {
 
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

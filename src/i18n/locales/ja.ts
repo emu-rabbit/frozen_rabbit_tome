@@ -705,6 +705,19 @@ export default {
       uncoveredNodes: '未決定',
       terminalNodes: '終端'
     },
+    analysis: {
+      title: '分析レポート',
+      subtitle: '現在の方針ルールにもとづき、収集品スコア、確率分布、報酬の着地点を計算します。',
+      run: '分析する',
+      empty: '上のボタンで現在の方針を分析します。',
+      unsupportedReward: 'この収集品の対応報酬表が見つからないため、まだ採点できません。',
+      summary: '概要',
+      expectedScore: '期待{unit}',
+      maxScore: '最高{unit}',
+      minScore: '最低{unit}',
+      distribution: 'スコア確率分布',
+      revisitExcluded: 'この分析では再発見をまだ含めていません。スコアは収集品ソルバーと同じ報酬採点方式を使用します。'
+    },
     tools: {
       moveUp: '上へ移動',
       moveDown: '下へ移動',

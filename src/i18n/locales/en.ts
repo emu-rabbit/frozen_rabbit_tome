@@ -716,6 +716,19 @@ export default {
       uncoveredNodes: 'Open',
       terminalNodes: 'Terminal'
     },
+    analysis: {
+      title: 'Analysis Report',
+      subtitle: 'Calculates collectable score, probability distribution, and reward outcomes for the current strategy rules.',
+      run: 'Run Analysis',
+      empty: 'Run analysis to evaluate the current strategy.',
+      unsupportedReward: 'No supported reward table was found for this collectable, so it cannot be scored yet.',
+      summary: 'Summary',
+      expectedScore: 'Expected {unit}',
+      maxScore: 'Highest {unit}',
+      minScore: 'Lowest {unit}',
+      distribution: 'Score probability distribution',
+      revisitExcluded: 'Revisit is not included yet; scores use the same reward scoring method as the collectable solver.'
+    },
     tools: {
       moveUp: 'Move up',
       moveDown: 'Move down',

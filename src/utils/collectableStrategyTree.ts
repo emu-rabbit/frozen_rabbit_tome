@@ -54,6 +54,7 @@ export type CollectableExperimentState = CollectableMechanicsState;
 
 export interface CollectableStrategyBranch {
   label: string;
+  labelKeys: string[];
   probability: number;
   state: CollectableExperimentState;
   child?: CollectableStrategyNode;
@@ -335,7 +336,8 @@ function applyAction(
   return applyCollectableAction(action, state, context.mechanics).map((transition) => ({
     state: transition.state,
     probability: transition.probability * 100,
-    label: context.formatBranchLabel(transition.labelKeys ?? [transition.labelKey])
+    label: context.formatBranchLabel(transition.labelKeys ?? [transition.labelKey]),
+    labelKeys: transition.labelKeys ?? [transition.labelKey]
   }));
 }
 

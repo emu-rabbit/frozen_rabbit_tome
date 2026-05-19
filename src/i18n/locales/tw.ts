@@ -717,6 +717,19 @@ export default {
       uncoveredNodes: '尚待決策',
       terminalNodes: '終止'
     },
+    analysis: {
+      title: '分析報告',
+      subtitle: '依目前策略規則計算收藏品分數、機率分布與收益落點。',
+      run: '進行分析',
+      empty: '點擊上方按鈕開始分析目前策略。',
+      unsupportedReward: '找不到此收藏品的支援獎勵表，暫時無法評分。',
+      summary: '總結',
+      expectedScore: '期望{unit}',
+      maxScore: '最高{unit}',
+      minScore: '最低{unit}',
+      distribution: '分數機率分布',
+      revisitExcluded: '此分析暫未納入再起；分數使用收藏品求解台相同的 reward 評分方式。'
+    },
     tools: {
       moveUp: '上移',
       moveDown: '下移',
