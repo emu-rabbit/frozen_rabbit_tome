@@ -7,10 +7,13 @@ import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import AutoComplete from 'primevue/autocomplete';
+import Select from 'primevue/select';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useSimulator } from '../composables/useSimulator';
+import { useSettings } from '../composables/useSettings';
 import PendingFeature from '../components/PendingFeature.vue';
+import CollectableStrategyLab from '../components/CollectableStrategyLab.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
 import { GATHERING_FOODS } from '../services/foodData';
@@ -28,9 +31,15 @@ type FoodOption = {
   searchText: string;
 };
 
+type RelicToolOption = {
+  label: string;
+  value: boolean;
+};
+
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const { solverSettings } = useSettings();
 const {
   activeItem,
   simStats,
@@ -125,6 +134,16 @@ const canRunSimulation = computed(() => canSimulate.value && !hasRotationIssue.v
 const activeInvalidIndexes = computed(() => activeBlock.value === 'primary'
   ? primaryValidation.value.invalidIndexes
   : revisitValidation.value.invalidIndexes);
+const collectableRelicToolBonusModel = computed<boolean>({
+  get: () => !!solverSettings.value.collectableRelicToolBonus,
+  set: (value) => {
+    solverSettings.value.collectableRelicToolBonus = value;
+  }
+});
+const collectableRelicToolBonusOptions = computed<RelicToolOption[]>(() => [
+  { label: t('solver.nodeBonuses.enabled'), value: true },
+  { label: t('solver.nodeBonuses.disabled'), value: false }
+]);
 
 onMounted(() => {
   fetchItemLevelData();
@@ -451,11 +470,11 @@ function progressPercent(range: number[], maxValue: number) {
       <Button :label="t('simulator.goToCreate')" icon="pi pi-search" class="rounded-xl" @click="goCreateExperiment" />
     </div>
 
-    <!-- === 收藏品/水晶採集系統 施工中畫面 === -->
+    <!-- === 水晶採集系統 施工中畫面 === -->
     <PendingFeature
-      v-else-if="activeItem.isCollectable || activeItem.isCrystalGathering"
+      v-else-if="activeItem.isCrystalGathering"
       :title="displayName"
-      :type="activeItem.isCollectable ? 'collectable' : 'crystal'"
+      type="crystal"
       back-path="/experiment"
     />
 
@@ -477,7 +496,7 @@ function progressPercent(range: number[], maxValue: number) {
         </div>
         <div class="rate-grid">
           <div><span>{{ t('simulator.rates.success') }}</span><strong>{{ successRate }}%</strong></div>
-          <div><span>{{ t('simulator.rates.boon') }}</span><strong>{{ boonChance }}%</strong></div>
+          <div v-if="!activeItem.isCollectable"><span>{{ t('simulator.rates.boon') }}</span><strong>{{ boonChance }}%</strong></div>
           <div><span>{{ t('simulator.rates.currentGp') }}</span><strong>{{ temporaryGp }}/{{ effectiveStats.gp }}</strong></div>
         </div>
       </section>
@@ -495,13 +514,11 @@ function progressPercent(range: number[], maxValue: number) {
             @click="isGearProfilePickerOpen = true"
           />
         </div>
-        <div class="input-grid">
-          <label><span>{{ t('game.stats.level') }}</span><InputNumber v-model="solverStats.level" :min="1" :max="100" fluid /></label>
-          <label><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="solverStats.gathering" :min="0" fluid /></label>
-          <label><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="solverStats.perception" :min="0" fluid /></label>
-          <label><span>{{ t('solver.maxGp') }}</span><InputNumber v-model="solverStats.gp" :min="0" fluid /></label>
-          <label><span>{{ t('solver.currentGp') }}</span><InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" fluid /></label>
-          <label>
+        <div class="input-grid stats-input-grid" :class="{ 'is-collectable': activeItem.isCollectable }">
+          <label class="field-level"><span>{{ t('game.stats.level') }}</span><InputNumber v-model="solverStats.level" :min="1" :max="100" fluid /></label>
+          <label class="field-gathering"><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="solverStats.gathering" :min="0" fluid /></label>
+          <label class="field-perception"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="solverStats.perception" :min="0" fluid /></label>
+          <label class="field-food">
             <span>{{ t('solver.food.label') }}</span>
             <AutoComplete
               v-model="selectedFoodModel"
@@ -514,15 +531,42 @@ function progressPercent(range: number[], maxValue: number) {
               @complete="searchFoods"
             />
           </label>
-          <label><span>{{ t('solver.nodeBonuses.baseIntegrity') }}</span><InputNumber v-model="nodeBonuses.baseIntegrity" :min="1" :max="10" fluid /></label>
-          <label><span>{{ t('solver.nodeBonuses.gatheringCount') }}</span><InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid /></label>
-          <label><span>{{ t('solver.nodeBonuses.yieldCount') }}</span><InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid /></label>
-          <label><span>{{ t('solver.nodeBonuses.extraRate') }}</span><InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid /></label>
+          <span v-if="!activeItem.isCollectable" class="stats-grid-spacer" aria-hidden="true"></span>
+          <label class="field-current-gp"><span>{{ t('solver.currentGp') }}</span><InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" fluid /></label>
+          <label class="field-max-gp"><span>{{ t('solver.maxGp') }}</span><InputNumber v-model="solverStats.gp" :min="0" fluid /></label>
+          <label class="field-gathering-count"><span>{{ t('solver.nodeBonuses.gatheringCount') }}</span><InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid /></label>
+          <template v-if="!activeItem.isCollectable">
+            <label class="field-yield-count"><span>{{ t('solver.nodeBonuses.yieldCount') }}</span><InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid /></label>
+            <label class="field-extra-rate"><span>{{ t('solver.nodeBonuses.extraRate') }}</span><InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid /></label>
+          </template>
+          <template v-if="activeItem.isCollectable">
+            <label class="field-relic-tool">
+              <span>{{ t('solver.nodeBonuses.collectableRelicToolBonus') }}</span>
+              <Select
+                v-model="collectableRelicToolBonusModel"
+                :options="collectableRelicToolBonusOptions"
+                optionLabel="label"
+                optionValue="value"
+                fluid
+              />
+            </label>
+          </template>
         </div>
         <p v-if="!isPerceptionMet" class="warning">{{ t('simulator.perceptionWarning') }}</p>
       </section>
 
-      <section class="panel simulation-panel">
+      <CollectableStrategyLab
+        v-if="activeItem.isCollectable"
+        :active-item="activeItem"
+        :effective-stats="effectiveStats"
+        :base-values="baseValues"
+        :item-real-level="itemRealLevel"
+        :node-bonuses="nodeBonuses"
+        :temporary-gp="temporaryGp"
+        :has-relic-tool-bonus="collectableRelicToolBonusModel"
+      />
+
+      <section v-else class="panel simulation-panel">
         <div class="simulation-header">
           <div class="section-title">
             <i class="pi pi-bolt text-amber-500"></i>
@@ -647,7 +691,7 @@ function progressPercent(range: number[], maxValue: number) {
 
       </section>
 
-      <section class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden analysis-panel">
+      <section v-if="!activeItem.isCollectable" class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden analysis-panel">
         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5 mb-8">
           <div class="flex flex-col gap-1 text-center sm:text-left">
             <div class="section-title justify-center sm:justify-start mb-1">
@@ -1202,15 +1246,26 @@ function progressPercent(range: number[], maxValue: number) {
   color: #e2e8f0;
 }
 .input-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
 }
+
 .input-grid label {
   display: grid;
   gap: 0.35rem;
   min-width: 0;
 }
+
+.stats-input-grid {
+  align-content: start;
+}
+
+.stats-grid-spacer {
+  display: none;
+}
+
 .input-grid :deep(.p-inputnumber),
 .input-grid :deep(.p-autocomplete),
+.input-grid :deep(.p-select),
 .input-grid :deep(.p-inputtext),
 .input-grid :deep(input) {
   width: 100% !important;
@@ -1641,9 +1696,6 @@ function progressPercent(range: number[], maxValue: number) {
   margin: 0;
 }
 @media (min-width: 640px) {
-  .input-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .simulate-actions {
     flex-direction: row;
   }
@@ -1673,9 +1725,73 @@ function progressPercent(range: number[], maxValue: number) {
   }
 }
 @media (min-width: 1024px) {
-  .input-grid {
+  .stats-input-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .stats-input-grid:not(.is-collectable) {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
+
+  .stats-grid-spacer {
+    display: block;
+  }
+
+  .field-level {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .field-gathering {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .field-perception {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .field-food {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .stats-grid-spacer {
+    grid-column: 5;
+    grid-row: 1;
+  }
+
+  .field-current-gp {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .field-max-gp {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .field-gathering-count {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .field-relic-tool {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .field-yield-count {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .field-extra-rate {
+    grid-column: 5;
+    grid-row: 2;
+  }
+
   .action-palette {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }

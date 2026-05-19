@@ -1,23 +1,22 @@
 import { calculateSuccessRate } from './gatheringMath';
 import {
   COLLECTABILITY_CAP,
-  COLLECTORS_STANDARD_PROC_RATES,
   addCollectableRewards,
-  applyRelicToolValueIncreaseBonus,
-  calculateCollectableMeticulousGain,
-  calculateCollectableScourGain,
-  calculateCollectableScourValue,
-  calculateFocusedValueIncreaseRate,
-  calculateMeticulousProcRate,
-  calculatePrimedMeticulousProcRate,
   calculateScrutinyBonus,
-  calculateScrutinyMultiplier,
   calculateValueIncreaseRate,
-  clampCollectability,
   createZeroReward,
   getCollectableRewardForValue,
   scoreCollectableReward
 } from './collectableMath';
+import {
+  COLLECTABLE_STATE_KEY_FIELDS,
+  applyCollectableAction,
+  collectableStateKey,
+  createCollectableMechanicsContext,
+  createInitialCollectableMechanicsState,
+  type CollectableMechanicsContext,
+  type CollectableMechanicsState
+} from './collectableMechanics';
 import { COLLECTABLE_ACTION_DEFINITIONS, getCollectableActionId } from '../services/collectableActions';
 import { summarizeCollectableRewardTable } from '../services/collectableRewards';
 import type {
@@ -35,23 +34,7 @@ import type {
 } from '../types/collectable';
 import type { SolverObjectiveMode } from '../types/game';
 
-interface SearchState {
-  gp: number;
-  integrity: number;
-  collectability: number;
-  scrutinyActive: boolean;
-  collectorsFocusActive: boolean;
-  primingTouchActive: boolean;
-  standardActive: boolean;
-  hasUsedCollectableAction: boolean;
-  hasCollected: boolean;
-  successBonus: number;
-  successIActive: boolean;
-  successIIActive: boolean;
-  successIIIActive: boolean;
-  nextCollectSuccessBonus: number;
-  wiseToTheWorldActive: boolean;
-}
+type SearchState = CollectableMechanicsState;
 
 interface SearchResult {
   expectedScore: number;
@@ -93,27 +76,7 @@ type ScoreSummary = {
 const EV_EPSILON = 0.0000001;
 const REGULAR_REVISIT_CHANCE = 0.05;
 const TIMED_REVISIT_CHANCE = 0.08;
-const STATE_KEY_FIELDS = [
-  'gp',
-  'integrity',
-  'collectability',
-  'scrutinyActive',
-  'collectorsFocusActive',
-  'primingTouchActive',
-  'standardActive',
-  'hasUsedCollectableAction',
-  'hasCollected',
-  'successBonus',
-  'successIActive',
-  'successIIActive',
-  'successIIIActive',
-  'nextCollectSuccessBonus',
-  'wiseToTheWorldActive'
-];
-
-function gpPerCollect(level: number): number {
-  return level >= 70 ? 6 : 5;
-}
+const STATE_KEY_FIELDS = [...COLLECTABLE_STATE_KEY_FIELDS];
 
 function emptyPolicy(state: SearchState): CollectablePolicyNode {
   return {
@@ -127,23 +90,7 @@ function emptyPolicy(state: SearchState): CollectablePolicyNode {
 }
 
 function buildMemoKey(state: SearchState): string {
-  return [
-    state.gp,
-    state.integrity,
-    state.collectability,
-    state.scrutinyActive ? 1 : 0,
-    state.collectorsFocusActive ? 1 : 0,
-    state.primingTouchActive ? 1 : 0,
-    state.standardActive ? 1 : 0,
-    state.hasUsedCollectableAction ? 1 : 0,
-    state.hasCollected ? 1 : 0,
-    state.successBonus,
-    state.successIActive ? 1 : 0,
-    state.successIIActive ? 1 : 0,
-    state.successIIIActive ? 1 : 0,
-    state.nextCollectSuccessBonus,
-    state.wiseToTheWorldActive ? 1 : 0
-  ].join('|');
+  return collectableStateKey(state);
 }
 
 function summarizeState(state: SearchState): CollectableStateSummary {
@@ -197,18 +144,8 @@ function calculateSuccessFormulaDebug(
 export function solveCollectableRotation(request: CollectableSolverRequest): CollectableSolverResult {
   const { stats, baseValues, itemLevel, nodeBonuses, temporaryGp, jobType, rewardTable, objective } = request;
   const objectiveMode: SolverObjectiveMode = request.objectiveMode ?? 'expected';
-  const maxIntegrity = nodeBonuses.baseIntegrity + nodeBonuses.gatheringCount;
-  const baseSuccessRate = calculateSuccessRate(stats.gathering, baseValues.Gathering, stats.level, itemLevel);
-  const scourValue = calculateCollectableScourValue(stats.gathering, baseValues.Gathering);
   const baseValueIncreaseRate = calculateValueIncreaseRate(stats.gathering, baseValues.Gathering);
-  const valueIncreaseRate = request.hasRelicToolBonus
-    ? applyRelicToolValueIncreaseBonus(baseValueIncreaseRate)
-    : baseValueIncreaseRate;
-  const focusedValueIncreaseRate = calculateFocusedValueIncreaseRate(valueIncreaseRate);
-  const meticulousRate = calculateMeticulousProcRate(stats.gathering, baseValues.Gathering);
-  const primedMeticulousRate = calculatePrimedMeticulousProcRate(meticulousRate);
-  const scrutinyMultiplier = calculateScrutinyMultiplier(stats.perception, baseValues.Perception);
-  const standardProcRate = getStandardProcRate(request);
+  const mechanics = createCollectableMechanicsContext(request);
   let memo = new Map<string, SearchResult>();
   let activeSearchStats: CollectableSearchDebugInfo | null = null;
 
@@ -258,43 +195,32 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     const canRefineCollectability = state.collectability < COLLECTABILITY_CAP;
 
     if (canRefineCollectability && state.gp >= 200 && !state.scrutinyActive) {
-      actions.push(buffAction('scrutiny', 10, 200, { scrutinyActive: true }));
+      actions.push(buffAction('scrutiny', 10, 200));
     }
 
     if (canRefineCollectability && state.gp >= 100 && !state.collectorsFocusActive) {
-      actions.push(buffAction('collectorsFocus', 20, 100, { collectorsFocusActive: true }));
+      actions.push(buffAction('collectorsFocus', 20, 100));
     }
 
     if (canRefineCollectability && state.gp >= 100 && !state.primingTouchActive) {
-      actions.push(buffAction('primingTouch', 30, 100, { primingTouchActive: true }));
+      actions.push(buffAction('primingTouch', 30, 100));
     }
 
-    if (baseSuccessRate + state.successBonus < 100 && !state.hasCollected) {
+    if (mechanics.baseSuccessRate + state.successBonus < 100 && !state.hasCollected) {
       if (stats.level >= 10 && state.gp >= 250 && !state.successIIIActive) {
-        actions.push(buffAction('successIII', 40, 250, {
-          successBonus: state.successBonus + 50,
-          successIIIActive: true
-        }));
+        actions.push(buffAction('successIII', 40, 250));
       }
 
       if (stats.level >= 5 && state.gp >= 100 && !state.successIIActive) {
-        actions.push(buffAction('successII', 41, 100, {
-          successBonus: state.successBonus + 15,
-          successIIActive: true
-        }));
+        actions.push(buffAction('successII', 41, 100));
       }
 
       if (stats.level >= 4 && state.gp >= 50 && !state.successIActive) {
-        actions.push(buffAction('successI', 42, 50, {
-          successBonus: state.successBonus + 5,
-          successIActive: true
-        }));
+        actions.push(buffAction('successI', 42, 50));
       }
 
       if (stats.level >= 23 && state.gp >= 50 && state.nextCollectSuccessBonus === 0) {
-        actions.push(buffAction('nextCollectSuccess', 50, 50, {
-          nextCollectSuccessBonus: 15
-        }));
+        actions.push(buffAction('nextCollectSuccess', 50, 50));
       }
     }
 
@@ -317,142 +243,41 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function addIntegrityRestoreActions(actions: ActionOption[], state: SearchState) {
-    const missingIntegrity = maxIntegrity - state.integrity;
+    const missingIntegrity = mechanics.maxIntegrity - state.integrity;
 
     if (stats.level < 25 || state.gp < 300 || missingIntegrity < 1) return;
 
     actions.push({
       kind: 'restoreIntegrity',
       priority: 65,
-      apply: (current, nextSolve) => {
-        const restoredState = {
-          ...current,
-          gp: current.gp - 300,
-          integrity: Math.min(maxIntegrity, current.integrity + 1)
-        };
-
-        if (stats.level < 90) {
-          const next = nextSolve(restoredState);
-          return buildPolicyResult(current, 'restoreIntegrity', [{
-            state: restoredState,
-            probability: 1,
-            labelKey: 'collectableSolver.branches.integrityRestored',
-            conditionKey: 'collectableSolver.conditions.integrityRestored'
-          }], [next], 300, 1);
-        }
-
-        const procState = {
-          ...restoredState,
-          wiseToTheWorldActive: true
-        };
-        const noProc = nextSolve(restoredState);
-        const proc = nextSolve(procState);
-
-        return buildPolicyResult(current, 'restoreIntegrity', [
-          {
-            state: procState,
-            probability: 0.5,
-            labelKey: 'collectableSolver.branches.wiseProc',
-            conditionKey: 'collectableSolver.conditions.wiseProc'
-          },
-          {
-            state: restoredState,
-            probability: 0.5,
-            labelKey: 'collectableSolver.branches.wiseNoProc',
-            conditionKey: 'collectableSolver.conditions.wiseNoProc'
-          }
-        ], [proc, noProc], 300, 1);
-      }
+      apply: (current, nextSolve) => applyMechanicsAction(current, nextSolve, 'restoreIntegrity', 300, 1)
     });
   }
 
   function createWiseToTheWorldAction(state: SearchState): ActionOption | null {
-    const missingIntegrity = maxIntegrity - state.integrity;
+    const missingIntegrity = mechanics.maxIntegrity - state.integrity;
     if (!state.wiseToTheWorldActive || missingIntegrity < 1) return null;
 
     return {
       kind: 'wiseToTheWorld',
       priority: 0,
-      apply: (current, nextSolve) => {
-        const nextState = {
-          ...current,
-          integrity: Math.min(maxIntegrity, current.integrity + 1),
-          wiseToTheWorldActive: false
-        };
-        const next = nextSolve(nextState);
-        return buildPolicyResult(current, 'wiseToTheWorld', [{
-          state: nextState,
-          probability: 1,
-          labelKey: 'collectableSolver.branches.integrityRestored',
-          conditionKey: 'collectableSolver.conditions.integrityRestored'
-        }], [next], 0, 1);
-      }
+      apply: (current, nextSolve) => applyMechanicsAction(current, nextSolve, 'wiseToTheWorld', 0, 1)
     };
   }
 
-  function buffAction(
-    kind: CollectableActionKind,
-    priority: number,
-    gpCost: number,
-    patch: Partial<SearchState>
-  ): ActionOption {
+  function buffAction(kind: CollectableActionKind, priority: number, gpCost: number): ActionOption {
     return {
       kind,
       priority,
-      apply: (state, nextSolve) => {
-        const nextState = {
-          ...state,
-          ...patch,
-          gp: state.gp - gpCost
-        };
-        const next = nextSolve(nextState);
-        return buildPolicyResult(state, kind, [{
-          state: nextState,
-          probability: 1,
-          labelKey: 'collectableSolver.branches.applied',
-          conditionKey: 'collectableSolver.conditions.always'
-        }], [next], gpCost, 1);
-      }
+      apply: (state, nextSolve) => applyMechanicsAction(state, nextSolve, kind, gpCost, 1)
     };
   }
 
   function applyCollect(state: SearchState, nextSolve: (state: SearchState) => SearchResult): SearchResult {
-    const successRate = Math.min(100, Math.max(0, baseSuccessRate + state.successBonus + state.nextCollectSuccessBonus)) / 100;
     const reward = getCollectableRewardForValue(state.collectability, rewardTable);
-    const successState = {
-      ...state,
-      gp: Math.min(stats.gp, state.gp + gpPerCollect(stats.level)),
-      integrity: state.integrity - 1,
-      hasUsedCollectableAction: true,
-      hasCollected: true,
-      nextCollectSuccessBonus: 0
-    };
-    const failedState = {
-      ...state,
-      integrity: state.integrity - 1,
-      hasUsedCollectableAction: true,
-      hasCollected: true,
-      nextCollectSuccessBonus: 0
-    };
-    const branches: WeightedState[] = [
-      {
-        state: successState,
-        probability: successRate,
-        labelKey: 'collectableSolver.branches.collectSuccess',
-        conditionKey: 'collectableSolver.conditions.collectSuccess',
-        reward
-      },
-      {
-        state: failedState,
-        probability: 1 - successRate,
-        labelKey: 'collectableSolver.branches.collectFailed',
-        conditionKey: 'collectableSolver.conditions.collectFailed',
-        reward: createZeroReward()
-      }
-    ].filter((branch) => branch.probability > 0);
-    const results = branches.map((branch) => nextSolve(branch.state));
-
-    return buildPolicyResult(state, 'collect', branches, results, 0, 1);
+    return applyMechanicsAction(state, nextSolve, 'collect', 0, 1, (branch) => (
+      branch.labelKey === 'collectableSolver.branches.collectSuccess' ? reward : createZeroReward()
+    ));
   }
 
   function applyRefine(
@@ -460,93 +285,31 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     nextSolve: (state: SearchState) => SearchResult,
     kind: 'scour' | 'meticulous'
   ): SearchResult {
-    const valueRate = (state.collectorsFocusActive ? focusedValueIncreaseRate : valueIncreaseRate) / 100;
-    const valueBranches = [
-      { valueIncrease: false, probability: 1 - valueRate, labelKey: 'collectableSolver.branches.valueNormal' },
-      { valueIncrease: true, probability: valueRate, labelKey: 'collectableSolver.branches.valueIncreased' }
-    ].filter((branch) => branch.probability > 0);
-    const durabilityBranches = kind === 'meticulous'
-      ? [
-          {
-            integrityCost: 0,
-            probability: (state.primingTouchActive ? primedMeticulousRate : meticulousRate) / 100,
-            labelKey: 'collectableSolver.branches.meticulousSaved'
-          },
-          {
-            integrityCost: 1,
-            probability: 1 - ((state.primingTouchActive ? primedMeticulousRate : meticulousRate) / 100),
-            labelKey: 'collectableSolver.branches.meticulousConsumed'
-          }
-        ].filter((branch) => branch.probability > 0)
-      : [{ integrityCost: 1, probability: 1, labelKey: 'collectableSolver.branches.integrityConsumed' }];
-    const branches: WeightedState[] = [];
+    return applyMechanicsAction(state, nextSolve, kind, 0, 1);
+  }
 
-    valueBranches.forEach((valueBranch) => {
-      durabilityBranches.forEach((durabilityBranch) => {
-        const gain = kind === 'scour'
-          ? calculateCollectableScourGain({
-              scourValue,
-              scrutinyMultiplier,
-              scrutinyActive: state.scrutinyActive,
-              valueIncrease: valueBranch.valueIncrease
-            })
-          : calculateCollectableMeticulousGain({
-              scourValue,
-              scrutinyMultiplier,
-              scrutinyActive: state.scrutinyActive,
-              standardActive: state.standardActive,
-              valueIncrease: valueBranch.valueIncrease
-            });
-        const nextBase = {
-          ...state,
-          collectability: clampCollectability(state.collectability + gain),
-          integrity: state.integrity - durabilityBranch.integrityCost,
-          scrutinyActive: false,
-          collectorsFocusActive: false,
-          primingTouchActive: kind === 'meticulous' ? false : state.primingTouchActive,
-          standardActive: kind === 'meticulous' ? false : state.standardActive,
-          hasUsedCollectableAction: true
-        };
-        const baseProbability = valueBranch.probability * durabilityBranch.probability;
-        const canProcStandard = nextBase.hasUsedCollectableAction
-          && nextBase.integrity > 0
-          && nextBase.collectability < COLLECTABILITY_CAP
-          && !nextBase.standardActive
-          && standardProcRate > 0;
+  function applyMechanicsAction(
+    state: SearchState,
+    nextSolve: (state: SearchState) => SearchResult,
+    kind: CollectableActionKind,
+    gpSpent: number,
+    actionCount: number,
+    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward()
+  ): SearchResult {
+    const branches: WeightedState[] = applyCollectableAction(kind, state, mechanics).map((transition) => ({
+      state: transition.state,
+      probability: transition.probability,
+      labelKey: transition.labelKey,
+      labelKeys: transition.labelKeys,
+      conditionKey: transition.conditionKey
+    }));
+    const branchesWithReward = branches.map((branch) => ({
+      ...branch,
+      reward: rewardForBranch(branch)
+    }));
+    const results = branchesWithReward.map((branch) => nextSolve(branch.state));
 
-        if (!canProcStandard) {
-          branches.push({
-            state: nextBase,
-            probability: baseProbability,
-            labelKey: valueBranch.labelKey,
-            labelKeys: [valueBranch.labelKey, durabilityBranch.labelKey],
-            conditionKey: 'collectableSolver.conditions.refineOutcome'
-          });
-          return;
-        }
-
-        branches.push({
-          state: {
-            ...nextBase,
-            standardActive: true
-          },
-          probability: baseProbability * standardProcRate,
-          labelKey: 'collectableSolver.branches.standardProc',
-          labelKeys: [valueBranch.labelKey, durabilityBranch.labelKey, 'collectableSolver.branches.standardProc'],
-          conditionKey: 'collectableSolver.conditions.standardProc'
-        });
-        branches.push({
-          state: nextBase,
-          probability: baseProbability * (1 - standardProcRate),
-          labelKey: 'collectableSolver.branches.standardNoProc',
-          labelKeys: [valueBranch.labelKey, durabilityBranch.labelKey, 'collectableSolver.branches.standardNoProc'],
-          conditionKey: 'collectableSolver.conditions.standardNoProc'
-        });
-      });
-    });
-
-    const results = branches.map((branch) => nextSolve(branch.state));
-    return buildPolicyResult(state, kind, branches, results, 0, 1);
+    return buildPolicyResult(state, kind, branchesWithReward, results, gpSpent, actionCount);
   }
 
   function buildPolicyResult(
@@ -664,7 +427,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
     let score = 0;
     if (node.recommendedAction.kind === 'restoreIntegrity') {
-      const missingIntegrity = maxIntegrity - node.state.integrity;
+      const missingIntegrity = mechanics.maxIntegrity - node.state.integrity;
       const preferredMissingIntegrity = stats.level >= 90 ? 2 : 1;
       score += missingIntegrity >= preferredMissingIntegrity ? 500 - depth * 20 : -500;
     }
@@ -711,23 +474,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       branchCount: 0
     };
 
-    const result = solve({
-      gp: Math.min(stats.gp, startingGp),
-      integrity: maxIntegrity,
-      collectability: 0,
-      scrutinyActive: false,
-      collectorsFocusActive: false,
-      primingTouchActive: false,
-      standardActive: false,
-      hasUsedCollectableAction: false,
-      hasCollected: false,
-      successBonus: 0,
-      successIActive: false,
-      successIIActive: false,
-      successIIIActive: false,
-      nextCollectSuccessBonus: 0,
-      wiseToTheWorldActive: false
-    });
+    const result = solve(createInitialCollectableMechanicsState(mechanics, startingGp));
     const search = activeSearchStats;
     search.memoHitRate = calculateMemoHitRate(search);
     activeSearchStats = null;
@@ -832,16 +579,16 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           baseGathering: baseValues.Gathering,
           perception: stats.perception,
           basePerception: baseValues.Perception,
-          scourValue,
+          scourValue: mechanics.scourValue,
           baseValueIncreaseRate,
-          valueIncreaseRate,
-          focusedValueIncreaseRate,
+          valueIncreaseRate: mechanics.valueIncreaseRate,
+          focusedValueIncreaseRate: mechanics.focusedValueIncreaseRate,
           hasRelicToolBonus: !!request.hasRelicToolBonus,
-          meticulousRate,
-          primedMeticulousRate,
-          scrutinyMultiplier,
-          scrutinyBonus: calculateScrutinyBonus(scourValue, scrutinyMultiplier),
-          standardProcRate
+          meticulousRate: mechanics.meticulousRate,
+          primedMeticulousRate: mechanics.primedMeticulousRate,
+          scrutinyMultiplier: mechanics.scrutinyMultiplier,
+          scrutinyBonus: calculateScrutinyBonus(mechanics.scourValue, mechanics.scrutinyMultiplier),
+          standardProcRate: mechanics.standardProcRate
         },
         rewardTable: summarizeCollectableRewardTable(rewardTable)
       },
@@ -1023,10 +770,4 @@ function calculateMemoHitRate(search: CollectableSearchDebugInfo): number {
   const cacheableLookups = search.statesSolved + search.memoHits;
   if (cacheableLookups === 0) return 0;
   return Number(((search.memoHits / cacheableLookups) * 100).toFixed(2));
-}
-
-function getStandardProcRate(request: CollectableSolverRequest): number {
-  if (request.itemLevel === 55) return COLLECTORS_STANDARD_PROC_RATES.level55;
-  if (request.isTimedNode) return COLLECTORS_STANDARD_PROC_RATES.timed;
-  return COLLECTORS_STANDARD_PROC_RATES.regular;
 }

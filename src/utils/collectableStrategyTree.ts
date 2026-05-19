@@ -1,0 +1,373 @@
+import {
+  applyCollectableAction,
+  canUseCollectableAction,
+  collectableDecisionKey,
+  createCollectableMechanicsContext,
+  createInitialCollectableMechanicsState,
+  type CollectableMechanicsContext,
+  type CollectableMechanicsState
+} from './collectableMechanics';
+import { COLLECTABLE_ACTION_DEFINITIONS } from '../services/collectableActions';
+import type { CollectableActionKind } from '../types/collectable';
+import type { NodeBonuses, PlayerStats } from '../types/game';
+
+export type CollectableStrategyNumericField =
+  | 'gp'
+  | 'integrity'
+  | 'collectability'
+  | 'successBonus'
+  | 'nextCollectSuccessBonus';
+
+export type CollectableStrategyBooleanField =
+  | 'scrutinyActive'
+  | 'collectorsFocusActive'
+  | 'primingTouchActive'
+  | 'standardActive'
+  | 'hasUsedCollectableAction'
+  | 'hasCollected'
+  | 'successIActive'
+  | 'successIIActive'
+  | 'successIIIActive'
+  | 'wiseToTheWorldActive';
+
+export type CollectableStrategyField = CollectableStrategyNumericField | CollectableStrategyBooleanField;
+export type CollectableStrategyComparator = '<' | '<=' | '=' | '>=' | '>';
+export type CollectableStrategyConditionMode = 'all' | 'any';
+
+export interface CollectableStrategyCondition {
+  id: string;
+  field: CollectableStrategyField;
+  comparator: CollectableStrategyComparator;
+  value: number | boolean;
+}
+
+export interface CollectableStrategyRule {
+  id: string;
+  name: string;
+  mode: CollectableStrategyConditionMode;
+  conditions: CollectableStrategyCondition[];
+  actions: CollectableActionKind[];
+  enabled: boolean;
+}
+
+export type CollectableExperimentState = CollectableMechanicsState;
+
+export interface CollectableStrategyBranch {
+  label: string;
+  probability: number;
+  state: CollectableExperimentState;
+  child?: CollectableStrategyNode;
+}
+
+export interface CollectableStrategyNode {
+  id: string;
+  state: CollectableExperimentState;
+  path: string[];
+  status: 'decided' | 'uncovered' | 'terminal' | 'limited';
+  matchedRuleId?: string;
+  matchedRuleName?: string;
+  action?: CollectableActionKind;
+  pendingActions: CollectableActionKind[];
+  branches: CollectableStrategyBranch[];
+}
+
+export interface CollectableStrategyTreeSummary {
+  totalNodes: number;
+  decidedNodes: number;
+  uncoveredNodes: number;
+  terminalNodes: number;
+  limitedNodes: number;
+  maxDepth: number;
+}
+
+export interface CollectableStrategyTreeResult {
+  root: CollectableStrategyNode;
+  summary: CollectableStrategyTreeSummary;
+  uncoveredNodes: CollectableStrategyNode[];
+  limited: boolean;
+}
+
+export interface CollectableStrategyBuildRequest {
+  stats: PlayerStats;
+  baseValues: {
+    Gathering: number;
+    Perception: number;
+  };
+  itemLevel: number;
+  nodeBonuses: NodeBonuses;
+  temporaryGp: number;
+  jobType: 'miner' | 'botanist';
+  isTimedNode: boolean;
+  hasRelicToolBonus?: boolean;
+  rules: CollectableStrategyRule[];
+  maxNodes?: number;
+}
+
+interface BuildContext {
+  mechanics: CollectableMechanicsContext;
+  rules: CollectableStrategyRule[];
+  maxNodes: number;
+  nodeCache: Map<string, CollectableStrategyNode>;
+  limited: boolean;
+  summary: CollectableStrategyTreeSummary;
+  uncoveredNodes: CollectableStrategyNode[];
+}
+
+export const collectableStrategyNumericFields: CollectableStrategyNumericField[] = [
+  'gp',
+  'integrity',
+  'collectability',
+  'successBonus',
+  'nextCollectSuccessBonus'
+];
+
+export const collectableStrategyBooleanFields: CollectableStrategyBooleanField[] = [
+  'scrutinyActive',
+  'collectorsFocusActive',
+  'primingTouchActive',
+  'standardActive',
+  'hasUsedCollectableAction',
+  'hasCollected',
+  'successIActive',
+  'successIIActive',
+  'successIIIActive',
+  'wiseToTheWorldActive'
+];
+
+export const collectableStrategyActionKinds: CollectableActionKind[] = [
+  'collect',
+  'scour',
+  'meticulous',
+  'scrutiny',
+  'collectorsFocus',
+  'primingTouch',
+  'successI',
+  'successII',
+  'successIII',
+  'nextCollectSuccess',
+  'restoreIntegrity',
+  'wiseToTheWorld'
+];
+
+export function createDefaultCollectableStrategyRules(): CollectableStrategyRule[] {
+  return [];
+}
+
+export function buildCollectableStrategyTree(request: CollectableStrategyBuildRequest): CollectableStrategyTreeResult {
+  const mechanics = createCollectableMechanicsContext(request);
+  const context: BuildContext = {
+    mechanics,
+    rules: request.rules.filter((rule) => rule.enabled),
+    maxNodes: request.maxNodes ?? 1200,
+    nodeCache: new Map(),
+    limited: false,
+    uncoveredNodes: [],
+    summary: {
+      totalNodes: 0,
+      decidedNodes: 0,
+      uncoveredNodes: 0,
+      terminalNodes: 0,
+      limitedNodes: 0,
+      maxDepth: 0
+    }
+  };
+  const rootState = createInitialCollectableMechanicsState(mechanics, request.temporaryGp);
+  const root = expandNode(rootState, [], [], context);
+
+  return {
+    root,
+    summary: context.summary,
+    uncoveredNodes: context.uncoveredNodes,
+    limited: context.limited
+  };
+}
+
+export function isNumericStrategyField(field: CollectableStrategyField): field is CollectableStrategyNumericField {
+  return collectableStrategyNumericFields.includes(field as CollectableStrategyNumericField);
+}
+
+function expandNode(
+  state: CollectableExperimentState,
+  path: string[],
+  pendingActions: CollectableActionKind[],
+  context: BuildContext
+): CollectableStrategyNode {
+  const decisionKey = collectableDecisionKey(state, pendingActions);
+  const cached = context.nodeCache.get(decisionKey);
+  if (cached) return cached;
+
+  context.summary.totalNodes += 1;
+  context.summary.maxDepth = Math.max(context.summary.maxDepth, path.length);
+
+  if (context.summary.totalNodes > context.maxNodes) {
+    context.limited = true;
+    context.summary.limitedNodes += 1;
+    const node = createNode(state, path, 'limited', pendingActions);
+    context.nodeCache.set(decisionKey, node);
+    return node;
+  }
+
+  if (state.integrity <= 0) {
+    context.summary.terminalNodes += 1;
+    const node = createNode(state, path, 'terminal', pendingActions);
+    context.nodeCache.set(decisionKey, node);
+    return node;
+  }
+
+  const pendingAction = pendingActions[0];
+  if (pendingAction && canUseAction(pendingAction, state, context)) {
+    const node = createNode(state, path, 'decided', pendingActions.slice(1), undefined, undefined, pendingAction);
+    context.nodeCache.set(decisionKey, node);
+    context.summary.decidedNodes += 1;
+    node.branches = applyAction(pendingAction, state, context).map((branch) => ({
+      ...branch,
+      child: expandNode(
+        branch.state,
+        [...path, `${actionLabel(pendingAction)}：${branch.label}`],
+        pendingActions.slice(1),
+        context
+      )
+    }));
+    return node;
+  }
+
+  const executableMatch = findExecutableRule(context.rules, state, context);
+  const matchedRule = executableMatch?.rule;
+  const action = executableMatch?.action;
+
+  if (!matchedRule || !action) {
+    const node = createNode(state, path, 'uncovered', [], matchedRule?.id, matchedRule?.name);
+    context.nodeCache.set(decisionKey, node);
+    context.summary.uncoveredNodes += 1;
+    context.uncoveredNodes.push(node);
+    return node;
+  }
+
+  const nextPending = matchedRule.actions.slice(matchedRule.actions.indexOf(action) + 1);
+  const node = createNode(state, path, 'decided', nextPending, matchedRule.id, matchedRule.name, action);
+  context.nodeCache.set(decisionKey, node);
+  context.summary.decidedNodes += 1;
+  node.branches = applyAction(action, state, context).map((branch) => ({
+    ...branch,
+    child: expandNode(
+      branch.state,
+      [...path, `${matchedRule.name} -> ${actionLabel(action)}：${branch.label}`],
+      nextPending,
+      context
+    )
+  }));
+
+  return node;
+}
+
+function createNode(
+  state: CollectableExperimentState,
+  path: string[],
+  status: CollectableStrategyNode['status'],
+  pendingActions: CollectableActionKind[],
+  matchedRuleId?: string,
+  matchedRuleName?: string,
+  action?: CollectableActionKind
+): CollectableStrategyNode {
+  return {
+    id: stateKey(state, path.length, pendingActions),
+    state: { ...state },
+    path,
+    status,
+    matchedRuleId,
+    matchedRuleName,
+    action,
+    pendingActions,
+    branches: []
+  };
+}
+
+function matchesRule(rule: CollectableStrategyRule, state: CollectableExperimentState): boolean {
+  if (rule.conditions.length === 0) return true;
+  const results = rule.conditions.map((condition) => matchesCondition(condition, state));
+  return rule.mode === 'all' ? results.every(Boolean) : results.some(Boolean);
+}
+
+function findExecutableRule(
+  rules: CollectableStrategyRule[],
+  state: CollectableExperimentState,
+  context: BuildContext
+): { rule: CollectableStrategyRule; action: CollectableActionKind } | undefined {
+  for (const rule of rules) {
+    if (!matchesRule(rule, state)) continue;
+
+    const action = rule.actions.find((candidate) => canUseAction(candidate, state, context));
+    if (action) return { rule, action };
+  }
+
+  return undefined;
+}
+
+function matchesCondition(condition: CollectableStrategyCondition, state: CollectableExperimentState): boolean {
+  const left = state[condition.field];
+  if (typeof left === 'boolean') return left === Boolean(condition.value);
+  const right = Number(condition.value);
+  if (condition.comparator === '<') return left < right;
+  if (condition.comparator === '<=') return left <= right;
+  if (condition.comparator === '>=') return left >= right;
+  if (condition.comparator === '>') return left > right;
+  return left === right;
+}
+
+function canUseAction(action: CollectableActionKind, state: CollectableExperimentState, context: BuildContext): boolean {
+  return canUseCollectableAction(action, state, context.mechanics);
+}
+
+function applyAction(
+  action: CollectableActionKind,
+  state: CollectableExperimentState,
+  context: BuildContext
+): Array<Omit<CollectableStrategyBranch, 'child'>> {
+  return applyCollectableAction(action, state, context.mechanics).map((transition) => ({
+    state: transition.state,
+    probability: transition.probability * 100,
+    label: strategyBranchLabel(transition.labelKeys ?? [transition.labelKey])
+  }));
+}
+
+function stateKey(
+  state: CollectableExperimentState,
+  _depth: number,
+  pendingActions: CollectableActionKind[]
+): string {
+  return collectableDecisionKey(state, pendingActions);
+}
+
+function actionLabel(action: CollectableActionKind): string {
+  return COLLECTABLE_ACTION_DEFINITIONS[action].fallbackName instanceof Object
+    ? '恢復耐久'
+    : COLLECTABLE_ACTION_DEFINITIONS[action].fallbackName;
+}
+
+function cryptoId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return Math.random().toString(36).slice(2);
+}
+
+function strategyBranchLabel(labelKeys: string[]) {
+  return labelKeys.map((key) => {
+    const label = strategyBranchLabels[key];
+    return label ?? key;
+  }).join(' / ');
+}
+
+const strategyBranchLabels: Record<string, string> = {
+  'collectableSolver.branches.applied': '狀態套用',
+  'collectableSolver.branches.collectSuccess': '採集成功',
+  'collectableSolver.branches.collectFailed': '採集失敗',
+  'collectableSolver.branches.valueNormal': '未觸發價值提升',
+  'collectableSolver.branches.valueIncreased': '觸發價值提升',
+  'collectableSolver.branches.integrityConsumed': '消耗耐久',
+  'collectableSolver.branches.meticulousSaved': '未消耗耐久',
+  'collectableSolver.branches.meticulousConsumed': '消耗耐久',
+  'collectableSolver.branches.standardProc': '觸發洞察',
+  'collectableSolver.branches.standardNoProc': '未觸發洞察',
+  'collectableSolver.branches.integrityRestored': '恢復耐久',
+  'collectableSolver.branches.wiseProc': '觸發理智同興',
+  'collectableSolver.branches.wiseNoProc': '未觸發理智同興'
+};
