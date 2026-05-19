@@ -1,5 +1,16 @@
-import { calculateSuccessRate, calculateBoonChance, calculateBountifulYield } from './gatheringMath';
+import { calculateBoonChance } from './gatheringMath';
 import type { SolverDebugInfo, SolverObjectiveMode, SolverRequest, SolverResponse, SolverSearchDebugInfo } from '../types/game';
+import {
+  REGULAR_GATHERING_STATE_KEY_FIELDS,
+  applyRegularGatheringAction,
+  createInitialRegularGatheringMechanicsState,
+  createRegularGatheringMechanicsContext,
+  gpPerGather,
+  regularGatheringStateKey,
+  type RegularGatheringActionKind,
+  type RegularGatheringMechanicsContext,
+  type RegularGatheringMechanicsState
+} from './regularGatheringMechanics';
 
 type JobType = SolverRequest['jobType'];
 
@@ -10,23 +21,7 @@ interface SolverResult {
   habitScore: number;
 }
 
-interface SearchState {
-  gp: number;
-  integrity: number;
-  hasGathered: boolean;
-  successBonus: number;
-  successIActive: boolean;
-  successIIActive: boolean;
-  successIIIActive: boolean;
-  boonBonus: number;
-  giftIActive: boolean;
-  giftIIActive: boolean;
-  allYieldBonus: number;
-  tidings: boolean;
-  nextSuccessBonus: number;
-  nextYieldBonus: number;
-  wiseReady: boolean;
-}
+type SearchState = RegularGatheringMechanicsState;
 
 interface ActionOption {
   name: string;
@@ -39,31 +34,15 @@ interface SearchRunResult extends SolverResult {
   search: SolverSearchDebugInfo;
 }
 
-const BOON_CAP = 100;
 const SUCCESS_CAP = 100;
+const BOON_CAP = 100;
 const EV_EPSILON = 0.0000001;
 const REGULAR_REVISIT_CHANCE = 0.05;
 const TIMED_REVISIT_CHANCE = 0.08;
 const GATHER_ACTION = '採集';
 const WISE_TO_THE_WORLD_ACTION = '理智同興(若觸發)';
 const WISE_PROC_GATHER_ACTION = '採集(理智觸發)';
-const STATE_KEY_FIELDS = [
-  'gp',
-  'integrity',
-  'hasGathered',
-  'successBonus',
-  'successIActive',
-  'successIIActive',
-  'successIIIActive',
-  'boonBonus',
-  'giftIActive',
-  'giftIIActive',
-  'allYieldBonus',
-  'tidings',
-  'nextSuccessBonus',
-  'nextYieldBonus',
-  'wiseReady'
-];
+const STATE_KEY_FIELDS = [...REGULAR_GATHERING_STATE_KEY_FIELDS];
 
 type OutcomeSummary = {
   minYield: number;
@@ -89,14 +68,6 @@ function actionNames(jobType: JobType) {
     kingII: isMiner ? '莫非王土II' : '天賜收成II',
     tidings: isMiner ? '納爾札爾福音' : '諾菲卡福音'
   };
-}
-
-function gpPerGather(level: number): number {
-  return level >= 70 ? 6 : 5;
-}
-
-function clampPercent(value: number, cap: number): number {
-  return Math.min(cap, Math.max(0, value));
 }
 
 function calculateSuccessFormulaDebug(
@@ -165,38 +136,18 @@ function calculateBoonFormulaDebug(perception: number, basePerception: number) {
 }
 
 function buildMemoKey(state: SearchState): string {
-  return [
-    state.gp,
-    state.integrity,
-    state.hasGathered ? 1 : 0,
-    state.successBonus,
-    state.successIActive ? 1 : 0,
-    state.successIIActive ? 1 : 0,
-    state.successIIIActive ? 1 : 0,
-    state.boonBonus,
-    state.giftIActive ? 1 : 0,
-    state.giftIIActive ? 1 : 0,
-    state.allYieldBonus,
-    state.tidings ? 1 : 0,
-    state.nextSuccessBonus,
-    state.nextYieldBonus,
-    state.wiseReady ? 1 : 0
-  ].join('|');
+  return regularGatheringStateKey(state);
 }
 
 export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   const { stats, baseValues, itemLevel, nodeBonuses, temporaryGp, jobType, isTimedNode = false } = request;
   const objectiveMode: SolverObjectiveMode = request.objectiveMode ?? 'expected';
   const names = actionNames(jobType);
-  const maxIntegrity = nodeBonuses.baseIntegrity + nodeBonuses.gatheringCount;
-  const baseSuccessRate = calculateSuccessRate(
-    stats.gathering,
-    baseValues.Gathering,
-    stats.level,
-    itemLevel
-  );
-  const baseBoonChance = calculateBoonChance(stats.perception, baseValues.Perception);
-  const bountifulAmount = calculateBountifulYield(stats.gathering, baseValues.Gathering);
+  const mechanics = createRegularGatheringMechanicsContext(request);
+  const maxIntegrity = mechanics.maxIntegrity;
+  const baseSuccessRate = mechanics.baseSuccessRate;
+  const baseBoonChance = mechanics.baseBoonChance;
+  const bountifulAmount = mechanics.bountifulYield;
   const gatherGp = gpPerGather(stats.level);
   const memo = new Map<string, SolverResult>();
   let activeSearchStats: SolverSearchDebugInfo | null = null;
@@ -243,39 +194,21 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   function gather(state: SearchState): SolverResult {
-    const successRate = clampPercent(
-      baseSuccessRate + state.successBonus + state.nextSuccessBonus,
-      SUCCESS_CAP
-    ) / 100;
-    const boonChance = clampPercent(
-      baseBoonChance + nodeBonuses.extraRate + state.boonBonus,
-      BOON_CAP
-    ) / 100;
-    const baseYield = 1 + nodeBonuses.yieldCount + state.allYieldBonus + state.nextYieldBonus;
-    const boonYield = 1 + (state.tidings ? 1 : 0);
-    const next = solve({
-      ...state,
-      gp: Math.min(stats.gp, state.gp + gatherGp),
-      integrity: state.integrity - 1,
-      hasGathered: true,
-      nextSuccessBonus: 0,
-      nextYieldBonus: 0
-    });
     const outcomes = new Map<number, number>();
-    activeSearchStats && (activeSearchStats.branchCount += [
-      1 - successRate,
-      successRate * (1 - boonChance),
-      successRate * boonChance
-    ].filter((probability) => probability > 0).length);
-    addShiftedOutcomes(outcomes, next.outcomes, 0, 1 - successRate);
-    addShiftedOutcomes(outcomes, next.outcomes, baseYield, successRate * (1 - boonChance));
-    addShiftedOutcomes(outcomes, next.outcomes, baseYield + boonYield, successRate * boonChance);
+    const branches = applyRegularGatheringAction('gather', state, mechanics);
+    const results = branches.map((branch) => solve(branch.state));
+
+    activeSearchStats && (activeSearchStats.branchCount += branches.length);
+    branches.forEach((branch, index) => {
+      addShiftedOutcomes(outcomes, results[index].outcomes, branch.yieldDelta, branch.probability);
+    });
+    const preferredHabitScore = results.reduce((score, result) => Math.max(score, result.habitScore), 0);
 
     return {
       expectedYield: expectedValue(outcomes),
-      rotation: [GATHER_ACTION, ...next.rotation],
+      rotation: [GATHER_ACTION, ...results[0].rotation],
       outcomes,
-      habitScore: next.habitScore
+      habitScore: preferredHabitScore
     };
   }
 
@@ -304,11 +237,11 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
 
     if (wholeNodeBuffAllowed && state.allYieldBonus === 0) {
       if (stats.level >= 40 && state.gp >= 500) {
-        actions.push(setBuffAction(names.kingII, 30, 500, { allYieldBonus: 2 }));
+        actions.push(setBuffAction(names.kingII, 'kingII', 30));
       }
 
       if (stats.level >= 30 && state.gp >= 400) {
-        actions.push(setBuffAction(names.kingI, 31, 400, { allYieldBonus: 1 }));
+        actions.push(setBuffAction(names.kingI, 'kingI', 31));
       }
     }
 
@@ -319,7 +252,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       state.gp >= 200 &&
       baseBoonChance + nodeBonuses.extraRate + state.boonBonus > 0
     ) {
-      actions.push(setBuffAction(names.tidings, 22, 200, { tidings: true }));
+      actions.push(setBuffAction(names.tidings, 'tidings', 22));
     }
 
     if (
@@ -329,14 +262,14 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       state.gp >= 50 &&
       baseSuccessRate + state.successBonus < SUCCESS_CAP
     ) {
-      actions.push(setBuffAction(names.clearVision, 70, 50, { nextSuccessBonus: 15 }));
+      actions.push(setBuffAction(names.clearVision, 'clearVision', 70));
     }
 
     if (state.nextYieldBonus === 0 && state.gp >= 100 && baseSuccessRate + state.successBonus > 0) {
       if (stats.level >= 68) {
-        actions.push(setBuffAction(names.bountifulII, 80, 100, { nextYieldBonus: bountifulAmount }));
+        actions.push(setBuffAction(names.bountifulII, 'bountifulII', 80));
       } else if (stats.level >= 24) {
-        actions.push(setBuffAction(names.bountifulI, 80, 100, { nextYieldBonus: 1 }));
+        actions.push(setBuffAction(names.bountifulI, 'bountifulI', 80));
       }
     }
 
@@ -349,40 +282,25 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
 
   function addSuccessActions(actions: ActionOption[], state: SearchState) {
     if (stats.level >= 10 && state.gp >= 250 && !state.successIIIActive) {
-      actions.push(setBuffAction(names.successIII, 10, 250, {
-        successBonus: state.successBonus + 50,
-        successIIIActive: true
-      }));
+      actions.push(setBuffAction(names.successIII, 'successIII', 10));
     }
 
     if (stats.level >= 5 && state.gp >= 100 && !state.successIIActive) {
-      actions.push(setBuffAction(names.successII, 11, 100, {
-        successBonus: state.successBonus + 15,
-        successIIActive: true
-      }));
+      actions.push(setBuffAction(names.successII, 'successII', 11));
     }
 
     if (stats.level >= 4 && state.gp >= 50 && !state.successIActive) {
-      actions.push(setBuffAction(names.successI, 12, 50, {
-        successBonus: state.successBonus + 5,
-        successIActive: true
-      }));
+      actions.push(setBuffAction(names.successI, 'successI', 12));
     }
   }
 
   function addBoonActions(actions: ActionOption[], state: SearchState) {
     if (stats.level >= 50 && state.gp >= 100 && !state.giftIIActive) {
-      actions.push(setBuffAction(names.giftII, 20, 100, {
-        boonBonus: state.boonBonus + 30,
-        giftIIActive: true
-      }));
+      actions.push(setBuffAction(names.giftII, 'giftII', 20));
     }
 
     if (stats.level >= 15 && state.gp >= 50 && !state.giftIActive) {
-      actions.push(setBuffAction(names.giftI, 21, 50, {
-        boonBonus: state.boonBonus + 10,
-        giftIActive: true
-      }));
+      actions.push(setBuffAction(names.giftI, 'giftI', 21));
     }
   }
 
@@ -396,17 +314,11 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
         name: names.restore,
         priority: 90,
         apply: (current, nextSolve) => {
-          const afterRestore = {
-            ...current,
-            gp: current.gp - 300,
-            integrity: Math.min(maxIntegrity, current.integrity + 1),
-            wiseReady: false
-          };
-          const noProc = nextSolve(afterRestore);
-          const proc = nextSolve({
-            ...afterRestore,
-            wiseReady: true
-          });
+          const branches = applyRegularGatheringAction('restore', current, mechanics);
+          const procBranch = branches.find((branch) => branch.state.wiseReady);
+          const noProcBranch = branches.find((branch) => !branch.state.wiseReady);
+          const noProc = nextSolve((noProcBranch ?? branches[0]).state);
+          const proc = nextSolve((procBranch ?? branches[0]).state);
           const preferredBranch = proc.expectedYield >= noProc.expectedYield
             ? {
                 ...proc,
@@ -414,7 +326,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
               }
             : noProc;
 
-          activeSearchStats && (activeSearchStats.branchCount += 2);
+          activeSearchStats && (activeSearchStats.branchCount += branches.length);
           return {
             expectedYield: noProc.expectedYield * 0.5 + proc.expectedYield * 0.5,
             rotation: preferredBranch.rotation,
@@ -436,11 +348,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       priority: 90,
       apply: (current, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
-        const next = nextSolve({
-          ...current,
-          gp: current.gp - 300,
-          integrity: current.integrity + 1
-        });
+        const [branch] = applyRegularGatheringAction('restore', current, mechanics);
+        const next = nextSolve(branch.state);
 
         return {
           ...next,
@@ -466,11 +375,8 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       priority: 0,
       apply: (current, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
-        const next = nextSolve({
-          ...current,
-          integrity: Math.min(maxIntegrity, current.integrity + 1),
-          wiseReady: false
-        });
+        const [branch] = applyRegularGatheringAction('wise', current, mechanics);
+        const next = nextSolve(branch.state);
 
         return {
           ...next,
@@ -482,20 +388,16 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
 
   function setBuffAction(
     name: string,
-    priority: number,
-    gpCost: number,
-    patch: Partial<SearchState>
+    kind: RegularGatheringActionKind,
+    priority: number
   ): ActionOption {
     return {
       name,
       priority,
       apply: (state, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
-        return nextSolve({
-          ...state,
-          ...patch,
-          gp: state.gp - gpCost
-        });
+        const [branch] = applyRegularGatheringAction(kind, state, mechanics);
+        return nextSolve(branch.state);
       }
     };
   }

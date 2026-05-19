@@ -1,25 +1,18 @@
-import { calculateBoonChance, calculateBountifulYield, calculateSuccessRate } from './gatheringMath';
 import type { NodeBonuses, PlayerStats, SimulationResponse, SimulationRotationAnalysis, SolverRequest } from '../types/game';
+import {
+  applyRegularGatheringAction,
+  canUseRegularGatheringAction,
+  createInitialRegularGatheringMechanicsState,
+  createRegularGatheringMechanicsContext,
+  type RegularGatheringActionKind,
+  type RegularGatheringMechanicsContext,
+  type RegularGatheringMechanicsState
+} from './regularGatheringMechanics';
 
 type JobType = SolverRequest['jobType'];
-type ActionKind =
-  | 'gather'
-  | 'successI'
-  | 'successII'
-  | 'successIII'
-  | 'giftI'
-  | 'giftII'
-  | 'clearVision'
-  | 'bountifulI'
-  | 'bountifulII'
-  | 'restore'
-  | 'wise'
-  | 'kingI'
-  | 'kingII'
-  | 'tidings';
 
 export interface SimulatorAction {
-  kind: ActionKind;
+  kind: RegularGatheringActionKind;
   name: string;
   category: 'gather' | 'success' | 'boon' | 'nextSuccess' | 'nextYield' | 'restore' | 'wholeYield' | 'boonYield';
   gpCost: number;
@@ -27,24 +20,9 @@ export interface SimulatorAction {
   description: string;
 }
 
-export interface SimState {
+export interface SimState extends RegularGatheringMechanicsState {
   probability: number;
   yield: number;
-  gp: number;
-  integrity: number;
-  hasGathered: boolean;
-  successBonus: number;
-  successIActive: boolean;
-  successIIActive: boolean;
-  successIIIActive: boolean;
-  boonBonus: number;
-  giftIActive: boolean;
-  giftIIActive: boolean;
-  allYieldBonus: number;
-  tidings: boolean;
-  nextSuccessBonus: number;
-  nextYieldBonus: number;
-  wiseReady: boolean;
 }
 
 export interface SimulationRequest {
@@ -59,8 +37,6 @@ export interface SimulationRequest {
   revisitRotation: string[];
 }
 
-const BOON_CAP = 100;
-const SUCCESS_CAP = 100;
 const REGULAR_REVISIT_CHANCE = 0.05;
 const TIMED_REVISIT_CHANCE = 0.08;
 
@@ -86,14 +62,14 @@ export function getSimulatorActions(jobType: JobType): SimulatorAction[] {
 }
 
 export function simulateGatheringRotation(request: SimulationRequest): SimulationResponse {
-  const maxIntegrity = request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount;
-  const initialState = createInitialState(Math.min(request.temporaryGp, request.stats.gp), maxIntegrity);
-  const primaryStates = runRotation([initialState], request.primaryRotation, request);
+  const mechanics = createRegularGatheringMechanicsContext(request);
+  const initialState = createInitialState(mechanics, request.temporaryGp);
+  const primaryStates = runRotation([initialState], request.primaryRotation, request, mechanics);
   const primary = summarizeRun('primary', request.primaryRotation, primaryStates);
   const revisitEnabled = request.stats.level >= 91;
   const revisitChance = revisitEnabled ? (request.isTimedNode ? TIMED_REVISIT_CHANCE : REGULAR_REVISIT_CHANCE) : 0;
   const revisitStates = request.revisitRotation.length > 0
-    ? runRotation([createInitialState(request.stats.gp, maxIntegrity)], request.revisitRotation, request)
+    ? runRotation([createInitialState(mechanics, request.stats.gp)], request.revisitRotation, request, mechanics)
     : [];
   const revisit = revisitStates.length > 0
     ? summarizeRun('revisit', request.revisitRotation, revisitStates)
@@ -111,11 +87,12 @@ export function simulateGatheringRotation(request: SimulationRequest): Simulatio
 }
 
 export function previewRotationState(request: Omit<SimulationRequest, 'primaryRotation' | 'revisitRotation'>, rotation: string[]) {
-  return runRotation([createInitialState(Math.min(request.temporaryGp, request.stats.gp), request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount)], rotation, {
+  const mechanics = createRegularGatheringMechanicsContext(request);
+  return runRotation([createInitialState(mechanics, request.temporaryGp)], rotation, {
     ...request,
     primaryRotation: rotation,
     revisitRotation: []
-  });
+  }, mechanics);
 }
 
 export function validateSimulatorRotation(
@@ -127,10 +104,8 @@ export function validateSimulatorRotation(
     primaryRotation: rotation,
     revisitRotation: []
   };
-  let states = [createInitialState(
-    Math.min(request.temporaryGp, request.stats.gp),
-    request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount
-  )];
+  const mechanics = createRegularGatheringMechanicsContext(request);
+  let states = [createInitialState(mechanics, request.temporaryGp)];
   const invalidIndexes: number[] = [];
 
   rotation.forEach((actionName, index) => {
@@ -140,12 +115,12 @@ export function validateSimulatorRotation(
       return;
     }
 
-    if (!states.some((state) => canUseAction(action, state, request))) {
+    if (!states.some((state) => canUseAction(action, state, request, mechanics))) {
       invalidIndexes.push(index);
       return;
     }
 
-    states = normalizeStates(states.flatMap((state) => applyAction(action, state, simulationRequest)));
+    states = normalizeStates(states.flatMap((state) => applyAction(action, state, simulationRequest, mechanics)));
   });
 
   return {
@@ -155,94 +130,47 @@ export function validateSimulatorRotation(
 }
 
 export function canUseSimulatorAction(action: SimulatorAction, states: SimState[], request: Omit<SimulationRequest, 'primaryRotation' | 'revisitRotation'>): boolean {
-  return states.some((state) => canUseAction(action, state, request));
+  const mechanics = createRegularGatheringMechanicsContext(request);
+  return states.some((state) => canUseAction(action, state, request, mechanics));
 }
 
-function runRotation(states: SimState[], rotation: string[], request: SimulationRequest) {
+function runRotation(
+  states: SimState[],
+  rotation: string[],
+  request: SimulationRequest,
+  mechanics: RegularGatheringMechanicsContext
+) {
   return rotation.reduce((currentStates, actionName) => {
     const action = resolveAction(actionName, request.jobType);
     if (!action) return currentStates;
 
-    return normalizeStates(currentStates.flatMap((state) => applyAction(action, state, request)));
+    return normalizeStates(currentStates.flatMap((state) => applyAction(action, state, request, mechanics)));
   }, states);
 }
 
-function applyAction(action: SimulatorAction, state: SimState, request: SimulationRequest): SimState[] {
-  if (!canUseAction(action, state, request)) return [state];
+function applyAction(
+  action: SimulatorAction,
+  state: SimState,
+  request: SimulationRequest,
+  mechanics: RegularGatheringMechanicsContext
+): SimState[] {
+  if (!canUseAction(action, state, request, mechanics)) return [state];
 
-  if (action.kind === 'gather') return gather(state, request);
-  if (action.kind === 'restore') return restore(state, request);
-  if (action.kind === 'wise') return [{ ...state, integrity: state.integrity + 1, wiseReady: false }];
-
-  const next = { ...state, gp: state.gp - action.gpCost };
-  if (action.kind === 'successI') return [{ ...next, successBonus: next.successBonus + 5, successIActive: true }];
-  if (action.kind === 'successII') return [{ ...next, successBonus: next.successBonus + 15, successIIActive: true }];
-  if (action.kind === 'successIII') return [{ ...next, successBonus: next.successBonus + 50, successIIIActive: true }];
-  if (action.kind === 'giftI') return [{ ...next, boonBonus: next.boonBonus + 10, giftIActive: true }];
-  if (action.kind === 'giftII') return [{ ...next, boonBonus: next.boonBonus + 30, giftIIActive: true }];
-  if (action.kind === 'clearVision') return [{ ...next, nextSuccessBonus: 15 }];
-  if (action.kind === 'bountifulI') return [{ ...next, nextYieldBonus: 1 }];
-  if (action.kind === 'bountifulII') return [{ ...next, nextYieldBonus: calculateBountifulYield(request.stats.gathering, request.baseValues.Gathering) }];
-  if (action.kind === 'kingI') return [{ ...next, allYieldBonus: 1 }];
-  if (action.kind === 'kingII') return [{ ...next, allYieldBonus: 2 }];
-  if (action.kind === 'tidings') return [{ ...next, tidings: true }];
-
-  return [state];
+  return applyRegularGatheringAction(action.kind, state, mechanics).map((transition) => ({
+    ...transition.state,
+    probability: state.probability * transition.probability,
+    yield: state.yield + transition.yieldDelta
+  }));
 }
 
-function canUseAction(action: SimulatorAction, state: SimState, request: Omit<SimulationRequest, 'primaryRotation' | 'revisitRotation'>): boolean {
+function canUseAction(
+  action: SimulatorAction,
+  state: SimState,
+  request: Omit<SimulationRequest, 'primaryRotation' | 'revisitRotation'>,
+  mechanics: RegularGatheringMechanicsContext
+): boolean {
   if (request.stats.level < action.minLevel || state.gp < action.gpCost) return false;
-  if (state.integrity <= 0) return false;
-  const maxIntegrity = request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount;
-  const baseSuccessRate = calculateSuccessRate(request.stats.gathering, request.baseValues.Gathering, request.stats.level, request.itemLevel);
-  const baseBoonChance = calculateBoonChance(request.stats.perception, request.baseValues.Perception);
-
-  if (action.kind === 'gather') return state.integrity > 0;
-  if (action.kind === 'wise') return state.integrity < maxIntegrity && state.wiseReady;
-  if (action.kind === 'restore') return state.integrity < maxIntegrity;
-  if (['successI', 'successII', 'successIII', 'giftI', 'giftII', 'kingI', 'kingII', 'tidings'].includes(action.kind) && state.hasGathered) return false;
-  if (action.kind === 'successI') return !state.successIActive && baseSuccessRate > 1 && baseSuccessRate + state.successBonus < SUCCESS_CAP;
-  if (action.kind === 'successII') return !state.successIIActive && baseSuccessRate > 1 && baseSuccessRate + state.successBonus < SUCCESS_CAP;
-  if (action.kind === 'successIII') return !state.successIIIActive && baseSuccessRate > 1 && baseSuccessRate + state.successBonus < SUCCESS_CAP;
-  if (action.kind === 'giftI') return !state.giftIActive && baseBoonChance + request.nodeBonuses.extraRate > 1;
-  if (action.kind === 'giftII') return !state.giftIIActive && baseBoonChance + request.nodeBonuses.extraRate > 1;
-  if (action.kind === 'clearVision') return state.nextSuccessBonus === 0 && baseSuccessRate > 1 && baseSuccessRate + state.successBonus < SUCCESS_CAP;
-  if (action.kind === 'bountifulI' || action.kind === 'bountifulII') return state.nextYieldBonus === 0 && baseSuccessRate + state.successBonus > 0;
-  if (action.kind === 'kingI' || action.kind === 'kingII') return state.allYieldBonus === 0;
-  if (action.kind === 'tidings') return !state.tidings && baseBoonChance + request.nodeBonuses.extraRate + state.boonBonus > 0;
-
-  return true;
-}
-
-function gather(state: SimState, request: SimulationRequest): SimState[] {
-  const successRate = clampPercent(calculateSuccessRate(request.stats.gathering, request.baseValues.Gathering, request.stats.level, request.itemLevel) + state.successBonus + state.nextSuccessBonus, SUCCESS_CAP) / 100;
-  const boonChance = clampPercent(calculateBoonChance(request.stats.perception, request.baseValues.Perception) + request.nodeBonuses.extraRate + state.boonBonus, BOON_CAP) / 100;
-  const baseYield = 1 + request.nodeBonuses.yieldCount + state.allYieldBonus + state.nextYieldBonus;
-  const boonYield = 1 + (state.tidings ? 1 : 0);
-  const afterGather = {
-    ...state,
-    gp: Math.min(request.stats.gp, state.gp + gpPerGather(request.stats.level)),
-    integrity: state.integrity - 1,
-    hasGathered: true,
-    nextSuccessBonus: 0,
-    nextYieldBonus: 0
-  };
-
-  return [
-    { ...afterGather, probability: state.probability * (1 - successRate) },
-    { ...afterGather, probability: state.probability * successRate * (1 - boonChance), yield: state.yield + baseYield },
-    { ...afterGather, probability: state.probability * successRate * boonChance, yield: state.yield + baseYield + boonYield }
-  ].filter((next) => next.probability > 0);
-}
-
-function restore(state: SimState, request: SimulationRequest): SimState[] {
-  const restored = { ...state, gp: state.gp - 300, integrity: state.integrity + 1 };
-  if (request.stats.level < 90) return [restored];
-
-  return [
-    { ...restored, probability: state.probability * 0.5, wiseReady: false },
-    { ...restored, probability: state.probability * 0.5, wiseReady: true }
-  ];
+  return canUseRegularGatheringAction(action.kind, state, mechanics);
 }
 
 function combineWithRevisit(primaryStates: SimState[], revisitStates: SimState[], revisitChance: number) {
@@ -293,25 +221,14 @@ function normalizeStates(states: SimState[]) {
   return [...merged.values()].filter((state) => state.probability > 0.000000001);
 }
 
-function createInitialState(gp: number, integrity: number): SimState {
+function createInitialState(
+  mechanics: RegularGatheringMechanicsContext,
+  temporaryGp: number
+): SimState {
   return {
+    ...createInitialRegularGatheringMechanicsState(mechanics, temporaryGp),
     probability: 1,
-    yield: 0,
-    gp,
-    integrity,
-    hasGathered: false,
-    successBonus: 0,
-    successIActive: false,
-    successIIActive: false,
-    successIIIActive: false,
-    boonBonus: 0,
-    giftIActive: false,
-    giftIIActive: false,
-    allYieldBonus: 0,
-    tidings: false,
-    nextSuccessBonus: 0,
-    nextYieldBonus: 0,
-    wiseReady: false
+    yield: 0
   };
 }
 
@@ -335,12 +252,4 @@ function actionNames(jobType: JobType) {
 
 function resolveAction(actionName: string, jobType: JobType) {
   return getSimulatorActions(jobType).find((option) => option.name === actionName || (option.kind === 'gather' && actionName.startsWith('採集')));
-}
-
-function gpPerGather(level: number): number {
-  return level >= 70 ? 6 : 5;
-}
-
-function clampPercent(value: number, cap: number): number {
-  return Math.min(cap, Math.max(0, value));
 }
