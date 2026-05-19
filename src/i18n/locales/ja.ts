@@ -327,6 +327,7 @@ export default {
       yieldCount: '獲得数増加',
       extraRate: '特殊採集発生率増加',
       collectableRelicToolBonus: 'レリック道具効果',
+      collectableRelicToolBonusDesc: '収集品の価値上昇率 +20%。',
       enabled: 'あり',
       disabled: 'なし'
     },

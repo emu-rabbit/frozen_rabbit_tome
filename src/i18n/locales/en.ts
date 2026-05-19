@@ -327,6 +327,7 @@ export default {
       yieldCount: 'Yield +',
       extraRate: 'Extra Rate +',
       collectableRelicToolBonus: 'Relic Tool Effect',
+      collectableRelicToolBonusDesc: 'Collectable value increase rate +20%.',
       enabled: 'Yes',
       disabled: 'No',
     },

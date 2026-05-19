@@ -328,6 +328,7 @@ export default {
       yieldCount: '獲得數增加',
       extraRate: '額外率增加',
       collectableRelicToolBonus: '遺物工具效果',
+      collectableRelicToolBonusDesc: '收藏品價值提升率 +20%。',
       enabled: '有',
       disabled: '無'
     },
