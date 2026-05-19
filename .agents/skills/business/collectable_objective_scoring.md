@@ -200,7 +200,70 @@ scoreCollectability(collectability, rewardTable, objective)
 - 顯示仍可保留「預期大地橘票」、「低 / 中 / 高標門檻」、「最低 / 最高結果」。
 - 文案要清楚標示目前推薦是依哪個評分偏好產生。
 
-### 5. Tome Library 與實驗系統
+### 5. 顯示預期檔位顆數
+
+若使用自訂權重或高標優先 preset，UI 不應只顯示 `expectedScore`。此時分數是使用者偏好權重，不是遊戲內真實單位；更有用的摘要是「預期會拿到幾顆高標 / 中標 / 低標」。
+
+不要嘗試從 scalar score 反推檔位顆數。原因：
+
+- 權重可能導致碰撞，例如同一個總分可由不同低 / 中 / 高組合得到。
+- `scrip` 模式下，總票數也無法可靠還原每顆的檔位。
+- 未來若加入特殊 breakpoint、精選評分或物品權重，反推會更不穩定。
+
+建議新增一個與 `expectedReward` 平行的摘要向量：
+
+```ts
+export interface CollectableTierCounts {
+  none: number;
+  low: number;
+  mid: number;
+  high: number;
+  cap?: number;
+}
+```
+
+每次 `Collect` 成功時，依當下 `collectability` 判斷 tier，給該 branch 加上一次 tier count：
+
+```ts
+{ high: 1 }
+```
+
+再像 `expectedReward` 一樣沿著 DP 結果加總並乘上機率，最後得到：
+
+```ts
+expectedTierCounts: {
+  low: 0.12,
+  mid: 1.35,
+  high: 4.48
+}
+```
+
+UI 可顯示為：
+
+```txt
+預期交納品質
+高標 4.48 顆
+中標 1.35 顆
+低標 0.12 顆
+未達標 0.00 顆
+```
+
+如果目前評分偏好是「老主顧高標」或其他 tier-aware preset，主視覺應優先顯示 tier counts；`expectedScore` 可以降級為 debug / 進階資訊，避免玩家把權重分數誤認為真實票據。
+
+### 6. RAM 與效能邊界
+
+只累積 `expectedTierCounts` 的 RAM 成本很低。它只是每個 memo result 多 4 到 5 個 number，相對目前已保存的 `expectedReward`、`outcomes: Map<number, probability>`、policy branch 物件與 debug 資訊，成本可忽略。
+
+請注意下列邊界：
+
+- `expectedTierCounts` 是結果摘要，不是求解狀態；不要把它加入 DP state key。
+- 不要為了一般 UI 把 endpoint outcome key 擴成 `score + lowCount + midCount + highCount`。這會放大 outcome distribution，尤其在多次 `Collect`、`Revisit` 與洞察分支下容易變胖。
+- 若未來需要完整檔位組合分布，建議只在 `debugMode` 或專門研究匯出中計算，平常求解不要保存。
+- 第一版 UI 只需要期望檔位顆數即可，不需要完整 endpoint tier distribution。
+
+因此，若只是為畫面顯示「預期高標 / 中標 / 低標顆數」，可以直接做；主要風險不是 RAM，而是命名、顯示與測試要避免讓使用者誤解 scoring 分數。
+
+### 7. Tome Library 與實驗系統
 
 若實作此功能，儲存到 Tome Library 時應保存 objective/preset，而不是只保存當下顯示文字。
 
@@ -220,8 +283,10 @@ scoreCollectability(collectability, rewardTable, objective)
 2. 新增 `scoreCollectability()` 並讓 solver / strategy analysis 共用。
 3. 加入老主顧高標 preset，至少針對 `rewardTable.source === 'customDelivery'` 作為建議預設。
 4. UI 加 `評分偏好` 小視窗，先提供 preset 與自訂低 / 中 / 高權重。
-5. 補 unit tests：
+5. 新增 `expectedTierCounts` 摘要，讓 UI 能顯示預期高標 / 中標 / 低標顆數。
+6. 補 unit tests：
    - 現有 `scrip` 模式維持舊行為。
    - 老主顧高標 preset 不會因中標票數總和較高而提早停手。
    - 自訂權重能改變推薦策略。
+   - `expectedTierCounts` 會隨 `Collect` 成功分支正確累積，且不影響 DP state key。
    - 秘笈與實驗分析使用同一 scoring helper。
