@@ -1290,45 +1290,52 @@ function makeId() {
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.55rem;
   align-items: stretch;
 }
 
 .summary-grid div {
   min-width: 0;
-  min-height: 6.9rem;
+  min-height: 5.15rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 0.65rem;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 1px solid transparent;
   border-radius: 0.85rem;
   background: #f8fafc;
-  padding: 0.75rem;
+  padding: 0.7rem 0.75rem;
 }
 
 .summary-grid div.warning {
-  background: #fff7ed;
+  border-color: rgb(82 168 144 / 0.32);
+  background: #ecfdf5;
 }
 
 :global(html.dark .summary-grid div) {
+  border-color: rgb(51 65 85 / 0.62);
   background: rgb(30 41 59 / 0.55);
 }
 
 :global(html.dark .summary-grid div.warning) {
-  background: rgb(154 52 18 / 0.18);
+  border-color: rgb(94 234 212 / 0.24);
+  background: rgb(20 83 73 / 0.24);
 }
 
 .summary-grid strong {
   display: block;
-  margin-top: auto;
   color: #0f172a;
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 950;
   line-height: 1;
 }
 
 :global(html.dark .summary-grid strong) {
   color: #f8fafc;
+}
+
+:global(html.dark .summary-grid div.warning span) {
+  color: #99f6e4;
 }
 
 .limit-warning {
