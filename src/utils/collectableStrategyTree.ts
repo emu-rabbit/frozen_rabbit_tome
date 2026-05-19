@@ -101,6 +101,9 @@ export interface CollectableStrategyBuildRequest {
   hasRelicToolBonus?: boolean;
   rules: CollectableStrategyRule[];
   maxNodes?: number;
+  formatActionLabel?: (action: CollectableActionKind) => string;
+  formatBranchLabel?: (labelKeys: string[]) => string;
+  formatPathStep?: (payload: { ruleName?: string; actionLabel: string; branchLabel: string }) => string;
 }
 
 interface BuildContext {
@@ -111,6 +114,9 @@ interface BuildContext {
   limited: boolean;
   summary: CollectableStrategyTreeSummary;
   uncoveredNodes: CollectableStrategyNode[];
+  formatActionLabel: (action: CollectableActionKind) => string;
+  formatBranchLabel: (labelKeys: string[]) => string;
+  formatPathStep: (payload: { ruleName?: string; actionLabel: string; branchLabel: string }) => string;
 }
 
 export const collectableStrategyNumericFields: CollectableStrategyNumericField[] = [
@@ -169,7 +175,10 @@ export function buildCollectableStrategyTree(request: CollectableStrategyBuildRe
       terminalNodes: 0,
       limitedNodes: 0,
       maxDepth: 0
-    }
+    },
+    formatActionLabel: request.formatActionLabel ?? defaultActionLabel,
+    formatBranchLabel: request.formatBranchLabel ?? defaultBranchLabel,
+    formatPathStep: request.formatPathStep ?? defaultPathStep
   };
   const rootState = createInitialCollectableMechanicsState(mechanics, request.temporaryGp);
   const root = expandNode(rootState, [], [], context);
@@ -223,7 +232,7 @@ function expandNode(
       ...branch,
       child: expandNode(
         branch.state,
-        [...path, `${actionLabel(pendingAction)}：${branch.label}`],
+        [...path, context.formatPathStep({ actionLabel: context.formatActionLabel(pendingAction), branchLabel: branch.label })],
         pendingActions.slice(1),
         context
       )
@@ -251,7 +260,7 @@ function expandNode(
     ...branch,
     child: expandNode(
       branch.state,
-      [...path, `${matchedRule.name} -> ${actionLabel(action)}：${branch.label}`],
+      [...path, context.formatPathStep({ ruleName: matchedRule.name, actionLabel: context.formatActionLabel(action), branchLabel: branch.label })],
       nextPending,
       context
     )
@@ -326,7 +335,7 @@ function applyAction(
   return applyCollectableAction(action, state, context.mechanics).map((transition) => ({
     state: transition.state,
     probability: transition.probability * 100,
-    label: strategyBranchLabel(transition.labelKeys ?? [transition.labelKey])
+    label: context.formatBranchLabel(transition.labelKeys ?? [transition.labelKey])
   }));
 }
 
@@ -338,9 +347,9 @@ function stateKey(
   return collectableDecisionKey(state, pendingActions);
 }
 
-function actionLabel(action: CollectableActionKind): string {
+function defaultActionLabel(action: CollectableActionKind): string {
   return COLLECTABLE_ACTION_DEFINITIONS[action].fallbackName instanceof Object
-    ? '恢復耐久'
+    ? 'Restore Integrity'
     : COLLECTABLE_ACTION_DEFINITIONS[action].fallbackName;
 }
 
@@ -349,7 +358,13 @@ function cryptoId() {
   return Math.random().toString(36).slice(2);
 }
 
-function strategyBranchLabel(labelKeys: string[]) {
+function defaultPathStep(payload: { ruleName?: string; actionLabel: string; branchLabel: string }) {
+  return payload.ruleName
+    ? `${payload.ruleName} -> ${payload.actionLabel}: ${payload.branchLabel}`
+    : `${payload.actionLabel}: ${payload.branchLabel}`;
+}
+
+function defaultBranchLabel(labelKeys: string[]) {
   return labelKeys.map((key) => {
     const label = strategyBranchLabels[key];
     return label ?? key;
@@ -357,17 +372,17 @@ function strategyBranchLabel(labelKeys: string[]) {
 }
 
 const strategyBranchLabels: Record<string, string> = {
-  'collectableSolver.branches.applied': '狀態套用',
-  'collectableSolver.branches.collectSuccess': '採集成功',
-  'collectableSolver.branches.collectFailed': '採集失敗',
-  'collectableSolver.branches.valueNormal': '未觸發價值提升',
-  'collectableSolver.branches.valueIncreased': '觸發價值提升',
-  'collectableSolver.branches.integrityConsumed': '消耗耐久',
-  'collectableSolver.branches.meticulousSaved': '未消耗耐久',
-  'collectableSolver.branches.meticulousConsumed': '消耗耐久',
-  'collectableSolver.branches.standardProc': '觸發洞察',
-  'collectableSolver.branches.standardNoProc': '未觸發洞察',
-  'collectableSolver.branches.integrityRestored': '恢復耐久',
-  'collectableSolver.branches.wiseProc': '觸發理智同興',
-  'collectableSolver.branches.wiseNoProc': '未觸發理智同興'
+  'collectableSolver.branches.applied': 'Applied',
+  'collectableSolver.branches.collectSuccess': 'Collect succeeded',
+  'collectableSolver.branches.collectFailed': 'Collect failed',
+  'collectableSolver.branches.valueNormal': 'No collectability increase',
+  'collectableSolver.branches.valueIncreased': 'Collectability increase',
+  'collectableSolver.branches.integrityConsumed': 'Integrity consumed',
+  'collectableSolver.branches.meticulousSaved': 'Meticulous saved integrity',
+  'collectableSolver.branches.meticulousConsumed': 'Meticulous consumed integrity',
+  'collectableSolver.branches.standardProc': "Collector's Standard proc",
+  'collectableSolver.branches.standardNoProc': "No Collector's Standard",
+  'collectableSolver.branches.integrityRestored': 'Integrity restored',
+  'collectableSolver.branches.wiseProc': 'Wise to the World proc',
+  'collectableSolver.branches.wiseNoProc': 'No Wise to the World'
 };

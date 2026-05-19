@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import type { CollectableActionKind } from '../types/collectable';
@@ -18,6 +19,7 @@ import {
 } from '../utils/collectableStrategyTree';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 
+const { t } = useI18n();
 const props = defineProps<{
   activeItem: GatherableItem;
   effectiveStats: PlayerStats;
@@ -48,7 +50,12 @@ const treeResult = computed(() => {
     isTimedNode: props.activeItem.isTimedNode ?? false,
     hasRelicToolBonus: props.hasRelicToolBonus,
     rules: rules.value,
-    maxNodes: internalMaxNodes
+    maxNodes: internalMaxNodes,
+    formatActionLabel: actionName,
+    formatBranchLabel: (labelKeys) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
+    formatPathStep: ({ ruleName, actionLabel, branchLabel }) => ruleName
+      ? t('collectableStrategyLab.pathStepWithRule', { rule: ruleName, action: actionLabel, branch: branchLabel })
+      : t('collectableStrategyLab.pathStep', { action: actionLabel, branch: branchLabel })
   });
 });
 const summary = computed(() => treeResult.value?.summary);
@@ -92,7 +99,7 @@ function addRule() {
     ...rules.value,
     {
       id,
-      name: `策略 ${rules.value.length + 1}`,
+      name: t('collectableStrategyLab.defaultRuleName', { index: rules.value.length + 1 }),
       mode: 'all',
       enabled: true,
       conditions: [createCondition('collectability')],
@@ -161,24 +168,7 @@ function actionIcon(action: CollectableActionKind) {
 }
 
 function fieldLabel(field: CollectableStrategyField) {
-  const labels: Record<CollectableStrategyField, string> = {
-    gp: 'GP',
-    integrity: '耐久',
-    collectability: '收藏價值',
-    scrutinyActive: '集中檢查',
-    collectorsFocusActive: '價值矚目',
-    primingTouchActive: '預備碰觸',
-    standardActive: '洞察',
-    hasUsedCollectableAction: '已用收藏品技能',
-    hasCollected: '已採集過',
-    successBonus: '採集成功率加成',
-    successIActive: '獲得率 I',
-    successIIActive: '獲得率 II',
-    successIIIActive: '獲得率 III',
-    nextCollectSuccessBonus: '下次採集成功率',
-    wiseToTheWorldActive: '理智同興'
-  };
-  return labels[field];
+  return t(`collectableStrategyLab.fields.${field}`);
 }
 
 function comparatorLabel(comparator: CollectableStrategyComparator) {
@@ -193,34 +183,43 @@ function comparatorLabel(comparator: CollectableStrategyComparator) {
 }
 
 function formatNodeState(node: CollectableStrategyNode) {
-  return `GP ${node.state.gp} / 耐久 ${node.state.integrity} / 價值 ${node.state.collectability}`;
+  return t('collectableStrategyLab.nodeState', {
+    gp: node.state.gp,
+    integrity: node.state.integrity,
+    collectability: node.state.collectability
+  });
 }
 
 function formatStateChips(node: CollectableStrategyNode) {
   return [
-    node.state.scrutinyActive ? '集中檢查' : '',
-    node.state.collectorsFocusActive ? '價值矚目' : '',
-    node.state.primingTouchActive ? '預備碰觸' : '',
-    node.state.standardActive ? '洞察' : '',
-    node.state.wiseToTheWorldActive ? '理智同興' : '',
-    node.state.successBonus ? `成功率 +${node.state.successBonus}` : '',
-    node.state.nextCollectSuccessBonus ? `下次 +${node.state.nextCollectSuccessBonus}` : '',
-    node.state.hasUsedCollectableAction ? '已開始' : '',
-    node.state.hasCollected ? '已採集' : ''
+    node.state.scrutinyActive ? t('collectableStrategyLab.chips.scrutinyActive') : '',
+    node.state.collectorsFocusActive ? t('collectableStrategyLab.chips.collectorsFocusActive') : '',
+    node.state.primingTouchActive ? t('collectableStrategyLab.chips.primingTouchActive') : '',
+    node.state.standardActive ? t('collectableStrategyLab.chips.standardActive') : '',
+    node.state.wiseToTheWorldActive ? t('collectableStrategyLab.chips.wiseToTheWorldActive') : '',
+    node.state.successBonus ? t('collectableStrategyLab.chips.successBonus', { value: node.state.successBonus }) : '',
+    node.state.nextCollectSuccessBonus ? t('collectableStrategyLab.chips.nextCollectSuccessBonus', { value: node.state.nextCollectSuccessBonus }) : '',
+    node.state.hasUsedCollectableAction ? t('collectableStrategyLab.chips.hasUsedCollectableAction') : '',
+    node.state.hasCollected ? t('collectableStrategyLab.chips.hasCollected') : ''
   ].filter(Boolean);
 }
 
 function coverageText(rule: CollectableStrategyRule) {
   const count = ruleCoverage.value.get(rule.id) ?? 0;
-  return `${count} 節點`;
+  return t('collectableStrategyLab.coverageNodes', { count });
 }
 
 function conditionSummary(rule: CollectableStrategyRule) {
-  if (rule.conditions.length === 0) return '無條件';
-  const joiner = rule.mode === 'all' ? '、' : ' 或 ';
+  if (rule.conditions.length === 0) return t('collectableStrategyLab.noConditions');
+  const joiner = rule.mode === 'all' ? t('collectableStrategyLab.joiners.all') : t('collectableStrategyLab.joiners.any');
   return rule.conditions.map((condition) => {
     const label = fieldLabel(condition.field);
-    if (!isNumericStrategyField(condition.field)) return `${label}${condition.value ? '有' : '無'}`;
+    if (!isNumericStrategyField(condition.field)) {
+      return t('collectableStrategyLab.booleanCondition', {
+        label,
+        value: condition.value ? t('collectableStrategyLab.booleanValues.true') : t('collectableStrategyLab.booleanValues.false')
+      });
+    }
     return `${label} ${condition.comparator} ${condition.value}`;
   }).join(joiner);
 }
@@ -256,19 +255,19 @@ function makeId() {
       <div class="strategy-column">
         <div class="column-header">
           <div>
-            <span>策略列表</span>
-            <h2>規則由上而下套用</h2>
+            <span>{{ t('collectableStrategyLab.strategyListKicker') }}</span>
+            <h2>{{ t('collectableStrategyLab.strategyListTitle') }}</h2>
           </div>
-          <Button icon="pi pi-plus" label="新增策略" class="p-button-sm rounded-xl" @click="addRule" />
+          <Button icon="pi pi-plus" :label="t('collectableStrategyLab.addStrategy')" class="p-button-sm rounded-xl" @click="addRule" />
         </div>
 
         <div v-if="rules.length === 0" class="strategy-empty">
           <i class="pi pi-sitemap"></i>
-          <strong>尚未建立策略</strong>
-          <p>新增第一條策略後，右側會立刻展開決策樹並顯示尚待決策的狀態。</p>
+          <strong>{{ t('collectableStrategyLab.emptyStrategyTitle') }}</strong>
+          <p>{{ t('collectableStrategyLab.emptyStrategyDesc') }}</p>
         </div>
 
-        <div v-if="rules.length > 0" class="strategy-list" aria-label="收藏品策略列表">
+        <div v-if="rules.length > 0" class="strategy-list" :aria-label="t('collectableStrategyLab.strategyListAria')">
           <article
             v-for="(rule, ruleIndex) in rules"
             :key="rule.id"
@@ -283,16 +282,16 @@ function makeId() {
               <strong class="rule-name-display">{{ rule.name }}</strong>
               <span class="coverage-pill">{{ coverageText(rule) }}</span>
               <div class="rule-tools">
-                <button type="button" :disabled="ruleIndex === 0" title="上移" @click="moveRule(rule.id, -1)">
+                <button type="button" :disabled="ruleIndex === 0" :title="t('collectableStrategyLab.tools.moveUp')" @click="moveRule(rule.id, -1)">
                   <i class="pi pi-arrow-up"></i>
                 </button>
-                <button type="button" :disabled="ruleIndex === rules.length - 1" title="下移" @click="moveRule(rule.id, 1)">
+                <button type="button" :disabled="ruleIndex === rules.length - 1" :title="t('collectableStrategyLab.tools.moveDown')" @click="moveRule(rule.id, 1)">
                   <i class="pi pi-arrow-down"></i>
                 </button>
-                <button type="button" title="編輯" @click="openRuleEditor(rule.id)">
+                <button type="button" :title="t('collectableStrategyLab.tools.edit')" @click="openRuleEditor(rule.id)">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button type="button" title="刪除" @click="removeRule(rule.id)">
+                <button type="button" :title="t('collectableStrategyLab.tools.delete')" @click="removeRule(rule.id)">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -310,74 +309,74 @@ function makeId() {
       <aside class="tree-column">
         <div class="column-header">
           <div>
-            <span>決策樹覆蓋</span>
-            <h2>目前展開狀態</h2>
+            <span>{{ t('collectableStrategyLab.treeKicker') }}</span>
+            <h2>{{ t('collectableStrategyLab.treeTitle') }}</h2>
           </div>
         </div>
 
         <div v-if="!canBuildTree" class="tree-empty">
           <i class="pi pi-database"></i>
-          <p>正在載入收藏品基礎值。</p>
+          <p>{{ t('collectableStrategyLab.loadingBaseValues') }}</p>
         </div>
 
         <template v-else-if="summary">
           <section class="summary-grid">
             <div>
-              <span>總節點</span>
+              <span>{{ t('collectableStrategyLab.summary.totalNodes') }}</span>
               <strong>{{ summary.totalNodes }}</strong>
             </div>
             <div>
-              <span>已決策</span>
+              <span>{{ t('collectableStrategyLab.summary.decidedNodes') }}</span>
               <strong>{{ summary.decidedNodes }}</strong>
             </div>
             <div :class="{ warning: summary.uncoveredNodes > 0 }">
-              <span>尚待決策</span>
+              <span>{{ t('collectableStrategyLab.summary.uncoveredNodes') }}</span>
               <strong>{{ summary.uncoveredNodes }}</strong>
             </div>
             <div>
-              <span>終止</span>
+              <span>{{ t('collectableStrategyLab.summary.terminalNodes') }}</span>
               <strong>{{ summary.terminalNodes }}</strong>
             </div>
           </section>
 
           <p v-if="treeResult?.limited" class="limit-warning">
-            目前策略展開過大，已先停止後續展開；請新增更收斂的策略再觀察。
+            {{ t('collectableStrategyLab.limitWarning') }}
           </p>
 
           <section class="uncovered-panel">
             <div class="panel-title-row">
-              <h3>尚待決策節點</h3>
+              <h3>{{ t('collectableStrategyLab.uncoveredTitle') }}</h3>
             </div>
 
             <div v-if="uncoveredNodes.length === 0" class="tree-empty compact">
               <i class="pi pi-check-circle"></i>
-              <p>目前所有分枝都能一路走到耐久歸零。</p>
+              <p>{{ t('collectableStrategyLab.noUncoveredDesc') }}</p>
             </div>
 
             <div v-else class="uncovered-layout">
               <div class="node-pager">
-                <button type="button" aria-label="上一個待決節點" @click="goToUncoveredNode(-1)">
+                <button type="button" :aria-label="t('collectableStrategyLab.previousUncovered')" @click="goToUncoveredNode(-1)">
                   <i class="pi pi-angle-left"></i>
                 </button>
-                <span>第 {{ selectedUncoveredIndex + 1 }} / {{ uncoveredNodes.length }} 個</span>
-                <button type="button" aria-label="下一個待決節點" @click="goToUncoveredNode(1)">
+                <span>{{ t('collectableStrategyLab.nodePager', { current: selectedUncoveredIndex + 1, total: uncoveredNodes.length }) }}</span>
+                <button type="button" :aria-label="t('collectableStrategyLab.nextUncovered')" @click="goToUncoveredNode(1)">
                   <i class="pi pi-angle-right"></i>
                 </button>
               </div>
 
               <article v-if="selectedUncoveredNode" class="uncovered-detail">
-                <span>待決狀態</span>
+                <span>{{ t('collectableStrategyLab.pendingState') }}</span>
                 <h4>{{ formatNodeState(selectedUncoveredNode) }}</h4>
                 <div class="state-chip-list">
                   <span v-for="chip in formatStateChips(selectedUncoveredNode)" :key="chip">{{ chip }}</span>
-                  <span v-if="formatStateChips(selectedUncoveredNode).length === 0">無 Buff</span>
+                  <span v-if="formatStateChips(selectedUncoveredNode).length === 0">{{ t('collectableStrategyLab.noBuff') }}</span>
                 </div>
                 <div class="path-box">
-                  <strong>過往路徑</strong>
+                  <strong>{{ t('collectableStrategyLab.pathTitle') }}</strong>
                   <ol v-if="selectedUncoveredNode.path.length">
                     <li v-for="(step, index) in selectedUncoveredNode.path" :key="`${step}-${index}`">{{ step }}</li>
                   </ol>
-                  <p v-else>尚無過往路徑。</p>
+                  <p v-else>{{ t('collectableStrategyLab.noPath') }}</p>
                 </div>
               </article>
             </div>
@@ -391,27 +390,27 @@ function makeId() {
         <section class="rule-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="collectable-rule-editor-title">
           <header class="rule-editor-dialog-header">
             <div>
-              <span>策略設定</span>
+              <span>{{ t('collectableStrategyLab.editor.kicker') }}</span>
               <h2 id="collectable-rule-editor-title">{{ editingRule.name }}</h2>
             </div>
-            <button type="button" class="dialog-close-button" aria-label="關閉策略設定" @click="closeRuleEditor">
+            <button type="button" class="dialog-close-button" :aria-label="t('collectableStrategyLab.editor.close')" @click="closeRuleEditor">
               <i class="pi pi-times"></i>
             </button>
           </header>
 
           <div class="rule-editor-body">
             <label class="dialog-name-field">
-              <span>策略名稱</span>
+              <span>{{ t('collectableStrategyLab.editor.name') }}</span>
               <input v-model="editingRule.name" type="text" />
             </label>
 
             <div class="rule-mode-row">
-              <span>符合</span>
+              <span>{{ t('collectableStrategyLab.editor.when') }}</span>
               <select v-model="editingRule.mode">
-                <option value="all">全部條件</option>
-                <option value="any">任一條件</option>
+                <option value="all">{{ t('collectableStrategyLab.editor.allConditions') }}</option>
+                <option value="any">{{ t('collectableStrategyLab.editor.anyCondition') }}</option>
               </select>
-              <span>時執行</span>
+              <span>{{ t('collectableStrategyLab.editor.then') }}</span>
             </div>
 
             <div class="condition-list">
@@ -441,27 +440,27 @@ function makeId() {
 
                 <template v-else>
                   <select v-model="condition.value">
-                    <option :value="true">有</option>
-                    <option :value="false">無</option>
+                    <option :value="true">{{ t('collectableStrategyLab.booleanValues.true') }}</option>
+                    <option :value="false">{{ t('collectableStrategyLab.booleanValues.false') }}</option>
                   </select>
                 </template>
 
-                <button type="button" class="icon-button" title="移除條件" @click="removeCondition(editingRule, condition.id)">
+                <button type="button" class="icon-button" :title="t('collectableStrategyLab.editor.removeCondition')" @click="removeCondition(editingRule, condition.id)">
                   <i class="pi pi-times"></i>
                 </button>
               </div>
               <button type="button" class="text-tool" @click="addCondition(editingRule)">
                 <i class="pi pi-plus"></i>
-                加條件
+                {{ t('collectableStrategyLab.editor.addCondition') }}
               </button>
             </div>
 
             <div class="action-chain">
               <div class="action-chain-header">
-                <span>{{ editingRule.actions.length > 1 ? '串聯技能' : '單一技能' }}</span>
+                <span>{{ editingRule.actions.length > 1 ? t('collectableStrategyLab.editor.actionChain') : t('collectableStrategyLab.editor.singleAction') }}</span>
                 <button type="button" class="text-tool" @click="addAction(editingRule)">
                   <i class="pi pi-plus"></i>
-                  加技能
+                  {{ t('collectableStrategyLab.editor.addAction') }}
                 </button>
               </div>
               <div class="action-list">
@@ -470,7 +469,7 @@ function makeId() {
                     <img v-if="actionIcon(action)" :src="actionIcon(action)" alt="" />
                     <strong>{{ actionName(action) }}</strong>
                   </div>
-                  <button type="button" :disabled="editingRule.actions.length <= 1" title="移除技能" @click="removeAction(editingRule, actionIndex)">
+                  <button type="button" :disabled="editingRule.actions.length <= 1" :title="t('collectableStrategyLab.editor.removeAction')" @click="removeAction(editingRule, actionIndex)">
                     <i class="pi pi-times"></i>
                   </button>
                   <div class="action-option-list">
@@ -492,7 +491,7 @@ function makeId() {
           </div>
 
           <footer class="rule-editor-dialog-footer">
-            <Button label="完成" icon="pi pi-check" class="p-button-sm rounded-xl" @click="closeRuleEditor" />
+            <Button :label="t('collectableStrategyLab.editor.done')" icon="pi pi-check" class="p-button-sm rounded-xl" @click="closeRuleEditor" />
           </footer>
         </section>
       </div>
@@ -557,6 +556,7 @@ function makeId() {
 }
 
 :global(html.dark .column-header h2),
+:global(html.dark .uncovered-panel h3),
 :global(html.dark .rule-editor-dialog-header h2),
 :global(html.dark .uncovered-detail h4),
 :global(html.dark .path-box strong) {
@@ -984,10 +984,16 @@ function makeId() {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
+  align-items: stretch;
 }
 
 .summary-grid div {
   min-width: 0;
+  min-height: 6.9rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.65rem;
   border-radius: 0.85rem;
   background: #f8fafc;
   padding: 0.75rem;
@@ -1007,10 +1013,11 @@ function makeId() {
 
 .summary-grid strong {
   display: block;
-  margin-top: 0.15rem;
+  margin-top: auto;
   color: #0f172a;
   font-size: 1.35rem;
   font-weight: 950;
+  line-height: 1;
 }
 
 :global(html.dark .summary-grid strong) {
