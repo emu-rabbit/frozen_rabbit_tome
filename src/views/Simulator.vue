@@ -20,6 +20,7 @@ import { GATHERING_FOODS } from '../services/foodData';
 import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
+import { calculateCollectableScourValue } from '../utils/collectableMath';
 import type { SimulationRequest } from '../utils/rotationSimulator';
 import type { FoodQuality, GearStatProfile, GatheringFood, SimulationResponse } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
@@ -114,6 +115,10 @@ const activeIntegrityMax = computed(() => Math.max(1, nodeBonuses.value.baseInte
 const activeGpMax = computed(() => Math.max(1, effectiveStats.value.gp));
 const activeIntegrityPercent = computed(() => progressPercent(activeStatus.value.integrity, activeIntegrityMax.value));
 const activeGpPercent = computed(() => progressPercent(activeStatus.value.gp, activeGpMax.value));
+const collectableScourValue = computed(() => {
+  if (!baseValues.value?.Gathering) return null;
+  return calculateCollectableScourValue(effectiveStats.value.gathering, baseValues.value.Gathering);
+});
 const activeRotation = computed(() => activeBlock.value === 'primary' ? primaryRotation.value : revisitRotation.value);
 const activeRotationTitle = computed(() => activeBlock.value === 'primary'
   ? t('simulator.primaryGathering')
@@ -497,7 +502,7 @@ function progressPercent(range: number[], maxValue: number) {
         <div class="rate-grid">
           <div><span>{{ t('simulator.rates.success') }}</span><strong>{{ successRate }}%</strong></div>
           <div v-if="!activeItem.isCollectable"><span>{{ t('simulator.rates.boon') }}</span><strong>{{ boonChance }}%</strong></div>
-          <div><span>{{ t('simulator.rates.currentGp') }}</span><strong>{{ temporaryGp }}/{{ effectiveStats.gp }}</strong></div>
+          <div v-else><span>{{ t('collectableSolver.stats.scourValue') }}</span><strong>{{ collectableScourValue ?? '-' }}</strong></div>
         </div>
       </section>
 
@@ -1126,19 +1131,24 @@ function progressPercent(range: number[], maxValue: number) {
   border-color: #334155;
   background: #0f172a;
 }
-.item-panel,
 .simulation-header,
 .item-heading,
 .section-title {
   display: flex;
   gap: 1rem;
 }
-.item-panel,
+.item-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+}
 .simulation-header {
   flex-direction: column;
 }
 .item-heading {
   align-items: center;
+  min-width: 0;
 }
 
 
@@ -1193,15 +1203,31 @@ function progressPercent(range: number[], maxValue: number) {
 .metric-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+.item-panel .rate-grid {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
 .rate-grid div,
 .metric-grid div {
   border-radius: 14px;
   background: #f8fafc;
   padding: 0.75rem;
 }
+.item-panel .rate-grid div {
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.85rem 1rem;
+  border: 1px solid #eef2f7;
+}
 :global(html.dark .rate-grid div),
 :global(html.dark .metric-grid div) {
   background: rgb(30 41 59 / 0.65);
+}
+:global(html.dark .item-panel .rate-grid div) {
+  border-color: rgb(51 65 85 / 0.7);
 }
 .rate-grid span,
 .metric-grid span,
@@ -1211,6 +1237,10 @@ function progressPercent(range: number[], maxValue: number) {
   font-size: 0.75rem;
   font-weight: 800;
 }
+.item-panel .rate-grid span {
+  line-height: 1.25;
+  white-space: nowrap;
+}
 .rate-grid strong,
 .metric-grid strong {
   display: block;
@@ -1218,6 +1248,10 @@ function progressPercent(range: number[], maxValue: number) {
   color: #0f172a;
   font-size: 1.2rem;
   font-weight: 900;
+}
+.item-panel .rate-grid strong {
+  font-size: 1.32rem;
+  line-height: 1.15;
 }
 :global(html.dark .rate-grid strong),
 :global(html.dark .metric-grid strong) {
@@ -1704,7 +1738,9 @@ function progressPercent(range: number[], maxValue: number) {
   .simulator-page {
     padding: 2.5rem 2rem 3rem;
   }
-  .item-panel,
+  .item-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(244px, 292px);
+  }
   .simulation-header {
     flex-direction: row;
     align-items: center;
