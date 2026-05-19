@@ -78,6 +78,10 @@ export default {
         a: 'The supported actions and items are based on Final Fantasy XIV Patch 7.5 content.'
       },
       {
+        q: 'What is the difference between Tome and Experiment?',
+        a: 'Tome is the solver: after you provide gear stats, GP, gathering attempts, node bonuses, and a goal, it calculates within the currently supported model and recommends a skill sequence. Experiment is the simulation and analysis tool: you provide the same conditions plus the action sequence or strategy you want to test. The simulator calculates the outcome, while the analyzer summarizes reward tiers, probability distribution, and risk so you can compare your own approach.'
+      },
+      {
         q: 'Does the solver output the best possible answer?',
         a: 'The site recommends a skill sequence based on most situations and the goal you selected. Each sequence still has its own strengths and tradeoffs, much like different playstyle schools, so there may not be one perfect answer. For deeper analysis, we strongly recommend using the Experiment area to simulate and compare rotations.'
       },
