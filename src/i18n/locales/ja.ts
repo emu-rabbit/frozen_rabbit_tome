@@ -240,6 +240,7 @@ export default {
       maxMin: '最大 / 最小'
     },
     rotations: {
+      preview: '手順プレビュー',
       primary: '通常採集',
       revisit: '再発見後の採集'
     },

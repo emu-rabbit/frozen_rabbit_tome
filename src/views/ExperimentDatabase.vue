@@ -14,6 +14,7 @@ import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getGatheringFood } from '../services/foodData';
 import { getRotationActionIconById, getRotationActionName } from '../services/actionIcons';
+import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
@@ -137,8 +138,9 @@ async function copyReportFromDb(experiment: StoredExperiment) {
     };
     return {
       ...rest,
+      revisitChance: hideRevisitExperimentFeatures ? 0 : rest.revisitChance,
       primary: cleanRotation(primary),
-      ...(revisit ? { revisit: cleanRotation(revisit) } : {}),
+      ...(!hideRevisitExperimentFeatures && revisit ? { revisit: cleanRotation(revisit) } : {}),
       total: cleanRotation(total)
     };
   };
@@ -146,7 +148,7 @@ async function copyReportFromDb(experiment: StoredExperiment) {
   const report = {
     ...experiment,
     primaryRotation: mapRotation(experiment.primaryRotation),
-    revisitRotation: mapRotation(experiment.revisitRotation),
+    revisitRotation: hideRevisitExperimentFeatures ? [] : mapRotation(experiment.revisitRotation),
     analysis: cleanAnalysis(experiment.analysis)
   };
 
@@ -241,10 +243,6 @@ function copyReportLabel(experiment: StoredExperiment) {
                 <i class="pi pi-sparkles"></i>
                 {{ t('createGuide.crystalGatheringSystem') }}
               </span>
-              <span v-else class="item-regular-badge">
-                <i class="pi pi-compass"></i>
-                {{ t('createGuide.regularSystem') }}
-              </span>
             </div>
           </div>
         </div>
@@ -302,7 +300,7 @@ function copyReportLabel(experiment: StoredExperiment) {
 
         <div v-if="displayMode === 'detailed'" class="rotation-preview-list">
           <div class="rotation-strip">
-            <h4>{{ t('experimentDatabase.rotations.primary') }}</h4>
+            <h4>{{ hideRevisitExperimentFeatures ? t('experimentDatabase.rotations.preview') : t('experimentDatabase.rotations.primary') }}</h4>
             <div class="rotation-icons">
               <template v-for="(step, index) in experiment.primaryRotation" :key="`p-${experiment.id}-${index}`">
                 <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'">
@@ -313,7 +311,7 @@ function copyReportLabel(experiment: StoredExperiment) {
               </template>
             </div>
           </div>
-          <div v-if="experiment.revisitRotation.length" class="rotation-strip">
+          <div v-if="!hideRevisitExperimentFeatures && experiment.revisitRotation.length" class="rotation-strip">
             <h4>{{ t('experimentDatabase.rotations.revisit') }}</h4>
             <div class="rotation-icons">
               <template v-for="(step, index) in experiment.revisitRotation" :key="`r-${experiment.id}-${index}`">
@@ -526,7 +524,6 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .is-compact .item-glv-badge,
 .is-compact .item-job-badge,
-.is-compact .item-regular-badge,
 .is-compact .item-collectable-badge,
 .is-compact .item-crystal-badge {
   padding: 2px 8px;
@@ -538,7 +535,6 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .item-glv-badge,
 .item-job-badge,
-.item-regular-badge,
 .item-collectable-badge,
 .item-crystal-badge {
   display: inline-flex;
@@ -556,9 +552,6 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .item-job-badge {
   background: linear-gradient(135deg, #64748b, #475569);
-}
-.item-regular-badge {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 .item-collectable-badge {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);

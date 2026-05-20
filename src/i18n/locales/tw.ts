@@ -241,6 +241,7 @@ export default {
       maxMin: '最大 / 最小'
     },
     rotations: {
+      preview: '手法預覽',
       primary: '一般採集',
       revisit: '再起後採集'
     },

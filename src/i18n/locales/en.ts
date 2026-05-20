@@ -240,6 +240,7 @@ export default {
       maxMin: 'Max / Min'
     },
     rotations: {
+      preview: 'Rotation Preview',
       primary: 'Primary Gathering',
       revisit: 'After Revisit'
     },

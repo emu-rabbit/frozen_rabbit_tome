@@ -21,6 +21,7 @@ import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseInte
 import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
+import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { SimulationRequest } from '../utils/rotationSimulator';
 import type { FoodQuality, GearStatProfile, GatheringFood, SimulationResponse } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
@@ -75,7 +76,6 @@ const foodSuggestions = ref<FoodOption[]>([]);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 const actionCategoryOrder = ['gather', 'success', 'boon', 'nextSuccess', 'nextYield', 'restore', 'wholeYield', 'boonYield'] as const;
-const hideRevisitExperimentFeatures = true;
 
 const actionOptions = computed(() => activeItem.value?.jobType ? getSimulatorActions(activeItem.value.jobType) : []);
 const actionGroups = computed(() => actionCategoryOrder
