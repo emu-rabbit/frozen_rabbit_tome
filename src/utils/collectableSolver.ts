@@ -843,6 +843,11 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         },
         rewardTable: summarizeCollectableRewardTable(rewardTable)
       },
+      objective: {
+        ...objective,
+        weights: objective.weights ? { ...objective.weights, items: { ...(objective.weights.items ?? {}) } } : undefined,
+        tierWeights: objective.tierWeights ? { ...objective.tierWeights } : undefined
+      },
       plans: policyPlans.map((plan) => {
         const run = plan.kind === 'revisit' ? fullGpResult : initial;
         return {

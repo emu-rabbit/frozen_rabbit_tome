@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CollectableSolverDebugInfo } from '../types/collectable';
+import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
+import type { CollectableObjective, CollectableRewardWeights, CollectableSolverDebugInfo, CollectableTierScoreWeights } from '../types/collectable';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -15,6 +16,32 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const plans = computed(() => props.debug?.plans ?? []);
 const stateFields = computed(() => props.debug?.optimality.stateKeyFields ?? []);
+const objectiveEntries = computed(() => buildObjectiveEntries(props.debug?.objective));
+const objectiveLabel = computed(() => {
+  const objective = props.debug?.objective;
+  if (!objective) return '-';
+  if (objective.kind === 'scrip') {
+    const meta = getCollectableScripRewardMeta(props.debug?.formulas.rewardTable.rewardItemId);
+    if (meta.kind === 'orange') return t('collectableObjective.presets.orangeScrip');
+    if (meta.kind === 'purple') return t('collectableObjective.presets.purpleScrip');
+    return t('collectableSolver.debug.objectiveKinds.scrip');
+  }
+  if (objective.presetId) return t(`collectableObjective.presets.${objective.presetId}`);
+  return t(`collectableSolver.debug.objectiveKinds.${objective.kind}`);
+});
+const objectiveUnitLabel = computed(() => {
+  const objective = props.debug?.objective;
+  if (!objective) return '-';
+  if (objective.kind === 'tierScore') {
+    return objective.presetId === 'customTier'
+      ? t('collectableSolver.results.pointUnit')
+      : t('collectableSolver.debug.objectiveUnits.tierScore');
+  }
+  if (objective.kind === 'scrip') {
+    return t(getCollectableScripRewardMeta(props.debug?.formulas.rewardTable.rewardItemId).labelKey);
+  }
+  return t(`collectableSolver.debug.objectiveUnits.${objective.kind}`);
+});
 
 function closeDialog() {
   emit('update:modelValue', false);
@@ -36,6 +63,48 @@ function planTitle(kind: string) {
   return kind === 'revisit'
     ? t('collectableSolver.debug.revisitPlan')
     : t('collectableSolver.debug.primaryPlan');
+}
+
+function buildObjectiveEntries(objective?: CollectableObjective) {
+  if (!objective) return [];
+  if (objective.kind === 'tierScore') return buildTierWeightEntries(objective.tierWeights);
+  return buildRewardWeightEntries(objective.weights, objective.kind);
+}
+
+function buildTierWeightEntries(weights: CollectableTierScoreWeights = {}) {
+  const entries = [
+    ['none', weights.none ?? 0],
+    ['low', weights.low ?? 0],
+    ['mid', weights.mid ?? 0],
+    ['high', weights.high ?? 0]
+  ] as const;
+  return entries.map(([key, value]) => ({
+    key,
+    label: t(`collectableObjective.tiers.${key}`),
+    value
+  }));
+}
+
+function buildRewardWeightEntries(weights: CollectableRewardWeights = {}, kind: CollectableObjective['kind']) {
+  const entries = [
+    { key: 'scrip', value: kind === 'scrip' ? 1 : weights.scrip },
+    { key: 'exp', value: kind === 'exp' ? 1 : weights.exp },
+    { key: 'gil', value: kind === 'gil' ? 1 : weights.gil }
+  ].filter((entry): entry is { key: 'scrip' | 'exp' | 'gil'; value: number } => typeof entry.value === 'number');
+  const itemEntries = Object.entries(weights.items ?? {}).map(([itemId, value]) => ({
+    key: `item-${itemId}`,
+    label: t('collectableSolver.debug.itemWeight', { itemId }),
+    value
+  }));
+
+  return [
+    ...entries.map((entry) => ({
+      key: entry.key,
+      label: t(`collectableSolver.debug.rewardWeights.${entry.key}`),
+      value: entry.value
+    })),
+    ...itemEntries
+  ];
 }
 </script>
 
@@ -93,6 +162,29 @@ function planTitle(kind: string) {
                   <p>{{ t('collectableSolver.debug.mid') }}: {{ debug.formulas.rewardTable.midCollectability }} / {{ t('collectableSolver.debug.scripAmount', { scrip: debug.formulas.rewardTable.midScrip }) }}</p>
                   <p>{{ t('collectableSolver.debug.high') }}: {{ debug.formulas.rewardTable.highCollectability ?? '-' }} / {{ debug.formulas.rewardTable.highScrip == null ? '-' : t('collectableSolver.debug.scripAmount', { scrip: debug.formulas.rewardTable.highScrip }) }}</p>
                 </article>
+              </div>
+            </section>
+
+            <section class="debug-section">
+              <h3>{{ t('collectableSolver.debug.objective') }}</h3>
+              <div class="debug-card objective-debug-card">
+                <div class="objective-debug-summary">
+                  <div>
+                    <span>{{ t('collectableSolver.debug.objectivePreset') }}</span>
+                    <strong>{{ objectiveLabel }}</strong>
+                  </div>
+                  <div>
+                    <span>{{ t('collectableSolver.debug.objectiveUnit') }}</span>
+                    <strong>{{ objectiveUnitLabel }}</strong>
+                  </div>
+                </div>
+                <p>{{ t('collectableSolver.debug.objectiveNote') }}</p>
+                <div class="objective-weight-grid">
+                  <div v-for="entry in objectiveEntries" :key="entry.key" class="objective-weight-row">
+                    <span>{{ entry.label }}</span>
+                    <strong>{{ entry.value }}</strong>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -312,6 +404,52 @@ function planTitle(kind: string) {
 
 :global(html.dark .debug-card strong) {
   color: #99f6e4;
+}
+
+.objective-debug-card {
+  gap: 0.75rem;
+}
+
+.objective-debug-summary,
+.objective-weight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.55rem;
+}
+
+.objective-debug-summary > div,
+.objective-weight-row {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid #dbeafe;
+  border-radius: 0.7rem;
+  background: #ffffff;
+  padding: 0.55rem 0.65rem;
+}
+
+:global(html.dark .objective-debug-summary > div),
+:global(html.dark .objective-weight-row) {
+  border-color: #334155;
+  background: rgb(15 23 42 / 0.72);
+}
+
+.objective-debug-summary span,
+.objective-weight-row span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+:global(html.dark .objective-debug-summary span),
+:global(html.dark .objective-weight-row span) {
+  color: #94a3b8;
+}
+
+.objective-debug-summary strong,
+.objective-weight-row strong {
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
 }
 
 .debug-stats {

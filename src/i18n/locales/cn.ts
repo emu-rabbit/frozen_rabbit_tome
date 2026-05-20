@@ -694,6 +694,29 @@ export default {
       scrutiny: '集中检查',
       standardRate: 'Collector\'s Standard 机率',
       rewardTable: '奖励门槛',
+      objective: '当前评分权重',
+      objectivePreset: '权重档',
+      objectiveUnit: '分数单位',
+      objectiveNote: '这些权重只用来排序推荐策略；数字越高，代表该结果在本次求解中越值得追求。',
+      itemWeight: '物品 {itemId}',
+      objectiveKinds: {
+        scrip: '票据总量',
+        exp: '经验值',
+        gil: '金币',
+        custom: '自定义收益',
+        tierScore: '档位权重'
+      },
+      objectiveUnits: {
+        exp: '经验值',
+        gil: '金币',
+        custom: '自定义分数',
+        tierScore: '分'
+      },
+      rewardWeights: {
+        scrip: '票据',
+        exp: '经验值',
+        gil: '金币'
+      },
       low: '低标',
       mid: '中标',
       high: '高标',

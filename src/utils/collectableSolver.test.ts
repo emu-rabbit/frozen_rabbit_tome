@@ -569,6 +569,7 @@ describe('solveCollectableRotation', () => {
       highCollectability: 1000,
       highScrip: 20
     });
+    expect(result.debug?.objective).toMatchObject({ kind: 'scrip' });
     expect(result.debug?.plans[0].search.statesSolved).toBeGreaterThan(0);
     expect(result.debug?.plans[0].search.memoHitRate).toBeGreaterThanOrEqual(0);
     expect(result.debug?.plans[0].outcomeDistribution.length).toBeGreaterThan(0);
@@ -639,5 +640,10 @@ describe('solveCollectableRotation', () => {
     expect(totalExpectedCounts).toBeGreaterThan(0);
     expect(result.policy.expectedTierCounts).toEqual(result.policyPlans[0].expectedTierCounts);
     expect(result.debug?.optimality.stateKeyFields).not.toContain('expectedTierCounts');
+    expect(result.debug?.objective).toMatchObject({
+      kind: 'tierScore',
+      presetId: 'highValue',
+      tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
+    });
   });
 });

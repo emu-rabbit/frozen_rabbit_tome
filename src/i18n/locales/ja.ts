@@ -694,6 +694,29 @@ export default {
       scrutiny: '集中検分',
       standardRate: '活眼発生率',
       rewardTable: '報酬しきい値',
+      objective: '現在の評価ウェイト',
+      objectivePreset: 'ウェイト設定',
+      objectiveUnit: '評価単位',
+      objectiveNote: 'これらのウェイトは推奨方針の並び替えにだけ使います。数値が高いほど、この計算で重視される結果です。',
+      itemWeight: 'アイテム {itemId}',
+      objectiveKinds: {
+        scrip: 'スクリップ合計',
+        exp: '経験値',
+        gil: 'ギル',
+        custom: 'カスタム報酬',
+        tierScore: '段階ウェイト'
+      },
+      objectiveUnits: {
+        exp: '経験値',
+        gil: 'ギル',
+        custom: 'カスタム点',
+        tierScore: '点'
+      },
+      rewardWeights: {
+        scrip: 'スクリップ',
+        exp: '経験値',
+        gil: 'ギル'
+      },
       low: '低',
       mid: '中',
       high: '高',

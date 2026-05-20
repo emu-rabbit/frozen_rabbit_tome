@@ -705,6 +705,29 @@ export default {
       scrutiny: 'Scrutiny',
       standardRate: "Collector's Standard Rate",
       rewardTable: 'Reward Thresholds',
+      objective: 'Current Scoring Weights',
+      objectivePreset: 'Weight profile',
+      objectiveUnit: 'Score unit',
+      objectiveNote: 'These weights only rank recommended strategies; higher numbers mean this result matters more for this solve.',
+      itemWeight: 'Item {itemId}',
+      objectiveKinds: {
+        scrip: 'Total scrip',
+        exp: 'EXP',
+        gil: 'Gil',
+        custom: 'Custom reward',
+        tierScore: 'Tier weights'
+      },
+      objectiveUnits: {
+        exp: 'EXP',
+        gil: 'Gil',
+        custom: 'Custom points',
+        tierScore: 'points'
+      },
+      rewardWeights: {
+        scrip: 'Scrip',
+        exp: 'EXP',
+        gil: 'Gil'
+      },
       low: 'Low',
       mid: 'Mid',
       high: 'High',

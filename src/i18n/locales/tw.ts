@@ -706,6 +706,29 @@ export default {
       scrutiny: '集中檢查',
       standardRate: 'Collector\'s Standard 機率',
       rewardTable: '獎勵門檻',
+      objective: '目前評分權重',
+      objectivePreset: '權重檔',
+      objectiveUnit: '分數單位',
+      objectiveNote: '這些權重只用來排序推薦策略；數字越高，代表該結果在本次求解中越值得追求。',
+      itemWeight: '物品 {itemId}',
+      objectiveKinds: {
+        scrip: '票據總量',
+        exp: '經驗值',
+        gil: '金幣',
+        custom: '自訂收益',
+        tierScore: '檔位權重'
+      },
+      objectiveUnits: {
+        exp: '經驗值',
+        gil: '金幣',
+        custom: '自訂分數',
+        tierScore: '分'
+      },
+      rewardWeights: {
+        scrip: '票據',
+        exp: '經驗值',
+        gil: '金幣'
+      },
       low: '低標',
       mid: '中標',
       high: '高標',

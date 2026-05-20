@@ -230,6 +230,7 @@ export interface CollectableSearchDebugInfo {
 
 export interface CollectableSolverDebugInfo {
   formulas: CollectableFormulaDebugInfo;
+  objective: CollectableObjective;
   plans: Array<{
     kind: CollectablePolicyPlanKind;
     startingGp: number;
