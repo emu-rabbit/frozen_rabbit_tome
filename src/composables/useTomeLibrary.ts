@@ -54,7 +54,7 @@ export function useTomeLibrary() {
         },
         rotation: [],
         objectiveMode: payload.collectableResult.objectiveMode,
-        collectableObjective: { kind: 'scrip' },
+        collectableObjective: payload.collectableResult.objective,
         collectableRewardTableSummary: payload.collectableResult.debug
           ? payload.collectableResult.debug.formulas.rewardTable
           : undefined,

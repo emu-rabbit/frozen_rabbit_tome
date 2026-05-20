@@ -257,7 +257,7 @@ export default {
     darkMode: 'Dark Mode',
     darkModeDesc: 'Enable dark mode for low-light environments',
     language: 'Language',
-    languageDesc: 'Interface language (English fallback)',
+    languageDesc: 'Interface language (uses English when a translation is missing)',
     langOptions: {
       tw: '繁體中文',
       en: 'English',
@@ -464,10 +464,42 @@ export default {
       caveat: 'Optimality holds for the currently modeled regular-gathering skills, GP, integrity, success rate, Boon, Revisit, and Wise to the World probabilities. Collectables, crystal gathering, and manual interruption are not included.'
     }
   },
+  collectableObjective: {
+    kicker: 'Recommendation weights',
+    title: 'Scoring Preference',
+    close: 'Close scoring preference',
+    intro: 'Weights turn each collectable result into a score. The solver ranks strategies by that score; a higher weight means you want the recommendation to lean harder toward that tier.',
+    solverIntro: 'Weights turn each collectable result into a score. The solver ranks strategies by that score; a higher weight means you want the recommendation to lean harder toward that tier.',
+    analysisIntro: 'Choose the standard you want to use when reading this analysis. Higher weights make that tier count more in the expected, maximum, minimum, and distribution results, so you can compare total scrip, high-value turn-ins, or your own target.',
+    cancel: 'Cancel',
+    apply: 'Apply',
+    applyCustom: 'Apply custom weights',
+    presets: {
+      highValue: 'High value first',
+      midValue: 'Mid value first',
+      lowValue: 'Low value first',
+      purpleScrip: 'Purple scrip first',
+      orangeScrip: 'Orange scrip first',
+      customTier: 'Custom weights'
+    },
+    presetDescriptions: {
+      highValue: 'Strongly prefers the highest tier, with the mid tier as a backup result.',
+      midValue: 'Prefers stopping at the middle tier instead of spending too many attempts pushing higher.',
+      lowValue: 'Prefers stable low-tier turn-ins for conservative testing.',
+      scrip: 'Uses the current reward table and scores by total scrip.',
+      customTier: 'Enter your own score for no tier, low, mid, and high tiers.'
+    },
+    tiers: {
+      none: 'No tier',
+      low: 'Low value',
+      mid: 'Mid value',
+      high: 'High value'
+    }
+  },
   collectableSolver: {
     badge: 'Collectable Tome',
     title: 'Collectable Solver',
-    description: 'Brazen and Collector\'s High Standard are excluded; scoring uses expected purple/orange gatherers\' scrip.',
+    description: 'Brazen and Collector\'s High Standard are excluded; recommendations are ranked by the current scoring preference.',
     solving: 'Calculating collectable policy...',
     empty: 'Solve to show a state-based recommended policy here.',
     stats: {
@@ -498,6 +530,10 @@ export default {
       subtitle: 'This is not a fixed macro. Follow the policy based on procs and collectability.',
       expectedScore: 'Expected {unit}',
       expectedScripUnit: 'Scoring Unit',
+      expectedTierCounts: 'Expected Tier Counts',
+      maxTierCounts: 'Max Tier Counts',
+      minTierCounts: 'Min Tier Counts',
+      pointUnit: 'pts',
       scripUnits: {
         purple: 'Purple Gatherers\' Scrip',
         orange: 'Orange Gatherers\' Scrip',
@@ -512,6 +548,7 @@ export default {
       },
       maxScore: 'Maximum {unit}',
       minScore: 'Minimum {unit}',
+      tierCountUnit: '{tier} count',
       scoreChance: '{chance} chance',
       revisitIncluded: 'Total score includes {chance}% Revisit chance.',
       limitationNote: 'V1 excludes Brazen, Collector\'s High Standard, aetherial reduction reward modeling, and real EXP conversion.'
@@ -594,7 +631,7 @@ export default {
     errors: {
       unsupportedReward: {
         title: 'Reward table not found',
-        desc: 'This item is not in the supported collectable turn-in, custom delivery, Studium, or Wachumeqimeqi data yet.'
+        desc: 'This item is not in the supported collectable turn-in, custom delivery, Studium, Wachumeqimeqi, reduction, or Cosmic Exploration data yet.'
       },
       workerStale: {
         title: 'Solver needs reload',
@@ -731,7 +768,7 @@ export default {
       maxScore: 'Highest {unit}',
       minScore: 'Lowest {unit}',
       distribution: 'Score probability distribution',
-      revisitExcluded: 'Revisit is not included yet; scores use the same reward scoring method as the collectable solver.'
+      scoringNote: 'Results use the current scoring preference. Change the gear setting and run analysis again to compare scrip, tier counts, or custom points.'
     },
     tools: {
       moveUp: 'Move up',

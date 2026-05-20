@@ -3,14 +3,20 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
-import type { CollectableSolverResult } from '../types/collectable';
+import type { CollectableObjective, CollectableRewardTable, CollectableSolverResult } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import CollectablePolicyView from './CollectablePolicyView.vue';
 import CollectableDebugDialog from './CollectableDebugDialog.vue';
+import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
+import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { getCollectableActionName } from '../services/collectableActions';
 import { useSettings } from '../composables/useSettings';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
+import {
+  createCollectableObjectiveOptions,
+  getDefaultCollectableObjectivePresetId
+} from '../utils/collectableObjectivePresets';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -29,6 +35,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { solverSettings } = useSettings();
 const {
+  collectableObjective,
   collectableResult,
   isCollectableSolving,
   collectableError,
@@ -36,9 +43,11 @@ const {
   clearCollectableResult
 } = useCollectableSolver();
 const isDebugDialogOpen = ref(false);
+const isObjectiveDialogOpen = ref(false);
 const isSaved = ref(false);
 const isDecisionTreeExported = ref(false);
 const isDecisionTreeExporting = ref(false);
+const rewardTable = ref<CollectableRewardTable | null>(null);
 let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
 
@@ -47,6 +56,12 @@ const isWorkerError = computed(() => collectableError.value === 'workerStale' ||
 const activeItemJobLabel = computed(() => {
   const jobs = gatherableItemJobs(props.activeItem);
   return jobs.length > 0 ? jobs.map((job) => t(`game.jobs.${job}`)).join(' / ') : '-';
+});
+const selectedObjectiveLabel = computed(() => {
+  if (!rewardTable.value) return t('collectableObjective.title');
+  const option = createCollectableObjectiveOptions(rewardTable.value)
+    .find((entry) => entry.id === collectableObjective.value.presetId || (entry.id === 'scrip' && collectableObjective.value.kind === 'scrip'));
+  return option ? t(option.labelKey) : t('collectableObjective.title');
 });
 
 onBeforeUnmount(() => {
@@ -75,6 +90,27 @@ watch(() => [
   isDecisionTreeExported.value = false;
 }, { deep: true });
 
+watch(() => props.activeItem.itemId, async () => {
+  rewardTable.value = null;
+  if (!props.activeItem.itemId) return;
+
+  try {
+    const table = await getCollectableRewardTable(props.activeItem.itemId);
+    rewardTable.value = table;
+    if (table) applyDefaultObjective(table);
+  } catch (error) {
+    console.error('Collectable reward table loading failed:', error);
+  }
+}, { immediate: true });
+
+function applyDefaultObjective(table: CollectableRewardTable) {
+  const defaultId = getDefaultCollectableObjectivePresetId(table);
+  const option = createCollectableObjectiveOptions(table).find((entry) => entry.id === defaultId);
+  if (option) {
+    collectableObjective.value = option.objective;
+  }
+}
+
 async function handleSolve() {
   if (!props.baseValues || !canSolve.value) return;
 
@@ -88,8 +124,16 @@ async function handleSolve() {
     itemLevel: props.itemRealLevel,
     nodeBonuses: { ...props.nodeBonuses },
     temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
-    debugMode: props.debugMode
+    debugMode: props.debugMode,
+    objective: collectableObjective.value
   });
+}
+
+function handleObjectiveChange(objective: CollectableObjective) {
+  collectableObjective.value = objective;
+  clearCollectableResult();
+  isSaved.value = false;
+  isDecisionTreeExported.value = false;
 }
 
 function handleSave() {
@@ -347,6 +391,16 @@ function waitForUiFrame() {
         <p>{{ t('collectableSolver.description') }}</p>
       </div>
       <div class="solver-action-bar solver-action-bar-primary">
+        <button
+          type="button"
+          class="solver-action-button p-button p-button-outlined rounded-xl objective-button"
+          :aria-label="t('collectableObjective.title')"
+          :title="selectedObjectiveLabel"
+          :disabled="!rewardTable"
+          @click="isObjectiveDialogOpen = true"
+        >
+          <i class="pi pi-cog" aria-hidden="true"></i>
+        </button>
         <Button
           class="solver-action-button p-button-primary rounded-xl shadow-md"
           :aria-label="t('collectableSolver.actions.solve')"
@@ -384,6 +438,11 @@ function waitForUiFrame() {
         :min-score-chance="collectableResult.minScoreChance"
         :max-score-chance="collectableResult.maxScoreChance"
         :objective-mode="collectableResult.objectiveMode"
+        :objective="collectableObjective"
+        :expected-tier-counts="collectableResult.expectedTierCounts"
+        :min-score-tier-counts="collectableResult.minScoreTierCounts"
+        :max-score-tier-counts="collectableResult.maxScoreTierCounts"
+        :item-icon-url="activeItem.iconUrl"
         :reward-item-id="collectableResult.rewardItemId"
         :job-type="activeItem.jobType || 'miner'"
         :revisit="collectableResult.revisit"
@@ -425,6 +484,13 @@ function waitForUiFrame() {
     </div>
 
     <CollectableDebugDialog v-model="isDebugDialogOpen" :debug="collectableResult?.debug" />
+    <CollectableObjectivePreferenceDialog
+      v-model="isObjectiveDialogOpen"
+      :reward-table="rewardTable"
+      :objective="collectableObjective"
+      context="solver"
+      @change="handleObjectiveChange"
+    />
   </div>
 </template>
 
@@ -490,11 +556,14 @@ function waitForUiFrame() {
 
 .solver-action-bar {
   width: 100%;
+  display: grid;
+  grid-template-columns: 2.75rem minmax(6.75rem, 1fr);
+  gap: 0.6rem;
 }
 
 @media (min-width: 1024px) {
   .solver-action-bar-primary {
-    width: min(100%, 10rem);
+    width: min(100%, 12.25rem);
   }
 }
 
@@ -502,6 +571,11 @@ function waitForUiFrame() {
   width: 100%;
   min-height: 42px;
   justify-content: center;
+}
+
+:deep(.objective-button) {
+  padding: 0;
+  line-height: 1;
 }
 
 :deep(.solver-action-button.is-tome-saved) {

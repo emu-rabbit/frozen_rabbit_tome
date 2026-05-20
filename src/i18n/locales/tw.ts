@@ -465,10 +465,42 @@ export default {
       caveat: '最優性成立於目前建模的普通採集技能、GP、耐久、成功率、Boon、再起與理智同興機率；未納入收藏品、水晶採集與玩家手動中斷。'
     }
   },
+  collectableObjective: {
+    kicker: '推薦排序權重',
+    title: '評分偏好',
+    close: '關閉評分偏好',
+    intro: '權重會把每次收藏品採集的結果換成分數，求解器會依這個分數排序推薦策略；權重越高，代表越希望策略把結果推向該檔位。',
+    solverIntro: '權重會把每次收藏品採集的結果換成分數，求解器會依這個分數排序推薦策略；權重越高，代表越希望策略把結果推向該檔位。',
+    analysisIntro: '選擇你想用哪種標準閱讀這份分析結果。權重越高，代表該檔位在期望、最高、最低與分布中越重要；可以在票據總量、高價值交納，或自己的目標之間切換比較。',
+    cancel: '取消',
+    apply: '套用',
+    applyCustom: '套用自訂權重',
+    presets: {
+      highValue: '高價值優先',
+      midValue: '中價值優先',
+      lowValue: '低價值優先',
+      purpleScrip: '大地紫票優先',
+      orangeScrip: '大地橘票優先',
+      customTier: '自訂權重'
+    },
+    presetDescriptions: {
+      highValue: '強烈偏向最高檔位，中檔作為備選結果。',
+      midValue: '偏向停在中檔，避免為了衝高檔投入太多採集次數。',
+      lowValue: '偏向穩定拿到低檔，適合只想保守達標的測試。',
+      scrip: '沿用目前獎勵表，以票據總量作為分數。',
+      customTier: '自行輸入未達標、低檔、中檔、高檔的分數。'
+    },
+    tiers: {
+      none: '未達標',
+      low: '低價值',
+      mid: '中價值',
+      high: '高價值'
+    }
+  },
   collectableSolver: {
     badge: '收藏品秘笈',
     title: '收藏品求解台',
-    description: '演算法未納入大膽提煉、強化洞察，以大地紫橘票獲得量為評分依據。',
+    description: '演算法未納入大膽提煉、強化洞察，會依目前評分偏好排序推薦策略。',
     solving: '正在推算收藏品推薦策略...',
     empty: '點擊求解後，這裡會顯示可依狀態判斷的推薦策略。',
     stats: {
@@ -499,6 +531,10 @@ export default {
       subtitle: '這不是固定巨集，而是依照隨機結果與收藏價值做判斷的策略。',
       expectedScore: '期望{unit}',
       expectedScripUnit: '評分單位',
+      expectedTierCounts: '期望檔位個數',
+      maxTierCounts: '最高檔位個數',
+      minTierCounts: '最低檔位個數',
+      pointUnit: '分',
       scripUnits: {
         purple: '大地紫票',
         orange: '大地橘票',
@@ -513,6 +549,7 @@ export default {
       },
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
+      tierCountUnit: '{tier}個數',
       scoreChance: '機率 {chance}',
       revisitIncluded: '總分數已納入再起 {chance}% 機率。',
       limitationNote: '第一版未納入大膽提煉、強化洞察、精選收益模型與實際經驗值換算。'
@@ -595,7 +632,7 @@ export default {
     errors: {
       unsupportedReward: {
         title: '找不到收藏品獎勵表',
-        desc: '此物品目前不在已支援的收藏品繳納、老主顧、魔法大學或萬貨街資料中，暫時無法求解。'
+        desc: '此物品目前不在已支援的收藏品繳納、老主顧、魔法大學、萬貨街、精選或宇宙探索資料中，暫時無法求解。'
       },
       workerStale: {
         title: '求解器需要重新載入',
@@ -732,7 +769,7 @@ export default {
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
       distribution: '分數機率分布',
-      revisitExcluded: '此分析暫未納入再起；分數使用收藏品求解台相同的 reward 評分方式。'
+      scoringNote: '結果會依目前評分偏好顯示；切換齒輪設定後再分析，即可比較票據、檔位個數或自訂分數。'
     },
     tools: {
       moveUp: '上移',

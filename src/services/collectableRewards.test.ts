@@ -4,6 +4,8 @@ import {
   __parseCustomDeliveryRewardsForTest,
   __parseCollectableRewardsForTest,
   __parseCsvForTest,
+  __parseAetherialReductionRewardsForTest,
+  __parseCosmicExplorationRewardsForTest,
   __parseSharlayanRewardsForTest,
   summarizeCollectableRewardTable
 } from './collectableRewards';
@@ -154,6 +156,51 @@ describe('collectableRewards', () => {
       tiers: {
         low: { collectability: 240, reward: { exp: 969294, gil: 240, scrip: 100 } },
         mid: { collectability: 600, reward: { exp: 1453941, gil: 360, scrip: 150 } }
+      }
+    });
+  });
+
+  it('可用 Teamcraft aetherial-reduce.json 建立精選評分用 reward table', () => {
+    const tables = __parseAetherialReductionRewardsForTest({
+      46248: 1
+    });
+
+    expect(tables.get(46248)).toMatchObject({
+      source: 'reduction',
+      tiers: {
+        low: { collectability: 1, reward: { scrip: 0 } },
+        mid: { collectability: 500, reward: { scrip: 0 } },
+        high: { collectability: 1000, reward: { scrip: 0 } }
+      }
+    });
+  });
+
+  it('可依 WKS item -> evaluation -> mission todo -> mission unit 路線建立宇宙探索分類', () => {
+    const tables = __parseCosmicExplorationRewardsForTest({
+      wksItemCsv: [
+        '#,Item,Unknown1,Unknown2,WKSItemSubCategory,Unknown3',
+        '383,48652,0,1,1,False'
+      ].join('\n'),
+      evaluationCsv: [
+        '#,Item',
+        '383.0,383'
+      ].join('\n'),
+      todoCsv: [
+        '#,TemporaryAction,Unknown2,Unknown1,RequiredItem[0],RequiredItem[1],RequiredItem[2],RequiredItemQuantity[0],RequiredItemQuantity[1],RequiredItemQuantity[2],Unknown9,Unknown10',
+        '143,0,0,0,0,0,0,0,0,0,0,383'
+      ].join('\n'),
+      missionUnitCsv: [
+        '#,Name,SilverStarRequirement,GoldStarRequirement,WKSMissionText,ClassJobCategory[0],ClassJobCategory[1],Unknown1,MissionTime,MissionReward,MissionToDo[0],MissionToDo[1],MissionToDo[2]',
+        '1,Water Filter Materials,1200,2400,17,9,0,100,0,1,143,0,0'
+      ].join('\n')
+    });
+
+    expect(tables.get(48652)).toMatchObject({
+      source: 'cosmicExploration',
+      tiers: {
+        low: { collectability: 1 },
+        mid: { collectability: 500 },
+        high: { collectability: 1000 }
       }
     });
   });

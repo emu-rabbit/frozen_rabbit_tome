@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CollectablePolicyBranch, CollectablePolicyNode, CollectableRevisitInfo } from '../types/collectable';
+import type { CollectableObjective, CollectablePolicyBranch, CollectablePolicyNode, CollectableRevisitInfo, CollectableTierCounts } from '../types/collectable';
 import type { SolverObjectiveMode } from '../types/game';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
+import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
 
 const props = defineProps<{
   policy: CollectablePolicyNode;
@@ -14,6 +15,11 @@ const props = defineProps<{
   minScoreChance: number;
   maxScoreChance: number;
   objectiveMode: SolverObjectiveMode;
+  objective: CollectableObjective;
+  expectedTierCounts: CollectableTierCounts;
+  minScoreTierCounts: CollectableTierCounts;
+  maxScoreTierCounts: CollectableTierCounts;
+  itemIconUrl?: string;
   rewardItemId?: number;
   jobType: 'miner' | 'botanist';
   revisit: CollectableRevisitInfo;
@@ -27,6 +33,7 @@ const selectedCollectSuccess = ref<boolean | null>(null);
 const selectedRevisit = ref<boolean | null>(null);
 const selectedCollectability = ref<number | null>(null);
 const selectedIntegrity = ref<number | null>(null);
+const tierCountVisibilityEpsilon = 0.000001;
 
 const currentNode = computed(() => nodeStack.value[nodeStack.value.length - 1] ?? props.policy);
 const previewBranches = computed(() => currentNode.value.branches);
@@ -142,6 +149,8 @@ const resolvedGuidedBranch = computed(() => selectedGuidedBranch.value ?? conflu
 const showsGuidedPanel = computed(() => usesGuidedQuestions.value || !!confluentBranch.value);
 const isConfluentOutcome = computed(() => !!confluentBranch.value && previewBranches.value.length > 1);
 const scripRewardMeta = computed(() => getCollectableScripRewardMeta(props.rewardItemId));
+const usesTierCountUnit = computed(() => isTierCountObjective(props.objective));
+const usesCustomScoreUnit = computed(() => isCustomTierObjective(props.objective));
 const summaryMetrics = computed(() => [
   buildScoreMetric('expected'),
   buildScoreMetric('max'),
@@ -149,6 +158,12 @@ const summaryMetrics = computed(() => [
 ]);
 const primaryMetric = computed(() => buildScoreMetric(props.objectiveMode));
 const secondaryMetrics = computed(() => summaryMetrics.value.filter((metric) => metric.key !== props.objectiveMode));
+const primaryTierIconEntry = computed(() => {
+  const metric = primaryMetric.value;
+  if (!('tierCounts' in metric)) return undefined;
+  const entries = visibleTierMetricEntries(metric.tierCounts);
+  return entries.length === 1 && entries[0].label ? entries[0] : undefined;
+});
 
 watch(() => props.policy, (policy) => {
   nodeStack.value = [policy];
@@ -174,6 +189,59 @@ function formatChance(chance: number) {
 }
 
 function buildScoreMetric(key: SolverObjectiveMode) {
+  if (usesTierCountUnit.value) {
+    const counts = key === 'max'
+      ? props.maxScoreTierCounts
+      : key === 'min'
+        ? props.minScoreTierCounts
+        : props.expectedTierCounts;
+    const labelKey = key === 'max'
+      ? 'collectableSolver.results.maxTierCounts'
+      : key === 'min'
+        ? 'collectableSolver.results.minTierCounts'
+        : 'collectableSolver.results.expectedTierCounts';
+
+    return {
+      key,
+      label: t(labelKey),
+      summaryLabel: t(labelKey),
+      value: key === 'max' ? props.maxScore : key === 'min' ? props.minScore : Number(props.expectedScore.toFixed(2)),
+      chance: key === 'expected' ? undefined : (key === 'max' ? props.maxScoreChance : props.minScoreChance),
+      tierCounts: counts
+    };
+  }
+
+  if (usesCustomScoreUnit.value) {
+    const unit = t('collectableSolver.results.pointUnit');
+    if (key === 'max') {
+      return {
+        key,
+        label: t('collectableSolver.results.maxScore', { unit }),
+        summaryLabel: t('collectableSolver.results.summary.max', { unit }),
+        value: props.maxScore,
+        chance: props.maxScoreChance
+      };
+    }
+
+    if (key === 'min') {
+      return {
+        key,
+        label: t('collectableSolver.results.minScore', { unit }),
+        summaryLabel: t('collectableSolver.results.summary.min', { unit }),
+        value: props.minScore,
+        chance: props.minScoreChance
+      };
+    }
+
+    return {
+      key,
+      label: t('collectableSolver.results.expectedScore', { unit }),
+      summaryLabel: t('collectableSolver.results.summary.expected', { unit }),
+      value: Number(props.expectedScore.toFixed(2)),
+      chance: undefined
+    };
+  }
+
   const unit = t(scripRewardMeta.value.labelKey);
 
   if (key === 'max') {
@@ -203,6 +271,52 @@ function buildScoreMetric(key: SolverObjectiveMode) {
     value: Number(props.expectedScore.toFixed(2)),
     chance: undefined
   };
+}
+
+function tierMetricEntries(counts?: CollectableTierCounts) {
+  const safeCounts = counts ?? { none: 0, low: 0, mid: 0, high: 0 };
+  return [
+    { key: 'high', label: t('collectableObjective.tiers.high'), value: safeCounts.high, className: 'tier-high' },
+    { key: 'mid', label: t('collectableObjective.tiers.mid'), value: safeCounts.mid, className: 'tier-mid' },
+    { key: 'low', label: t('collectableObjective.tiers.low'), value: safeCounts.low, className: 'tier-low' }
+  ];
+}
+
+function visibleTierMetricEntries(counts?: CollectableTierCounts) {
+  const entries = tierMetricEntries(counts).filter((entry) => Math.abs(entry.value) > tierCountVisibilityEpsilon);
+  return entries.length ? entries : [{ key: 'none', label: '', value: 0, className: 'tier-none' }];
+}
+
+function formatTierCountValue(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function formatSingleTierCount(counts?: CollectableTierCounts) {
+  const entry = visibleTierMetricEntries(counts)[0];
+  return `${formatTierCountValue(entry.value)}`;
+}
+
+function metricSummaryLabel(metric: ReturnType<typeof buildScoreMetric>) {
+  if (!('tierCounts' in metric)) return metric.summaryLabel;
+  const entries = visibleTierMetricEntries(metric.tierCounts);
+  if (entries.length !== 1 || !entries[0].label) return metric.summaryLabel;
+  return t(`collectableSolver.results.summary.${metric.key}`, { unit: tierCountUnit(entries[0].label) });
+}
+
+function metricLabel(metric: ReturnType<typeof buildScoreMetric>) {
+  if (!('tierCounts' in metric)) return metric.label;
+  const entries = visibleTierMetricEntries(metric.tierCounts);
+  if (entries.length !== 1 || !entries[0].label) return metric.label;
+  const labelKey = metric.key === 'max'
+    ? 'collectableSolver.results.maxScore'
+    : metric.key === 'min'
+      ? 'collectableSolver.results.minScore'
+      : 'collectableSolver.results.expectedScore';
+  return t(labelKey, { unit: tierCountUnit(entries[0].label) });
+}
+
+function tierCountUnit(tierLabel: string) {
+  return t('collectableSolver.results.tierCountUnit', { tier: tierLabel });
 }
 
 function uniqueNumbers(values: number[]) {
@@ -263,22 +377,36 @@ function continueGuidedBranch() {
   <div class="collectable-policy">
     <section class="collectable-summary">
       <div class="summary-value">
-        <span class="summary-kicker">{{ primaryMetric.summaryLabel }}</span>
-        <h3>{{ Number(primaryMetric.value.toFixed(2)) }}</h3>
+        <span class="summary-kicker">{{ metricSummaryLabel(primaryMetric) }}</span>
+        <div v-if="'tierCounts' in primaryMetric && visibleTierMetricEntries(primaryMetric.tierCounts).length > 1" class="tier-count-list">
+          <div v-for="entry in visibleTierMetricEntries(primaryMetric.tierCounts)" :key="entry.key" class="tier-count-entry">
+            <span class="tier-icon-frame" :class="entry.className">
+              <img v-if="itemIconUrl" :src="itemIconUrl" alt="" />
+              <i v-else class="pi pi-box"></i>
+            </span>
+            <strong>{{ formatTierCountValue(entry.value) }}</strong>
+            <small>{{ entry.label }}</small>
+          </div>
+        </div>
+        <h3 v-else-if="'tierCounts' in primaryMetric">{{ formatSingleTierCount(primaryMetric.tierCounts) }}</h3>
+        <h3 v-else>{{ Number(primaryMetric.value.toFixed(2)) }}</h3>
         <p v-if="primaryMetric.chance !== undefined">
           {{ t('collectableSolver.results.scoreChance', { chance: formatChance(primaryMetric.chance) }) }}
         </p>
         <p v-if="revisit.enabled">{{ t('collectableSolver.results.revisitIncluded', { chance: (revisit.chance * 100).toFixed(0) }) }}</p>
       </div>
       <div
+        v-if="(!usesTierCountUnit && !usesCustomScoreUnit) || primaryTierIconEntry"
         class="summary-scrip"
-        :class="`is-${scripRewardMeta.kind}`"
-        :title="t(scripRewardMeta.labelKey)"
-        :aria-label="t(scripRewardMeta.labelKey)"
+        :class="primaryTierIconEntry ? primaryTierIconEntry.className : `is-${scripRewardMeta.kind}`"
+        :title="primaryTierIconEntry ? primaryTierIconEntry.label : t(scripRewardMeta.labelKey)"
+        :aria-label="primaryTierIconEntry ? primaryTierIconEntry.label : t(scripRewardMeta.labelKey)"
       >
-        <img v-if="scripRewardMeta.iconUrl" :src="scripRewardMeta.iconUrl" :alt="t(scripRewardMeta.labelKey)" />
+        <img v-if="primaryTierIconEntry && itemIconUrl" :src="itemIconUrl" :alt="primaryTierIconEntry.label" />
+        <i v-else-if="primaryTierIconEntry" class="pi pi-box" aria-hidden="true"></i>
+        <img v-else-if="scripRewardMeta.iconUrl" :src="scripRewardMeta.iconUrl" :alt="t(scripRewardMeta.labelKey)" />
         <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
-        <span class="sr-only">{{ t(scripRewardMeta.labelKey) }}</span>
+        <span class="sr-only">{{ primaryTierIconEntry ? primaryTierIconEntry.label : t(scripRewardMeta.labelKey) }}</span>
       </div>
     </section>
 
@@ -288,8 +416,19 @@ function continueGuidedBranch() {
         :key="metric.key"
         class="score-metric-card"
       >
-        <span>{{ metric.label }}</span>
-        <strong>{{ Number(metric.value.toFixed(2)) }}</strong>
+        <span>{{ metricLabel(metric) }}</span>
+        <div v-if="'tierCounts' in metric && visibleTierMetricEntries(metric.tierCounts).length > 1" class="tier-count-list compact">
+          <div v-for="entry in visibleTierMetricEntries(metric.tierCounts)" :key="entry.key" class="tier-count-entry">
+            <span class="tier-icon-frame" :class="entry.className">
+              <img v-if="itemIconUrl" :src="itemIconUrl" alt="" />
+              <i v-else class="pi pi-box"></i>
+            </span>
+            <strong>{{ formatTierCountValue(entry.value) }}</strong>
+            <small>{{ entry.label }}</small>
+          </div>
+        </div>
+        <strong v-else-if="'tierCounts' in metric">{{ formatSingleTierCount(metric.tierCounts) }}</strong>
+        <strong v-else>{{ Number(metric.value.toFixed(2)) }}</strong>
         <small v-if="metric.chance !== undefined">
           {{ t('collectableSolver.results.scoreChance', { chance: formatChance(metric.chance) }) }}
         </small>
@@ -533,6 +672,87 @@ function continueGuidedBranch() {
   line-height: 1;
 }
 
+.tier-count-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+}
+
+.tier-count-list.compact {
+  gap: 0.45rem;
+}
+
+.tier-count-entry {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.35rem;
+  min-width: 5.6rem;
+}
+
+.tier-icon-frame {
+  width: 1.65rem;
+  height: 1.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #94a3b8;
+  border-radius: 0.35rem;
+  background: transparent;
+  box-sizing: content-box;
+  overflow: hidden;
+}
+
+.tier-count-entry .tier-icon-frame {
+  grid-row: 1 / span 2;
+}
+
+.tier-icon-frame.tier-high {
+  border-color: #6ee16a;
+}
+
+.tier-icon-frame.tier-mid {
+  border-color: #f5b800;
+}
+
+.tier-icon-frame.tier-low {
+  border-color: #33bfff;
+}
+
+.tier-icon-frame img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  object-fit: cover;
+}
+
+.tier-count-entry strong {
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.tier-count-list.compact .tier-count-entry strong {
+  font-size: 0.92rem;
+}
+
+.tier-count-entry small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+:global(html.dark .tier-count-entry strong) {
+  color: #f8fafc;
+}
+
+:global(html.dark .tier-count-entry small) {
+  color: #94a3b8;
+}
+
 .score-metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -624,6 +844,44 @@ function continueGuidedBranch() {
   image-rendering: pixelated;
 }
 
+.summary-scrip.tier-high {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-width: 3px;
+  border-color: #6ee16a;
+  border-radius: 0.7rem;
+  background: transparent;
+  overflow: hidden;
+}
+
+.summary-scrip.tier-mid {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-width: 3px;
+  border-color: #f5b800;
+  border-radius: 0.7rem;
+  background: transparent;
+  overflow: hidden;
+}
+
+.summary-scrip.tier-low {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-width: 3px;
+  border-color: #33bfff;
+  border-radius: 0.7rem;
+  background: transparent;
+  overflow: hidden;
+}
+
+.summary-scrip.tier-high img,
+.summary-scrip.tier-mid img,
+.summary-scrip.tier-low img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .summary-scrip i {
   font-size: 1.6rem;
 }
@@ -633,6 +891,21 @@ function continueGuidedBranch() {
   background: rgb(2 6 23 / 0.62);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
   color: #99f6e4;
+}
+
+:global(html.dark .summary-scrip.tier-high) {
+  border-color: #6ee16a;
+  background: transparent;
+}
+
+:global(html.dark .summary-scrip.tier-mid) {
+  border-color: #f5b800;
+  background: transparent;
+}
+
+:global(html.dark .summary-scrip.tier-low) {
+  border-color: #33bfff;
+  background: transparent;
 }
 
 .sr-only {

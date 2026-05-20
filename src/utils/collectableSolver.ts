@@ -2,11 +2,14 @@ import { calculateSuccessRate } from './gatheringMath';
 import {
   COLLECTABILITY_CAP,
   addCollectableRewards,
+  addCollectableTierCounts,
   calculateScrutinyBonus,
   calculateValueIncreaseRate,
   createZeroReward,
+  createZeroTierCounts,
+  getCollectableTierCountForValue,
   getCollectableRewardForValue,
-  scoreCollectableReward
+  scoreCollectability
 } from './collectableMath';
 import {
   COLLECTABLE_STATE_KEY_FIELDS,
@@ -25,6 +28,7 @@ import type {
   CollectablePolicyBranch,
   CollectablePolicyNode,
   CollectablePolicyPlan,
+  CollectableTierCounts,
   CollectableRewardVector,
   CollectableSearchDebugInfo,
   CollectableSolverDebugInfo,
@@ -39,7 +43,9 @@ type SearchState = CollectableMechanicsState;
 interface SearchResult {
   expectedScore: number;
   expectedReward: CollectableRewardVector;
+  expectedTierCounts: CollectableTierCounts;
   outcomes: Map<number, number>;
+  outcomeDetails: Map<string, OutcomeDetail>;
   recommendedActionKind: CollectableActionKind;
   habit: SearchHabitMetrics;
   gpSpent: number;
@@ -66,6 +72,13 @@ type WeightedState = {
   labelKeys?: string[];
   conditionKey: string;
   reward?: CollectableRewardVector;
+  tierCounts?: CollectableTierCounts;
+};
+
+type OutcomeDetail = {
+  score: number;
+  probability: number;
+  tierCounts: CollectableTierCounts;
 };
 
 type ScoreSummary = {
@@ -94,6 +107,7 @@ function emptyPolicy(state: SearchState): CollectablePolicyNode {
     recommendedAction: actionSummary('collect', 'miner'),
     expectedScore: 0,
     expectedReward: createZeroReward(),
+    expectedTierCounts: createZeroTierCounts(),
     branches: []
   };
 }
@@ -164,7 +178,13 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       return {
         expectedScore: 0,
         expectedReward: createZeroReward(),
+        expectedTierCounts: createZeroTierCounts(),
         outcomes: new Map([[0, 1]]),
+        outcomeDetails: new Map([[outcomeDetailKey(0, createZeroTierCounts()), {
+          score: 0,
+          probability: 1,
+          tierCounts: createZeroTierCounts()
+        }]]),
         recommendedActionKind: 'collect',
         habit: emptyHabitMetrics(),
         gpSpent: 0,
@@ -285,8 +305,11 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function applyCollect(state: SearchState, nextSolve: (state: SearchState) => SearchResult): SearchResult {
     const reward = getCollectableRewardForValue(state.collectability, rewardTable);
+    const tierCounts = getCollectableTierCountForValue(state.collectability, rewardTable);
     return applyMechanicsAction(state, nextSolve, 'collect', 0, 1, (branch) => (
       branch.labelKey === 'collectableSolver.branches.collectSuccess' ? reward : createZeroReward()
+    ), (branch) => (
+      branch.labelKey === 'collectableSolver.branches.collectSuccess' ? tierCounts : createZeroTierCounts()
     ));
   }
 
@@ -304,9 +327,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     kind: CollectableActionKind,
     gpSpent: number,
     actionCount: number,
-    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward()
+    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward(),
+    tierCountsForBranch: (branch: WeightedState) => CollectableTierCounts = () => createZeroTierCounts()
   ): SearchResult {
-    const branchesWithReward = createBranchesWithReward(state, kind, rewardForBranch);
+    const branchesWithReward = createBranchesWithReward(state, kind, rewardForBranch, tierCountsForBranch);
     const results = branchesWithReward.map((branch) => nextSolve(branch.state));
 
     return buildSearchResult(state, kind, branchesWithReward, results, gpSpent, actionCount);
@@ -315,7 +339,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   function createBranchesWithReward(
     state: SearchState,
     kind: CollectableActionKind,
-    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward()
+    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward(),
+    tierCountsForBranch: (branch: WeightedState) => CollectableTierCounts = () => createZeroTierCounts()
   ): WeightedState[] {
     const branches: WeightedState[] = applyCollectableAction(kind, state, mechanics).map((transition) => ({
       state: transition.state,
@@ -326,7 +351,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     }));
     return branches.map((branch) => ({
       ...branch,
-      reward: rewardForBranch(branch)
+      reward: rewardForBranch(branch),
+      tierCounts: tierCountsForBranch(branch)
     }));
   }
 
@@ -339,23 +365,29 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     actionCount: number
   ): SearchResult {
     let expectedReward = createZeroReward();
+    let expectedTierCounts = createZeroTierCounts();
     let expectedScore = 0;
     let nodeCount = 1;
     branches.forEach((branch, index) => {
       const result = results[index];
       const branchReward = addCollectableRewards(branch.reward ?? createZeroReward(), result.expectedReward);
-      const branchScore = scoreCollectableReward(branchReward, objective);
+      const branchTierCounts = addCollectableTierCounts(branch.tierCounts ?? createZeroTierCounts(), result.expectedTierCounts);
+      const immediateScore = scoreImmediateBranch(branch);
       expectedReward = addCollectableRewards(expectedReward, branchReward, branch.probability);
-      expectedScore += branchScore * branch.probability;
+      expectedTierCounts = addCollectableTierCounts(expectedTierCounts, branchTierCounts, branch.probability);
+      expectedScore += (immediateScore + result.expectedScore) * branch.probability;
       nodeCount += result.nodeCount;
       activeSearchStats && (activeSearchStats.branchCount += 1);
     });
     const outcomes = mergeOutcomeDistributions(branches, results);
+    const outcomeDetails = mergeOutcomeDetails(branches, results);
 
     return {
       expectedScore,
       expectedReward,
+      expectedTierCounts,
       outcomes,
+      outcomeDetails,
       recommendedActionKind: kind,
       habit: buildHabitMetrics(state, kind, results),
       gpSpent: gpSpent + weightedSum(results, branches, 'gpSpent'),
@@ -372,7 +404,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     const outcomes = new Map<number, number>();
 
     branches.forEach((branch, index) => {
-      const immediateScore = scoreCollectableReward(branch.reward ?? createZeroReward(), objective);
+      const immediateScore = scoreImmediateBranch(branch);
       results[index].outcomes.forEach((probability, score) => {
         const totalScore = immediateScore + score;
         outcomes.set(totalScore, (outcomes.get(totalScore) ?? 0) + probability * branch.probability);
@@ -380,6 +412,43 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     });
 
     return outcomes;
+  }
+
+  function mergeOutcomeDetails(branches: WeightedState[], results: SearchResult[]) {
+    const details = new Map<string, OutcomeDetail>();
+
+    branches.forEach((branch, index) => {
+      const immediateScore = scoreImmediateBranch(branch);
+      const immediateTierCounts = branch.tierCounts ?? createZeroTierCounts();
+      results[index].outcomeDetails.forEach((child) => {
+        const totalScore = immediateScore + child.score;
+        const totalTierCounts = addCollectableTierCounts(immediateTierCounts, child.tierCounts);
+        const key = outcomeDetailKey(totalScore, totalTierCounts);
+        const current = details.get(key);
+        details.set(key, {
+          score: totalScore,
+          probability: (current?.probability ?? 0) + child.probability * branch.probability,
+          tierCounts: totalTierCounts
+        });
+      });
+    });
+
+    return details;
+  }
+
+  function scoreImmediateBranch(branch: WeightedState) {
+    const hasReward = (branch.reward?.exp ?? 0) > 0
+      || (branch.reward?.gil ?? 0) > 0
+      || (branch.reward?.scrip ?? 0) > 0
+      || Object.keys(branch.reward?.items ?? {}).length > 0
+      || tierCountsTotal(branch.tierCounts ?? createZeroTierCounts()) > 0;
+    return hasReward ? scoreCollectability(stateCollectabilityForBranch(branch), rewardTable, objective) : 0;
+  }
+
+  function stateCollectabilityForBranch(branch: WeightedState) {
+    return branch.labelKey === 'collectableSolver.branches.collectSuccess'
+      ? branch.state.collectability
+      : branch.state.collectability;
   }
 
   function isPreferred(candidate: SearchResult, current: SearchResult): boolean {
@@ -491,6 +560,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       recommendedAction: actionSummary(result.recommendedActionKind, jobType),
       expectedScore: Number(result.expectedScore.toFixed(6)),
       expectedReward: result.expectedReward,
+      expectedTierCounts: result.expectedTierCounts,
       branches: []
     };
     visited.set(memoKey, policy);
@@ -499,12 +569,16 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       result.recommendedActionKind === 'collect' && branch.labelKey === 'collectableSolver.branches.collectSuccess'
         ? getCollectableRewardForValue(state.collectability, rewardTable)
         : createZeroReward()
+    ), (branch) => (
+      result.recommendedActionKind === 'collect' && branch.labelKey === 'collectableSolver.branches.collectSuccess'
+        ? getCollectableTierCountForValue(state.collectability, rewardTable)
+        : createZeroTierCounts()
     ));
 
     policy.branches = branches.map((branch) => {
       const nextResult = solve(branch.state);
       const branchReward = addCollectableRewards(branch.reward ?? createZeroReward(), nextResult.expectedReward);
-      const branchScore = scoreCollectableReward(branchReward, objective);
+      const branchScore = scoreImmediateBranch(branch) + nextResult.expectedScore;
       const childPolicy = buildPolicyFromState(branch.state, visited);
 
       return {
@@ -561,17 +635,28 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const initialSummary = summarizeOutcomes(initial.outcomes);
   const fullGpSummary = summarizeOutcomes(fullGpResult.outcomes);
   const revisitOutcomes = combineSequentialOutcomes(initial.outcomes, fullGpResult.outcomes);
+  const revisitOutcomeDetails = combineSequentialOutcomeDetails(initial.outcomeDetails, fullGpResult.outcomeDetails);
   const combinedOutcomes = revisitEnabled
     ? mergeWeightedOutcomeMaps([
         { outcomes: initial.outcomes, weight: 1 - revisitChance },
         { outcomes: revisitOutcomes, weight: revisitChance }
       ])
     : initial.outcomes;
+  const combinedOutcomeDetails = revisitEnabled
+    ? mergeWeightedOutcomeDetails([
+        { details: initial.outcomeDetails, weight: 1 - revisitChance },
+        { details: revisitOutcomeDetails, weight: revisitChance }
+      ])
+    : initial.outcomeDetails;
   const combinedSummary = summarizeOutcomes(combinedOutcomes);
+  const combinedTierSummary = summarizeTierCountsForScores(combinedOutcomeDetails, combinedSummary.minScore, combinedSummary.maxScore);
   const expectedScore = expectedValue(combinedOutcomes);
   const expectedReward = revisitEnabled
     ? addCollectableRewards(initial.expectedReward, fullGpResult.expectedReward, revisitChance)
     : initial.expectedReward;
+  const expectedTierCounts = revisitEnabled
+    ? addCollectableTierCounts(initial.expectedTierCounts, fullGpResult.expectedTierCounts, revisitChance)
+    : initial.expectedTierCounts;
   const revisitPolicy = fullGpResult.policy;
   const primaryPolicy = revisitEnabled
     ? attachRevisitGate(initial.policy, revisitPolicy, revisitChance)
@@ -586,6 +671,9 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         minScoreChance: initialSummary.minScoreChance,
         maxScoreChance: initialSummary.maxScoreChance,
         expectedReward: initial.expectedReward,
+        expectedTierCounts: initial.expectedTierCounts,
+        minScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).minScoreTierCounts,
+        maxScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).maxScoreTierCounts,
         policy: primaryPolicy
       }]
     : [
@@ -598,6 +686,9 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           minScoreChance: initialSummary.minScoreChance,
           maxScoreChance: initialSummary.maxScoreChance,
           expectedReward: initial.expectedReward,
+          expectedTierCounts: initial.expectedTierCounts,
+          minScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).minScoreTierCounts,
+          maxScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).maxScoreTierCounts,
           policy: primaryPolicy
         },
         {
@@ -609,6 +700,9 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           minScoreChance: fullGpSummary.minScoreChance,
           maxScoreChance: fullGpSummary.maxScoreChance,
           expectedReward: fullGpResult.expectedReward,
+          expectedTierCounts: fullGpResult.expectedTierCounts,
+          minScoreTierCounts: summarizeTierCountsForScores(fullGpResult.outcomeDetails, fullGpSummary.minScore, fullGpSummary.maxScore).minScoreTierCounts,
+          maxScoreTierCounts: summarizeTierCountsForScores(fullGpResult.outcomeDetails, fullGpSummary.minScore, fullGpSummary.maxScore).maxScoreTierCounts,
           policy: revisitPolicy
         }
       ];
@@ -619,7 +713,11 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     minScoreChance: combinedSummary.minScoreChance,
     maxScoreChance: combinedSummary.maxScoreChance,
     objectiveMode,
+    objective,
     expectedReward,
+    expectedTierCounts,
+    minScoreTierCounts: combinedTierSummary.minScoreTierCounts,
+    maxScoreTierCounts: combinedTierSummary.maxScoreTierCounts,
     rewardItemId: rewardTable.rewardItemId,
     policyPlans,
     revisit: {
@@ -704,6 +802,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         state: { ...node.state },
         recommendedAction: { ...node.recommendedAction },
         expectedReward: { ...node.expectedReward, items: { ...node.expectedReward.items } },
+        expectedTierCounts: { ...node.expectedTierCounts },
         branches: []
       };
       visited.set(node.id, cloned);
@@ -751,6 +850,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       recommendedAction: actionSummary('revisitCheck', jobType),
       expectedScore: Number((probability * nextPolicy.expectedScore).toFixed(6)),
       expectedReward: addCollectableRewards(createZeroReward(), nextPolicy.expectedReward, probability),
+      expectedTierCounts: addCollectableTierCounts(createZeroTierCounts(), nextPolicy.expectedTierCounts, probability),
       branches: [
         {
           labelKey: 'collectableSolver.branches.revisitProc',
@@ -823,6 +923,96 @@ function mergeWeightedOutcomeMaps(parts: Array<{ outcomes: Map<number, number>; 
   });
 
   return outcomes;
+}
+
+function combineSequentialOutcomeDetails(
+  left: Map<string, OutcomeDetail>,
+  right: Map<string, OutcomeDetail>
+) {
+  const details = new Map<string, OutcomeDetail>();
+
+  left.forEach((leftDetail) => {
+    right.forEach((rightDetail) => {
+      const score = leftDetail.score + rightDetail.score;
+      const tierCounts = addCollectableTierCounts(leftDetail.tierCounts, rightDetail.tierCounts);
+      const probability = leftDetail.probability * rightDetail.probability;
+      const key = outcomeDetailKey(score, tierCounts);
+      const current = details.get(key);
+      details.set(key, {
+        score,
+        probability: (current?.probability ?? 0) + probability,
+        tierCounts
+      });
+    });
+  });
+
+  return details;
+}
+
+function mergeWeightedOutcomeDetails(parts: Array<{ details: Map<string, OutcomeDetail>; weight: number }>) {
+  const details = new Map<string, OutcomeDetail>();
+
+  parts.forEach((part) => {
+    part.details.forEach((detail) => {
+      const key = outcomeDetailKey(detail.score, detail.tierCounts);
+      const current = details.get(key);
+      details.set(key, {
+        ...detail,
+        probability: (current?.probability ?? 0) + detail.probability * part.weight
+      });
+    });
+  });
+
+  return details;
+}
+
+function summarizeTierCountsForScores(
+  details: Map<string, OutcomeDetail>,
+  minScore: number,
+  maxScore: number
+) {
+  return {
+    minScoreTierCounts: representativeTierCountsForScore(details, minScore, 'min'),
+    maxScoreTierCounts: representativeTierCountsForScore(details, maxScore, 'max')
+  };
+}
+
+function representativeTierCountsForScore(
+  details: Map<string, OutcomeDetail>,
+  score: number,
+  direction: 'min' | 'max'
+) {
+  const matches = [...details.values()].filter((detail) => detail.score === score);
+  if (matches.length === 0) return createZeroTierCounts();
+
+  return matches.sort((left, right) => {
+    if (right.probability !== left.probability) return right.probability - left.probability;
+    const highDiff = direction === 'max'
+      ? right.tierCounts.high - left.tierCounts.high
+      : left.tierCounts.high - right.tierCounts.high;
+    if (highDiff !== 0) return highDiff;
+    const midDiff = direction === 'max'
+      ? right.tierCounts.mid - left.tierCounts.mid
+      : left.tierCounts.mid - right.tierCounts.mid;
+    if (midDiff !== 0) return midDiff;
+    return direction === 'max'
+      ? right.tierCounts.low - left.tierCounts.low
+      : left.tierCounts.low - right.tierCounts.low;
+  })[0].tierCounts;
+}
+
+function outcomeDetailKey(score: number, tierCounts: CollectableTierCounts) {
+  return [
+    score,
+    tierCounts.none,
+    tierCounts.low,
+    tierCounts.mid,
+    tierCounts.high
+  ].join('|');
+}
+
+function tierCountsTotal(tierCounts: CollectableTierCounts) {
+  return tierCounts.none + tierCounts.low + tierCounts.mid + tierCounts.high;
 }
 
 function expectedValue(outcomes: Map<number, number>): number {

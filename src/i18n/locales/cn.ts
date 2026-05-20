@@ -464,10 +464,42 @@ export default {
       caveat: '最优性成立于目前建模的普通采集技能、GP、耐久、成功率、Boon、再起与理智同兴概率；未纳入收藏品、水晶采集与玩家手动中断。'
     }
   },
+  collectableObjective: {
+    kicker: '推荐排序权重',
+    title: '评分偏好',
+    close: '关闭评分偏好',
+    intro: '权重会把每次收藏品采集结果换成分数，求解器会依这个分数排序推荐策略；权重越高，代表越希望策略把结果推向该档位。',
+    solverIntro: '权重会把每次收藏品采集结果换成分数，求解器会依这个分数排序推荐策略；权重越高，代表越希望策略把结果推向该档位。',
+    analysisIntro: '选择你想用哪种标准阅读这份分析结果。权重越高，代表该档位在期望、最高、最低与分布中越重要；可以在票据总量、高价值交纳，或自己的目标之间切换比较。',
+    cancel: '取消',
+    apply: '套用',
+    applyCustom: '套用自定义权重',
+    presets: {
+      highValue: '高价值优先',
+      midValue: '中价值优先',
+      lowValue: '低价值优先',
+      purpleScrip: '大地紫票优先',
+      orangeScrip: '大地橙票优先',
+      customTier: '自定义权重'
+    },
+    presetDescriptions: {
+      highValue: '强烈偏向最高档位，中档作为备选结果。',
+      midValue: '偏向停在中档，避免为了冲高档投入太多采集次数。',
+      lowValue: '偏向稳定拿到低档，适合只想保守达标的测试。',
+      scrip: '沿用目前奖励表，以票据总量作为分数。',
+      customTier: '自行输入未达标、低档、中档、高档的分数。'
+    },
+    tiers: {
+      none: '未达标',
+      low: '低价值',
+      mid: '中价值',
+      high: '高价值'
+    }
+  },
   collectableSolver: {
     badge: '收藏品秘籍',
     title: '收藏品求解台',
-    description: '算法未纳入大胆提炼、强化洞察，以大地紫橘票获得量为评分依据。',
+    description: '算法未纳入大胆提炼、强化洞察，会依目前评分偏好排序推荐策略。',
     solving: '正在推算收藏品推荐策略...',
     empty: '点击求解后，这里会显示可依状态判断的推荐策略。',
     stats: { scourValue: '提炼基础值' },
@@ -496,6 +528,10 @@ export default {
       subtitle: '这不是固定宏，而是依照随机结果与收藏价值做判断的策略。',
       expectedScore: '期望{unit}',
       expectedScripUnit: '评分单位',
+      expectedTierCounts: '期望档位个数',
+      maxTierCounts: '最高档位个数',
+      minTierCounts: '最低档位个数',
+      pointUnit: '分',
       scripUnits: {
         purple: '大地紫票',
         orange: '大地橘票',
@@ -510,6 +546,7 @@ export default {
       },
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
+      tierCountUnit: '{tier}个数',
       scoreChance: '概率 {chance}',
       revisitIncluded: '总分数已纳入再起 {chance}% 概率。',
       limitationNote: '第一版未纳入大胆提炼、强化洞察、精选收益模型与实际经验值换算。'
@@ -590,7 +627,7 @@ export default {
       revisitNoProc: '再起未触发，本次采集点结束。'
     },
     errors: {
-      unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在已支持的收藏品缴纳、老主顾、魔法大学或万货街资料中，暂时无法求解。' },
+      unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在已支持的收藏品缴纳、老主顾、魔法大学、万货街、精选或宇宙探索资料中，暂时无法求解。' },
       workerStale: { title: '求解器需要重新载入', desc: '网站可能刚更新完成，刷新后即可继续。' },
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }
     },
@@ -720,7 +757,7 @@ export default {
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
       distribution: '分数概率分布',
-      revisitExcluded: '此分析暂未纳入再起；分数使用收藏品求解台相同的 reward 评分方式。'
+      scoringNote: '结果会依目前评分偏好显示；切换齿轮设置后再分析，即可比较票据、档位个数或自定义分数。'
     },
     tools: {
       moveUp: '上移',

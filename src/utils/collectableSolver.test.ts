@@ -621,4 +621,23 @@ describe('solveCollectableRotation', () => {
     expect(result.expectedScore).toBeGreaterThan(result.policyPlans[0].expectedScore);
     expect(collectBranchLabels(result.policy)).toContain('collectableSolver.branches.revisitProc');
   });
+
+  it('檔位權重會回傳期望檔位個數且不加入 DP state key', () => {
+    const result = solveCollectableRotation(createRequest({
+      objective: {
+        kind: 'tierScore',
+        presetId: 'highValue',
+        tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
+      },
+      debugMode: true
+    }));
+    const totalExpectedCounts = result.expectedTierCounts.none
+      + result.expectedTierCounts.low
+      + result.expectedTierCounts.mid
+      + result.expectedTierCounts.high;
+
+    expect(totalExpectedCounts).toBeGreaterThan(0);
+    expect(result.policy.expectedTierCounts).toEqual(result.policyPlans[0].expectedTierCounts);
+    expect(result.debug?.optimality.stateKeyFields).not.toContain('expectedTierCounts');
+  });
 });

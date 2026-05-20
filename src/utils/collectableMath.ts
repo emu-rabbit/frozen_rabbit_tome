@@ -1,5 +1,6 @@
 import type {
   CollectableObjective,
+  CollectableTierCounts,
   CollectableRewardTable,
   CollectableRewardTierName,
   CollectableRewardVector
@@ -136,6 +137,37 @@ export function createZeroReward(): CollectableRewardVector {
   };
 }
 
+export function createZeroTierCounts(): CollectableTierCounts {
+  return {
+    none: 0,
+    low: 0,
+    mid: 0,
+    high: 0
+  };
+}
+
+export function addCollectableTierCounts(
+  left: CollectableTierCounts,
+  right: CollectableTierCounts,
+  rightWeight = 1
+): CollectableTierCounts {
+  return {
+    none: left.none + right.none * rightWeight,
+    low: left.low + right.low * rightWeight,
+    mid: left.mid + right.mid * rightWeight,
+    high: left.high + right.high * rightWeight
+  };
+}
+
+export function getCollectableTierCountForValue(
+  collectability: number,
+  rewardTable: CollectableRewardTable
+): CollectableTierCounts {
+  const counts = createZeroTierCounts();
+  counts[getCollectableRewardTier(collectability, rewardTable)] = 1;
+  return counts;
+}
+
 export function addCollectableRewards(
   left: CollectableRewardVector,
   right: CollectableRewardVector,
@@ -187,4 +219,17 @@ export function scoreCollectableReward(
     + reward.gil * (weights.gil ?? 0)
     + reward.scrip * (weights.scrip ?? 0)
     + itemScore;
+}
+
+export function scoreCollectability(
+  collectability: number,
+  rewardTable: CollectableRewardTable,
+  objective: CollectableObjective
+): number {
+  if (objective.kind !== 'tierScore') {
+    return scoreCollectableReward(getCollectableRewardForValue(collectability, rewardTable), objective);
+  }
+
+  const tier = getCollectableRewardTier(collectability, rewardTable);
+  return objective.tierWeights?.[tier] ?? 0;
 }

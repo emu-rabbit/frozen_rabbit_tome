@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
-import type { CollectableActionKind, CollectableRewardTable } from '../types/collectable';
+import type { CollectableActionKind, CollectableObjective, CollectableRewardTable, CollectableTierCounts } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
@@ -22,6 +22,13 @@ import {
   type CollectableStrategyRule
 } from '../utils/collectableStrategyTree';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
+import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
+import {
+  createCollectableObjectiveOptions,
+  getDefaultCollectableObjectivePresetId,
+  isCustomTierObjective,
+  isTierCountObjective
+} from '../utils/collectableObjectivePresets';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -40,7 +47,9 @@ const selectedUncoveredId = ref('');
 const analysis = ref<CollectableStrategyAnalysis | null>(null);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 const rewardError = ref(false);
+const isObjectiveDialogOpen = ref(false);
 const internalMaxNodes = 1200;
+const tierCountVisibilityEpsilon = 0.000001;
 const { collectableObjective } = useCollectableSolver();
 
 const jobType = computed(() => props.activeItem.jobType || 'miner');
@@ -95,6 +104,12 @@ const ruleCoverage = computed(() => {
   return counts;
 });
 const analysisUnit = computed(() => t(getCollectableScripRewardMeta(rewardTable.value?.rewardItemId).labelKey));
+const selectedObjectiveLabel = computed(() => {
+  if (!rewardTable.value) return t('collectableObjective.title');
+  const option = createCollectableObjectiveOptions(rewardTable.value)
+    .find((entry) => entry.id === collectableObjective.value.presetId || (entry.id === 'scrip' && collectableObjective.value.kind === 'scrip'));
+  return option ? t(option.labelKey) : t('collectableObjective.title');
+});
 
 watch(uncoveredNodes, (nodes) => {
   if (!nodes.some((node) => node.id === selectedUncoveredId.value)) {
@@ -110,6 +125,7 @@ watch(() => props.activeItem.itemId, async () => {
   try {
     rewardTable.value = await getCollectableRewardTable(props.activeItem.itemId);
     rewardError.value = !rewardTable.value;
+    if (rewardTable.value) applyDefaultObjective(rewardTable.value);
   } catch (error) {
     console.error('Collectable strategy reward table loading failed:', error);
     rewardError.value = true;
@@ -137,6 +153,44 @@ function runAnalysis() {
     rewardTable.value,
     collectableObjective.value
   );
+}
+
+function applyDefaultObjective(table: CollectableRewardTable) {
+  const defaultId = getDefaultCollectableObjectivePresetId(table);
+  const option = createCollectableObjectiveOptions(table).find((entry) => entry.id === defaultId);
+  if (option) collectableObjective.value = option.objective;
+}
+
+function handleObjectiveChange(objective: CollectableObjective) {
+  collectableObjective.value = objective;
+  analysis.value = null;
+}
+
+function scoreUnitLabel() {
+  if (isCustomTierObjective(collectableObjective.value)) return t('collectableSolver.results.pointUnit');
+  return analysisUnit.value;
+}
+
+function tierMetricEntries(counts: CollectableTierCounts) {
+  return [
+    { key: 'high', label: t('collectableObjective.tiers.high'), value: counts.high },
+    { key: 'mid', label: t('collectableObjective.tiers.mid'), value: counts.mid },
+    { key: 'low', label: t('collectableObjective.tiers.low'), value: counts.low }
+  ];
+}
+
+function visibleTierMetricEntries(counts: CollectableTierCounts) {
+  const entries = tierMetricEntries(counts).filter((entry) => Math.abs(entry.value) > tierCountVisibilityEpsilon);
+  return entries.length ? entries : [{ key: 'none', label: '', value: 0 }];
+}
+
+function formatTierCountValue(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function formatSingleTierCount(counts: CollectableTierCounts) {
+  const entry = visibleTierMetricEntries(counts)[0];
+  return entry.label ? `${formatTierCountValue(entry.value)} ${entry.label}` : `${formatTierCountValue(entry.value)}`;
 }
 
 function addRule() {
@@ -452,15 +506,27 @@ function makeId() {
           </div>
           <p>{{ t('collectableStrategyLab.analysis.subtitle') }}</p>
         </div>
-        <Button
-          class="analysis-run-button p-button-primary rounded-xl"
-          :aria-label="t('collectableStrategyLab.analysis.run')"
-          :disabled="!treeResult?.root || !rewardTable || rewardError"
-          @click="runAnalysis"
-        >
-          <i class="pi pi-play"></i>
-          <span>{{ t('collectableStrategyLab.analysis.run') }}</span>
-        </Button>
+        <div class="analysis-action-group">
+          <button
+            type="button"
+            class="analysis-run-button p-button p-button-outlined rounded-xl objective-run-button"
+            :aria-label="t('collectableObjective.title')"
+            :title="selectedObjectiveLabel"
+            :disabled="!rewardTable"
+            @click="isObjectiveDialogOpen = true"
+          >
+            <i class="pi pi-cog" aria-hidden="true"></i>
+          </button>
+          <Button
+            class="analysis-run-button p-button-primary rounded-xl"
+            :aria-label="t('collectableStrategyLab.analysis.run')"
+            :disabled="!treeResult?.root || !rewardTable || rewardError"
+            @click="runAnalysis"
+          >
+            <i class="pi pi-play"></i>
+            <span>{{ t('collectableStrategyLab.analysis.run') }}</span>
+          </Button>
+        </div>
       </div>
 
       <div v-if="rewardError" class="analysis-empty" role="alert">
@@ -477,17 +543,38 @@ function makeId() {
         <h3>{{ t('collectableStrategyLab.analysis.summary') }}</h3>
         <div class="metric-grid">
           <div>
-            <span>{{ t('collectableStrategyLab.analysis.expectedScore', { unit: analysisUnit }) }}</span>
-            <strong>{{ analysis.expectedScore }}</strong>
+            <span>{{ isTierCountObjective(collectableObjective) ? t('collectableSolver.results.expectedTierCounts') : t('collectableStrategyLab.analysis.expectedScore', { unit: scoreUnitLabel() }) }}</span>
+            <div v-if="isTierCountObjective(collectableObjective) && visibleTierMetricEntries(analysis.expectedTierCounts).length > 1" class="tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(analysis.expectedTierCounts)" :key="entry.key" class="tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small>{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else-if="isTierCountObjective(collectableObjective)">{{ formatSingleTierCount(analysis.expectedTierCounts) }}</strong>
+            <strong v-else>{{ analysis.expectedScore }}</strong>
           </div>
           <div>
-            <span>{{ t('collectableStrategyLab.analysis.maxScore', { unit: analysisUnit }) }}</span>
-            <strong>{{ analysis.maxScore }}</strong>
+            <span>{{ isTierCountObjective(collectableObjective) ? t('collectableSolver.results.maxTierCounts') : t('collectableStrategyLab.analysis.maxScore', { unit: scoreUnitLabel() }) }}</span>
+            <div v-if="isTierCountObjective(collectableObjective) && visibleTierMetricEntries(analysis.maxScoreTierCounts).length > 1" class="tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(analysis.maxScoreTierCounts)" :key="entry.key" class="tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small>{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else-if="isTierCountObjective(collectableObjective)">{{ formatSingleTierCount(analysis.maxScoreTierCounts) }}</strong>
+            <strong v-else>{{ analysis.maxScore }}</strong>
             <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.maxScoreChance, false, false) }) }}</small>
           </div>
           <div>
-            <span>{{ t('collectableStrategyLab.analysis.minScore', { unit: analysisUnit }) }}</span>
-            <strong>{{ analysis.minScore }}</strong>
+            <span>{{ isTierCountObjective(collectableObjective) ? t('collectableSolver.results.minTierCounts') : t('collectableStrategyLab.analysis.minScore', { unit: scoreUnitLabel() }) }}</span>
+            <div v-if="isTierCountObjective(collectableObjective) && visibleTierMetricEntries(analysis.minScoreTierCounts).length > 1" class="tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(analysis.minScoreTierCounts)" :key="entry.key" class="tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small>{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else-if="isTierCountObjective(collectableObjective)">{{ formatSingleTierCount(analysis.minScoreTierCounts) }}</strong>
+            <strong v-else>{{ analysis.minScore }}</strong>
             <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.minScoreChance, false, false) }) }}</small>
           </div>
         </div>
@@ -500,9 +587,17 @@ function makeId() {
             <small class="probability-text">{{ formatProbability(entry.probability, true, true) }}</small>
           </div>
         </div>
-        <p class="analysis-note">{{ t('collectableStrategyLab.analysis.revisitExcluded') }}</p>
+        <p class="analysis-note">{{ t('collectableStrategyLab.analysis.scoringNote') }}</p>
       </article>
     </section>
+
+    <CollectableObjectivePreferenceDialog
+      v-model="isObjectiveDialogOpen"
+      :reward-table="rewardTable"
+      :objective="collectableObjective"
+      context="analysis"
+      @change="handleObjectiveChange"
+    />
 
     <Teleport to="body">
       <div v-if="editingRule" class="rule-editor-overlay" role="presentation" @click.self="closeRuleEditor">
@@ -761,6 +856,27 @@ function makeId() {
   font-weight: 900;
 }
 
+.analysis-action-group {
+  display: inline-grid;
+  grid-template-columns: 3rem minmax(8rem, 11rem);
+  align-items: stretch;
+  gap: 0.65rem;
+  flex: 0 0 auto;
+}
+
+.analysis-action-group .analysis-run-button {
+  width: 100%;
+}
+
+.objective-run-button {
+  width: 3rem;
+  min-width: 3rem;
+  height: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  line-height: 1;
+}
+
 .analysis-empty {
   display: grid;
   justify-items: center;
@@ -808,6 +924,41 @@ function makeId() {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+.tier-count-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.tier-count-entry {
+  display: inline-grid;
+  grid-template-columns: auto;
+  align-items: start;
+  min-width: 4.4rem;
+}
+
+.tier-count-entry strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.tier-count-entry small {
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+:global(html.dark .tier-count-entry strong) {
+  color: #f8fafc;
+}
+
+:global(html.dark .tier-count-entry small) {
+  color: #94a3b8;
 }
 
 .metric-grid div {
@@ -1574,6 +1725,11 @@ function makeId() {
   .rule-card-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .analysis-action-group {
+    width: 100%;
+    grid-template-columns: 3rem minmax(0, 1fr);
   }
 
   .condition-row {

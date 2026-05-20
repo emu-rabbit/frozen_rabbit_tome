@@ -1,6 +1,6 @@
 import type { NodeBonuses, PlayerStats, SolverObjectiveMode } from './game';
 
-export type CollectableObjectiveKind = 'scrip' | 'exp' | 'gil' | 'custom';
+export type CollectableObjectiveKind = 'scrip' | 'exp' | 'gil' | 'custom' | 'tierScore';
 
 export interface CollectableRewardWeights {
   exp?: number;
@@ -12,6 +12,22 @@ export interface CollectableRewardWeights {
 export interface CollectableObjective {
   kind: CollectableObjectiveKind;
   weights?: CollectableRewardWeights;
+  tierWeights?: CollectableTierScoreWeights;
+  presetId?: CollectableObjectivePresetId;
+}
+
+export type CollectableObjectivePresetId =
+  | 'scrip'
+  | 'highValue'
+  | 'midValue'
+  | 'lowValue'
+  | 'customTier';
+
+export interface CollectableTierScoreWeights {
+  none?: number;
+  low?: number;
+  mid?: number;
+  high?: number;
 }
 
 export interface CollectableRewardVector {
@@ -19,6 +35,13 @@ export interface CollectableRewardVector {
   gil: number;
   scrip: number;
   items: Record<number, number>;
+}
+
+export interface CollectableTierCounts {
+  none: number;
+  low: number;
+  mid: number;
+  high: number;
 }
 
 export type CollectableRewardTierName = 'none' | 'low' | 'mid' | 'high';
@@ -30,7 +53,13 @@ export interface CollectableRewardTier {
 
 export interface CollectableRewardTable {
   itemId: number;
-  source: 'collectables' | 'customDelivery' | 'sharlayanStudium' | 'wachumeqimeqi';
+  source:
+    | 'collectables'
+    | 'customDelivery'
+    | 'sharlayanStudium'
+    | 'wachumeqimeqi'
+    | 'reduction'
+    | 'cosmicExploration';
   rewardItemId?: number;
   tiers: {
     low: CollectableRewardTier;
@@ -121,6 +150,7 @@ export interface CollectablePolicyNode {
   recommendedAction: CollectableActionSummary;
   expectedScore: number;
   expectedReward: CollectableRewardVector;
+  expectedTierCounts: CollectableTierCounts;
   branches: CollectablePolicyBranch[];
 }
 
@@ -133,6 +163,9 @@ export interface CollectablePolicyPlan {
   minScoreChance: number;
   maxScoreChance: number;
   expectedReward: CollectableRewardVector;
+  expectedTierCounts: CollectableTierCounts;
+  minScoreTierCounts: CollectableTierCounts;
+  maxScoreTierCounts: CollectableTierCounts;
   policy: CollectablePolicyNode;
 }
 
@@ -223,7 +256,11 @@ export interface CollectableSolverResult {
   minScoreChance: number;
   maxScoreChance: number;
   objectiveMode: SolverObjectiveMode;
+  objective: CollectableObjective;
   expectedReward: CollectableRewardVector;
+  expectedTierCounts: CollectableTierCounts;
+  minScoreTierCounts: CollectableTierCounts;
+  maxScoreTierCounts: CollectableTierCounts;
   rewardItemId?: number;
   policyPlans: CollectablePolicyPlan[];
   revisit: CollectableRevisitInfo;

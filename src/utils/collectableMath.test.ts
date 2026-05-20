@@ -10,6 +10,8 @@ import {
   calculateScrutinyMultiplier,
   calculateValueIncreaseRate,
   getCollectableRewardTier,
+  getCollectableTierCountForValue,
+  scoreCollectability,
   scoreCollectableReward
 } from './collectableMath';
 import type { CollectableRewardTable } from '../types/collectable';
@@ -178,5 +180,32 @@ describe('collectable math', () => {
         items: { 99: 10 }
       }
     })).toBe(54);
+  });
+
+  it('可用檔位權重直接替收藏價值評分並累積檔位個數', () => {
+    const table: CollectableRewardTable = {
+      itemId: 1,
+      source: 'customDelivery',
+      tiers: {
+        low: { collectability: 240, reward: { exp: 0, gil: 0, scrip: 107, items: {} } },
+        mid: { collectability: 450, reward: { exp: 0, gil: 0, scrip: 124, items: {} } },
+        high: { collectability: 600, reward: { exp: 0, gil: 0, scrip: 140, items: {} } }
+      }
+    };
+    const objective = {
+      kind: 'tierScore' as const,
+      presetId: 'highValue' as const,
+      tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
+    };
+
+    expect(scoreCollectability(449, table, objective)).toBe(0);
+    expect(scoreCollectability(450, table, objective)).toBe(1);
+    expect(scoreCollectability(600, table, objective)).toBe(100);
+    expect(getCollectableTierCountForValue(600, table)).toEqual({
+      none: 0,
+      low: 0,
+      mid: 0,
+      high: 1
+    });
   });
 });

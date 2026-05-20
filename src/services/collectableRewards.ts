@@ -13,10 +13,18 @@ const SATISFACTION_SUPPLY_REWARD_URL = `${DATAMINING_BASE_URL}/SatisfactionSuppl
 const SHARLAYAN_SUPPLY_URL = `${DATAMINING_BASE_URL}/SharlayanCraftWorksSupply.csv`;
 const BANKA_SUPPLY_URL = `${DATAMINING_BASE_URL}/BankaCraftWorksSupply.csv`;
 const COLLECTABLES_REFINE_URL = `${DATAMINING_BASE_URL}/CollectablesRefine.csv`;
+const WKS_ITEM_INFO_URL = `${DATAMINING_BASE_URL}/WKSItemInfo.csv`;
+const WKS_MISSION_TODO_EVALUATION_ITEM_URL = `${DATAMINING_BASE_URL}/WKSMissionToDoEvalutionItem.csv`;
+const WKS_MISSION_TODO_URL = `${DATAMINING_BASE_URL}/WKSMissionToDo.csv`;
+const WKS_MISSION_UNIT_URL = `${DATAMINING_BASE_URL}/WKSMissionUnit.csv`;
+const AETHERIAL_REDUCE_URL = `${BASE_URL}/aetherial-reduce.json`;
 const PURPLE_GATHERERS_SCRIP_ITEM_ID = 33914;
 const ORANGE_GATHERERS_SCRIP_ITEM_ID = 41785;
 const CUSTOM_DELIVERY_PURPLE_CURRENCY = 4;
 const CUSTOM_DELIVERY_ORANGE_CURRENCY = 7;
+const VALUE_SCORING_LOW_COLLECTABILITY = 1;
+const VALUE_SCORING_MID_COLLECTABILITY = 500;
+const VALUE_SCORING_HIGH_COLLECTABILITY = 1000;
 
 type TeamcraftCollectableTier = {
   rating?: number;
@@ -169,6 +177,39 @@ function mergeRewardTables(
       target.set(itemId, table);
     }
   });
+}
+
+function createValueScoringTable(
+  itemId: number,
+  source: Extract<CollectableRewardTable['source'], 'reduction' | 'cosmicExploration'>
+): CollectableRewardTable {
+  return {
+    itemId,
+    source,
+    tiers: {
+      low: {
+        collectability: VALUE_SCORING_LOW_COLLECTABILITY,
+        reward: createZeroRewardVector()
+      },
+      mid: {
+        collectability: VALUE_SCORING_MID_COLLECTABILITY,
+        reward: createZeroRewardVector()
+      },
+      high: {
+        collectability: VALUE_SCORING_HIGH_COLLECTABILITY,
+        reward: createZeroRewardVector()
+      }
+    }
+  };
+}
+
+function createZeroRewardVector(): CollectableRewardVector {
+  return {
+    exp: 0,
+    gil: 0,
+    scrip: 0,
+    items: {}
+  };
 }
 
 function scaledRewardVector(exp: number, gil: number, scrip: number, multiplier = 100): CollectableRewardVector {
@@ -392,25 +433,102 @@ function parseCustomDeliveryRewards(
   return tables;
 }
 
+function parseAetherialReductionRewards(raw: Record<string, unknown>): Map<number, CollectableRewardTable> {
+  const tables = new Map<number, CollectableRewardTable>();
+
+  Object.keys(raw).forEach((itemIdText) => {
+    const itemId = Number(itemIdText);
+    if (Number.isFinite(itemId) && itemId > 0) {
+      tables.set(itemId, createValueScoringTable(itemId, 'reduction'));
+    }
+  });
+
+  return tables;
+}
+
+function parseCosmicExplorationRewards(options: {
+  wksItemRows: CsvRow[];
+  evaluationRows: CsvRow[];
+  todoRows: CsvRow[];
+  missionUnitRows: CsvRow[];
+}): Map<number, CollectableRewardTable> {
+  const tables = new Map<number, CollectableRewardTable>();
+  const itemIdByWksItemIndex = new Map<number, number>();
+  const todoByUnknown10 = new Set<number>();
+  const missionTodoIds = new Set<number>();
+
+  options.missionUnitRows.forEach((row) => {
+    for (let index = 0; index < 3; index += 1) {
+      const todoId = intValue(row[`MissionToDo[${index}]`]);
+      if (todoId > 0) missionTodoIds.add(todoId);
+    }
+  });
+
+  options.todoRows.forEach((row) => {
+    const todoId = intValue(row['#']);
+    const unknown10 = intValue(row.Unknown10);
+    if (todoId > 0 && unknown10 > 0 && missionTodoIds.has(todoId)) {
+      todoByUnknown10.add(unknown10);
+    }
+  });
+
+  options.wksItemRows.forEach((row) => {
+    const wksItemIndex = intValue(row['#']);
+    const itemId = intValue(row.Item);
+    if (wksItemIndex > 0 && itemId > 0) {
+      itemIdByWksItemIndex.set(wksItemIndex, itemId);
+    }
+  });
+
+  options.evaluationRows.forEach((row) => {
+    const wksItemIndex = intValue(row.Item);
+    const evaluationRowId = Number.parseFloat(String(row['#'] ?? '0'));
+    const unknown10 = Number.isFinite(evaluationRowId) ? Math.floor(evaluationRowId) : 0;
+    const itemId = itemIdByWksItemIndex.get(wksItemIndex);
+    if (itemId && todoByUnknown10.has(unknown10)) {
+      tables.set(itemId, createValueScoringTable(itemId, 'cosmicExploration'));
+    }
+  });
+
+  return tables;
+}
+
 async function loadSupplementalRewardTables(): Promise<Map<number, CollectableRewardTable>> {
   const [
     satisfactionSupplyRows,
     satisfactionRewardRows,
     sharlayanRows,
     bankaRows,
-    refineRows
+    refineRows,
+    aetherialReduce,
+    wksItemRows,
+    evaluationRows,
+    todoRows,
+    missionUnitRows
   ] = await Promise.all([
     fetchCsvRows(SATISFACTION_SUPPLY_URL),
     fetchCsvRows(SATISFACTION_SUPPLY_REWARD_URL),
     fetchCsvRows(SHARLAYAN_SUPPLY_URL),
     fetchCsvRows(BANKA_SUPPLY_URL),
-    fetchCsvRows(COLLECTABLES_REFINE_URL)
+    fetchCsvRows(COLLECTABLES_REFINE_URL),
+    fetch(AETHERIAL_REDUCE_URL).then((response) => response.ok ? response.json() : {}),
+    fetchCsvRows(WKS_ITEM_INFO_URL),
+    fetchCsvRows(WKS_MISSION_TODO_EVALUATION_ITEM_URL),
+    fetchCsvRows(WKS_MISSION_TODO_URL),
+    fetchCsvRows(WKS_MISSION_UNIT_URL)
   ]);
   const tables = new Map<number, CollectableRewardTable>();
 
   mergeRewardTables(tables, parseCustomDeliveryRewards(satisfactionSupplyRows, satisfactionRewardRows));
   mergeRewardTables(tables, parseSharlayanRewards(sharlayanRows));
   mergeRewardTables(tables, parseBankaRewards(bankaRows, parseCollectablesRefineRows(refineRows)));
+  mergeRewardTables(tables, parseAetherialReductionRewards(aetherialReduce as Record<string, unknown>));
+  mergeRewardTables(tables, parseCosmicExplorationRewards({
+    wksItemRows,
+    evaluationRows,
+    todoRows,
+    missionUnitRows
+  }));
 
   return tables;
 }
@@ -485,4 +603,22 @@ export function __parseSharlayanRewardsForTest(csv: string) {
 
 export function __parseBankaRewardsForTest(supplyCsv: string, refineCsv: string) {
   return parseBankaRewards(toCsvRows(supplyCsv), parseCollectablesRefineRows(toCsvRows(refineCsv)));
+}
+
+export function __parseAetherialReductionRewardsForTest(raw: Record<string, unknown>) {
+  return parseAetherialReductionRewards(raw);
+}
+
+export function __parseCosmicExplorationRewardsForTest(options: {
+  wksItemCsv: string;
+  evaluationCsv: string;
+  todoCsv: string;
+  missionUnitCsv: string;
+}) {
+  return parseCosmicExplorationRewards({
+    wksItemRows: toCsvRows(options.wksItemCsv),
+    evaluationRows: toCsvRows(options.evaluationCsv),
+    todoRows: toCsvRows(options.todoCsv),
+    missionUnitRows: toCsvRows(options.missionUnitCsv)
+  });
 }

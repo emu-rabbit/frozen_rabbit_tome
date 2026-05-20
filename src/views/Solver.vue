@@ -22,6 +22,7 @@ import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 import type { CollectableSolverResult } from '../types/collectable';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
+import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
@@ -424,10 +425,15 @@ function savePreviewRows() {
 function savePreviewMetrics() {
   const collectableResult = pendingCollectableSaveResult.value;
   if (collectableResult) {
+    const unit = isCustomTierObjective(collectableResult.objective)
+      ? t('collectableSolver.results.pointUnit')
+      : isTierCountObjective(collectableResult.objective)
+        ? ''
+        : t('collectableSolver.results.expectedScripUnit');
     return [
-      { label: t('collectableSolver.results.expectedScore', { unit: t('collectableSolver.results.expectedScripUnit') }), value: Number(collectableResult.expectedScore.toFixed(2)) },
-      { label: t('collectableSolver.results.maxScore', { unit: t('collectableSolver.results.expectedScripUnit') }), value: collectableResult.maxScore },
-      { label: t('collectableSolver.results.minScore', { unit: t('collectableSolver.results.expectedScripUnit') }), value: collectableResult.minScore }
+      { label: isTierCountObjective(collectableResult.objective) ? t('collectableSolver.results.expectedTierCounts') : t('collectableSolver.results.expectedScore', { unit }), value: Number(collectableResult.expectedScore.toFixed(2)) },
+      { label: isTierCountObjective(collectableResult.objective) ? t('collectableSolver.results.maxTierCounts') : t('collectableSolver.results.maxScore', { unit }), value: collectableResult.maxScore },
+      { label: isTierCountObjective(collectableResult.objective) ? t('collectableSolver.results.minTierCounts') : t('collectableSolver.results.minScore', { unit }), value: collectableResult.minScore }
     ];
   }
 

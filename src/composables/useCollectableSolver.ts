@@ -35,6 +35,7 @@ export function useCollectableSolver() {
     nodeBonuses: NodeBonuses;
     temporaryGp: number;
     debugMode: boolean;
+    objective?: CollectableObjective;
   }) => {
     cancelCollectableSolve();
     collectableResult.value = null;
@@ -77,7 +78,7 @@ export function useCollectableSolver() {
       temporaryGp: payload.temporaryGp,
       jobType: payload.activeItem.jobType || 'miner',
       rewardTable,
-      objective: collectableObjective.value,
+      objective: payload.objective ?? collectableObjective.value,
       objectiveMode: solverSettings.value.objectiveMode,
       hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
       isTimedNode: payload.activeItem.isTimedNode ?? false,

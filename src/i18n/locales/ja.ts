@@ -464,10 +464,42 @@ export default {
       caveat: '最適性は、現在モデル化されている通常採集スキル、GP、耐久、成功率、Boon、再発見、理知興起の確率に対して成立します。収集品、クリスタル採集、手動中断は含まれません。'
     }
   },
+  collectableObjective: {
+    kicker: 'おすすめ順の重み',
+    title: '評価設定',
+    close: '評価設定を閉じる',
+    intro: '重みは各収集品の結果をスコアに変換します。ソルバーはそのスコアで方針を並べ替えます。重みが高いほど、その段階を強く狙う設定です。',
+    solverIntro: '重みは各収集品の結果をスコアに変換します。ソルバーはそのスコアで方針を並べ替えます。重みが高いほど、その段階を強く狙う設定です。',
+    analysisIntro: 'この分析結果をどの基準で読みたいかを選びます。重みが高い段階ほど、期待値、最大、最小、分布で重視されます。スクリップ総量、高価値納品、自分の目標を切り替えて比較できます。',
+    cancel: 'キャンセル',
+    apply: '適用',
+    applyCustom: 'カスタム重みを適用',
+    presets: {
+      highValue: '高価値優先',
+      midValue: '中価値優先',
+      lowValue: '低価値優先',
+      purpleScrip: 'ギャザラー紫貨優先',
+      orangeScrip: 'ギャザラー橙貨優先',
+      customTier: 'カスタム重み'
+    },
+    presetDescriptions: {
+      highValue: '最高段階を強く優先し、中段階を予備の候補にします。',
+      midValue: '高段階へ押し上げるために採集回数を使いすぎず、中段階を優先します。',
+      lowValue: '保守的な検証向けに、低段階へ安定して到達することを優先します。',
+      scrip: '現在の報酬表を使い、スクリップ総量で採点します。',
+      customTier: '未達、低、中、高の各段階に任意の点数を入力します。'
+    },
+    tiers: {
+      none: '未達',
+      low: '低価値',
+      mid: '中価値',
+      high: '高価値'
+    }
+  },
   collectableSolver: {
     badge: '収集品秘伝書',
     title: '収集品ソルバー',
-    description: '大胆純化と強活眼は未対応です。採集系の紫貨／橙貨の期待量で評価します。',
+    description: '大胆純化と強活眼は未対応です。現在の評価設定に基づいて推奨方針を並べ替えます。',
     solving: '収集品の推奨方針を計算中...',
     empty: '計算すると、状態に応じた推奨方針がここに表示されます。',
     stats: { scourValue: '純化基礎値' },
@@ -496,6 +528,10 @@ export default {
       subtitle: '固定マクロではなく、proc と収集価値に応じて判断する方針です。',
       expectedScore: '期待{unit}',
       expectedScripUnit: '評価単位',
+      expectedTierCounts: '期待段階数',
+      maxTierCounts: '最大段階数',
+      minTierCounts: '最小段階数',
+      pointUnit: '点',
       scripUnits: {
         purple: 'ギャザラー紫貨',
         orange: 'ギャザラー橙貨',
@@ -510,6 +546,7 @@ export default {
       },
       maxScore: '最大{unit}',
       minScore: '最小{unit}',
+      tierCountUnit: '{tier}数',
       scoreChance: '確率 {chance}',
       revisitIncluded: '合計スコアには再発見 {chance}% の確率を含みます。',
       limitationNote: 'V1 では大胆純化、強活眼、精選報酬モデル、実際の経験値換算を含みません。'
@@ -590,7 +627,7 @@ export default {
       revisitNoProc: '再発見が発動しなかったため、この採集場所は終了です。'
     },
     errors: {
-      unsupportedReward: { title: '報酬テーブルが見つかりません', desc: 'このアイテムは対応済みの収集品納品、お得意様、魔法大学、ワチュメキメキ万貨街データにないため、まだ計算できません。' },
+      unsupportedReward: { title: '報酬テーブルが見つかりません', desc: 'このアイテムは対応済みの収集品納品、お得意様、魔法大学、ワチュメキメキ万貨街、精選、またはコスモエクスプローラーのデータにないため、まだ計算できません。' },
       workerStale: { title: 'ソルバーの再読み込みが必要です', desc: 'サイト更新直後の可能性があります。再読み込みしてからお試しください。' },
       workerFailed: { title: '収集品ソルバーを起動できません', desc: 'ページを再読み込みしてもう一度お試しください。' }
     },
@@ -720,7 +757,7 @@ export default {
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
       distribution: 'スコア確率分布',
-      revisitExcluded: 'この分析では再発見をまだ含めていません。スコアは収集品ソルバーと同じ報酬採点方式を使用します。'
+      scoringNote: '結果は現在の評価設定で表示されます。歯車設定を切り替えて再分析すると、スクリップ、段階数、カスタム点を比較できます。'
     },
     tools: {
       moveUp: '上へ移動',
