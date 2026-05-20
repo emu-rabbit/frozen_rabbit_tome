@@ -18,6 +18,7 @@ import { useRouter } from 'vue-router';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useSearchStore } from '../composables/useSearchStore';
 import { useFavoriteItems } from '../composables/useFavoriteItems';
+import { applySanitizedPaste, stripSpecialSearchCharacters } from '../utils/searchText';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -121,6 +122,19 @@ function clearSearch() {
   lastSearchedLang = '';
 }
 
+function handleSearchPaste(event: ClipboardEvent) {
+  const pastedText = event.clipboardData?.getData('text') ?? '';
+  if (!pastedText || stripSpecialSearchCharacters(pastedText) === pastedText) return;
+
+  event.preventDefault();
+  searchQuery.value = applySanitizedPaste(
+    searchQuery.value,
+    pastedText,
+    (event.target as HTMLInputElement | null)?.selectionStart,
+    (event.target as HTMLInputElement | null)?.selectionEnd
+  );
+}
+
 // 搜尋 UI 狀態機
 function getUiState() {
   if (apiError.value) return 'error';
@@ -159,6 +173,7 @@ function getUiState() {
           :disabled="isGameDataLoading"
           class="search-input"
           autocomplete="off"
+          @paste="handleSearchPaste"
         />
         <InputIcon v-if="searchQuery" style="cursor:pointer" @click="clearSearch">
           <i class="pi pi-times clear-icon"></i>

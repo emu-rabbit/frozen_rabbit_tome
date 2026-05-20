@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { isCrystalGatheringItemId, shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import type { GatherableItem, GatherableItemJobInfo, GatheringJob } from '../types/game';
+import { normalizeGatherableSearchQuery } from '../utils/searchText';
 
 // ─── 常數設定 ───────────────────────────────────────────────────────────────
 
@@ -370,7 +371,7 @@ export async function loadGameData(lang: string): Promise<void> {
 }
 
 export async function searchGatherables(query: string): Promise<GatherableItem[]> {
-  const q = query.trim().toLowerCase();
+  const q = normalizeGatherableSearchQuery(query);
   if (!q || itemInfoMap.size === 0) return [];
   const results: GatherableItem[] = [];
   for (const [itemId, info] of itemInfoMap) {
