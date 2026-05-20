@@ -200,6 +200,7 @@ export default {
     analysis: {
       title: 'Analysis Report',
       subtitle: 'Expected outcome based on current rotation and stats',
+      noRevisitNotice: 'Experiment analysis is scoped to one gathering point and does not include any after-Revisit gathering.',
       empty: 'Click the button above to analyze the rotation',
       summary: 'Summary',
       expectedYield: 'Expected Yield',
@@ -760,6 +761,7 @@ export default {
     analysis: {
       title: 'Analysis Report',
       subtitle: 'Calculates collectable score, probability distribution, and reward outcomes for the current strategy rules.',
+      noRevisitNotice: 'Experiment analysis is scoped to one gathering point and does not include any after-Revisit gathering.',
       run: 'Run Analysis',
       empty: 'Run analysis to evaluate the current strategy.',
       unsupportedReward: 'No supported reward table was found for this collectable, so it cannot be scored yet.',

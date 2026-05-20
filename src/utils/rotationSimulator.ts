@@ -33,6 +33,7 @@ export interface SimulationRequest {
   temporaryGp: number;
   jobType: JobType;
   isTimedNode?: boolean;
+  includeRevisit?: boolean;
   primaryRotation: string[];
   revisitRotation: string[];
 }
@@ -66,7 +67,7 @@ export function simulateGatheringRotation(request: SimulationRequest): Simulatio
   const initialState = createInitialState(mechanics, request.temporaryGp);
   const primaryStates = runRotation([initialState], request.primaryRotation, request, mechanics);
   const primary = summarizeRun('primary', request.primaryRotation, primaryStates);
-  const revisitEnabled = request.stats.level >= 91;
+  const revisitEnabled = request.includeRevisit !== false && request.stats.level >= 91;
   const revisitChance = revisitEnabled ? (request.isTimedNode ? TIMED_REVISIT_CHANCE : REGULAR_REVISIT_CHANCE) : 0;
   const revisitStates = request.revisitRotation.length > 0
     ? runRotation([createInitialState(mechanics, request.stats.gp)], request.revisitRotation, request, mechanics)

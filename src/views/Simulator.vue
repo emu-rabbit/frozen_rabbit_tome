@@ -75,6 +75,7 @@ const foodSuggestions = ref<FoodOption[]>([]);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 const actionCategoryOrder = ['gather', 'success', 'boon', 'nextSuccess', 'nextYield', 'restore', 'wholeYield', 'boonYield'] as const;
+const hideRevisitExperimentFeatures = true;
 
 const actionOptions = computed(() => activeItem.value?.jobType ? getSimulatorActions(activeItem.value.jobType) : []);
 const actionGroups = computed(() => actionCategoryOrder
@@ -100,12 +101,14 @@ const primaryPreviewStates = computed(() => {
 });
 
 const revisitPreviewStates = computed(() => {
+  if (hideRevisitExperimentFeatures) return [];
   const request = buildRequest(effectiveStats.value.gp);
   return request ? previewRotationState(request, revisitRotation.value) : [];
 });
 
-const activePreviewStates = computed(() => activeBlock.value === 'primary' ? primaryPreviewStates.value : revisitPreviewStates.value);
+const activePreviewStates = computed(() => activeBlock.value === 'primary' || hideRevisitExperimentFeatures ? primaryPreviewStates.value : revisitPreviewStates.value);
 const canCreateRevisitBlock = computed(() => {
+  if (hideRevisitExperimentFeatures) return false;
   if (!activeItem.value || effectiveStats.value.level < 91) return false;
   return primaryPreviewStates.value.some((state) => state.integrity <= 0);
 });
@@ -119,11 +122,11 @@ const collectableScourValue = computed(() => {
   if (!baseValues.value?.Gathering) return null;
   return calculateCollectableScourValue(effectiveStats.value.gathering, baseValues.value.Gathering);
 });
-const activeRotation = computed(() => activeBlock.value === 'primary' ? primaryRotation.value : revisitRotation.value);
-const activeRotationTitle = computed(() => activeBlock.value === 'primary'
+const activeRotation = computed(() => activeBlock.value === 'primary' || hideRevisitExperimentFeatures ? primaryRotation.value : revisitRotation.value);
+const activeRotationTitle = computed(() => activeBlock.value === 'primary' || hideRevisitExperimentFeatures
   ? t('simulator.primaryGathering')
   : t('simulator.revisitGathering'));
-const activeRotationEmptyText = computed(() => activeBlock.value === 'primary'
+const activeRotationEmptyText = computed(() => activeBlock.value === 'primary' || hideRevisitExperimentFeatures
   ? t('simulator.emptyPrimaryRotation')
   : t('simulator.emptyRevisitRotation'));
 const primaryValidation = computed(() => {
@@ -131,12 +134,13 @@ const primaryValidation = computed(() => {
   return request ? validateSimulatorRotation(request, primaryRotation.value) : { invalidIndexes: [], isValid: true };
 });
 const revisitValidation = computed(() => {
+  if (hideRevisitExperimentFeatures) return { invalidIndexes: [], isValid: true };
   const request = buildRequest(effectiveStats.value.gp);
   return request ? validateSimulatorRotation(request, revisitRotation.value) : { invalidIndexes: [], isValid: true };
 });
 const hasRotationIssue = computed(() => !primaryValidation.value.isValid || !revisitValidation.value.isValid);
 const canRunSimulation = computed(() => canSimulate.value && !hasRotationIssue.value);
-const activeInvalidIndexes = computed(() => activeBlock.value === 'primary'
+const activeInvalidIndexes = computed(() => activeBlock.value === 'primary' || hideRevisitExperimentFeatures
   ? primaryValidation.value.invalidIndexes
   : revisitValidation.value.invalidIndexes);
 const collectableRelicToolBonusModel = computed<boolean>({
@@ -208,13 +212,14 @@ function runSimulation() {
 
   analysis.value = simulateGatheringRotation({
     ...request,
+    includeRevisit: !hideRevisitExperimentFeatures,
     primaryRotation: primaryRotation.value,
-    revisitRotation: revisitRotation.value
+    revisitRotation: hideRevisitExperimentFeatures ? [] : revisitRotation.value
   });
 }
 
 function addAction(actionName: string) {
-  const target = activeBlock.value === 'primary' ? primaryRotation : revisitRotation;
+  const target = activeBlock.value === 'primary' || hideRevisitExperimentFeatures ? primaryRotation : revisitRotation;
   target.value = [...target.value, actionName];
 }
 
@@ -229,17 +234,20 @@ function clearRotation(block: 'primary' | 'revisit') {
 }
 
 function copyPrimaryToRevisit() {
+  if (hideRevisitExperimentFeatures) return;
   revisitRotation.value = [...primaryRotation.value];
   activeBlock.value = 'revisit';
 }
 
 function enableRevisitBlock() {
+  if (hideRevisitExperimentFeatures) return;
   if (!canCreateRevisitBlock.value) return;
   activeBlock.value = 'revisit';
   if (revisitRotation.value.length === 0) revisitRotation.value = [];
 }
 
 function selectRotationTab(block: 'primary' | 'revisit') {
+  if (block === 'revisit' && hideRevisitExperimentFeatures) return;
   if (block === 'revisit' && !canCreateRevisitBlock.value && revisitRotation.value.length === 0) return;
   activeBlock.value = block;
 }
@@ -249,7 +257,7 @@ function clearActiveRotation() {
 }
 
 function isActionDisabled(actionName: string) {
-  const request = buildRequest(activeBlock.value === 'revisit' ? effectiveStats.value.gp : temporaryGp.value);
+  const request = buildRequest(activeBlock.value === 'revisit' && !hideRevisitExperimentFeatures ? effectiveStats.value.gp : temporaryGp.value);
   const action = actionOptions.value.find((option) => option.name === actionName);
   if (!request || !action) return true;
   return !canUseSimulatorAction(action, activePreviewStates.value, request);
@@ -334,7 +342,7 @@ function confirmSaveExperiment(name: string) {
     food: { ...selectedFood.value },
     nodeBonuses: { ...nodeBonuses.value },
     primaryRotation: primaryRotation.value,
-    revisitRotation: revisitRotation.value,
+    revisitRotation: hideRevisitExperimentFeatures ? [] : revisitRotation.value,
     analysis: analysis.value
   });
   savedExperimentId.value = saved.id;
@@ -375,7 +383,7 @@ async function copyReport() {
     food: { ...selectedFood.value },
     nodeBonuses: { ...nodeBonuses.value },
     primaryRotation: mapRotation(primaryRotation.value),
-    revisitRotation: mapRotation(revisitRotation.value),
+    revisitRotation: hideRevisitExperimentFeatures ? [] : mapRotation(revisitRotation.value),
     analysis: cleanAnalysis(analysis.value)
   };
 
@@ -416,11 +424,11 @@ function loadExperimentFromRoute() {
   
   // 3. 設置手法
   primaryRotation.value = experiment.primaryRotation.map(fromStoredRotationStep).filter(Boolean);
-  revisitRotation.value = experiment.revisitRotation.map(fromStoredRotationStep).filter(Boolean);
+  revisitRotation.value = hideRevisitExperimentFeatures ? [] : experiment.revisitRotation.map(fromStoredRotationStep).filter(Boolean);
   activeBlock.value = 'primary';
   
   // 4. 設置分析結果
-  if (experiment.analysis && experiment.analysis.total) {
+  if (experiment.analysis && experiment.analysis.total && !(hideRevisitExperimentFeatures && experiment.analysis.revisit)) {
     analysis.value = experiment.analysis;
   } else {
     analysis.value = null;
@@ -599,7 +607,7 @@ function progressPercent(range: number[], maxValue: number) {
           </div>
         </div>
 
-        <div class="rotation-tabs-wrap">
+        <div v-if="!hideRevisitExperimentFeatures" class="rotation-tabs-wrap">
           <div class="rotation-tabs" role="tablist" :aria-label="t('simulator.tabsLabel')">
             <button
               id="primary-rotation-tab"
@@ -614,6 +622,7 @@ function progressPercent(range: number[], maxValue: number) {
               {{ t('simulator.primaryGathering') }}
             </button>
             <button
+              v-if="!hideRevisitExperimentFeatures"
               id="revisit-rotation-tab"
               type="button"
               role="tab"
@@ -628,7 +637,7 @@ function progressPercent(range: number[], maxValue: number) {
             </button>
           </div>
 
-          <button v-if="activeBlock === 'revisit'" class="rotation-copy-button" :disabled="!canCreateRevisitBlock" @click="copyPrimaryToRevisit">
+          <button v-if="!hideRevisitExperimentFeatures && activeBlock === 'revisit'" class="rotation-copy-button" :disabled="!canCreateRevisitBlock" @click="copyPrimaryToRevisit">
             <i class="pi pi-copy"></i>
             {{ t('simulator.copyPrimaryRotation') }}
           </button>
@@ -642,15 +651,17 @@ function progressPercent(range: number[], maxValue: number) {
           </div>
         </div>
 
-        <div class="rotation-editor">
+        <div class="rotation-editor" :class="{ 'single-rotation-editor': hideRevisitExperimentFeatures }">
           <div
             id="active-rotation-panel"
             class="rotation-column"
+            :class="{ 'single-rotation-column': hideRevisitExperimentFeatures }"
             role="tabpanel"
-            :aria-labelledby="activeBlock === 'primary' ? 'primary-rotation-tab' : 'revisit-rotation-tab'"
+            :aria-labelledby="hideRevisitExperimentFeatures ? undefined : (activeBlock === 'primary' ? 'primary-rotation-tab' : 'revisit-rotation-tab')"
+            :aria-label="hideRevisitExperimentFeatures ? t('simulator.primaryGathering') : undefined"
           >
-            <div class="rotation-title">
-              <strong>{{ activeRotationTitle }}</strong>
+            <div class="rotation-title" :class="{ 'single-rotation-title': hideRevisitExperimentFeatures }">
+              <strong v-if="!hideRevisitExperimentFeatures">{{ activeRotationTitle }}</strong>
               <button :aria-label="t('simulator.clearRotation', { name: activeRotationTitle })" @click="clearActiveRotation"><i class="pi pi-trash"></i></button>
             </div>
             <div class="rotation-steps">
@@ -704,6 +715,10 @@ function progressPercent(range: number[], maxValue: number) {
               <h2>{{ t('simulator.analysis.title') }}</h2>
             </div>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('simulator.analysis.subtitle') }}</p>
+            <div class="analysis-scope-note" role="note">
+              <i class="pi pi-info-circle"></i>
+              <span>{{ t('simulator.analysis.noRevisitNotice') }}</span>
+            </div>
           </div>
           <div class="w-full lg:w-auto min-w-[200px]">
             <Button
@@ -743,9 +758,9 @@ function progressPercent(range: number[], maxValue: number) {
               </div>
             </div>
           </div>
-          <p v-if="analysis.revisitChance > 0" class="note">{{ t('simulator.analysis.revisitNote', { chance: formatProbability(analysis.revisitChance * 100, false, false) }) }}</p>
+          <p v-if="!hideRevisitExperimentFeatures && analysis.revisitChance > 0" class="note">{{ t('simulator.analysis.revisitNote', { chance: formatProbability(analysis.revisitChance * 100, false, false) }) }}</p>
         </article>
-        <article v-if="analysis.primary && analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
+        <article v-if="!hideRevisitExperimentFeatures && analysis.primary && analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.primaryRotationAnalysis') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
@@ -762,7 +777,7 @@ function progressPercent(range: number[], maxValue: number) {
             </div>
           </div>
         </article>
-        <article v-if="analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
+        <article v-if="!hideRevisitExperimentFeatures && analysis.revisit" class="analysis-card p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
           <h3>{{ t('simulator.revisitRotationAnalysis') }}</h3>
           <div class="analysis-content">
             <div class="metric-grid">
@@ -877,7 +892,7 @@ function progressPercent(range: number[], maxValue: number) {
               </template>
             </div>
           </div>
-          <div v-if="revisitRotation.length" class="save-preview-rotation">
+          <div v-if="!hideRevisitExperimentFeatures && revisitRotation.length" class="save-preview-rotation">
             <span>{{ t('experimentDatabase.rotations.revisit') }}</span>
             <div class="save-preview-icons">
               <template v-for="(action, index) in revisitRotation" :key="`save-revisit-${index}`">
@@ -1504,22 +1519,42 @@ function progressPercent(range: number[], maxValue: number) {
   display: grid;
   gap: 1rem;
 }
+.rotation-editor.single-rotation-editor {
+  margin-top: 1rem;
+}
 .rotation-column {
+  position: relative;
   border: 1px solid #e2e8f0;
   border-top: 0;
   border-radius: 0 0 16px 16px;
   background: #f8fafc;
   padding: 0.85rem;
 }
+.rotation-column.single-rotation-column {
+  border-top: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.25rem 3.25rem 1.25rem 1rem;
+}
 :global(html.dark .rotation-column) {
   border-color: #334155;
   background: rgb(30 41 59 / 0.5);
+}
+:global(html.dark .rotation-column.single-rotation-column) {
+  border-top-color: #334155;
 }
 .rotation-title {
   display: flex;
   justify-content: space-between;
   margin-bottom: 0.75rem;
   color: #475569;
+}
+.rotation-title.single-rotation-title {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 1;
+  justify-content: flex-end;
+  margin: 0;
 }
 .rotation-title button {
   color: #94a3b8;
@@ -1661,6 +1696,32 @@ function progressPercent(range: number[], maxValue: number) {
 }
 :global(html.dark .analysis-card h3) {
   color: #e2e8f0;
+}
+.analysis-scope-note {
+  width: fit-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+  border: 1px solid rgb(82 168 144 / 0.22);
+  border-radius: 14px;
+  background: #f0fdf4;
+  padding: 0.55rem 0.7rem;
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.45;
+  text-align: left;
+}
+.analysis-scope-note i {
+  margin-top: 0.12rem;
+  color: #52a890;
+}
+:global(html.dark .analysis-scope-note) {
+  border-color: rgb(94 234 212 / 0.22);
+  background: rgb(20 83 45 / 0.22);
+  color: #bbf7d0;
 }
 .analysis-card.total {
   border-color: rgb(82 168 144 / 0.5);

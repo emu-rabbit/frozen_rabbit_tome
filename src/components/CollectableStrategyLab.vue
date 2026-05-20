@@ -505,6 +505,10 @@ function makeId() {
             <h2>{{ t('collectableStrategyLab.analysis.title') }}</h2>
           </div>
           <p>{{ t('collectableStrategyLab.analysis.subtitle') }}</p>
+          <div class="analysis-scope-note" role="note">
+            <i class="pi pi-info-circle"></i>
+            <span>{{ t('collectableStrategyLab.analysis.noRevisitNotice') }}</span>
+          </div>
         </div>
         <div class="analysis-action-group">
           <button
@@ -844,6 +848,34 @@ function makeId() {
   color: #64748b;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.analysis-scope-note {
+  width: fit-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  border: 1px solid rgb(82 168 144 / 0.22);
+  border-radius: 0.85rem;
+  background: #f0fdf4;
+  padding: 0.55rem 0.7rem;
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.analysis-scope-note i {
+  margin-top: 0.12rem;
+  color: #52a890;
+}
+
+:global(html.dark .analysis-scope-note) {
+  border-color: rgb(94 234 212 / 0.22);
+  background: rgb(20 83 45 / 0.22);
+  color: #bbf7d0;
 }
 
 .analysis-run-button {

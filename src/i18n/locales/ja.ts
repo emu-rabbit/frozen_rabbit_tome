@@ -200,6 +200,7 @@ export default {
     analysis: {
       title: '分析レポート',
       subtitle: '設定したスキル回しに基づく期待値',
+      noRevisitNotice: '実験台の分析は 1 つの採集ポイント内に限定され、再発見後の再採集は含みません。',
       empty: '上のボタンを押して分析を開始します',
       summary: '概要',
       expectedYield: '期待獲得数',
@@ -749,6 +750,7 @@ export default {
     analysis: {
       title: '分析レポート',
       subtitle: '現在の方針ルールにもとづき、収集品スコア、確率分布、報酬の着地点を計算します。',
+      noRevisitNotice: '実験台の分析は 1 つの採集ポイント内に限定され、再発見後の再採集は含みません。',
       run: '分析する',
       empty: '上のボタンで現在の方針を分析します。',
       unsupportedReward: 'この収集品の対応報酬表が見つからないため、まだ採点できません。',

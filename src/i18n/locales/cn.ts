@@ -200,6 +200,7 @@ export default {
     analysis: {
       title: '分析报告',
       subtitle: '根据设定手法计算之期望结果',
+      noRevisitNotice: '实验台以单次采集点为范围，分析结果不包含再起后重新采集的情况。',
       empty: '点击上方按钮开始进行分析',
       summary: '总结',
       expectedYield: '期望获得量',
@@ -749,6 +750,7 @@ export default {
     analysis: {
       title: '分析报告',
       subtitle: '依当前策略规则计算收藏品分数、概率分布与收益落点。',
+      noRevisitNotice: '实验台以单次采集点为范围，分析结果不包含再起后重新采集的情况。',
       run: '进行分析',
       empty: '点击上方按钮开始分析当前策略。',
       unsupportedReward: '找不到此收藏品的支持奖励表，暂时无法评分。',
