@@ -29,7 +29,7 @@ Live site: [https://emu-rabbit.github.io/frozen_rabbit_tome/](https://emu-rabbit
 - **Report copying**: Copy a compact result summary for sharing, note-taking, or comparing several approaches side by side.
 
 ### Library and Database
-- **Guide Library**: Save solved Tome setups and load them back later with their item, stats, bonuses, and recommendation context.
+- **Tome Library**: Save solved Tome setups and load them back later with their item, stats, bonuses, and recommendation context.
 - **Experiment Database**: Save simulation setups and analysis results for repeat checks.
 - **Favorite Items**: Keep commonly used gathering items close at hand without locking them to one gear profile or one solved result.
 

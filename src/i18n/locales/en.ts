@@ -58,11 +58,11 @@ export default {
     }
   },
   nav: {
-    createGuide: 'Create New Guide',
+    createGuide: 'Create New Tome',
     solver: 'Tome Solver',
     createExperiment: 'Create New Experiment',
     favoriteItems: 'Favorite Items',
-    tomeLibrary: 'Guide Library',
+    tomeLibrary: 'Tome Library',
     experimentDatabase: 'Experiment Database',
     faq: 'FAQ',
     settings: 'Settings',
@@ -136,17 +136,17 @@ export default {
   },
   favoriteItems: {
     title: 'Favorite Items',
-    subtitle: 'Keep commonly used gathering items here and jump straight into a guide or experiment.',
+    subtitle: 'Keep commonly used gathering items here and jump straight into a tome or experiment.',
     count: '{count} items',
     addAction: 'Add to favorites',
     removeAction: 'Remove from favorites',
     emptyTitle: 'No favorite items yet',
-    emptyDesc: 'Press the heart on search results in Create New Guide or Create New Experiment to add items here.',
+    emptyDesc: 'Press the heart on search results in Create New Tome or Create New Experiment to add items here.',
     dialog: {
       kicker: 'Choose next step',
       title: 'Use {item}',
       close: 'Close choice dialog',
-      guideDesc: 'Enter the solver to calculate a recommended gathering rotation',
+      guideDesc: 'Enter the Tome Solver to calculate a recommended gathering rotation',
       experimentDesc: 'Enter the simulator for experiments and analysis'
     },
     filters: {
@@ -929,7 +929,7 @@ export default {
     editModeConflict: {
       kicker: 'Solver mode mismatch',
       title: 'Which mode should open the solver?',
-      desc: 'This guide uses "{tomeMode}", while Settings currently uses "{currentMode}". You can overwrite the Settings mode, or keep the current mode for this edit.',
+      desc: 'This tome uses "{tomeMode}", while Settings currently uses "{currentMode}". You can overwrite the Settings mode, or keep the current mode for this edit.',
       useTomeMode: 'Overwrite Settings',
       useCurrentMode: 'Keep Current Mode',
       cancel: 'Cancel'
