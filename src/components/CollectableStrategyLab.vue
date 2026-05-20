@@ -22,7 +22,7 @@ import {
   type CollectableStrategyNode,
   type CollectableStrategyRule
 } from '../utils/collectableStrategyTree';
-import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
+import { getCollectableActionIcon, getCollectableActionMinLevel, getCollectableActionName } from '../services/collectableActions';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
 import {
   createCollectableObjectiveOptions,
@@ -111,6 +111,21 @@ const selectedObjectiveLabel = computed(() => {
     .find((entry) => entry.id === collectableObjective.value.presetId || (entry.id === 'scrip' && collectableObjective.value.kind === 'scrip'));
   return option ? t(option.labelKey) : t('collectableObjective.title');
 });
+const strategyLevelIssues = computed(() => rules.value.flatMap((rule) => {
+  if (!rule.enabled) return [];
+
+  return rule.actions
+    .filter((action) => isActionLevelLocked(action))
+    .map((action) => ({
+      ruleId: rule.id,
+      ruleName: rule.name,
+      action,
+      actionName: actionName(action),
+      minLevel: getCollectableActionMinLevel(action)
+    }));
+}));
+const hasStrategyLevelIssue = computed(() => strategyLevelIssues.value.length > 0);
+const firstStrategyLevelIssue = computed(() => strategyLevelIssues.value[0] ?? null);
 
 watch(uncoveredNodes, (nodes) => {
   if (!nodes.some((node) => node.id === selectedUncoveredId.value)) {
@@ -147,7 +162,7 @@ watch([
 }, { deep: true });
 
 function runAnalysis() {
-  if (!treeResult.value?.root || !rewardTable.value) return;
+  if (!treeResult.value?.root || !rewardTable.value || hasStrategyLevelIssue.value) return;
 
   analysis.value = analyzeCollectableStrategyTree(
     treeResult.value.root,
@@ -268,6 +283,7 @@ function removeAction(rule: CollectableStrategyRule, index: number) {
 }
 
 function setAction(rule: CollectableStrategyRule, actionIndex: number, action: CollectableActionKind) {
+  if (isActionLevelLocked(action)) return;
   rule.actions[actionIndex] = action;
 }
 
@@ -277,6 +293,20 @@ function actionName(action: CollectableActionKind) {
 
 function actionIcon(action: CollectableActionKind) {
   return getCollectableActionIcon(action, jobType.value);
+}
+
+function isActionLevelLocked(action: CollectableActionKind) {
+  return props.effectiveStats.level < getCollectableActionMinLevel(action);
+}
+
+function hasRuleLevelIssue(rule: CollectableStrategyRule) {
+  return rule.enabled && rule.actions.some(isActionLevelLocked);
+}
+
+function actionLevelRequirement(action: CollectableActionKind) {
+  return t('collectableStrategyLab.actionLevelRequirement', {
+    level: getCollectableActionMinLevel(action)
+  });
 }
 
 function fieldLabel(field: CollectableStrategyField) {
@@ -402,7 +432,7 @@ function makeId() {
             v-for="(rule, ruleIndex) in rules"
             :key="rule.id"
             class="rule-card"
-            :class="{ 'is-disabled': !rule.enabled }"
+            :class="{ 'is-disabled': !rule.enabled, 'is-level-invalid': hasRuleLevelIssue(rule) }"
           >
             <header class="rule-card-header">
               <label class="rule-enabled">
@@ -432,6 +462,9 @@ function makeId() {
               <i class="pi pi-arrow-right"></i>
               <strong>{{ actionSummary(rule) }}</strong>
             </div>
+            <p v-if="hasRuleLevelIssue(rule)" class="rule-level-warning">
+              {{ t('collectableStrategyLab.ruleLevelIssue', { level: effectiveStats.level }) }}
+            </p>
           </article>
         </div>
       </div>
@@ -527,6 +560,18 @@ function makeId() {
             <i class="pi pi-info-circle"></i>
             <span>{{ t('collectableStrategyLab.analysis.noRevisitNotice') }}</span>
           </div>
+          <div v-if="firstStrategyLevelIssue" class="strategy-level-alert" role="alert">
+            <i class="pi pi-exclamation-triangle"></i>
+            <div>
+              <strong>{{ t('collectableStrategyLab.strategyLevelIssueTitle') }}</strong>
+              <span>
+                {{ t('collectableStrategyLab.strategyLevelIssueDesc', {
+                  action: firstStrategyLevelIssue.actionName,
+                  level: firstStrategyLevelIssue.minLevel
+                }) }}
+              </span>
+            </div>
+          </div>
         </div>
         <div class="analysis-action-group">
           <button
@@ -542,7 +587,7 @@ function makeId() {
           <Button
             class="analysis-run-button p-button-primary rounded-xl"
             :aria-label="t('collectableStrategyLab.analysis.run')"
-            :disabled="!treeResult?.root || !rewardTable || rewardError"
+            :disabled="!treeResult?.root || !rewardTable || rewardError || hasStrategyLevelIssue"
             @click="runAnalysis"
           >
             <i class="pi pi-play"></i>
@@ -700,10 +745,16 @@ function makeId() {
                 </button>
               </div>
               <div class="action-list">
-                <div v-for="(action, actionIndex) in editingRule.actions" :key="`${editingRule.id}-${actionIndex}`" class="action-chip">
+                <div
+                  v-for="(action, actionIndex) in editingRule.actions"
+                  :key="`${editingRule.id}-${actionIndex}`"
+                  class="action-chip"
+                  :class="{ 'is-level-invalid': isActionLevelLocked(action) }"
+                >
                   <div class="selected-action">
                     <img v-if="actionIcon(action)" :src="actionIcon(action)" alt="" />
                     <strong>{{ actionName(action) }}</strong>
+                    <small v-if="isActionLevelLocked(action)">{{ actionLevelRequirement(action) }}</small>
                   </div>
                   <button type="button" :disabled="editingRule.actions.length <= 1" :title="t('collectableStrategyLab.editor.removeAction')" @click="removeAction(editingRule, actionIndex)">
                     <i class="pi pi-times"></i>
@@ -715,6 +766,8 @@ function makeId() {
                       type="button"
                       class="action-option"
                       :class="{ active: action === option }"
+                      :disabled="isActionLevelLocked(option)"
+                      :title="isActionLevelLocked(option) ? actionLevelRequirement(option) : actionName(option)"
                       @click="setAction(editingRule, actionIndex, option)"
                     >
                       <img v-if="actionIcon(option)" :src="actionIcon(option)" alt="" />
@@ -894,6 +947,48 @@ function makeId() {
   border-color: rgb(94 234 212 / 0.22);
   background: rgb(20 83 45 / 0.22);
   color: #bbf7d0;
+}
+
+.strategy-level-alert {
+  width: fit-content;
+  max-width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 0.6rem;
+  border: 1px solid rgb(251 146 60 / 0.75);
+  border-radius: 0.85rem;
+  background: rgb(255 247 237 / 0.96);
+  padding: 0.65rem 0.8rem;
+  color: #9a3412;
+  line-height: 1.45;
+}
+
+.strategy-level-alert i {
+  margin-top: 0.12rem;
+  color: #f97316;
+}
+
+.strategy-level-alert strong,
+.strategy-level-alert span {
+  display: block;
+}
+
+.strategy-level-alert strong {
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.strategy-level-alert span {
+  margin-top: 0.1rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+:global(html.dark .strategy-level-alert) {
+  border-color: rgb(194 65 12 / 0.55);
+  background: rgb(154 52 18 / 0.16);
+  color: #fed7aa;
 }
 
 .analysis-run-button {
@@ -1163,6 +1258,11 @@ function makeId() {
   opacity: 0.72;
 }
 
+.rule-card.is-level-invalid {
+  border-color: rgb(248 113 113 / 0.75);
+  box-shadow: 0 0 0 3px rgb(248 113 113 / 0.12);
+}
+
 .strategy-empty {
   min-height: 0;
   height: 100%;
@@ -1344,6 +1444,14 @@ function makeId() {
   opacity: 0.52;
 }
 
+.rule-level-warning {
+  margin: -0.15rem 0 0;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
 :global(html.dark .rule-summary-row) {
   background: rgb(30 41 59 / 0.42);
   color: #94a3b8;
@@ -1351,6 +1459,10 @@ function makeId() {
 
 :global(html.dark .rule-summary-row strong) {
   color: #99f6e4;
+}
+
+:global(html.dark .rule-level-warning) {
+  color: #fca5a5;
 }
 
 .rule-editor-body {
@@ -1410,14 +1522,25 @@ function makeId() {
   padding: 0.55rem;
 }
 
+.action-chip.is-level-invalid {
+  border-color: rgb(248 113 113 / 0.7);
+  background: #fff7ed;
+}
+
 :global(html.dark .action-chip) {
   border-color: #334155;
   background: rgb(30 41 59 / 0.42);
 }
 
+:global(html.dark .action-chip.is-level-invalid) {
+  border-color: rgb(248 113 113 / 0.45);
+  background: rgb(127 29 29 / 0.16);
+}
+
 .selected-action {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.55rem;
 }
@@ -1429,8 +1552,20 @@ function makeId() {
   font-weight: 900;
 }
 
+.selected-action small {
+  grid-column: 2;
+  margin-top: -0.25rem;
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 :global(html.dark .selected-action strong) {
   color: #f8fafc;
+}
+
+:global(html.dark .selected-action small) {
+  color: #fca5a5;
 }
 
 .selected-action img,
@@ -1471,6 +1606,16 @@ function makeId() {
   background: #ecfdf5;
 }
 
+.action-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.action-option:disabled:hover {
+  border-color: #e2e8f0;
+  background: white;
+}
+
 .action-option.active {
   box-shadow: 0 0 0 3px rgb(82 168 144 / 0.12);
   color: #0f766e;
@@ -1492,6 +1637,12 @@ function makeId() {
   border-color: #5eead4;
   background: rgb(20 83 45 / 0.24);
   color: #ccfbf1;
+}
+
+:global(html.dark .action-option:disabled:hover) {
+  border-color: #334155;
+  background: rgb(2 6 23 / 0.5);
+  color: #e2e8f0;
 }
 
 .summary-grid {

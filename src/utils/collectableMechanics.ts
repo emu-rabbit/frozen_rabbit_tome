@@ -169,7 +169,9 @@ export function canUseCollectableAction(
   state: CollectableMechanicsState,
   context: CollectableMechanicsContext
 ): boolean {
-  const gpCost = COLLECTABLE_ACTION_DEFINITIONS[action].gpCost;
+  const definition = COLLECTABLE_ACTION_DEFINITIONS[action];
+  const gpCost = definition.gpCost;
+  if (context.level < definition.minLevel) return false;
   if (state.gp < gpCost) return false;
 
   if (action === 'revisitCheck') return false;

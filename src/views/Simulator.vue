@@ -719,6 +719,13 @@ function progressPercent(range: number[], maxValue: number) {
               <i class="pi pi-info-circle"></i>
               <span>{{ t('simulator.analysis.noRevisitNotice') }}</span>
             </div>
+            <div v-if="hasRotationIssue" class="rotation-issue-alert analysis-issue-alert" role="alert">
+              <i class="pi pi-exclamation-triangle"></i>
+              <div>
+                <strong>{{ t('simulator.rotationIssueTitle') }}</strong>
+                <span>{{ t('simulator.rotationIssueDesc') }}</span>
+              </div>
+            </div>
           </div>
           <div class="w-full lg:w-auto min-w-[200px]">
             <Button
@@ -1485,7 +1492,7 @@ function progressPercent(range: number[], maxValue: number) {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
   padding: 0.85rem 1rem;
   border: 1px solid rgb(251 146 60 / 0.75);
   border-radius: 14px;

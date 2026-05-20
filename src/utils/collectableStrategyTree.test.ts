@@ -4,6 +4,11 @@ import {
   createSimpleCollectableStrategyRules,
   type CollectableStrategyRule
 } from './collectableStrategyTree';
+import {
+  canUseCollectableAction,
+  createCollectableMechanicsContext,
+  createInitialCollectableMechanicsState
+} from './collectableMechanics';
 
 function rule(id: string, action: CollectableStrategyRule['actions'][number]): CollectableStrategyRule {
   return {
@@ -66,6 +71,66 @@ describe('collectableStrategyTree', () => {
       isTimedNode: false,
       rules: [
         rule('restore-first', 'restoreIntegrity'),
+        rule('collect-fallback', 'collect')
+      ]
+    });
+
+    expect(result.root.status).toBe('decided');
+    expect(result.root.matchedRuleId).toBe('collect-fallback');
+    expect(result.root.action).toBe('collect');
+  });
+
+  it('會依角色等級阻擋尚未學會的收藏品技能', () => {
+    const mechanics = createCollectableMechanicsContext({
+      stats: {
+        level: 84,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 4860,
+        Perception: 4860
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      isTimedNode: false
+    });
+    const state = createInitialCollectableMechanicsState(mechanics, 930);
+
+    expect(canUseCollectableAction('collectorsFocus', state, mechanics)).toBe(false);
+    expect(canUseCollectableAction('collect', state, mechanics)).toBe(true);
+  });
+
+  it('策略樹遇到等級不足技能時，會改用下一條可執行策略', () => {
+    const result = buildCollectableStrategyTree({
+      stats: {
+        level: 84,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 4860,
+        Perception: 4860
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      jobType: 'miner',
+      isTimedNode: false,
+      rules: [
+        rule('focus-first', 'collectorsFocus'),
         rule('collect-fallback', 'collect')
       ]
     });

@@ -108,4 +108,17 @@ describe('rotationSimulator', () => {
 
     expect(validateSimulatorRotation(request, request.primaryRotation).invalidIndexes).toEqual([0]);
   });
+
+  it('reports invalid rotation steps when the current level has not unlocked a skill', () => {
+    const request: SimulationRequest = {
+      ...baseRequest,
+      stats: {
+        ...baseRequest.stats,
+        level: 67
+      },
+      primaryRotation: ['高產II']
+    };
+
+    expect(validateSimulatorRotation(request, request.primaryRotation).invalidIndexes).toEqual([0]);
+  });
 });
