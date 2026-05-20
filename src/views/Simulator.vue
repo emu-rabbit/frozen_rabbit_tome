@@ -368,6 +368,14 @@ async function copyReport() {
       const { rotation, ...cleaned } = obj;
       return cleaned;
     };
+    if (hideRevisitExperimentFeatures) {
+      const { revisitChance, ...singleRunRest } = rest;
+      return {
+        ...singleRunRest,
+        rotation: cleanRotation(primary),
+        total: cleanRotation(total)
+      };
+    }
     return {
       ...rest,
       primary: cleanRotation(primary),
@@ -382,8 +390,12 @@ async function copyReport() {
     temporaryGp: temporaryGp.value,
     food: { ...selectedFood.value },
     nodeBonuses: { ...nodeBonuses.value },
-    primaryRotation: mapRotation(primaryRotation.value),
-    revisitRotation: hideRevisitExperimentFeatures ? [] : mapRotation(revisitRotation.value),
+    ...(hideRevisitExperimentFeatures
+      ? { rotation: mapRotation(primaryRotation.value) }
+      : {
+          primaryRotation: mapRotation(primaryRotation.value),
+          revisitRotation: mapRotation(revisitRotation.value)
+        }),
     analysis: cleanAnalysis(analysis.value)
   };
 

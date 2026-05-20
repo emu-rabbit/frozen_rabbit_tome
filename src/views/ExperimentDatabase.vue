@@ -136,20 +136,32 @@ async function copyReportFromDb(experiment: StoredExperiment) {
       const { rotation, ...cleaned } = obj;
       return cleaned;
     };
+    if (hideRevisitExperimentFeatures) {
+      const { revisitChance, ...singleRunRest } = rest;
+      return {
+        ...singleRunRest,
+        rotation: cleanRotation(primary),
+        total: cleanRotation(total)
+      };
+    }
     return {
       ...rest,
-      revisitChance: hideRevisitExperimentFeatures ? 0 : rest.revisitChance,
       primary: cleanRotation(primary),
-      ...(!hideRevisitExperimentFeatures && revisit ? { revisit: cleanRotation(revisit) } : {}),
+      ...(revisit ? { revisit: cleanRotation(revisit) } : {}),
       total: cleanRotation(total)
     };
   };
 
+  const { primaryRotation, revisitRotation, analysis: storedAnalysis, ...experimentMeta } = experiment;
   const report = {
-    ...experiment,
-    primaryRotation: mapRotation(experiment.primaryRotation),
-    revisitRotation: hideRevisitExperimentFeatures ? [] : mapRotation(experiment.revisitRotation),
-    analysis: cleanAnalysis(experiment.analysis)
+    ...experimentMeta,
+    ...(hideRevisitExperimentFeatures
+      ? { rotation: mapRotation(primaryRotation) }
+      : {
+          primaryRotation: mapRotation(primaryRotation),
+          revisitRotation: mapRotation(revisitRotation)
+        }),
+    analysis: cleanAnalysis(storedAnalysis)
   };
 
   try {
