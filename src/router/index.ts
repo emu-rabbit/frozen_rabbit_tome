@@ -9,6 +9,7 @@ import CreateExperiment from '../views/CreateExperiment.vue';
 import Simulator from '../views/Simulator.vue';
 import ExperimentDatabase from '../views/ExperimentDatabase.vue';
 import FAQ from '../views/FAQ.vue';
+import Changelog from '../views/Changelog.vue';
 
 const routes = [
   {
@@ -50,6 +51,11 @@ const routes = [
     path: '/faq',
     name: 'FAQ',
     component: FAQ,
+  },
+  {
+    path: '/changelog',
+    name: 'Changelog',
+    component: Changelog,
   },
   {
     path: '/settings',

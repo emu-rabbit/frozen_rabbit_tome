@@ -287,6 +287,9 @@ export default {
       teamcraft: 'Teamcraft - 採集アイテム、収集品報酬、アクション表示データ',
       xivapi: 'XIVAPI - 採集データ表、収集品判定、アイコン API サポート'
     },
+    changelogTitle: 'システムアップデート',
+    changelogDesc: '秘伝書の最新機能やアップデート履歴を確認できます',
+    changelogLink: '秘伝書のアップデート履歴を見る',
     statsTitle: 'ステータス設定',
     statsDesc: 'より正確なおすすめを表示するために、ゲーム内での現在のステータスを入力してください。',
     gearProfilesTitle: '装備ステータスプロファイル',
@@ -314,6 +317,12 @@ export default {
     debugDesc: '有効にすると、計算結果に数式、確率分布、探索統計を表示します。',
     solverDebugMode: 'ソルバーのチェック情報を表示',
     solverDebugModeDesc: 'スキル回し、期待値、探索過程の確認向けです。通常利用ではオフのままで構いません。',
+  },
+  changelog: {
+    title: 'アップデート履歴',
+    description: '秘伝書の更新履歴や新機能はこちらで確認できます。',
+    version: 'バージョン {v}',
+    latest: '最新'
   },
   solver: {
     title: '秘伝書ソルバー',

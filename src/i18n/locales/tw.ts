@@ -288,6 +288,9 @@ export default {
       teamcraft: 'Teamcraft - 採集物品、收藏品獎勵與技能顯示資料',
       xivapi: 'XIVAPI - 採集資料表、收藏品判定與圖示 API 支援'
     },
+    changelogTitle: '系統更新',
+    changelogDesc: '了解秘笈的最新功能與版本更新內容',
+    changelogLink: '查看秘笈版本更新紀錄',
     statsTitle: '採集玩家數值',
     statsDesc: '請填入你在遊戲中真實的裝備數值，以便獲得更精確的演算建議。',
     gearProfilesTitle: '裝備數值設定檔',
@@ -315,6 +318,12 @@ export default {
     debugDesc: '開啟後，求解結果會顯示公式、機率分布與搜尋統計。',
     solverDebugMode: '顯示求解器檢查資訊',
     solverDebugModeDesc: '適合核對技能手法、期望值與搜尋過程；一般採集時可保持關閉。',
+  },
+  changelog: {
+    title: '版本更新紀錄',
+    description: '這裡記錄了秘笈的歷史更新與功能迭代。',
+    version: '版本 {v}',
+    latest: '最新'
   },
   solver: {
     title: '秘笈求解器',

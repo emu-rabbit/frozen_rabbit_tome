@@ -3,9 +3,10 @@ import { useRoute } from 'vue-router';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useFavoriteItems } from '../composables/useFavoriteItems';
+import packageJson from '../../package.json';
 
 const route = useRoute();
-const version = '0.1.0';
+const version = packageJson.version;
 const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tome';
 const { tomeCount } = useTomeLibrary();
 const { experimentCount } = useExperimentLibrary();

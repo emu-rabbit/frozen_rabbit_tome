@@ -287,6 +287,9 @@ export default {
       teamcraft: 'Teamcraft - Gatherable items, collectable rewards, and action display data',
       xivapi: 'XIVAPI - Gathering tables, collectable checks, and icon API support'
     },
+    changelogTitle: 'System Updates',
+    changelogDesc: 'Learn about the latest Tome features and version updates',
+    changelogLink: 'View Tome Update History',
     statsTitle: 'Player Equipment Stats',
     statsDesc: 'Enter your actual in-game stats to get more accurate recommendations.',
     gearProfilesTitle: 'Gear Stat Profiles',
@@ -314,6 +317,12 @@ export default {
     debugDesc: 'When enabled, solved results show formulas, probability distributions, and search statistics.',
     solverDebugMode: 'Show solver check info',
     solverDebugModeDesc: 'Useful for checking action plans, expected values, and the search process. Keep it off for normal use.',
+  },
+  changelog: {
+    title: 'Version Changelog',
+    description: 'A history of Tome updates and feature changes.',
+    version: 'Version {v}',
+    latest: 'Latest'
   },
   solver: {
     title: 'Tome Solver',
