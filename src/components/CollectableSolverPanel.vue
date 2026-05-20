@@ -4,13 +4,13 @@ import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import type { CollectableObjective, CollectableRewardTable, CollectableSolverResult } from '../types/collectable';
+import packageInfo from '../../package.json';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import CollectablePolicyView from './CollectablePolicyView.vue';
 import CollectableDebugDialog from './CollectableDebugDialog.vue';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
-import { getCollectableActionName } from '../services/collectableActions';
 import { useSettings } from '../composables/useSettings';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import {
@@ -32,7 +32,7 @@ const emit = defineEmits<{
   save: [result: CollectableSolverResult];
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { solverSettings } = useSettings();
 const {
   collectableObjective,
@@ -50,6 +50,7 @@ const isDecisionTreeExporting = ref(false);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
+const DECISION_TREE_EXPORT_SCHEMA_VERSION = 1;
 
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId);
 const isWorkerError = computed(() => collectableError.value === 'workerStale' || collectableError.value === 'workerFailed');
@@ -156,7 +157,7 @@ async function handleExportDecisionTree() {
 
   try {
     downloadTextFile(
-      await buildDecisionTreeMarkdown(collectableResult.value),
+      [await buildDecisionTreeJson(collectableResult.value)],
       buildDecisionTreeFileName()
     );
 
@@ -173,29 +174,93 @@ async function handleExportDecisionTree() {
   }
 }
 
-async function buildDecisionTreeMarkdown(result: CollectableSolverResult) {
+async function buildDecisionTreeJson(result: CollectableSolverResult) {
   const policyGraph = await serializePolicyGraph(result.policy);
-  const chunks = [
-    `# ${t('collectableSolver.export.title', { item: props.activeItem.nameLocale || props.activeItem.nameEn })}\n\n`,
-    `- ${t('collectableSolver.export.exportedAt')}：${new Date().toISOString()}\n`,
-    `- ${t('collectableSolver.export.itemId')}：${props.activeItem.itemId}\n`,
-    `- ${t('collectableSolver.export.job')}：${activeItemJobLabel.value}\n`,
-    `- ${t('collectableSolver.results.expectedScore', { unit: formatScripUnit(result.rewardItemId) })}：${Number(result.expectedScore.toFixed(2))}\n`,
-    `- ${t('collectableSolver.export.rootNode')}：\`${policyGraph.rootId}\`\n`,
-    `- ${t('collectableSolver.export.nodeCount')}：${policyGraph.nodeCount}\n\n`,
-    `## ${t('collectableSolver.export.howToReadTitle')}\n\n`,
-    `${t('collectableSolver.export.howToReadDesc')}\n\n`,
-    `## ${t('collectableSolver.export.nodeIndexTitle')}\n\n`
-  ];
+  const planGraphs = [];
 
-  for (let index = 0; index < policyGraph.nodes.length; index += 1) {
-    chunks.push(formatPolicyNodeMarkdown(policyGraph.nodes[index]));
-    if ((index + 1) % 200 === 0) {
-      await waitForUiFrame();
-    }
+  for (let index = 0; index < result.policyPlans.length; index += 1) {
+    const plan = result.policyPlans[index];
+    planGraphs.push({
+      kind: plan.kind,
+      startingGp: plan.startingGp,
+      expectedScore: plan.expectedScore,
+      minScore: plan.minScore,
+      maxScore: plan.maxScore,
+      minScoreChance: plan.minScoreChance,
+      maxScoreChance: plan.maxScoreChance,
+      expectedReward: plan.expectedReward,
+      expectedTierCounts: plan.expectedTierCounts,
+      minScoreTierCounts: plan.minScoreTierCounts,
+      maxScoreTierCounts: plan.maxScoreTierCounts,
+      policy: await serializePolicyGraph(plan.policy)
+    });
   }
 
-  return chunks;
+  const payload = {
+    schemaVersion: DECISION_TREE_EXPORT_SCHEMA_VERSION,
+    manifest: {
+      app: 'frozen_rabbit_tome',
+      version: packageInfo.version,
+      commit: import.meta.env.VITE_APP_COMMIT ?? null,
+      algorithm: 'collectable',
+      exportType: 'decision-tree',
+      generatedAt: new Date().toISOString(),
+      locale: locale.value,
+      limitations: result.debug?.limitations ?? [
+        'brazen-excluded',
+        'high-standard-excluded',
+        'reduction-reward-model-excluded'
+      ]
+    },
+    input: {
+      item: {
+        itemId: props.activeItem.itemId,
+        nameLocale: props.activeItem.nameLocale,
+        nameEn: props.activeItem.nameEn,
+        jobType: props.activeItem.jobType || 'miner',
+        jobTypes: gatherableItemJobs(props.activeItem),
+        isTimedNode: props.activeItem.isTimedNode ?? false
+      },
+      stats: { ...props.effectiveStats },
+      baseValues: props.baseValues ? { ...props.baseValues } : null,
+      itemLevel: props.itemRealLevel,
+      nodeBonuses: { ...props.nodeBonuses },
+      temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
+      objectiveMode: result.objectiveMode,
+      objective: result.objective,
+      hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
+      rewardTable: rewardTable.value
+    },
+    display: {
+      title: t('collectableSolver.export.title', { item: props.activeItem.nameLocale || props.activeItem.nameEn }),
+      job: activeItemJobLabel.value,
+      expectedScoreLabel: t('collectableSolver.results.expectedScore', { unit: formatScripUnit(result.rewardItemId) })
+    },
+    formulaDebug: result.debug?.formulas ?? null,
+    plans: planGraphs,
+    combined: {
+      expectedScore: result.expectedScore,
+      minScore: result.minScore,
+      maxScore: result.maxScore,
+      minScoreChance: result.minScoreChance,
+      maxScoreChance: result.maxScoreChance,
+      expectedReward: result.expectedReward,
+      expectedTierCounts: result.expectedTierCounts,
+      minScoreTierCounts: result.minScoreTierCounts,
+      maxScoreTierCounts: result.maxScoreTierCounts,
+      revisit: result.revisit,
+      calculationTime: result.calculationTime,
+      debug: result.debug?.combined ?? null
+    },
+    search: {
+      plans: result.debug?.plans ?? null,
+      optimality: result.debug?.optimality ?? null
+    },
+    policy: policyGraph,
+    rotationPlans: []
+  };
+
+  return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
 async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
@@ -268,75 +333,7 @@ function formatScripUnit(rewardItemId?: number) {
 function buildDecisionTreeFileName() {
   const itemName = props.activeItem.nameLocale || props.activeItem.nameEn || `item-${props.activeItem.itemId}`;
   const date = new Date().toISOString().slice(0, 10);
-  return sanitizeFileName(`${itemName} - ${t('collectableSolver.actions.exportDecisionTree')} - ${date}.md`);
-}
-
-function formatPolicyNodeMarkdown(node: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]) {
-  const chunks = [
-    `### ${t('collectableSolver.export.node')} \`${node.id}\`\n\n`,
-    `- ${t('collectableSolver.export.state')}：${formatState(node.state)}\n`,
-    `- ${t('collectableSolver.export.recommendedAction')}：${actionName(node.recommendedAction.kind)}\n`,
-    `- ${t('collectableSolver.export.nodeExpectedScore')}：${Number(node.expectedScore.toFixed(2))}\n\n`,
-    `${t('collectableSolver.export.resultBranches')}：\n`
-  ];
-
-  if (node.branches.length === 0) {
-    chunks.push(`- ${t('collectableSolver.export.noBranches')}\n\n`);
-    return chunks.join('');
-  }
-
-  node.branches.forEach((branch) => {
-    chunks.push(
-      `- ${branchLabel(branch)}（${formatProbability(branch.probability)}）\n`,
-      `  - ${t('collectableSolver.export.outcome')}：${formatOutcome(branch.outcome)}\n`,
-      `  - ${t('collectableSolver.export.branchScore')}：${Number(branch.outcome.score.toFixed(2))}\n`,
-      `  - ${t('collectableSolver.export.nextStep')}：${formatNextStep(branch)}\n`
-    );
-  });
-
-  chunks.push('\n');
-  return chunks.join('');
-}
-
-function formatNextStep(branch: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]['branches'][number]) {
-  if (branch.revisitGate) {
-    return t('collectableSolver.export.revisitGateSummary', {
-      procProbability: formatProbability(branch.revisitGate.procProbability),
-      procNext: `${t('collectableSolver.export.node')} \`${branch.revisitGate.procNextId}\``,
-      noProcProbability: formatProbability(branch.revisitGate.noProcProbability)
-    });
-  }
-
-  return branch.nextId ? `${t('collectableSolver.export.node')} \`${branch.nextId}\`` : t('collectableSolver.export.end');
-}
-
-function actionName(kind: CollectableSolverResult['policy']['recommendedAction']['kind']) {
-  return getCollectableActionName(kind, props.activeItem.jobType || 'miner');
-}
-
-function branchLabel(branch: Awaited<ReturnType<typeof serializePolicyGraph>>['nodes'][number]['branches'][number]) {
-  return (branch.labelKeys?.length ? branch.labelKeys : [branch.labelKey]).map((key) => t(key)).join(' / ');
-}
-
-function formatProbability(probability: number) {
-  if (probability > 0 && probability < 0.01) return '<0.01%';
-  return `${probability.toFixed(2)}%`;
-}
-
-function formatState(state: CollectableSolverResult['policy']['state']) {
-  return t('collectableSolver.export.stateSummary', {
-    gp: state.gp,
-    integrity: state.integrity,
-    collectability: state.collectability
-  });
-}
-
-function formatOutcome(outcome: CollectableSolverResult['policy']['branches'][number]['outcome']) {
-  return t('collectableSolver.export.outcomeSummary', {
-    gp: outcome.gp,
-    integrity: outcome.integrity,
-    collectability: outcome.collectability
-  });
+  return sanitizeFileName(`${itemName} - ${t('collectableSolver.actions.exportDecisionTree')} - ${date}.json`);
 }
 
 function sanitizeFileName(fileName: string) {
@@ -348,7 +345,7 @@ function sanitizeFileName(fileName: string) {
 }
 
 function downloadTextFile(chunks: string[], fileName: string) {
-  const blob = new Blob(chunks, { type: 'text/markdown;charset=utf-8' });
+  const blob = new Blob(chunks, { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
 
