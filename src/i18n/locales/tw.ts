@@ -725,6 +725,11 @@ export default {
     addStrategy: '新增策略',
     emptyStrategyTitle: '尚未建立策略',
     emptyStrategyDesc: '新增第一條策略後，右側會立刻展開決策樹並顯示尚待決策的狀態。',
+    loadSimpleExample: '載入簡單範例',
+    simpleExample: {
+      improveName: '提高價值',
+      collectName: '採集'
+    },
     treeKicker: '決策樹覆蓋',
     treeTitle: '目前展開狀態',
     loadingBaseValues: '正在載入收藏品基礎值。',

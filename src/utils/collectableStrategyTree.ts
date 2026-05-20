@@ -160,6 +160,45 @@ export function createDefaultCollectableStrategyRules(): CollectableStrategyRule
   return [];
 }
 
+export function createSimpleCollectableStrategyRules(payload: {
+  highTierCollectability: number;
+  improveName: string;
+  collectName: string;
+}): CollectableStrategyRule[] {
+  return [
+    {
+      id: 'simple-improve-value',
+      name: payload.improveName,
+      mode: 'all',
+      enabled: true,
+      conditions: [
+        {
+          id: 'simple-improve-value-condition',
+          field: 'collectability',
+          comparator: '<',
+          value: payload.highTierCollectability
+        }
+      ],
+      actions: ['meticulous']
+    },
+    {
+      id: 'simple-collect',
+      name: payload.collectName,
+      mode: 'all',
+      enabled: true,
+      conditions: [
+        {
+          id: 'simple-collect-condition',
+          field: 'collectability',
+          comparator: '>=',
+          value: payload.highTierCollectability
+        }
+      ],
+      actions: ['collect']
+    }
+  ];
+}
+
 export function buildCollectableStrategyTree(request: CollectableStrategyBuildRequest): CollectableStrategyTreeResult {
   const mechanics = createCollectableMechanicsContext(request);
   const context: BuildContext = {

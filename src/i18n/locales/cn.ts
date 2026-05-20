@@ -713,6 +713,11 @@ export default {
     addStrategy: '新增策略',
     emptyStrategyTitle: '尚未建立策略',
     emptyStrategyDesc: '新增第一条策略后，右侧会立刻展开决策树并显示尚待决策的状态。',
+    loadSimpleExample: '载入简单范例',
+    simpleExample: {
+      improveName: '提高价值',
+      collectName: '采集'
+    },
     treeKicker: '决策树覆盖',
     treeTitle: '当前展开状态',
     loadingBaseValues: '正在载入收藏品基础值。',

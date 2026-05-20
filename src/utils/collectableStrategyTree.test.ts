@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildCollectableStrategyTree, type CollectableStrategyRule } from './collectableStrategyTree';
+import {
+  buildCollectableStrategyTree,
+  createSimpleCollectableStrategyRules,
+  type CollectableStrategyRule
+} from './collectableStrategyTree';
 
 function rule(id: string, action: CollectableStrategyRule['actions'][number]): CollectableStrategyRule {
   return {
@@ -13,6 +17,31 @@ function rule(id: string, action: CollectableStrategyRule['actions'][number]): C
 }
 
 describe('collectableStrategyTree', () => {
+  it('簡單範例會在未達最高檔前慎重提煉，達最高檔後收藏品採集', () => {
+    const rules = createSimpleCollectableStrategyRules({
+      highTierCollectability: 800,
+      improveName: '提高價值',
+      collectName: '採集'
+    });
+
+    expect(rules).toMatchObject([
+      {
+        id: 'simple-improve-value',
+        name: '提高價值',
+        conditions: [{ field: 'collectability', comparator: '<', value: 800 }],
+        actions: ['meticulous'],
+        enabled: true
+      },
+      {
+        id: 'simple-collect',
+        name: '採集',
+        conditions: [{ field: 'collectability', comparator: '>=', value: 800 }],
+        actions: ['collect'],
+        enabled: true
+      }
+    ]);
+  });
+
   it('符合上方規則但技能不可用時，會繼續套用下一條可執行策略', () => {
     const result = buildCollectableStrategyTree({
       stats: {

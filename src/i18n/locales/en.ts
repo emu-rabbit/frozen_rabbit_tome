@@ -724,6 +724,11 @@ export default {
     addStrategy: 'Add Strategy',
     emptyStrategyTitle: 'No strategies yet',
     emptyStrategyDesc: 'Add the first strategy to expand the decision tree and reveal states that still need a choice.',
+    loadSimpleExample: 'Load Simple Example',
+    simpleExample: {
+      improveName: 'Raise Value',
+      collectName: 'Collect'
+    },
     treeKicker: 'Decision Tree Coverage',
     treeTitle: 'Current Expanded State',
     loadingBaseValues: 'Loading collectable base values.',

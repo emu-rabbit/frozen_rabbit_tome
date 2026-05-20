@@ -713,6 +713,11 @@ export default {
     addStrategy: '方針を追加',
     emptyStrategyTitle: '方針はまだありません',
     emptyStrategyDesc: '最初の方針を追加すると、右側で決定木が展開され、未決定の状態が表示されます。',
+    loadSimpleExample: '簡単な例を読み込む',
+    simpleExample: {
+      improveName: '価値を上げる',
+      collectName: '採集'
+    },
     treeKicker: '決定木カバー率',
     treeTitle: '現在の展開状態',
     loadingBaseValues: '収集品の基礎値を読み込み中です。',

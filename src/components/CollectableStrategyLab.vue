@@ -14,6 +14,7 @@ import {
   collectableStrategyBooleanFields,
   collectableStrategyNumericFields,
   createDefaultCollectableStrategyRules,
+  createSimpleCollectableStrategyRules,
   isNumericStrategyField,
   type CollectableStrategyCondition,
   type CollectableStrategyComparator,
@@ -209,6 +210,17 @@ function addRule() {
   editingRuleId.value = id;
 }
 
+function loadSimpleExampleRules() {
+  const highTierCollectability = rewardTable.value?.tiers.high?.collectability ?? rewardTable.value?.tiers.mid.collectability ?? 1000;
+  rules.value = createSimpleCollectableStrategyRules({
+    highTierCollectability,
+    improveName: t('collectableStrategyLab.simpleExample.improveName'),
+    collectName: t('collectableStrategyLab.simpleExample.collectName')
+  });
+  editingRuleId.value = '';
+  analysis.value = null;
+}
+
 function removeRule(ruleId: string) {
   rules.value = rules.value.filter((rule) => rule.id !== ruleId);
   if (editingRuleId.value === ruleId) editingRuleId.value = '';
@@ -377,6 +389,12 @@ function makeId() {
           <i class="pi pi-sitemap"></i>
           <strong>{{ t('collectableStrategyLab.emptyStrategyTitle') }}</strong>
           <p>{{ t('collectableStrategyLab.emptyStrategyDesc') }}</p>
+          <Button
+            icon="pi pi-bolt"
+            :label="t('collectableStrategyLab.loadSimpleExample')"
+            class="p-button-sm p-button-primary rounded-xl strategy-empty-action"
+            @click="loadSimpleExampleRules"
+          />
         </div>
 
         <div v-if="rules.length > 0" class="strategy-list" :aria-label="t('collectableStrategyLab.strategyListAria')">
@@ -1180,6 +1198,12 @@ function makeId() {
   color: #64748b;
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+.strategy-empty-action {
+  margin-top: 0.35rem;
+  min-height: 2.35rem;
+  font-weight: 900;
 }
 
 :global(html.dark .strategy-empty strong) {
