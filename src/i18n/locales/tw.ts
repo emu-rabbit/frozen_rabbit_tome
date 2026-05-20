@@ -223,7 +223,7 @@ export default {
   },
   experimentDatabase: {
     title: '實驗資料庫',
-    subtitle: '管理已儲存的一般採集實驗，之後可以載回模擬台重新分析。',
+    subtitle: '管理已儲存的一般採集與收藏品實驗，之後可以載回模擬台重新分析。',
     searchPlaceholder: '搜尋實驗名稱或物品名稱',
     emptyTitle: '實驗資料庫目前是空的',
     emptyDesc: '在模擬台完成分析後，按下「儲存實驗」就會收進這裡。',
@@ -231,6 +231,7 @@ export default {
     emptySearchDesc: '可以改用當前語系名稱或英文名稱搜尋看看。',
     unknownDate: '未知時間',
     regularExperiment: '一般採集實驗',
+    collectableExperiment: '收藏品實驗',
     countValue: '{count} 個',
     createdAt: '建立於 {time}',
     rows: {
@@ -238,10 +239,13 @@ export default {
       gpState: 'GP 狀態',
       nodeBonuses: '節點獎勵',
       totalExpected: '總期望',
+      expectedScore: '期望分數',
       maxMin: '最大 / 最小'
     },
     rotations: {
       preview: '手法預覽',
+      strategyPreview: '策略預覽',
+      noStrategyPreview: '尚無可預覽策略',
       primary: '一般採集',
       revisit: '再起後採集'
     },

@@ -222,7 +222,7 @@ export default {
   },
   experimentDatabase: {
     title: 'Experiment Database',
-    subtitle: 'Manage saved regular gathering experiments and load them back into the simulator for analysis.',
+    subtitle: 'Manage saved regular gathering and collectable experiments, then load them back into the simulator for analysis.',
     searchPlaceholder: 'Search experiment or item names',
     emptyTitle: 'Your experiment database is empty',
     emptyDesc: 'After analyzing a setup in the simulator, press "Save Experiment" to keep it here.',
@@ -230,6 +230,7 @@ export default {
     emptySearchDesc: 'Try searching by the current language name or the English item name.',
     unknownDate: 'Unknown time',
     regularExperiment: 'Regular gathering experiment',
+    collectableExperiment: 'Collectable experiment',
     countValue: '{count} item(s)',
     createdAt: 'Created at {time}',
     rows: {
@@ -237,10 +238,13 @@ export default {
       gpState: 'GP State',
       nodeBonuses: 'Node Bonuses',
       totalExpected: 'Total Expected',
+      expectedScore: 'Expected Score',
       maxMin: 'Max / Min'
     },
     rotations: {
       preview: 'Rotation Preview',
+      strategyPreview: 'Strategy Preview',
+      noStrategyPreview: 'No strategy preview yet',
       primary: 'Primary Gathering',
       revisit: 'After Revisit'
     },

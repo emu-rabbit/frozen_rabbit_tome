@@ -14,8 +14,10 @@ import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getGatheringFood } from '../services/foodData';
 import { getRotationActionIconById, getRotationActionName } from '../services/actionIcons';
+import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
-import type { StoredExperiment, StoredTomeRotationStep } from '../types/game';
+import type { StoredCollectableStrategyRule, StoredExperiment, StoredTomeRotationStep } from '../types/game';
+import type { CollectableActionKind } from '../types/collectable';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
@@ -81,12 +83,19 @@ function formatGp(experiment: StoredExperiment) {
 }
 
 function formatNodeBonuses(experiment: StoredExperiment) {
+  if (experiment.kind === 'collectable') {
+    return `${experiment.nodeBonuses.gatheringCount}`;
+  }
   return `${experiment.nodeBonuses.gatheringCount}/${experiment.nodeBonuses.yieldCount}/${experiment.nodeBonuses.extraRate}`;
 }
 
 function rotationIcon(experiment: StoredExperiment, step: StoredTomeRotationStep) {
   if (step.type === 'gather') return getItemIcon(experiment.itemId);
   return getRotationActionIconById(step.actionId);
+}
+
+function collectableActionIcon(experiment: StoredExperiment, action: CollectableActionKind) {
+  return getCollectableActionIcon(action, itemMeta(experiment)?.jobType ?? 'miner');
 }
 
 function handleEdit(experiment: StoredExperiment) {
@@ -123,7 +132,98 @@ function actionLabel(step: StoredTomeRotationStep) {
   );
 }
 
+function collectableActionLabel(experiment: StoredExperiment, action: CollectableActionKind) {
+  return getCollectableActionName(action, itemMeta(experiment)?.jobType ?? 'miner');
+}
+
+function enabledCollectableRules(experiment: StoredExperiment) {
+  return (experiment.collectableRules ?? []).filter((rule) => rule.enabled);
+}
+
+function previewCollectableActions(rule: StoredCollectableStrategyRule) {
+  return rule.actions.slice(0, 5);
+}
+
+function isCollectableExperiment(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable';
+}
+
+function experimentSystemLabel(experiment: StoredExperiment) {
+  if (isCollectableExperiment(experiment)) return t('createGuide.collectableSystem');
+  if (itemMeta(experiment)?.isCrystalGathering) return t('createGuide.crystalGatheringSystem');
+  return t('createGuide.regularSystem');
+}
+
+function totalExpectedLabel(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? t('experimentDatabase.rows.expectedScore')
+    : t('experimentDatabase.rows.totalExpected');
+}
+
+function totalExpectedValue(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? experiment.collectableAnalysis?.expectedScore ?? '-'
+    : experiment.analysis?.total.expectedYield ?? '-';
+}
+
+function maxValue(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? experiment.collectableAnalysis?.maxScore ?? '-'
+    : experiment.analysis?.total.maxYield ?? '-';
+}
+
+function minValue(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? experiment.collectableAnalysis?.minScore ?? '-'
+    : experiment.analysis?.total.minYield ?? '-';
+}
+
+function maxChance(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? experiment.collectableAnalysis?.maxScoreChance ?? 0
+    : experiment.analysis?.total.maxYieldChance ?? 0;
+}
+
+function minChance(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? experiment.collectableAnalysis?.minScoreChance ?? 0
+    : experiment.analysis?.total.minYieldChance ?? 0;
+}
+
 async function copyReportFromDb(experiment: StoredExperiment) {
+  if (experiment.kind === 'collectable') {
+    const report = {
+      kind: 'collectable',
+      id: experiment.id,
+      name: experiment.name,
+      itemId: experiment.itemId,
+      stats: experiment.stats,
+      temporaryGp: experiment.temporaryGp,
+      food: experiment.food,
+      nodeBonuses: experiment.nodeBonuses,
+      hasRelicToolBonus: experiment.collectableHasRelicToolBonus,
+      objective: experiment.collectableObjective,
+      rewardTable: experiment.collectableRewardTableSummary,
+      strategyRules: experiment.collectableRules ?? [],
+      analysis: experiment.collectableAnalysis
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+      copiedExperimentId.value = experiment.id;
+      if (copyTimer) window.clearTimeout(copyTimer);
+      copyTimer = window.setTimeout(() => {
+        if (copiedExperimentId.value === experiment.id) {
+          copiedExperimentId.value = null;
+        }
+        copyTimer = null;
+      }, 1600);
+    } catch (error) {
+      console.error('Failed to copy collectable experiment report:', error);
+    }
+    return;
+  }
+
   const mapRotation = (rotation: StoredTomeRotationStep[]) => rotation.map(step => {
     if (step.type === 'gather') return { type: 'gather', actionName: actionLabel(step) };
     return { type: 'action', actionId: step.actionId, actionName: actionLabel(step) };
@@ -152,7 +252,7 @@ async function copyReportFromDb(experiment: StoredExperiment) {
     };
   };
 
-  const { primaryRotation, revisitRotation, analysis: storedAnalysis, ...experimentMeta } = experiment;
+  const { primaryRotation = [], revisitRotation = [], analysis: storedAnalysis, ...experimentMeta } = experiment;
   const report = {
     ...experimentMeta,
     ...(hideRevisitExperimentFeatures
@@ -161,7 +261,7 @@ async function copyReportFromDb(experiment: StoredExperiment) {
           primaryRotation: mapRotation(primaryRotation),
           revisitRotation: mapRotation(revisitRotation)
         }),
-    analysis: cleanAnalysis(storedAnalysis)
+    analysis: storedAnalysis ? cleanAnalysis(storedAnalysis) : null
   };
 
   try {
@@ -247,13 +347,17 @@ function copyReportLabel(experiment: StoredExperiment) {
                 {{ t(`game.jobs.${job}`) }}
               </span>
               <span v-if="itemJobs(experiment).length === 0" class="item-job-badge">-</span>
-              <span v-if="itemMeta(experiment)?.isCollectable" class="item-collectable-badge">
+              <span v-if="isCollectableExperiment(experiment)" class="item-collectable-badge">
                 <i class="pi pi-box"></i>
-                {{ t('createGuide.collectableSystem') }}
+                {{ experimentSystemLabel(experiment) }}
               </span>
               <span v-else-if="itemMeta(experiment)?.isCrystalGathering" class="item-crystal-badge">
                 <i class="pi pi-sparkles"></i>
-                {{ t('createGuide.crystalGatheringSystem') }}
+                {{ experimentSystemLabel(experiment) }}
+              </span>
+              <span v-else class="item-regular-badge">
+                <i class="pi pi-compass"></i>
+                {{ experimentSystemLabel(experiment) }}
               </span>
             </div>
           </div>
@@ -286,52 +390,76 @@ function copyReportLabel(experiment: StoredExperiment) {
 
         <div v-if="displayMode === 'detailed'" class="rotation-plan-stats">
           <div class="is-primary-metric">
-            <span>{{ t('experimentDatabase.rows.totalExpected') }}</span>
+            <span>{{ totalExpectedLabel(experiment) }}</span>
             <strong>
-              {{ experiment.analysis.total.expectedYield }}
-              <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+              {{ totalExpectedValue(experiment) }}
+              <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
             </strong>
           </div>
           <div>
             <span>{{ t('simulator.analysis.maxYield') }}</span>
             <strong>
-              {{ experiment.analysis.total.maxYield }}
-              <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+              {{ maxValue(experiment) }}
+              <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
             </strong>
-            <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(experiment.analysis.total.maxYieldChance) }) }}</small>
+            <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(maxChance(experiment)) }) }}</small>
           </div>
           <div>
             <span>{{ t('simulator.analysis.minYield') }}</span>
             <strong>
-              {{ experiment.analysis.total.minYield }}
-              <small class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
+              {{ minValue(experiment) }}
+              <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
             </strong>
-            <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(experiment.analysis.total.minYieldChance) }) }}</small>
+            <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(minChance(experiment)) }) }}</small>
           </div>
         </div>
 
         <div v-if="displayMode === 'detailed'" class="rotation-preview-list">
-          <div class="rotation-strip">
+          <div v-if="experiment.kind === 'collectable'" class="rotation-strip collectable-strategy-strip">
+            <h4>{{ t('experimentDatabase.rotations.strategyPreview') }}</h4>
+            <div class="collectable-rule-preview-list">
+              <div
+                v-for="rule in enabledCollectableRules(experiment).slice(0, 3)"
+                :key="`${experiment.id}-${rule.id}`"
+                class="collectable-rule-preview"
+              >
+                <strong>{{ rule.name }}</strong>
+                <div class="rotation-icons">
+                  <template v-for="(action, index) in previewCollectableActions(rule)" :key="`${experiment.id}-${rule.id}-${action}-${index}`">
+                    <span class="rotation-icon-wrap rotation-action">
+                      <img v-if="collectableActionIcon(experiment, action)" :src="collectableActionIcon(experiment, action)" class="rotation-icon" :alt="collectableActionLabel(experiment, action)" />
+                      <i v-else class="pi pi-sparkles text-xs"></i>
+                    </span>
+                    <i v-if="index < previewCollectableActions(rule).length - 1" class="pi pi-angle-right rotation-arrow"></i>
+                  </template>
+                </div>
+              </div>
+              <p v-if="enabledCollectableRules(experiment).length === 0" class="strategy-preview-empty">
+                {{ t('experimentDatabase.rotations.noStrategyPreview') }}
+              </p>
+            </div>
+          </div>
+          <div v-else class="rotation-strip">
             <h4>{{ hideRevisitExperimentFeatures ? t('experimentDatabase.rotations.preview') : t('experimentDatabase.rotations.primary') }}</h4>
             <div class="rotation-icons">
-              <template v-for="(step, index) in experiment.primaryRotation" :key="`p-${experiment.id}-${index}`">
+              <template v-for="(step, index) in experiment.primaryRotation ?? []" :key="`p-${experiment.id}-${index}`">
                 <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'">
                   <img v-if="rotationIcon(experiment, step)" :src="rotationIcon(experiment, step)" class="rotation-icon" alt="" />
                   <i v-else class="pi pi-sparkles text-xs"></i>
                 </span>
-                <i v-if="index < experiment.primaryRotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
+                <i v-if="index < (experiment.primaryRotation ?? []).length - 1" class="pi pi-angle-right rotation-arrow"></i>
               </template>
             </div>
           </div>
-          <div v-if="!hideRevisitExperimentFeatures && experiment.revisitRotation.length" class="rotation-strip">
+          <div v-if="experiment.kind !== 'collectable' && !hideRevisitExperimentFeatures && experiment.revisitRotation?.length" class="rotation-strip">
             <h4>{{ t('experimentDatabase.rotations.revisit') }}</h4>
             <div class="rotation-icons">
-              <template v-for="(step, index) in experiment.revisitRotation" :key="`r-${experiment.id}-${index}`">
+              <template v-for="(step, index) in experiment.revisitRotation ?? []" :key="`r-${experiment.id}-${index}`">
                 <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-revisit'">
                   <img v-if="rotationIcon(experiment, step)" :src="rotationIcon(experiment, step)" class="rotation-icon" alt="" />
                   <i v-else class="pi pi-sparkles text-xs"></i>
                 </span>
-                <i v-if="index < experiment.revisitRotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
+                <i v-if="index < (experiment.revisitRotation ?? []).length - 1" class="pi pi-angle-right rotation-arrow"></i>
               </template>
             </div>
           </div>
@@ -536,6 +664,7 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .is-compact .item-glv-badge,
 .is-compact .item-job-badge,
+.is-compact .item-regular-badge,
 .is-compact .item-collectable-badge,
 .is-compact .item-crystal-badge {
   padding: 2px 8px;
@@ -547,6 +676,7 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .item-glv-badge,
 .item-job-badge,
+.item-regular-badge,
 .item-collectable-badge,
 .item-crystal-badge {
   display: inline-flex;
@@ -564,6 +694,9 @@ function copyReportLabel(experiment: StoredExperiment) {
 }
 .item-job-badge {
   background: linear-gradient(135deg, #64748b, #475569);
+}
+.item-regular-badge {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 .item-collectable-badge {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
@@ -690,7 +823,65 @@ function copyReportLabel(experiment: StoredExperiment) {
   font-size: 0.72rem;
   font-weight: 900;
 }
+
+.collectable-strategy-strip {
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border-width: 1px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+:global(html.dark .collectable-strategy-strip) {
+  background: rgb(15 23 42 / 0.6);
+  border-color: #1e293b;
+}
+
+.collectable-rule-preview-list {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.collectable-rule-preview {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.5rem;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+:global(html.dark .collectable-rule-preview) {
+  background: rgb(30 41 59 / 0.55);
+  border-color: #334155;
+}
+.collectable-rule-preview strong {
+  min-width: 0;
+  max-width: 9rem;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(html.dark .collectable-rule-preview strong) {
+  color: #e2e8f0;
+}
+.strategy-preview-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
 .rotation-icons {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -727,6 +918,28 @@ function copyReportLabel(experiment: StoredExperiment) {
   height: 34px;
   object-fit: cover;
   image-rendering: pixelated;
+}
+
+.collectable-strategy-strip .rotation-icons {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+}
+
+.collectable-strategy-strip .rotation-icon-wrap,
+.collectable-strategy-strip .rotation-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.collectable-strategy-strip .rotation-icon-wrap {
+  border-radius: 7px;
+}
+
+@media (max-width: 560px) {
+  .collectable-rule-preview {
+    max-width: 100%;
+  }
 }
 .card-footer {
   display: flex;

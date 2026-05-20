@@ -1,8 +1,10 @@
 // === FFXIV 採集物品 型別定義 ===
 // 對應姊妹站 frozen_rabbit_workshop 的 MockItem 擴展版本
 import type {
+  CollectableActionKind,
   CollectableObjective,
   CollectableRewardTableSummary,
+  CollectableTierCounts,
   CollectableRewardVector,
   StoredCollectablePolicy
 } from './collectable';
@@ -334,6 +336,7 @@ export interface SimulationResponse {
 }
 
 export interface StoredExperiment {
+  kind?: 'regular' | 'collectable';
   id: string;
   name?: string;
   itemId: number;
@@ -341,11 +344,49 @@ export interface StoredExperiment {
   temporaryGp: number;
   food: FoodSelection;
   nodeBonuses: StoredTomeNodeBonuses;
-  primaryRotation: StoredTomeRotationStep[];
-  revisitRotation: StoredTomeRotationStep[];
-  analysis: SimulationResponse;
+  primaryRotation?: StoredTomeRotationStep[];
+  revisitRotation?: StoredTomeRotationStep[];
+  analysis?: SimulationResponse;
+  collectableRules?: StoredCollectableStrategyRule[];
+  collectableObjective?: CollectableObjective;
+  collectableRewardTableSummary?: CollectableRewardTableSummary;
+  collectableAnalysis?: StoredCollectableExperimentAnalysis;
+  collectableHasRelicToolBonus?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StoredCollectableStrategyCondition {
+  id: string;
+  field: string;
+  comparator: '<' | '<=' | '=' | '>=' | '>';
+  value: number | boolean;
+}
+
+export interface StoredCollectableStrategyRule {
+  id: string;
+  name: string;
+  mode: 'all' | 'any';
+  enabled: boolean;
+  conditions: StoredCollectableStrategyCondition[];
+  actions: CollectableActionKind[];
+}
+
+export interface StoredCollectableScoreDistributionEntry {
+  score: number;
+  probability: number;
+}
+
+export interface StoredCollectableExperimentAnalysis {
+  expectedScore: number;
+  minScore: number;
+  maxScore: number;
+  minScoreChance: number;
+  maxScoreChance: number;
+  expectedTierCounts: CollectableTierCounts;
+  minScoreTierCounts: CollectableTierCounts;
+  maxScoreTierCounts: CollectableTierCounts;
+  outcomeDistribution: StoredCollectableScoreDistributionEntry[];
 }
 
 export interface StoredFavoriteItem {

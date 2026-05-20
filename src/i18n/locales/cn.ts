@@ -222,7 +222,7 @@ export default {
   },
   experimentDatabase: {
     title: '实验数据库',
-    subtitle: '管理已保存的一般采集实验，之后可以载回模拟台重新分析。',
+    subtitle: '管理已保存的一般采集与收藏品实验，之后可以载回模拟台重新分析。',
     searchPlaceholder: '搜索实验名称或物品名称',
     emptyTitle: '实验数据库目前是空的',
     emptyDesc: '在模拟台完成分析后，按下“保存实验”就会收进这里。',
@@ -230,6 +230,7 @@ export default {
     emptySearchDesc: '可以改用当前语言名称或英文名称搜索看看。',
     unknownDate: '未知时间',
     regularExperiment: '一般采集实验',
+    collectableExperiment: '收藏品实验',
     countValue: '{count} 个',
     createdAt: '建立于 {time}',
     rows: {
@@ -237,10 +238,13 @@ export default {
       gpState: 'GP 状态',
       nodeBonuses: '节点奖励',
       totalExpected: '总期望',
+      expectedScore: '期望分数',
       maxMin: '最大 / 最小'
     },
     rotations: {
       preview: '手法预览',
+      strategyPreview: '策略预览',
+      noStrategyPreview: '暂无可预览策略',
       primary: '一般采集',
       revisit: '再起后采集'
     },

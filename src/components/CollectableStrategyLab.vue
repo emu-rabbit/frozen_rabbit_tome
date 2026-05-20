@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
-import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
-import type { CollectableActionKind, CollectableObjective, CollectableRewardTable, CollectableTierCounts } from '../types/collectable';
+import type { FoodSelection, GatherableItem, NodeBonuses, PlayerStats, StoredCollectableStrategyRule } from '../types/game';
+import type { CollectableActionKind, CollectableObjective, CollectableRewardTable, CollectableRewardTableSummary, CollectableTierCounts } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
+import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
+import { getItemName } from '../services/gameData';
 import { analyzeCollectableStrategyTree, type CollectableStrategyAnalysis } from '../utils/collectableStrategyAnalysis';
 import {
   buildCollectableStrategyTree,
@@ -23,6 +26,7 @@ import {
 } from '../utils/collectableStrategyTree';
 import { getCollectableActionIcon, getCollectableActionMinLevel, getCollectableActionName } from '../services/collectableActions';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
+import SaveEntryDialog from './SaveEntryDialog.vue';
 import {
   createCollectableObjectiveOptions,
   getDefaultCollectableObjectivePresetId,
@@ -31,6 +35,8 @@ import {
 } from '../utils/collectableObjectivePresets';
 
 const { t } = useI18n();
+const route = useRoute();
+const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
 const props = defineProps<{
   activeItem: GatherableItem;
   effectiveStats: PlayerStats;
@@ -38,6 +44,7 @@ const props = defineProps<{
   itemRealLevel: number;
   nodeBonuses: NodeBonuses;
   temporaryGp: number;
+  selectedFood: FoodSelection;
   hasRelicToolBonus?: boolean;
 }>();
 
@@ -48,9 +55,14 @@ const analysis = ref<CollectableStrategyAnalysis | null>(null);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 const rewardError = ref(false);
 const isObjectiveDialogOpen = ref(false);
+const isSaveExperimentDialogOpen = ref(false);
+const isSaved = ref(false);
+const isReportCopied = ref(false);
 const internalMaxNodes = 1200;
 const tierCountVisibilityEpsilon = 0.000001;
 const { collectableObjective } = useCollectableSolver();
+let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
+let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const jobType = computed(() => props.activeItem.jobType || 'miner');
 const canBuildTree = computed(() => !!props.baseValues);
@@ -143,11 +155,18 @@ watch(() => props.activeItem.itemId, async () => {
   try {
     rewardTable.value = await getCollectableRewardTable(props.activeItem.itemId);
     rewardError.value = !rewardTable.value;
-    if (rewardTable.value) applyDefaultObjective(rewardTable.value);
+    if (rewardTable.value && !routeCollectableExperiment()) applyDefaultObjective(rewardTable.value);
   } catch (error) {
     console.error('Collectable strategy reward table loading failed:', error);
     rewardError.value = true;
   }
+}, { immediate: true });
+
+watch([
+  () => route.query.experiment,
+  () => props.activeItem.itemId
+], () => {
+  loadCollectableExperimentFromRoute();
 }, { immediate: true });
 
 watch([
@@ -161,7 +180,13 @@ watch([
   collectableObjective
 ], () => {
   analysis.value = null;
+  isSaved.value = false;
 }, { deep: true });
+
+onUnmounted(() => {
+  if (saveTimer) window.clearTimeout(saveTimer);
+  if (copyTimer) window.clearTimeout(copyTimer);
+});
 
 function runAnalysis() {
   if (!treeResult.value?.root || !rewardTable.value || hasStrategyLevelIssue.value) return;
@@ -171,6 +196,127 @@ function runAnalysis() {
     rewardTable.value,
     collectableObjective.value
   );
+}
+
+function defaultExperimentName() {
+  return getItemName(props.activeItem.itemId);
+}
+
+function rewardTableSummary(table: CollectableRewardTable | null): CollectableRewardTableSummary | undefined {
+  if (!table) return undefined;
+  return {
+    source: table.source,
+    rewardItemId: table.rewardItemId,
+    lowCollectability: table.tiers.low.collectability,
+    lowScrip: table.tiers.low.reward.scrip,
+    midCollectability: table.tiers.mid.collectability,
+    midScrip: table.tiers.mid.reward.scrip,
+    highCollectability: table.tiers.high?.collectability,
+    highScrip: table.tiers.high?.reward.scrip
+  };
+}
+
+function storedRules(): StoredCollectableStrategyRule[] {
+  return rules.value.map((rule) => ({
+    id: rule.id,
+    name: rule.name,
+    mode: rule.mode,
+    enabled: rule.enabled,
+    conditions: rule.conditions.map((condition) => ({ ...condition })),
+    actions: [...rule.actions]
+  }));
+}
+
+function saveCurrentExperiment() {
+  if (!analysis.value) return;
+  isSaveExperimentDialogOpen.value = true;
+}
+
+function confirmSaveExperiment(name: string) {
+  if (!analysis.value) return;
+
+  saveCollectableExperiment({
+    name,
+    itemId: props.activeItem.itemId,
+    stats: { ...props.effectiveStats },
+    temporaryGp: props.temporaryGp,
+    food: { ...props.selectedFood },
+    nodeBonuses: { ...props.nodeBonuses },
+    rules: storedRules(),
+    objective: collectableObjective.value,
+    rewardTableSummary: rewardTableSummary(rewardTable.value),
+    analysis: analysis.value,
+    hasRelicToolBonus: props.hasRelicToolBonus
+  });
+
+  isSaved.value = true;
+  if (saveTimer) window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => {
+    isSaved.value = false;
+    saveTimer = null;
+  }, 1600);
+}
+
+async function copyReport() {
+  if (!analysis.value) return;
+
+  const report = {
+    kind: 'collectable',
+    itemId: props.activeItem.itemId,
+    stats: { ...props.effectiveStats },
+    temporaryGp: props.temporaryGp,
+    food: { ...props.selectedFood },
+    nodeBonuses: { ...props.nodeBonuses },
+    hasRelicToolBonus: !!props.hasRelicToolBonus,
+    objective: collectableObjective.value,
+    rewardTable: rewardTableSummary(rewardTable.value),
+    strategyRules: storedRules(),
+    analysis: analysis.value
+  };
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    isReportCopied.value = true;
+    if (copyTimer) window.clearTimeout(copyTimer);
+    copyTimer = window.setTimeout(() => {
+      isReportCopied.value = false;
+      copyTimer = null;
+    }, 1600);
+  } catch (error) {
+    console.error('Failed to copy collectable experiment report:', error);
+  }
+}
+
+function loadCollectableExperimentFromRoute() {
+  const id = typeof route.query.experiment === 'string' ? route.query.experiment : '';
+  if (!id) return;
+
+  const experiment = routeCollectableExperiment();
+  if (!experiment || experiment.kind !== 'collectable' || experiment.itemId !== props.activeItem.itemId) return;
+
+  if (experiment.collectableRules?.length) {
+    rules.value = clonePlain(experiment.collectableRules) as CollectableStrategyRule[];
+  }
+  if (experiment.collectableObjective) {
+    collectableObjective.value = clonePlain(experiment.collectableObjective);
+  }
+  analysis.value = null;
+}
+
+function clonePlain<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function routeCollectableExperiment() {
+  const id = typeof route.query.experiment === 'string' ? route.query.experiment : '';
+  if (!id) return null;
+  const experiment = getExperiment(id);
+  if (!experiment || experiment.kind !== 'collectable' || experiment.itemId !== props.activeItem.itemId) return null;
+  return experiment;
+}
+
+function previewRuleActionIcons(rule: CollectableStrategyRule) {
+  return rule.actions.slice(0, 5);
 }
 
 function applyDefaultObjective(table: CollectableRewardTable) {
@@ -662,7 +808,93 @@ function makeId() {
         </div>
         <p class="analysis-note">{{ t('collectableStrategyLab.analysis.scoringNote') }}</p>
       </article>
+
+      <div v-if="analysis" class="collectable-analysis-actions">
+        <Button
+          class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
+          :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isReportCopied }"
+          :aria-label="t('simulator.actions.copyReport')"
+          :disabled="!analysis"
+          @click="copyReport"
+        >
+          <i :class="isReportCopied ? 'pi pi-check' : 'pi pi-file-edit'"></i>
+          <span>{{ isReportCopied ? t('simulator.actions.copied') : t('simulator.actions.copyReport') }}</span>
+        </Button>
+        <Button
+          class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
+          :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isSaved }"
+          :aria-label="t('simulator.actions.save')"
+          :disabled="isSaved"
+          @click="saveCurrentExperiment"
+        >
+          <i :class="isSaved ? 'pi pi-check' : 'pi pi-bookmark'"></i>
+          <span>{{ isSaved ? t('simulator.actions.saved') : t('simulator.actions.save') }}</span>
+        </Button>
+      </div>
     </section>
+
+    <SaveEntryDialog
+      v-model="isSaveExperimentDialogOpen"
+      :title="t('saveEntry.experiment.title')"
+      :description="t('saveEntry.experiment.description')"
+      :name-label="t('saveEntry.nameLabel')"
+      :default-name="defaultExperimentName()"
+      :confirm-label="t('saveEntry.experiment.confirm')"
+      :cancel-label="t('saveEntry.cancel')"
+      @confirm="confirmSaveExperiment"
+    >
+      <article v-if="analysis" class="collectable-save-preview-card">
+        <div class="collectable-save-preview-item">
+          <div class="collectable-save-preview-icon">
+            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" :alt="getItemName(activeItem.itemId)" />
+            <i v-else class="pi pi-box"></i>
+          </div>
+          <div class="collectable-save-preview-info">
+            <h4>{{ getItemName(activeItem.itemId) }}</h4>
+            <div class="collectable-save-preview-badges">
+              <span class="item-glv-badge">{{ t('createGuide.glv') }} {{ activeItem.glv ?? '-' }}</span>
+              <span class="item-collectable-badge">
+                <i class="pi pi-box"></i>
+                {{ t('createGuide.collectableSystem') }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="collectable-save-preview-metrics">
+          <div>
+            <span>{{ t('collectableStrategyLab.analysis.expectedScore', { unit: scoreUnitLabel() }) }}</span>
+            <strong>{{ analysis.expectedScore }}</strong>
+          </div>
+          <div>
+            <span>{{ t('collectableStrategyLab.analysis.maxScore', { unit: scoreUnitLabel() }) }}</span>
+            <strong>{{ analysis.maxScore }}</strong>
+            <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.maxScoreChance, false, false) }) }}</small>
+          </div>
+          <div>
+            <span>{{ t('collectableStrategyLab.analysis.minScore', { unit: scoreUnitLabel() }) }}</span>
+            <strong>{{ analysis.minScore }}</strong>
+            <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.minScoreChance, false, false) }) }}</small>
+          </div>
+        </div>
+        <div class="collectable-save-strategy-preview">
+          <span>{{ t('experimentDatabase.rotations.strategyPreview') }}</span>
+          <div class="collectable-save-rule-list">
+            <div v-for="rule in rules.filter((entry) => entry.enabled).slice(0, 3)" :key="rule.id" class="collectable-save-rule">
+              <strong>{{ rule.name }}</strong>
+              <div class="collectable-save-icons">
+                <template v-for="(action, index) in previewRuleActionIcons(rule)" :key="`${rule.id}-${action}-${index}`">
+                  <span class="collectable-save-action-icon">
+                    <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionName(action)" />
+                    <i v-else class="pi pi-sparkles"></i>
+                  </span>
+                  <i v-if="index < previewRuleActionIcons(rule).length - 1" class="pi pi-angle-right collectable-save-arrow"></i>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </SaveEntryDialog>
 
     <CollectableObjectivePreferenceDialog
       v-model="isObjectiveDialogOpen"
@@ -1189,6 +1421,239 @@ function makeId() {
   color: #15803d;
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.collectable-analysis-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.collectable-save-preview-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+:global(html.dark .collectable-save-preview-card) {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.collectable-save-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.collectable-save-preview-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+:global(html.dark .collectable-save-preview-icon) {
+  background: #1e293b;
+}
+
+.collectable-save-preview-icon img,
+.collectable-save-action-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.collectable-save-preview-info {
+  min-width: 0;
+}
+
+.collectable-save-preview-info h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+:global(html.dark .collectable-save-preview-info h4) {
+  color: #f8fafc;
+}
+
+.collectable-save-preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.item-glv-badge,
+.item-collectable-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.item-glv-badge {
+  background: linear-gradient(135deg, #52a890, #3d8b75);
+}
+
+.item-collectable-badge {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.collectable-save-preview-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: 0.45rem;
+}
+
+.collectable-save-preview-metrics div {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.62rem 0.7rem;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.collectable-save-strategy-preview {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid #f1f5f9;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+}
+
+.collectable-save-rule {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #ffffff;
+}
+
+:global(html.dark .collectable-save-preview-metrics div),
+:global(html.dark .collectable-save-rule) {
+  background: rgb(30 41 59 / 0.55);
+}
+
+:global(html.dark .collectable-save-strategy-preview) {
+  border-color: #1e293b;
+  background: rgb(15 23 42 / 0.6);
+}
+
+.collectable-save-preview-metrics span,
+.collectable-save-strategy-preview > span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+:global(html.dark .collectable-save-preview-metrics span),
+:global(html.dark .collectable-save-strategy-preview > span) {
+  color: #94a3b8;
+}
+
+.collectable-save-preview-metrics strong,
+.collectable-save-rule strong {
+  min-width: 0;
+  max-width: 8rem;
+  color: #334155;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collectable-save-preview-metrics small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+:global(html.dark .collectable-save-preview-metrics strong),
+:global(html.dark .collectable-save-rule strong) {
+  color: #e2e8f0;
+}
+
+.collectable-save-rule-list {
+  min-width: 0;
+  max-height: 8rem;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.collectable-save-icons {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.collectable-save-action-icon {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  background: #52a890;
+  color: white;
+}
+
+.collectable-save-arrow {
+  color: #cbd5e1;
+  font-size: 0.72rem;
+}
+
+:global(html.dark .collectable-save-arrow) {
+  color: #64748b;
 }
 
 .lab-layout {
@@ -1861,6 +2326,23 @@ function makeId() {
 
 :global(html.dark .node-pager span) {
   color: #e2e8f0;
+}
+
+@media (min-width: 640px) {
+  .collectable-analysis-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 520px) {
+  .collectable-save-preview-item {
+    align-items: flex-start;
+  }
+
+  .collectable-save-rule {
+    gap: 0.35rem;
+  }
 }
 
 .uncovered-detail {

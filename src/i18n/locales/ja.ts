@@ -222,7 +222,7 @@ export default {
   },
   experimentDatabase: {
     title: '実験データベース',
-    subtitle: '保存した通常採集実験を管理し、シミュレーターへ読み戻して再分析できます。',
+    subtitle: '保存した通常採集実験と収集品実験を管理し、シミュレーターへ読み戻して再分析できます。',
     searchPlaceholder: '実験名またはアイテム名を検索',
     emptyTitle: '実験データベースはまだ空です',
     emptyDesc: 'シミュレーターで分析したあと、「実験を保存」を押すとここに保存されます。',
@@ -230,6 +230,7 @@ export default {
     emptySearchDesc: '現在の表示言語名、または英語名で検索してみてください。',
     unknownDate: '不明な時刻',
     regularExperiment: '通常採集実験',
+    collectableExperiment: '収集品実験',
     countValue: '{count} 個',
     createdAt: '作成日時 {time}',
     rows: {
@@ -237,10 +238,13 @@ export default {
       gpState: 'GP 状態',
       nodeBonuses: '採集ポイントボーナス',
       totalExpected: '合計期待値',
+      expectedScore: '期待スコア',
       maxMin: '最大 / 最小'
     },
     rotations: {
       preview: '手順プレビュー',
+      strategyPreview: '戦略プレビュー',
+      noStrategyPreview: 'プレビューできる戦略はまだありません',
       primary: '通常採集',
       revisit: '再発見後の採集'
     },

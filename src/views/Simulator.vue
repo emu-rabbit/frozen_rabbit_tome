@@ -417,7 +417,10 @@ function loadExperimentFromRoute() {
   if (!id || savedExperimentId.value === id) return;
 
   const experiment = getExperiment(id);
-  const item = experiment ? getGatherableItemById(experiment.itemId) : null;
+  const rawItem = experiment ? getGatherableItemById(experiment.itemId) : null;
+  const item = rawItem && experiment?.kind === 'collectable'
+    ? { ...rawItem, isCollectable: true, isCrystalGathering: false }
+    : rawItem;
   if (!experiment || !item) return;
 
   // 1. 設置物品
@@ -435,8 +438,17 @@ function loadExperimentFromRoute() {
   temporaryGp.value = experiment.temporaryGp;
   
   // 3. 設置手法
-  primaryRotation.value = experiment.primaryRotation.map(fromStoredRotationStep).filter(Boolean);
-  revisitRotation.value = hideRevisitExperimentFeatures ? [] : experiment.revisitRotation.map(fromStoredRotationStep).filter(Boolean);
+  if (experiment.kind === 'collectable') {
+    primaryRotation.value = [];
+    revisitRotation.value = [];
+    analysis.value = null;
+    solverSettings.value.collectableRelicToolBonus = !!experiment.collectableHasRelicToolBonus;
+    savedExperimentId.value = id;
+    return;
+  }
+
+  primaryRotation.value = (experiment.primaryRotation ?? []).map(fromStoredRotationStep).filter(Boolean);
+  revisitRotation.value = hideRevisitExperimentFeatures ? [] : (experiment.revisitRotation ?? []).map(fromStoredRotationStep).filter(Boolean);
   activeBlock.value = 'primary';
   
   // 4. 設置分析結果
@@ -588,6 +600,7 @@ function progressPercent(range: number[], maxValue: number) {
         :item-real-level="itemRealLevel"
         :node-bonuses="nodeBonuses"
         :temporary-gp="temporaryGp"
+        :selected-food="selectedFood"
         :has-relic-tool-bonus="collectableRelicToolBonusModel"
       />
 
@@ -949,9 +962,13 @@ function progressPercent(range: number[], maxValue: number) {
 }
 
 .save-preview-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   display: grid;
-  gap: 0.85rem;
-  padding: 0.95rem;
+  gap: 0.75rem;
+  padding: 0.85rem;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
@@ -966,13 +983,13 @@ function progressPercent(range: number[], maxValue: number) {
 .save-preview-item {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
   min-width: 0;
 }
 
 .save-preview-icon {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -1002,7 +1019,7 @@ function progressPercent(range: number[], maxValue: number) {
 .save-preview-info h4 {
   margin: 0;
   color: #1e293b;
-  font-size: 1.02rem;
+  font-size: 0.98rem;
   font-weight: 900;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -1054,17 +1071,19 @@ function progressPercent(range: number[], maxValue: number) {
 .save-preview-rows,
 .save-preview-metrics {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: 0.45rem;
 }
 
 .save-preview-row,
 .save-preview-metrics div,
 .save-preview-rotation {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   display: grid;
   gap: 0.25rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.62rem 0.7rem;
   border-radius: 12px;
   background: #f8fafc;
 }
@@ -1076,8 +1095,8 @@ function progressPercent(range: number[], maxValue: number) {
 }
 
 .save-preview-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 1fr;
+  align-items: start;
 }
 
 .save-preview-row span,
@@ -1104,7 +1123,7 @@ function progressPercent(range: number[], maxValue: number) {
 }
 
 .save-preview-row strong {
-  text-align: right;
+  text-align: left;
 }
 
 .save-preview-metrics small {
@@ -1123,44 +1142,41 @@ function progressPercent(range: number[], maxValue: number) {
 
 .save-preview-rotation-list {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .save-preview-icons {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .save-preview-action-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #52a890;
   color: white;
 }
 
 .save-preview-arrow {
   color: #cbd5e1;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
 :global(html.dark .save-preview-arrow) {
   color: #64748b;
 }
 
-@media (min-width: 640px) {
-  .save-preview-rows,
-  .save-preview-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 :global(html.dark .panel) {
   border-color: #334155;
   background: #0f172a;
