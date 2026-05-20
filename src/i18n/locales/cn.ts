@@ -104,8 +104,13 @@ export default {
       {
         q: '为什么要把兔肉冷冻起来，可以烤来吃吗？',
         a: '不可以'
+      },
+      {
+        q: '关于网站现在的状态',
+        a: '网站现在在超先行测试运行中，很多东西还不是稳定状态，但同时也在搜集各方的意见，有 Bug 或任何意见欢迎前往 <a href="https://github.com/emu-rabbit/frozen_rabbit_tome/issues" target="_blank" rel="noreferrer" class="text-soft-green-600 hover:text-soft-green-700 font-bold underline decoration-dotted underline-offset-4 transition-colors">GitHub Issues</a> 告诉我唷'
       }
-    ]
+    ],
+    footer: '还有其他疑问吗？欢迎通过 GitHub 回报或来信联系：{email}'
   },
   createGuide: {
     title: '请选择待采集物品',

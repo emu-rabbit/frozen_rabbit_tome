@@ -43,14 +43,21 @@ const faqItems = computed(() => tm('faq.items') as FaqItem[]);
                 <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0 font-bold text-lg">
                   A
                 </div>
-                <p class="flex-1 text-slate-600 dark:text-slate-400 leading-relaxed py-1">
-                  {{ item.a }}
-                </p>
+                <div
+                  class="flex-1 text-slate-600 dark:text-slate-400 leading-relaxed py-1"
+                  v-html="item.a"
+                />
               </div>
             </div>
           </div>
         </div>
       </article>
     </div>
+
+    <footer class="mt-12 pt-8 border-t border-soft-green-100 dark:border-slate-800 text-center">
+      <p class="text-sm text-slate-400 dark:text-slate-500">
+        {{ t('faq.footer', { email: 'mausu2526@gmail.com' }) }}
+      </p>
+    </footer>
   </div>
 </template>

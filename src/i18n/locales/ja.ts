@@ -104,8 +104,13 @@ export default {
       {
         q: 'どうしてうさぎを冷凍するのですか？焼いて食べてもいいですか？',
         a: 'ダメです。'
+      },
+      {
+        q: 'サイトの現在の状態について',
+        a: 'このサイトは現在アルファテスト段階にあり、多くの機能が不安定な状態です。現在、皆様からのフィードバックを募集しています。バグ報告や改善の提案がありましたら、お気軽に <a href="https://github.com/emu-rabbit/frozen_rabbit_tome/issues" target="_blank" rel="noreferrer" class="text-soft-green-600 hover:text-soft-green-700 font-bold underline decoration-dotted underline-offset-4 transition-colors">GitHub Issues</a> までお寄せください！'
       }
-    ]
+    ],
+    footer: '他に質問がありますか？GitHubでの報告、またはメールでお問い合わせください：{email}'
   },
   createGuide: {
     title: '採集アイテムの選択',
