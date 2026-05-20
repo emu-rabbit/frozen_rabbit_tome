@@ -90,6 +90,10 @@ export default {
         a: 'The solver expands every possible action branch, scores each branch against your selected goal, then chooses from the highest-scoring results. When multiple sequences tie, it prefers the casting order that better matches common player habits.'
       },
       {
+        q: 'Why are crystal items unsupported, and why are Brazen Prospector / Brazen Woodsman and Collector\'s High Standard outside the solver search?',
+        a: 'We do not yet know the detailed formulas and probability distributions for The Giving Land, Brazen Prospector / Brazen Woodsman, and Collector\'s High Standard. Brazen actions also expand the search tree very aggressively, which can create a heavy computation load. Once there is enough data or a solid approach, Frozen Rabbit will work them into the tool as soon as possible.'
+      },
+      {
         q: 'Why are macros described as semi-automatic?',
         a: 'Gathering itself still requires the player to click the in-game gathering menu, so a macro cannot complete the entire gathering session for you. Collectable gathering also does not support macros because it depends on judging the current on-screen state and choosing the next action accordingly.'
       },
@@ -106,7 +110,7 @@ export default {
   createGuide: {
     title: 'Select Item to Gather',
     description: 'Search and select an item here to enter the solver and calculate the recommended gathering rotation.',
-    dataScope: 'Only Miner & Botanist items are shown.',
+    dataScope: 'Only Miner & Botanist items are shown; crystal items are not supported yet.',
     searchPlaceholder: 'Search by name, or try English if not found',
     loading: 'Loading data, please wait…',
     noResults: 'No items found. Try searching in English.',
@@ -123,7 +127,7 @@ export default {
   createExperiment: {
     title: 'Select Item to Gather',
     description: 'Search and select an item here to enter the simulator for experiments and analysis.',
-    dataScope: 'Only Miner & Botanist items are shown.'
+    dataScope: 'Only Miner & Botanist items are shown; crystal items are not supported yet.'
   },
   favoriteItems: {
     title: 'Favorite Items',
