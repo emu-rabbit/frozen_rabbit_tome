@@ -821,6 +821,23 @@ export default {
       nextCollectSuccessBonus: '下次採集成功率',
       wiseToTheWorldActive: '理智同興'
     },
+    fieldDescriptions: {
+      collectability: '目前收藏價值。常用來判斷要繼續提煉，還是已達目標檔位可以開始採集。',
+      integrity: '目前剩餘耐久。常用來判斷是否該收尾、繼續提煉，或先恢復耐久。',
+      gp: '目前剩餘 GP。常用來限制集中檢查、價值矚目、預備碰觸與恢復耐久等耗 GP 技能。',
+      scrutinyActive: '集中檢查是否已啟用。啟用後會強化下一次提煉類技能，提煉後消耗。',
+      collectorsFocusActive: '價值矚目是否已啟用。啟用後會提高下一次提煉類技能的價值提升機率，提煉後消耗。',
+      primingTouchActive: '預備碰觸是否已啟用。啟用後只影響下一次慎重提煉的不消耗耐久機率。',
+      standardActive: '洞察是否已觸發。常用來讓有洞察的分支改走慎重提煉或其他高價值判斷。',
+      wiseToTheWorldActive: '理智同興是否可用。通常用來在觸發後立刻免費恢復 1 點耐久。',
+      successIActive: '獲得率 I 是否已套用。用來避免重複使用同階成功率補強。',
+      successIIActive: '獲得率 II 是否已套用。用來避免重複使用同階成功率補強。',
+      successIIIActive: '獲得率 III 是否已套用。用來避免重複使用同階成功率補強。',
+      successBonus: '目前整個採集點已累積的收藏品採集成功率加成，來自獲得率 I/II/III。',
+      nextCollectSuccessBonus: '只套用在下一次收藏品採集的成功率加成，採集一次後就會消耗。',
+      hasUsedCollectableAction: '是否已使用過提煉或收藏品採集類動作。多半是進階分支或偵錯用的流程旗標。',
+      hasCollected: '是否已經按過收藏品採集。多半用來區分採集前後的進階收尾規則。'
+    },
     nodeState: 'GP {gp} / 耐久 {integrity} / 收藏價值 {collectability}',
     chips: {
       scrutinyActive: '集中檢查',

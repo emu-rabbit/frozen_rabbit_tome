@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildCollectableStrategyTree,
+  collectableStrategyFields,
   createSimpleCollectableStrategyRules,
   type CollectableStrategyRule
 } from './collectableStrategyTree';
@@ -22,6 +23,26 @@ function rule(id: string, action: CollectableStrategyRule['actions'][number]): C
 }
 
 describe('collectableStrategyTree', () => {
+  it('策略條件欄位會依常用決策順序排列，並集中成功率相關欄位', () => {
+    expect(collectableStrategyFields).toEqual([
+      'collectability',
+      'integrity',
+      'gp',
+      'scrutinyActive',
+      'collectorsFocusActive',
+      'primingTouchActive',
+      'standardActive',
+      'wiseToTheWorldActive',
+      'successIActive',
+      'successIIActive',
+      'successIIIActive',
+      'successBonus',
+      'nextCollectSuccessBonus',
+      'hasUsedCollectableAction',
+      'hasCollected'
+    ]);
+  });
+
   it('簡單範例會在未達最高檔前慎重提煉，達最高檔後收藏品採集', () => {
     const rules = createSimpleCollectableStrategyRules({
       highTierCollectability: 800,

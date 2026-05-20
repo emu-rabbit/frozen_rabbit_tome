@@ -809,6 +809,23 @@ export default {
       nextCollectSuccessBonus: '下次采集成功率',
       wiseToTheWorldActive: '理智同兴'
     },
+    fieldDescriptions: {
+      collectability: '当前收藏价值。常用于判断要继续提炼，还是已达目标档位可以开始采集。',
+      integrity: '当前剩余耐久。常用于判断是否该收尾、继续提炼，或先恢复耐久。',
+      gp: '当前剩余 GP。常用于限制集中检查、价值瞩目、预备碰触与恢复耐久等耗 GP 技能。',
+      scrutinyActive: '集中检查是否已启用。启用后会强化下一次提炼类技能，提炼后消耗。',
+      collectorsFocusActive: '价值瞩目是否已启用。启用后会提高下一次提炼类技能的价值提升概率，提炼后消耗。',
+      primingTouchActive: '预备碰触是否已启用。启用后只影响下一次慎重提炼的不消耗耐久概率。',
+      standardActive: '洞察是否已触发。常用于让有洞察的分支改走慎重提炼或其他高价值判断。',
+      wiseToTheWorldActive: '理智同兴是否可用。通常用于在触发后立刻免费恢复 1 点耐久。',
+      successIActive: '获得率 I 是否已套用。用于避免重复使用同阶成功率补强。',
+      successIIActive: '获得率 II 是否已套用。用于避免重复使用同阶成功率补强。',
+      successIIIActive: '获得率 III 是否已套用。用于避免重复使用同阶成功率补强。',
+      successBonus: '当前整个采集点已累积的收藏品采集成功率加成，来自获得率 I/II/III。',
+      nextCollectSuccessBonus: '只套用在下一次收藏品采集的成功率加成，采集一次后就会消耗。',
+      hasUsedCollectableAction: '是否已使用过提炼或收藏品采集类动作。多半是进阶分支或调试用的流程标记。',
+      hasCollected: '是否已经按过收藏品采集。多半用于区分采集前后的进阶收尾规则。'
+    },
     nodeState: 'GP {gp} / 耐久 {integrity} / 收藏价值 {collectability}',
     chips: {
       scrutinyActive: '集中检查',

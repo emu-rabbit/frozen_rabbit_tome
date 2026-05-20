@@ -809,6 +809,23 @@ export default {
       nextCollectSuccessBonus: '次回採集成功率',
       wiseToTheWorldActive: '理知興起'
     },
+    fieldDescriptions: {
+      collectability: '現在の収集価値です。目標段階まで純化を続けるか、採集を始めるかの判断に使います。',
+      integrity: '現在の残り耐久です。締めに入るか、純化を続けるか、先に耐久を回復するかの判断に使います。',
+      gp: '現在の残り GP です。集中検分、バリューフォーカス、プライミングタッチ、耐久回復など GP を使うアクションの条件に使います。',
+      scrutinyActive: '集中検分が有効かどうかです。次の純化系アクションを強化し、その後消費されます。',
+      collectorsFocusActive: 'バリューフォーカスが有効かどうかです。次の純化系アクションの価値上昇率を上げ、その後消費されます。',
+      primingTouchActive: 'プライミングタッチが有効かどうかです。次の慎重純化の耐久消費なし確率だけに影響します。',
+      standardActive: '活眼が発動しているかどうかです。活眼ありの分岐を慎重純化など高価値の判断へ分ける時に使います。',
+      wiseToTheWorldActive: '理知興起が使用可能かどうかです。発動後にすぐ無料で耐久を 1 回復する判断によく使います。',
+      successIActive: '採集成功率 I が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',
+      successIIActive: '採集成功率 II が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',
+      successIIIActive: '採集成功率 III が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',
+      successBonus: '採集場所全体に累積している収集品採集成功率ボーナスです。採集成功率 I/II/III から加算されます。',
+      nextCollectSuccessBonus: '次の収集品採集だけに適用される成功率ボーナスです。採集を 1 回試すと消費されます。',
+      hasUsedCollectableAction: '純化または収集品採集を使ったことがあるかどうかです。主に上級分岐やデバッグ用の進行フラグです。',
+      hasCollected: '収集品採集を押したことがあるかどうかです。主に採集前後を分ける上級の締めルールに使います。'
+    },
     nodeState: 'GP {gp} / 耐久 {integrity} / 収集価値 {collectability}',
     chips: {
       scrutinyActive: '集中検分',

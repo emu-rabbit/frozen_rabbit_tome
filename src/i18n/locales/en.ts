@@ -820,6 +820,23 @@ export default {
       nextCollectSuccessBonus: 'Next collect success bonus',
       wiseToTheWorldActive: 'Wise to the World'
     },
+    fieldDescriptions: {
+      collectability: 'Current collectability. Use it to decide whether to keep refining or start collecting after a target tier is reached.',
+      integrity: 'Current remaining integrity. Use it to decide whether to finish, keep refining, or restore integrity first.',
+      gp: 'Current remaining GP. Use it to gate GP-cost actions such as Scrutiny, Collector\'s Focus, Priming Touch, and integrity recovery.',
+      scrutinyActive: 'Whether Scrutiny is active. It strengthens the next refine action, then is consumed.',
+      collectorsFocusActive: 'Whether Collector\'s Focus is active. It raises the value-increase chance for the next refine action, then is consumed.',
+      primingTouchActive: 'Whether Priming Touch is active. It only affects the next Meticulous integrity-save chance.',
+      standardActive: 'Whether Collector\'s Standard is active. Use it to route Standard branches toward Meticulous or another high-value choice.',
+      wiseToTheWorldActive: 'Whether Wise to the World is available. Usually used to immediately restore 1 integrity for free after it procs.',
+      successIActive: 'Whether Gathering Rate I has been applied. Use it to avoid repeating the same success-rate buff tier.',
+      successIIActive: 'Whether Gathering Rate II has been applied. Use it to avoid repeating the same success-rate buff tier.',
+      successIIIActive: 'Whether Gathering Rate III has been applied. Use it to avoid repeating the same success-rate buff tier.',
+      successBonus: 'The node-wide collect success bonus currently accumulated from Gathering Rate I/II/III.',
+      nextCollectSuccessBonus: 'The success bonus for only the next Collect action. It is consumed after one Collect attempt.',
+      hasUsedCollectableAction: 'Whether any refine or Collect action has been used. Mostly a flow flag for advanced branches or debugging.',
+      hasCollected: 'Whether Collect has already been pressed. Mostly useful for advanced finish rules before or after collecting.'
+    },
     nodeState: 'GP {gp} / Integrity {integrity} / Collectability {collectability}',
     chips: {
       scrutinyActive: 'Scrutiny',

@@ -11,8 +11,7 @@ import { analyzeCollectableStrategyTree, type CollectableStrategyAnalysis } from
 import {
   buildCollectableStrategyTree,
   collectableStrategyActionKinds,
-  collectableStrategyBooleanFields,
-  collectableStrategyNumericFields,
+  collectableStrategyFields,
   createDefaultCollectableStrategyRules,
   createSimpleCollectableStrategyRules,
   isNumericStrategyField,
@@ -87,8 +86,11 @@ const selectedUncoveredIndex = computed(() => {
   return index >= 0 ? index : 0;
 });
 const stateFieldOptions = computed(() => [
-  ...collectableStrategyNumericFields.map((field) => ({ field, label: fieldLabel(field), type: 'number' })),
-  ...collectableStrategyBooleanFields.map((field) => ({ field, label: fieldLabel(field), type: 'boolean' }))
+  ...collectableStrategyFields.map((field) => ({
+    field,
+    label: fieldLabel(field),
+    type: isNumericStrategyField(field) ? 'number' : 'boolean'
+  }))
 ]);
 const ruleCoverage = computed(() => {
   const counts = new Map<string, number>();
@@ -311,6 +313,10 @@ function actionLevelRequirement(action: CollectableActionKind) {
 
 function fieldLabel(field: CollectableStrategyField) {
   return t(`collectableStrategyLab.fields.${field}`);
+}
+
+function fieldDescription(field: CollectableStrategyField) {
+  return t(`collectableStrategyLab.fieldDescriptions.${field}`);
 }
 
 function comparatorLabel(comparator: CollectableStrategyComparator) {
@@ -726,9 +732,13 @@ function makeId() {
                   </select>
                 </template>
 
-                <button type="button" class="icon-button" :title="t('collectableStrategyLab.editor.removeCondition')" @click="removeCondition(editingRule, condition.id)">
-                  <i class="pi pi-times"></i>
+                <button type="button" class="condition-remove-button" :title="t('collectableStrategyLab.editor.removeCondition')" @click="removeCondition(editingRule, condition.id)">
+                  <i class="pi pi-minus"></i>
                 </button>
+
+                <p class="condition-help">
+                  {{ fieldDescription(condition.field) }}
+                </p>
               </div>
               <button type="button" class="text-tool" @click="addCondition(editingRule)">
                 <i class="pi pi-plus"></i>
@@ -1406,6 +1416,37 @@ function makeId() {
   color: #99f6e4;
 }
 
+.condition-remove-button {
+  align-self: center;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fecdd3;
+  border-radius: 0.65rem;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.condition-remove-button:hover {
+  border-color: #fda4af;
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+:global(html.dark .condition-remove-button) {
+  border-color: rgb(244 63 94 / 0.35);
+  background: rgb(127 29 29 / 0.28);
+  color: #fda4af;
+}
+
+:global(html.dark .condition-remove-button:hover) {
+  border-color: rgb(251 113 133 / 0.55);
+  background: rgb(127 29 29 / 0.42);
+  color: #fecdd3;
+}
+
 .rule-mode-row {
   justify-content: flex-start;
   color: #64748b;
@@ -1482,6 +1523,7 @@ function makeId() {
 .condition-row {
   display: grid;
   grid-template-columns: minmax(9rem, 1.2fr) minmax(4.5rem, 0.45fr) minmax(5rem, 0.55fr) auto;
+  align-items: start;
   gap: 0.45rem;
 }
 
@@ -1489,8 +1531,21 @@ function makeId() {
   grid-column: auto;
 }
 
-.condition-row.is-boolean .icon-button {
+.condition-row.is-boolean .condition-remove-button {
   grid-column: 4;
+}
+
+.condition-help {
+  grid-column: 1 / -1;
+  margin: -0.15rem 0 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+:global(html.dark .condition-help) {
+  color: #94a3b8;
 }
 
 .text-tool {

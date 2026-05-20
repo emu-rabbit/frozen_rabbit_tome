@@ -141,6 +141,24 @@ export const collectableStrategyBooleanFields: CollectableStrategyBooleanField[]
   'wiseToTheWorldActive'
 ];
 
+export const collectableStrategyFields: CollectableStrategyField[] = [
+  'collectability',
+  'integrity',
+  'gp',
+  'scrutinyActive',
+  'collectorsFocusActive',
+  'primingTouchActive',
+  'standardActive',
+  'wiseToTheWorldActive',
+  'successIActive',
+  'successIIActive',
+  'successIIIActive',
+  'successBonus',
+  'nextCollectSuccessBonus',
+  'hasUsedCollectableAction',
+  'hasCollected'
+];
+
 export const collectableStrategyActionKinds: CollectableActionKind[] = [
   'collect',
   'scour',
