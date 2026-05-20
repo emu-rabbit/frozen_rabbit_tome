@@ -22,7 +22,7 @@ import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
 const router = useRouter();
-const { experiments, deleteExperiment, searchQuery, fromStoredRotationStep } = useExperimentLibrary();
+const { visibleExperiments, deleteExperiment, searchQuery, fromStoredRotationStep } = useExperimentLibrary();
 
 const copiedExperimentId = ref<string | null>(null);
 const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-experiment-database-display-mode', 'detailed');
@@ -35,9 +35,9 @@ let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 const filteredExperiments = computed(() => {
   currentLanguage.value;
   const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return experiments.value;
+  if (!query) return visibleExperiments.value;
 
-  return experiments.value.filter((experiment) => {
+  return visibleExperiments.value.filter((experiment) => {
     const customName = (experiment.name ?? '').toLowerCase();
     const localizedName = getItemName(experiment.itemId).toLowerCase();
     const englishName = getItemEnglishName(experiment.itemId).toLowerCase();

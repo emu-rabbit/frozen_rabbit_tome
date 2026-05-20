@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { isCrystalGatheringItemId, shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import type { GatherableItem, GatherableItemJobInfo, GatheringJob } from '../types/game';
 
 // ─── 常數設定 ───────────────────────────────────────────────────────────────
@@ -68,12 +69,6 @@ const SOLVER_ACTION_IDS = new Set([
   240, 22182, 22184, 22185, 22188, 22189, 21205, 34871
 ]);
 
-const CRYSTAL_GATHERING_ITEM_IDS = new Set([
-  2, 3, 4, 5, 6, 7, // Shards
-  8, 9, 10, 11, 12, 13, // Crystals
-  14, 15, 16, 17, 18, 19 // Clusters
-]);
-
 // ─── 輔助解析函數 ────────────────────────────────────────────────────────────
 
 function extractName(entry: any, lang: string): string {
@@ -115,10 +110,6 @@ function resolveIconPath(icon: string | number | { icon?: string | number; Icon?
   if (iconValue.startsWith('/i/')) return iconValue;
   const iconId = Number(iconValue);
   return Number.isFinite(iconId) ? iconIdToPath(iconId) : iconValue;
-}
-
-function isCrystalGatheringItem(itemId: number): boolean {
-  return CRYSTAL_GATHERING_ITEM_IDS.has(itemId);
 }
 
 function gatheringTypeToJob(typeId: number): GatheringJob {
@@ -177,7 +168,7 @@ function toGatherableItem(itemId: number, info: GatherableItemInfo): GatherableI
     isTimedNode: info.isTimedNode,
     iconUrl: getItemIcon(itemId),
     isFallback: !localeRaw && !!enRaw,
-    isCrystalGathering: isCrystalGatheringItem(itemId)
+    isCrystalGathering: isCrystalGatheringItemId(itemId)
   };
 }
 
@@ -383,6 +374,8 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
   if (!q || itemInfoMap.size === 0) return [];
   const results: GatherableItem[] = [];
   for (const [itemId, info] of itemInfoMap) {
+    if (shouldHideCrystalGatheringItem({ itemId })) continue;
+
     const localeRaw = extractName(rawTargetNames[itemId.toString()], currentLanguage.value);
     const enRaw = extractName(rawEnglishNames[itemId.toString()], 'en');
     const nameLocale = localeRaw || enRaw;
@@ -422,6 +415,8 @@ export function getItemIcon(itemId: number): string {
 }
 
 export function getGatherableItemById(itemId: number): GatherableItem | null {
+  if (shouldHideCrystalGatheringItem({ itemId })) return null;
+
   const info = itemInfoMap.get(itemId);
   if (!info) return null;
 

@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
+import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import type {
   FoodSelection,
   NodeBonuses,
@@ -39,7 +40,8 @@ function cloneStoragePayload<T>(payload: T): T {
 }
 
 export function useExperimentLibrary() {
-  const experimentCount = computed(() => experiments.value.length);
+  const visibleExperiments = computed(() => experiments.value.filter((experiment) => !shouldHideCrystalGatheringItem({ itemId: experiment.itemId })));
+  const experimentCount = computed(() => visibleExperiments.value.length);
 
   const saveExperiment = (payload: {
     name?: string;
@@ -52,6 +54,10 @@ export function useExperimentLibrary() {
     revisitRotation: string[];
     analysis: SimulationResponse;
   }) => {
+    if (shouldHideCrystalGatheringItem({ itemId: payload.itemId })) {
+      throw new Error('Crystal gathering items are hidden by configuration');
+    }
+
     const now = new Date().toISOString();
     const experiment: StoredExperiment = {
       id: createExperimentId(),
@@ -95,6 +101,10 @@ export function useExperimentLibrary() {
     analysis: StoredCollectableExperimentAnalysis;
     hasRelicToolBonus?: boolean;
   }) => {
+    if (shouldHideCrystalGatheringItem({ itemId: payload.itemId })) {
+      throw new Error('Crystal gathering items are hidden by configuration');
+    }
+
     const now = new Date().toISOString();
     const experiment: StoredExperiment = {
       id: createExperimentId(),
@@ -131,6 +141,7 @@ export function useExperimentLibrary() {
 
   return {
     experiments,
+    visibleExperiments,
     experimentCount,
     saveExperiment,
     saveCollectableExperiment,

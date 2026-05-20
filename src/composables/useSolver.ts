@@ -4,6 +4,7 @@ import type { FoodSelection, GatherableItem, GearStatProfile, GatheringJob, Play
 import { useSettings } from './useSettings';
 import { profileToStats, useGearProfiles } from './useGearProfiles';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity, getGatherableItemById } from '../services/gameData';
+import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse } from '../types/game';
@@ -17,6 +18,9 @@ type SyncFromSettingsOptions = {
 };
 
 const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-active-item', null);
+if (shouldHideCrystalGatheringItem(activeItem.value)) {
+  activeItem.value = null;
+}
 const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
   level: 100,
   gathering: 5345,
@@ -141,6 +145,8 @@ export function useSolver() {
   };
 
   const setSelectedItem = (item: GatherableItem) => {
+    if (shouldHideCrystalGatheringItem(item)) return;
+
     const isDifferentItem = activeItem.value?.itemId !== item.itemId;
 
     if (isDifferentItem) {

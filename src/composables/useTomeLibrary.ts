@@ -1,5 +1,6 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
+import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import type { FoodSelection, NodeBonuses, PlayerStats, SolverResponse, StoredTome, StoredTomeRotationPlan, StoredTomeRotationStep } from '../types/game';
 import type { CollectableSolverResult } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
@@ -25,7 +26,8 @@ function toStoredRotationStep(action: string): StoredTomeRotationStep | null {
 }
 
 export function useTomeLibrary() {
-  const tomeCount = computed(() => tomes.value.length);
+  const visibleTomes = computed(() => tomes.value.filter((tome) => !shouldHideCrystalGatheringItem({ itemId: tome.itemId })));
+  const tomeCount = computed(() => visibleTomes.value.length);
 
   const saveTome = (payload: {
     name?: string;
@@ -37,6 +39,10 @@ export function useTomeLibrary() {
     rotationResult?: SolverResponse;
     collectableResult?: CollectableSolverResult;
   }) => {
+    if (shouldHideCrystalGatheringItem({ itemId: payload.itemId })) {
+      throw new Error('Crystal gathering items are hidden by configuration');
+    }
+
     if (payload.collectableResult) {
       const tome: StoredTome = {
         kind: 'collectable',
@@ -127,6 +133,7 @@ export function useTomeLibrary() {
 
   return {
     tomes,
+    visibleTomes,
     tomeCount,
     saveTome,
     deleteTome

@@ -24,7 +24,7 @@ import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
 const router = useRouter();
-const { tomes, deleteTome } = useTomeLibrary();
+const { visibleTomes, deleteTome } = useTomeLibrary();
 const { loadTomeForEditing } = useSolver();
 const { macroSettings, solverSettings } = useSettings();
 const searchQuery = ref('');
@@ -40,9 +40,9 @@ const displayModeOptions = computed(() => [
 const filteredTomes = computed(() => {
   currentLanguage.value;
   const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return tomes.value;
+  if (!query) return visibleTomes.value;
 
-  return tomes.value.filter((tome) => {
+  return visibleTomes.value.filter((tome) => {
     const customName = (tome.name ?? '').toLowerCase();
     const localizedName = getItemName(tome.itemId).toLowerCase();
     const englishName = getItemEnglishName(tome.itemId).toLowerCase();

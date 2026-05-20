@@ -9,6 +9,7 @@ import GatheringItemCard from '../components/GatheringItemCard.vue';
 import { useFavoriteItems } from '../composables/useFavoriteItems';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useSolver } from '../composables/useSolver';
+import { shouldHideCrystalGatheringItem, showCrystalGathering } from '../config/crystalGathering';
 import { getGatherableItemById, isGameDataLoading } from '../services/gameData';
 import type { GatherableItem, GatheringJob } from '../types/game';
 import { gatherableItemSupportsJob } from '../utils/gatherableItemJobs';
@@ -25,12 +26,14 @@ interface FavoriteItemFilters {
 }
 
 const ALL_JOBS: FavoriteFilterJob[] = ['miner', 'botanist'];
-const ALL_SYSTEMS: FavoriteFilterSystem[] = ['regular', 'collectable', 'crystal'];
+const ALL_SYSTEMS: FavoriteFilterSystem[] = showCrystalGathering
+  ? ['regular', 'collectable', 'crystal']
+  : ['regular', 'collectable'];
 const FILTER_STORAGE_KEY = 'frozen-rabbit-tome-favorite-item-filters';
 
 const { t } = useI18n();
 const router = useRouter();
-const { favoriteItems, favoriteCount, removeFavorite } = useFavoriteItems();
+const { visibleFavoriteItems, favoriteCount, removeFavorite } = useFavoriteItems();
 const { setSelectedItem: setSolverItem } = useSolver();
 const { setSelectedItem: setSimulatorItem } = useSimulatorStats();
 const selectedItem = ref<GatherableItem | null>(null);
@@ -44,15 +47,18 @@ const filters = useLocalStorage<FavoriteItemFilters>(FILTER_STORAGE_KEY, {
 });
 filters.value = normalizeFilters(filters.value);
 
-const displayItems = computed<GatherableItem[]>(() => favoriteItems.value.reduce<GatherableItem[]>((items, favorite) => {
+const displayItems = computed<GatherableItem[]>(() => visibleFavoriteItems.value.reduce<GatherableItem[]>((items, favorite) => {
     const item = getGatherableItemById(favorite.itemId);
     if (!item) return items;
 
-    items.push({
+    const displayItem = {
       ...item,
       isCollectable: favorite.isCollectable ?? item.isCollectable,
       isCrystalGathering: favorite.isCrystalGathering ?? item.isCrystalGathering
-    });
+    };
+    if (shouldHideCrystalGatheringItem(displayItem)) return items;
+
+    items.push(displayItem);
 
     return items;
   }, []));
@@ -137,7 +143,7 @@ function isLimitedSelection<T>(selected: T[], allOptions: T[]) {
 
 function itemSystem(item: GatherableItem): FavoriteFilterSystem {
   if (item.isCollectable) return 'collectable';
-  if (item.isCrystalGathering) return 'crystal';
+  if (showCrystalGathering && item.isCrystalGathering) return 'crystal';
   return 'regular';
 }
 

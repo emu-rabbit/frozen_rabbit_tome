@@ -3,6 +3,7 @@ import type { FoodSelection, GatherableItem, GearStatProfile, GatheringJob, Play
 import { useSettings } from './useSettings';
 import { profileToStats, useGearProfiles } from './useGearProfiles';
 import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading, getItemBaseIntegrity } from '../services/gameData';
+import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import { useSimulator } from './useSimulator';
@@ -113,6 +114,8 @@ export function useSimulatorStats() {
 
   // ── 選擇物品：相同物品保留現有狀態；不同物品完整重置 ──
   const setSelectedItem = (item: GatherableItem) => {
+    if (shouldHideCrystalGatheringItem(item)) return;
+
     const isSameItem = activeItem.value?.itemId === item.itemId;
 
     if (isSameItem) {
