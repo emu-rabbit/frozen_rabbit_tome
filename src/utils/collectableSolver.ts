@@ -45,7 +45,8 @@ interface SearchResult {
   expectedReward: CollectableRewardVector;
   expectedTierCounts: CollectableTierCounts;
   outcomes: Map<number, number>;
-  outcomeDetails: Map<string, OutcomeDetail>;
+  minScoreDetail: OutcomeDetail;
+  maxScoreDetail: OutcomeDetail;
   recommendedActionKind: CollectableActionKind;
   habit: SearchHabitMetrics;
   gpSpent: number;
@@ -180,11 +181,16 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         expectedReward: createZeroReward(),
         expectedTierCounts: createZeroTierCounts(),
         outcomes: new Map([[0, 1]]),
-        outcomeDetails: new Map([[outcomeDetailKey(0, createZeroTierCounts()), {
+        minScoreDetail: {
           score: 0,
           probability: 1,
           tierCounts: createZeroTierCounts()
-        }]]),
+        },
+        maxScoreDetail: {
+          score: 0,
+          probability: 1,
+          tierCounts: createZeroTierCounts()
+        },
         recommendedActionKind: 'collect',
         habit: emptyHabitMetrics(),
         gpSpent: 0,
@@ -380,14 +386,16 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       activeSearchStats && (activeSearchStats.branchCount += 1);
     });
     const outcomes = mergeOutcomeDistributions(branches, results);
-    const outcomeDetails = mergeOutcomeDetails(branches, results);
+    const minScore = getMinScore(outcomes);
+    const maxScore = getMaxScore(outcomes);
 
     return {
       expectedScore,
       expectedReward,
       expectedTierCounts,
       outcomes,
-      outcomeDetails,
+      minScoreDetail: representativeOutcomeDetailForScore(branches, results, minScore, 'min'),
+      maxScoreDetail: representativeOutcomeDetailForScore(branches, results, maxScore, 'max'),
       recommendedActionKind: kind,
       habit: buildHabitMetrics(state, kind, results),
       gpSpent: gpSpent + weightedSum(results, branches, 'gpSpent'),
@@ -414,26 +422,106 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     return outcomes;
   }
 
-  function mergeOutcomeDetails(branches: WeightedState[], results: SearchResult[]) {
+  function representativeOutcomeDetailForScore(
+    branches: WeightedState[],
+    results: SearchResult[],
+    score: number,
+    direction: 'min' | 'max'
+  ): OutcomeDetail {
     const details = new Map<string, OutcomeDetail>();
 
     branches.forEach((branch, index) => {
       const immediateScore = scoreImmediateBranch(branch);
       const immediateTierCounts = branch.tierCounts ?? createZeroTierCounts();
-      results[index].outcomeDetails.forEach((child) => {
-        const totalScore = immediateScore + child.score;
-        const totalTierCounts = addCollectableTierCounts(immediateTierCounts, child.tierCounts);
-        const key = outcomeDetailKey(totalScore, totalTierCounts);
-        const current = details.get(key);
-        details.set(key, {
-          score: totalScore,
-          probability: (current?.probability ?? 0) + child.probability * branch.probability,
-          tierCounts: totalTierCounts
-        });
+      const childDetail = direction === 'min' ? results[index].minScoreDetail : results[index].maxScoreDetail;
+      if (immediateScore + childDetail.score !== score) return;
+
+      const totalScore = immediateScore + childDetail.score;
+      const totalTierCounts = addCollectableTierCounts(immediateTierCounts, childDetail.tierCounts);
+      const key = outcomeDetailKey(totalScore, totalTierCounts);
+      const current = details.get(key);
+      details.set(key, {
+        score: totalScore,
+        probability: (current?.probability ?? 0) + childDetail.probability * branch.probability,
+        tierCounts: totalTierCounts
       });
     });
 
-    return details;
+    return pickRepresentativeOutcomeDetail([...details.values()], score, direction);
+  }
+
+  function detailWithWeight(detail: OutcomeDetail, weight: number): OutcomeDetail {
+    return {
+      ...detail,
+      probability: detail.probability * weight
+    };
+  }
+
+  function combineSequentialExtremeDetails(
+    left: OutcomeDetail,
+    right: OutcomeDetail,
+    weight: number
+  ): OutcomeDetail {
+    return {
+      score: left.score + right.score,
+      probability: left.probability * right.probability * weight,
+      tierCounts: addCollectableTierCounts(left.tierCounts, right.tierCounts)
+    };
+  }
+
+  function representativeCombinedDetailForScore(
+    score: number,
+    direction: 'min' | 'max',
+    noRevisitWeight: number,
+    revisitWeight: number
+  ): OutcomeDetail {
+    const primaryDetail = direction === 'min' ? initial.minScoreDetail : initial.maxScoreDetail;
+    const revisitPrimaryDetail = direction === 'min' ? initial.minScoreDetail : initial.maxScoreDetail;
+    const revisitFullDetail = direction === 'min' ? fullGpResult.minScoreDetail : fullGpResult.maxScoreDetail;
+    const candidates: OutcomeDetail[] = [];
+
+    if (primaryDetail.score === score) {
+      candidates.push(detailWithWeight(primaryDetail, noRevisitWeight));
+    }
+
+    if (revisitPrimaryDetail.score + revisitFullDetail.score === score) {
+      candidates.push(combineSequentialExtremeDetails(revisitPrimaryDetail, revisitFullDetail, revisitWeight));
+    }
+
+    return pickRepresentativeOutcomeDetail(candidates, score, direction);
+  }
+
+  function pickRepresentativeOutcomeDetail(
+    candidates: OutcomeDetail[],
+    score: number,
+    direction: 'min' | 'max'
+  ): OutcomeDetail {
+    if (candidates.length === 0) {
+      return {
+        score,
+        probability: 0,
+        tierCounts: createZeroTierCounts()
+      };
+    }
+
+    return candidates.sort(compareOutcomeDetails(direction))[0];
+  }
+
+  function compareOutcomeDetails(direction: 'min' | 'max') {
+    return (left: OutcomeDetail, right: OutcomeDetail) => {
+      if (right.probability !== left.probability) return right.probability - left.probability;
+      const highDiff = direction === 'max'
+        ? right.tierCounts.high - left.tierCounts.high
+        : left.tierCounts.high - right.tierCounts.high;
+      if (highDiff !== 0) return highDiff;
+      const midDiff = direction === 'max'
+        ? right.tierCounts.mid - left.tierCounts.mid
+        : left.tierCounts.mid - right.tierCounts.mid;
+      if (midDiff !== 0) return midDiff;
+      return direction === 'max'
+        ? right.tierCounts.low - left.tierCounts.low
+        : left.tierCounts.low - right.tierCounts.low;
+    };
   }
 
   function scoreImmediateBranch(branch: WeightedState) {
@@ -635,21 +723,19 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const initialSummary = summarizeOutcomes(initial.outcomes);
   const fullGpSummary = summarizeOutcomes(fullGpResult.outcomes);
   const revisitOutcomes = combineSequentialOutcomes(initial.outcomes, fullGpResult.outcomes);
-  const revisitOutcomeDetails = combineSequentialOutcomeDetails(initial.outcomeDetails, fullGpResult.outcomeDetails);
   const combinedOutcomes = revisitEnabled
     ? mergeWeightedOutcomeMaps([
         { outcomes: initial.outcomes, weight: 1 - revisitChance },
         { outcomes: revisitOutcomes, weight: revisitChance }
       ])
     : initial.outcomes;
-  const combinedOutcomeDetails = revisitEnabled
-    ? mergeWeightedOutcomeDetails([
-        { details: initial.outcomeDetails, weight: 1 - revisitChance },
-        { details: revisitOutcomeDetails, weight: revisitChance }
-      ])
-    : initial.outcomeDetails;
   const combinedSummary = summarizeOutcomes(combinedOutcomes);
-  const combinedTierSummary = summarizeTierCountsForScores(combinedOutcomeDetails, combinedSummary.minScore, combinedSummary.maxScore);
+  const combinedMinDetail = revisitEnabled
+    ? representativeCombinedDetailForScore(combinedSummary.minScore, 'min', 1 - revisitChance, revisitChance)
+    : initial.minScoreDetail;
+  const combinedMaxDetail = revisitEnabled
+    ? representativeCombinedDetailForScore(combinedSummary.maxScore, 'max', 1 - revisitChance, revisitChance)
+    : initial.maxScoreDetail;
   const expectedScore = expectedValue(combinedOutcomes);
   const expectedReward = revisitEnabled
     ? addCollectableRewards(initial.expectedReward, fullGpResult.expectedReward, revisitChance)
@@ -672,8 +758,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         maxScoreChance: initialSummary.maxScoreChance,
         expectedReward: initial.expectedReward,
         expectedTierCounts: initial.expectedTierCounts,
-        minScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).minScoreTierCounts,
-        maxScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).maxScoreTierCounts,
+        minScoreTierCounts: initial.minScoreDetail.tierCounts,
+        maxScoreTierCounts: initial.maxScoreDetail.tierCounts,
         policy: primaryPolicy
       }]
     : [
@@ -687,8 +773,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           maxScoreChance: initialSummary.maxScoreChance,
           expectedReward: initial.expectedReward,
           expectedTierCounts: initial.expectedTierCounts,
-          minScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).minScoreTierCounts,
-          maxScoreTierCounts: summarizeTierCountsForScores(initial.outcomeDetails, initialSummary.minScore, initialSummary.maxScore).maxScoreTierCounts,
+          minScoreTierCounts: initial.minScoreDetail.tierCounts,
+          maxScoreTierCounts: initial.maxScoreDetail.tierCounts,
           policy: primaryPolicy
         },
         {
@@ -701,8 +787,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           maxScoreChance: fullGpSummary.maxScoreChance,
           expectedReward: fullGpResult.expectedReward,
           expectedTierCounts: fullGpResult.expectedTierCounts,
-          minScoreTierCounts: summarizeTierCountsForScores(fullGpResult.outcomeDetails, fullGpSummary.minScore, fullGpSummary.maxScore).minScoreTierCounts,
-          maxScoreTierCounts: summarizeTierCountsForScores(fullGpResult.outcomeDetails, fullGpSummary.minScore, fullGpSummary.maxScore).maxScoreTierCounts,
+          minScoreTierCounts: fullGpResult.minScoreDetail.tierCounts,
+          maxScoreTierCounts: fullGpResult.maxScoreDetail.tierCounts,
           policy: revisitPolicy
         }
       ];
@@ -716,8 +802,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     objective,
     expectedReward,
     expectedTierCounts,
-    minScoreTierCounts: combinedTierSummary.minScoreTierCounts,
-    maxScoreTierCounts: combinedTierSummary.maxScoreTierCounts,
+    minScoreTierCounts: combinedMinDetail.tierCounts,
+    maxScoreTierCounts: combinedMaxDetail.tierCounts,
     rewardItemId: rewardTable.rewardItemId,
     policyPlans,
     revisit: {
@@ -923,82 +1009,6 @@ function mergeWeightedOutcomeMaps(parts: Array<{ outcomes: Map<number, number>; 
   });
 
   return outcomes;
-}
-
-function combineSequentialOutcomeDetails(
-  left: Map<string, OutcomeDetail>,
-  right: Map<string, OutcomeDetail>
-) {
-  const details = new Map<string, OutcomeDetail>();
-
-  left.forEach((leftDetail) => {
-    right.forEach((rightDetail) => {
-      const score = leftDetail.score + rightDetail.score;
-      const tierCounts = addCollectableTierCounts(leftDetail.tierCounts, rightDetail.tierCounts);
-      const probability = leftDetail.probability * rightDetail.probability;
-      const key = outcomeDetailKey(score, tierCounts);
-      const current = details.get(key);
-      details.set(key, {
-        score,
-        probability: (current?.probability ?? 0) + probability,
-        tierCounts
-      });
-    });
-  });
-
-  return details;
-}
-
-function mergeWeightedOutcomeDetails(parts: Array<{ details: Map<string, OutcomeDetail>; weight: number }>) {
-  const details = new Map<string, OutcomeDetail>();
-
-  parts.forEach((part) => {
-    part.details.forEach((detail) => {
-      const key = outcomeDetailKey(detail.score, detail.tierCounts);
-      const current = details.get(key);
-      details.set(key, {
-        ...detail,
-        probability: (current?.probability ?? 0) + detail.probability * part.weight
-      });
-    });
-  });
-
-  return details;
-}
-
-function summarizeTierCountsForScores(
-  details: Map<string, OutcomeDetail>,
-  minScore: number,
-  maxScore: number
-) {
-  return {
-    minScoreTierCounts: representativeTierCountsForScore(details, minScore, 'min'),
-    maxScoreTierCounts: representativeTierCountsForScore(details, maxScore, 'max')
-  };
-}
-
-function representativeTierCountsForScore(
-  details: Map<string, OutcomeDetail>,
-  score: number,
-  direction: 'min' | 'max'
-) {
-  const matches = [...details.values()].filter((detail) => detail.score === score);
-  if (matches.length === 0) return createZeroTierCounts();
-
-  return matches.sort((left, right) => {
-    if (right.probability !== left.probability) return right.probability - left.probability;
-    const highDiff = direction === 'max'
-      ? right.tierCounts.high - left.tierCounts.high
-      : left.tierCounts.high - right.tierCounts.high;
-    if (highDiff !== 0) return highDiff;
-    const midDiff = direction === 'max'
-      ? right.tierCounts.mid - left.tierCounts.mid
-      : left.tierCounts.mid - right.tierCounts.mid;
-    if (midDiff !== 0) return midDiff;
-    return direction === 'max'
-      ? right.tierCounts.low - left.tierCounts.low
-      : left.tierCounts.low - right.tierCounts.low;
-  })[0].tierCounts;
 }
 
 function outcomeDetailKey(score: number, tierCounts: CollectableTierCounts) {
