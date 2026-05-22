@@ -14,22 +14,19 @@
    - 讓節點狀態、分支路徑、關鍵機率與預測落點更視覺化。
    - 目標是幫使用者更容易做策略決策。
 
-3. **檢查精選物品分類**
-   - 檢查 `Calamus Root` 與 `Levin Quartz` 為何未正確進入收藏品 / 精選流程。
-
-4. **分享、匯出、復現資料**
+3. **分享、匯出、復現資料**
    - 整理 JSON export/import，使其足以重現結果，但避免輸出過多噪音。
    - 保留未來 Discord 分享、指南引用、第三方復現的可能性。
 
-5. **新增兩個報表比較功能**
+4. **新增兩個報表比較功能**
    - 讓使用者比較兩份分析報表，例如 spiritbond rotation vs normal rotation。
    - 優先考慮一般採集實驗區與收藏品實驗區的共用比較模型。
 
-6. **效能與 OOM 壓力測試**
+5. **效能與 OOM 壓力測試**
    - 特別關注低 Gathering/Perception、高 GP 的版本初期情境。
    - 這是較偏後端 / 演算法品質的項目。
 
-7. **Frontier 實驗區**
+6. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
 
@@ -109,29 +106,7 @@ Shikhu 認為收藏品工具同時有「資訊太多」與「資訊不夠」的�
 - 對 value increase、Standard、Wise、Revisit 等隨機事件使用一致圖示與短文字。
 - 在節點旁加入一個 compact formula panel，顯示玩家當下決策最需要看的幾個機率。
 
-## 3. 檢查精選物品分類
-
-### 背景
-
-Shikhu 測試 `Calamus Root` 與 `Levin Quartz` 時，表示它們沒有作為 collectables 開啟，因此無法判斷目前 scoring preference 是否足以支援精選需求。
-
-### User Story
-
-作為想研究精選採集的玩家，我希望精選物品能正確進入收藏品 / 精選相關流程，這樣才能使用求解器或分析器評估手法。
-
-### 待查問題
-
-- `Calamus Root` 與 `Levin Quartz` 是否被資料來源標為 collectable / reduction item。
-- 目前 item classification 是否只支援一般收藏品 reward table，而漏掉 aetherial reduction。
-- 入口 UI 是否將 reduction source 排除或 fallback 到普通物品。
-- reward table 若缺資料，是否應顯示「精選 reward model 尚未完整支援」而不是完全不進收藏品模式。
-
-### 取捨
-
-- 精選 reward model 尚不完整，不應假裝支援完整靈砂收益。
-- 但即使 reward 不完整，仍可能先允許進入收藏品分析流程，並清楚標示限制。
-
-## 4. 分享、匯出、復現資料
+## 3. 分享、匯出、復現資料
 
 ### 背景
 
@@ -161,7 +136,7 @@ Shikhu 提到希望能在 Discord 分享設定，也可能將 JSON 用於 Icy Ve
   - policy 或 strategy analysis 必要資料。
 - 未來若做 share code，先以普通採集或簡短 rotation 為主，不要先挑收藏品決策樹。
 
-## 5. 新增兩個報表比較功能
+## 4. 新增兩個報表比較功能
 
 ### 背景
 
@@ -188,7 +163,7 @@ Shikhu 提到一般採集模擬器 / 分析器可用於研究，例如比較 spi
 - 跨系統比較容易語意混亂，應延後。
 - 報表比較依賴穩定的 export/report schema，因此可與第 4 項一起規劃。
 
-## 6. 效能與 OOM 壓力測試
+## 5. 效能與 OOM 壓力測試
 
 ### 背景
 
@@ -214,7 +189,7 @@ Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的
 - 不能接受 OOM crash 或整頁崩潰。
 - 不可為了效能偷刪合法分支，除非 UI 明確標示模型限制。
 
-## 7. Frontier 實驗區
+## 6. Frontier 實驗區
 
 ### 背景
 
