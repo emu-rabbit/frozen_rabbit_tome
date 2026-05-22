@@ -572,7 +572,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 :style="`width: ${collectableScourProgress.toFixed(1)}%; background-color: #f59e0b;`"
               ></div>
             </div>
-            <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">MAX 200</p>
+            <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">{{ t('solver.results.maxValue', { value: 200 }) }}</p>
           </div>
         </div>
       </div>
@@ -755,7 +755,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ successRate }}</span>
                 <span class="text-xl font-bold text-slate-400">%</span>
               </template>
-              <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">未知</span>
+              <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">{{ t('solver.results.unknown') }}</span>
             </div>
             <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
               <div 
@@ -776,7 +776,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <span class="text-4xl font-black text-slate-800 dark:text-slate-100">{{ boonChance }}</span>
                 <span class="text-xl font-bold text-slate-400">%</span>
               </template>
-              <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">未知</span>
+              <span v-else class="text-3xl font-black text-red-500 dark:text-red-400">{{ t('solver.results.unknown') }}</span>
             </div>
             <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full mt-4 overflow-hidden border border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
               <div 
@@ -784,7 +784,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 :style="`width: ${isPerceptionMet ? (boonChance / 60 * 100).toFixed(1) : 0}%; background-color: #f59e0b;`"
               ></div>
             </div>
-            <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">MAX 60%</p>
+            <p class="text-[9px] text-slate-400 mt-2 font-bold text-right">{{ t('solver.results.maxPercent', { value: 60 }) }}</p>
           </div>
         </div>
       </div>

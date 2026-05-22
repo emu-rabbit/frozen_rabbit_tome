@@ -347,7 +347,10 @@ export default {
     },
     results: {
       gatheringRate: '基礎採集成功率',
-      boonRate: '基礎額外採集率'
+      boonRate: '基礎額外採集率',
+      unknown: '未知',
+      maxValue: '最高 {value}',
+      maxPercent: '最高 {value}%'
     },
     nodeBonusesTitle: '採集點數值',
     nodeBonuses: {

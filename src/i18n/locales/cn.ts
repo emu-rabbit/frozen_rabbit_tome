@@ -346,7 +346,10 @@ export default {
     },
     results: {
       gatheringRate: '基础采集成功率',
-      boonRate: '基础额外采集率'
+      boonRate: '基础额外采集率',
+      unknown: '未知',
+      maxValue: '最高 {value}',
+      maxPercent: '最高 {value}%'
     },
     nodeBonusesTitle: '采集点数值',
     nodeBonuses: {

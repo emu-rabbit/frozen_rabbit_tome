@@ -346,7 +346,10 @@ export default {
     },
     results: {
       gatheringRate: 'Base Gathering Rate',
-      boonRate: 'Base Boon Rate'
+      boonRate: 'Base Boon Rate',
+      unknown: 'Unknown',
+      maxValue: 'MAX {value}',
+      maxPercent: 'MAX {value}%'
     },
     nodeBonusesTitle: 'Node Values',
     nodeBonuses: {
