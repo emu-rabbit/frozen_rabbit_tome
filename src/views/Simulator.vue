@@ -6,7 +6,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
-import AutoComplete from 'primevue/autocomplete';
 import Select from 'primevue/select';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
@@ -16,22 +15,16 @@ import PendingFeature from '../components/PendingFeature.vue';
 import CollectableStrategyLab from '../components/CollectableStrategyLab.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
-import { GATHERING_FOODS } from '../services/foodData';
-import { getGatherableItemById, getItemEnglishName, getItemName, getItemBaseIntegrity } from '../services/gameData';
+import FoodAutoComplete from '../components/FoodAutoComplete.vue';
+import { getGatherableItemById, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { SimulationRequest } from '../utils/rotationSimulator';
-import type { FoodQuality, GearStatProfile, GatheringFood, SimulationResponse } from '../types/game';
+import type { GearStatProfile, SimulationResponse } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
-
-type FoodOption = {
-  food: GatheringFood;
-  quality: FoodQuality;
-  label: string;
-  searchText: string;
-};
+import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
 
 type RelicToolOption = {
   label: string;
@@ -72,7 +65,6 @@ const isSaved = ref(false);
 const isReportCopied = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
 const isGearProfilePickerOpen = ref(false);
-const foodSuggestions = ref<FoodOption[]>([]);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 const actionCategoryOrder = ['gather', 'success', 'boon', 'nextSuccess', 'nextYield', 'restore', 'wholeYield', 'boonYield'] as const;
@@ -87,7 +79,7 @@ const actionGroups = computed(() => actionCategoryOrder
   .filter((group) => group.actions.length > 0));
 const canSimulate = computed(() => !!activeItem.value && !!baseValues.value && isPerceptionMet.value && primaryRotation.value.length > 0);
 const selectedFoodModel = computed<FoodOption | null>({
-  get: () => selectedFoodItem.value ? toFoodOption(selectedFoodItem.value, selectedFood.value.quality) : null,
+  get: () => selectedFoodItem.value ? buildFoodOption(selectedFoodItem.value, selectedFood.value.quality, t) : null,
   set: (option) => {
     selectedFood.value.foodId = option?.food.id ?? null;
     if (option) selectedFood.value.quality = option.quality;
@@ -276,17 +268,13 @@ function actionLabel(actionName: string) {
   );
 }
 
-function formatFood(food: GatheringFood, quality: FoodQuality) {
-  return `${getItemName(food.id)} ${t(`solver.food.${quality}`)}`;
-}
-
 function defaultExperimentName() {
   return activeItem.value ? getItemName(activeItem.value.itemId) : '';
 }
 
 function savePreviewFood() {
   if (!selectedFood.value.foodId || !selectedFoodItem.value) return t('tomeLibrary.noFood');
-  return formatFood(selectedFoodItem.value, selectedFood.value.quality);
+  return formatFoodLabel(selectedFoodItem.value, selectedFood.value.quality, t);
 }
 
 function savePreviewRows() {
@@ -306,23 +294,6 @@ function savePreviewMetrics() {
     { label: t('simulator.analysis.maxYield'), value: analysis.value.total.maxYield, chance: formatProbability(analysis.value.total.maxYieldChance, false, false) },
     { label: t('simulator.analysis.minYield'), value: analysis.value.total.minYield, chance: formatProbability(analysis.value.total.minYieldChance, false, false) }
   ];
-}
-
-function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
-  const localizedName = getItemName(food.id);
-  const englishName = getItemEnglishName(food.id);
-  return {
-    food,
-    quality,
-    label: formatFood(food, quality),
-    searchText: [localizedName, englishName, food.id.toString(), quality].join(' ').toLowerCase()
-  };
-}
-
-function searchFoods(event: { query: string }) {
-  const query = event.query.trim().toLowerCase();
-  const allOptions = GATHERING_FOODS.flatMap((food) => [toFoodOption(food, 'hq'), toFoodOption(food, 'nq')]);
-  foodSuggestions.value = (query ? allOptions.filter((option) => option.searchText.includes(query)) : allOptions).slice(0, 40);
 }
 
 function saveCurrentExperiment() {
@@ -557,15 +528,13 @@ function progressPercent(range: number[], maxValue: number) {
           <label class="field-perception"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="solverStats.perception" :min="0" fluid /></label>
           <label class="field-food">
             <span>{{ t('solver.food.label') }}</span>
-            <AutoComplete
+            <FoodAutoComplete
               v-model="selectedFoodModel"
-              :suggestions="foodSuggestions"
-              optionLabel="label"
+              :placeholder="t('solver.food.placeholder')"
               forceSelection
               dropdown
               showClear
               fluid
-              @complete="searchFoods"
             />
           </label>
           <span v-if="!activeItem.isCollectable" class="stats-grid-spacer" aria-hidden="true"></span>

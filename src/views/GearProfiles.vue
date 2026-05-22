@@ -7,18 +7,11 @@ import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
-import AutoComplete from 'primevue/autocomplete';
-import type { FoodQuality, GatheringFood, GearStatProfile, GatheringJob } from '../types/game';
+import FoodAutoComplete from '../components/FoodAutoComplete.vue';
+import type { FoodQuality, GearStatProfile, GatheringJob } from '../types/game';
 import { isDefaultGearProfile, useGearProfiles } from '../composables/useGearProfiles';
-import { GATHERING_FOODS, getGatheringFood } from '../services/foodData';
-import { getItemEnglishName, getItemName } from '../services/gameData';
-
-type FoodOption = {
-  food: GatheringFood;
-  quality: FoodQuality;
-  label: string;
-  searchText: string;
-};
+import { getGatheringFood } from '../services/foodData';
+import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
 
 type DraftProfile = {
   id: string | null;
@@ -40,7 +33,6 @@ const router = useRouter();
 const { orderedProfiles, createProfile, updateProfile, deleteProfile } = useGearProfiles();
 
 const selectedId = ref<string | null>(orderedProfiles.value[0]?.id ?? null);
-const foodSuggestions = ref<FoodOption[]>([]);
 
 const selectedProfile = computed(() => orderedProfiles.value.find((profile) => profile.id === selectedId.value) ?? null);
 const isEditingDefault = computed(() => !!selectedProfile.value && isDefaultGearProfile(selectedProfile.value));
@@ -62,7 +54,7 @@ const selectedFoodModel = computed<FoodOption | null>({
   get: () => {
     if (!draft.value.foodId) return null;
     const food = getGatheringFood(draft.value.foodId);
-    return food ? toFoodOption(food, draft.value.foodQuality) : null;
+    return food ? buildFoodOption(food, draft.value.foodQuality, t) : null;
   },
   set: (option) => {
     draft.value.foodId = option?.food.id ?? null;
@@ -100,27 +92,7 @@ function jobLabel(jobs: GatheringJob[]) {
 function foodLabel(profile: GearStatProfile) {
   if (!profile.food.foodId) return t('tomeLibrary.noFood');
   const food = getGatheringFood(profile.food.foodId);
-  return food ? `${getItemName(food.id)} ${t(`solver.food.${profile.food.quality}`)}` : t('tomeLibrary.noFood');
-}
-
-function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
-  const localizedName = getItemName(food.id);
-  const englishName = getItemEnglishName(food.id);
-  return {
-    food,
-    quality,
-    label: `${localizedName} ${t(`solver.food.${quality}`)}`,
-    searchText: [localizedName, englishName, food.id.toString()].join(' ').toLowerCase()
-  };
-}
-
-function searchFoods(event: { query: string }) {
-  const query = event.query.trim().toLowerCase();
-  const allOptions = GATHERING_FOODS.flatMap((food) => [
-    toFoodOption(food, 'hq'),
-    toFoodOption(food, 'nq')
-  ]);
-  foodSuggestions.value = (query ? allOptions.filter((option) => option.searchText.includes(query)) : allOptions).slice(0, 40);
+  return food ? formatFoodLabel(food, profile.food.quality, t) : t('tomeLibrary.noFood');
 }
 
 function selectProfile(profile: GearStatProfile) {
@@ -339,16 +311,10 @@ onMounted(async () => {
 
           <label class="gear-field">
             <span>{{ t('solver.food.label') }}</span>
-            <AutoComplete
+            <FoodAutoComplete
               v-model="selectedFoodModel"
-              :suggestions="foodSuggestions"
-              optionLabel="label"
               :placeholder="t('solver.food.placeholder')"
-              forceSelection
-              dropdown
-              showClear
               fluid
-              @complete="searchFoods"
             />
           </label>
 

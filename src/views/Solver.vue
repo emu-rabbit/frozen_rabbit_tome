@@ -3,13 +3,11 @@ defineOptions({ name: 'Solver' });
 import { computed, onBeforeUnmount, onMounted, ref, watch, onActivated } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSolver } from '../composables/useSolver';
-import { GATHERING_FOODS } from '../services/foodData';
-import { getActionName, getItemEnglishName, getItemName } from '../services/gameData';
+import { getActionName, getItemName } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import { getCollectableActionName } from '../services/collectableActions';
-import type { FoodQuality, GearStatProfile, GatheringFood, SolverObjectiveMode, SolverRotationPlan } from '../types/game';
+import type { GearStatProfile, SolverObjectiveMode, SolverRotationPlan } from '../types/game';
 import InputNumber from 'primevue/inputnumber';
-import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SolverDebugDialog from '../components/SolverDebugDialog.vue';
@@ -17,6 +15,7 @@ import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import PendingFeature from '../components/PendingFeature.vue';
 import CollectableSolverPanel from '../components/CollectableSolverPanel.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
+import FoodAutoComplete from '../components/FoodAutoComplete.vue';
 import { useSettings } from '../composables/useSettings';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
@@ -24,6 +23,7 @@ import type { CollectableSolverResult } from '../types/collectable';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
 import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
+import { buildFoodOption, type FoodOption } from '../services/foodOptions';
 
 const { t, locale } = useI18n();
 const {
@@ -54,12 +54,6 @@ const {
 
 const { macroSettings, solverSettings, debugSettings } = useSettings();
 const { saveTome } = useTomeLibrary();
-type FoodOption = {
-  food: GatheringFood;
-  quality: FoodQuality;
-  label: string;
-  searchText: string;
-};
 type StrategyActionKey = 'copyMacro' | 'saveTome' | 'solve';
 type YieldMetricKey = 'expected' | 'max' | 'min';
 type YieldMetric = {
@@ -69,7 +63,6 @@ type YieldMetric = {
   chance?: number;
 };
 
-const foodSuggestions = ref<FoodOption[]>([]);
 const isGearProfilePickerOpen = ref(false);
 const isTomeSaved = ref(false);
 const isMacroPreviewOpen = ref(false);
@@ -89,7 +82,7 @@ const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey,
 };
 
 const selectedFoodModel = computed<FoodOption | null>({
-  get: () => selectedFoodItem.value ? toFoodOption(selectedFoodItem.value, selectedFood.value.quality) : null,
+  get: () => selectedFoodItem.value ? buildFoodOption(selectedFoodItem.value, selectedFood.value.quality, t) : null,
   set: (option) => {
     selectedFood.value.foodId = option?.food.id ?? null;
     if (option) {
@@ -146,57 +139,8 @@ const collectableScourProgress = computed(() => {
   return Math.min(100, Math.max(0, (collectableScourValue.value / 200) * 100));
 });
 
-function toFoodOption(food: GatheringFood, quality: FoodQuality): FoodOption {
-  const localizedName = foodName(food);
-  const englishName = foodEnglishName(food);
-  const qualityLabel = t(`solver.food.${quality}`);
-
-  return {
-    food,
-    quality,
-    label: `${localizedName} ${qualityLabel}`,
-    searchText: [localizedName, englishName, food.id.toString()].join(' ').toLowerCase()
-  };
-}
-
-function foodName(food: GatheringFood) {
-  return getItemName(food.id);
-}
-
-function foodEnglishName(food: GatheringFood) {
-  return getItemEnglishName(food.id);
-}
-
-function foodSummary(food: GatheringFood, quality = selectedFood.value.quality) {
-  return Object.entries(food.bonuses)
-    .map(([stat, bonus]) => {
-      const value = bonus[quality];
-      return `${t(`game.stats.${foodStatKey(stat)}`)} +${value.value}% (${t('solver.food.max')} ${value.max})`;
-    })
-    .join(' / ');
-}
-
-function foodStatKey(stat: string) {
-  if (stat === 'Gathering') return 'gathering';
-  if (stat === 'Perception') return 'perception';
-  return 'gp';
-}
-
 function activeItemJobs() {
   return gatherableItemJobs(activeItem.value);
-}
-
-function searchFoods(event: { query: string }) {
-  const query = event.query.trim().toLowerCase();
-  const allOptions = GATHERING_FOODS.flatMap((food) => [
-    toFoodOption(food, 'hq'),
-    toFoodOption(food, 'nq')
-  ]);
-  const matchedOptions = query
-    ? allOptions.filter((option) => option.searchText.includes(query))
-    : allOptions;
-
-  foodSuggestions.value = matchedOptions.slice(0, 40);
 }
 
 onMounted(() => {
@@ -559,17 +503,11 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.food.label') }}</label>
-                <AutoComplete
+                <FoodAutoComplete
                   v-model="selectedFoodModel"
-                  :suggestions="foodSuggestions"
-                  optionLabel="label"
                   :placeholder="t('solver.food.placeholder')"
-                  forceSelection
-                  dropdown
-                  showClear
                   class="w-full"
                   inputClass="w-full"
-                  @complete="searchFoods"
                 />
               </div>
               <div class="flex flex-col gap-1.5">
@@ -761,35 +699,12 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.food.label') }}</label>
-                <AutoComplete
+                <FoodAutoComplete
                   v-model="selectedFoodModel"
-                  :suggestions="foodSuggestions"
-                  optionLabel="label"
                   :placeholder="t('solver.food.placeholder')"
-                  forceSelection
-                  dropdown
-                  showClear
                   class="w-full"
                   inputClass="w-full"
-                  @complete="searchFoods"
-                >
-                  <template #option="{ option }">
-                    <div class="flex items-start gap-3 min-w-0 w-full">
-                      <span
-                        class="px-2 py-0.5 rounded-md text-[11px] font-black flex-shrink-0"
-                        :class="option.quality === 'hq'
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
-                          : 'bg-soft-green-100 text-soft-green-700 dark:bg-soft-green-900/40 dark:text-soft-green-200'"
-                      >
-                        {{ t(`solver.food.${option.quality}`) }}
-                      </span>
-                      <div class="flex flex-col min-w-0">
-                        <span class="font-semibold text-sm text-slate-700 dark:text-slate-100 truncate">{{ foodName(option.food) }}</span>
-                        <span class="text-[11px] text-slate-400 truncate">{{ foodSummary(option.food, option.quality) }}</span>
-                      </div>
-                    </div>
-                  </template>
-                </AutoComplete>
+                />
               </div>
 
               <!-- 第二排：獲得力 與 鑑別力 -->
