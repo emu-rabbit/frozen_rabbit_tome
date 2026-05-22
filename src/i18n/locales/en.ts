@@ -462,7 +462,7 @@ export default {
       actionsEvaluated: 'Evaluated options',
       candidateComparisons: 'Candidate comparisons',
       branchCount: 'Total branches',
-      terminalStates: 'Terminal states',
+      terminalStates: 'Completed states',
       outcomeDistribution: 'Probability Distribution',
       optimality: 'Node State Fields and Optimality',
       stateKeyIntro: 'These fields are the state snapshot used by the regular gathering solver for each search node. When every value matches, the solver treats it as the same subproblem and reuses the computed result.',
@@ -494,14 +494,14 @@ export default {
     close: 'Close scoring preference',
     intro: 'Weights turn each collectable result into a score. The solver ranks strategies by that score; a higher weight means you want the recommendation to lean harder toward that tier.',
     solverIntro: 'Weights turn each collectable result into a score. The solver ranks strategies by that score; a higher weight means you want the recommendation to lean harder toward that tier.',
-    analysisIntro: 'Choose the standard you want to use when reading this analysis. Higher weights make that tier count more in the expected, maximum, minimum, and distribution results, so you can compare total scrip, high-value turn-ins, or your own target.',
+    analysisIntro: 'Choose the standard you want to use when reading this analysis. Higher weights make that tier count more in the expected, maximum, minimum, and distribution results, so you can compare total scrip, high-tier turn-ins, or your own target.',
     cancel: 'Cancel',
     apply: 'Apply',
     applyCustom: 'Apply custom weights',
     presets: {
-      highValue: 'High value first',
-      midValue: 'Mid value first',
-      lowValue: 'Low value first',
+      highValue: 'High Tier first',
+      midValue: 'Mid Tier first',
+      lowValue: 'Low Tier first',
       purpleScrip: 'Purple scrip first',
       orangeScrip: 'Orange scrip first',
       customTier: 'Custom weights'
@@ -515,9 +515,9 @@ export default {
     },
     tiers: {
       none: 'No tier',
-      low: 'Low value',
-      mid: 'Mid value',
-      high: 'High value'
+      low: 'Low Tier',
+      mid: 'Mid Tier',
+      high: 'High Tier'
     }
   },
   collectableSolver: {
@@ -618,7 +618,7 @@ export default {
       continue: 'Next Step',
       outcomeValue: 'Collectability {value}, integrity {integrity}',
       nextAction: 'Next: {action}',
-      terminal: 'This branch ends here',
+      terminal: 'Completed',
       back: 'Back',
       root: 'Root'
     },
@@ -817,7 +817,7 @@ export default {
       totalNodes: 'Total',
       decidedNodes: 'Decided',
       uncoveredNodes: 'Open',
-      terminalNodes: 'Terminal'
+      terminalNodes: 'Completed'
     },
     analysis: {
       title: 'Analysis Report',
@@ -879,7 +879,7 @@ export default {
       scrutinyActive: 'Whether Scrutiny is active. It strengthens the next refine action, then is consumed.',
       collectorsFocusActive: 'Whether Collector\'s Focus is active. It raises the value-increase chance for the next refine action, then is consumed.',
       primingTouchActive: 'Whether Priming Touch is active. It only affects the next Meticulous integrity-save chance.',
-      standardActive: 'Whether Collector\'s Standard is active. Use it to route Standard branches toward Meticulous or another high-value choice.',
+      standardActive: 'Whether Collector\'s Standard is active. Use it to route Standard branches toward Meticulous or another high-tier choice.',
       wiseToTheWorldActive: 'Whether Wise to the World is available. Usually used to immediately restore 1 integrity for free after it procs.',
       successIActive: 'Whether Gathering Rate I has been applied. Use it to avoid repeating the same success-rate buff tier.',
       successIIActive: 'Whether Gathering Rate II has been applied. Use it to avoid repeating the same success-rate buff tier.',
