@@ -1,0 +1,278 @@
+# Shikhu 回饋收斂待辦
+
+本文件整理與 Shikhu 討論後收斂出的後續方向。此文件是給未來 Agent 接手時使用的產品與技術脈絡，不代表所有項目都應立即實作。執行前仍需依任務類型讀取 `.agents/skills/` 內的核心、業務與專業規範。
+
+## 超簡要檢視區
+
+### 主待辦
+
+1. **機率分布表的 score 單位與權重說明**
+   - 釐清分布圖中的 `400 / 500 / 600...` 是 weighted score，不是 collectability rating。
+   - 權重檔與 tier counts 的關係需更直覺。
+
+2. **收藏品節點儀表台改善**
+   - 讓節點狀態、分支路徑、關鍵機率與預測落點更視覺化。
+   - 目標是幫使用者更容易做策略決策。
+
+3. **檢查精選物品分類**
+   - 檢查 `Calamus Root` 與 `Levin Quartz` 為何未正確進入收藏品 / 精選流程。
+
+4. **分享、匯出、復現資料**
+   - 整理 JSON export/import，使其足以重現結果，但避免輸出過多噪音。
+   - 保留未來 Discord 分享、指南引用、第三方復現的可能性。
+
+5. **新增兩個報表比較功能**
+   - 讓使用者比較兩份分析報表，例如 spiritbond rotation vs normal rotation。
+   - 優先考慮一般採集實驗區與收藏品實驗區的共用比較模型。
+
+6. **效能與 OOM 壓力測試**
+   - 特別關注低 Gathering/Perception、高 GP 的版本初期情境。
+   - 這是較偏後端 / 演算法品質的項目。
+
+7. **Frontier 實驗區**
+   - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
+   - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
+
+### 低優先備註
+
+- **策略編輯器可用性**：未來可研究 rule group、fallback action、策略模板或類 nested logic 的輕量替代，但不要貿然引入複雜巢狀 UI。
+- **版本差異管理**：Evercold 後繁中服與國際服可能出現技能版本差異，長期可能需要 action model / formula versioning。
+
+## 詳細內容
+
+## 1. 機率分布表的 score 單位與權重說明
+
+### 背景
+
+Shikhu 在收藏品分析報表中看到 `400 / 500 / 600 / 700 / 800` 搭配百分比時，直覺認為那些數字是 collectability rating。但在目前模型中，這些數字是依照 scoring preference / tier weights 算出的 weighted score。
+
+例如高檔位權重為 `100`、中檔位權重為 `3`、低檔位權重為 `1` 時：
+
+- `500` 可能代表 `5 High Tier`。
+- `506` 可能代表 `5 High Tier + 2 Mid Tier`。
+- 它不是收藏價值 `500`。
+
+### User Story
+
+作為收藏品工具使用者，我希望分布圖能明確告訴我數字代表「分數」而非「收藏價值」，如此我才能正確判讀結果，不會以為工具算出低於 1000 rating 的收藏品。
+
+### 已討論取捨
+
+- `Tier Counts` 應代表物品落在各 tier 的數量期望，不應被誤解為 weighted score。
+- 改變權重後，求解器可能選擇不同策略，因此 tier counts 可能跟著變；這不是因為 tier count 本身被權重相乘。
+- 在固定策略的分析器中，權重理論上應只改變 score，不應改變實際 tier counts；若行為不是如此，需要檢查。
+
+### 可能方向
+
+- 分布圖標題或座標改為 `Weighted Score` / `Score Distribution`。
+- 若目前 profile 是高檔位優先，可在 score 旁顯示近似解讀，例如 `500 points, roughly 5 High Tier items`。
+- tooltip 或說明按鈕中明確寫出 scoring formula。
+- 結果卡片避免混用 `High value` 這類容易被看成 collectability 的文字；術語修正已另行處理並準備上線。
+
+## 2. 收藏品節點儀表台改善
+
+### 背景
+
+Shikhu 認為收藏品工具同時有「資訊太多」與「資訊不夠」的問題。他能理解決策樹概念，但難以追蹤每個 state，以及不知道如何有效使用 Collector's Standard 分支。
+
+他也希望工具顯示更多遊戲 UI 中能看到、或玩家做決策時需要的數值。
+
+### User Story
+
+作為正在調整收藏品策略的玩家，我希望在每個節點清楚看到目前 GP、耐久、收藏價值、已觸發的 proc、下一步可能落點與關鍵機率，這樣我才能判斷下一條策略規則應該怎麼寫。
+
+### 應優先顯示的資訊
+
+- 目前 GP / integrity / collectability。
+- 分支路徑摘要：目前節點是如何走到這裡的。
+- value increase / Collector's Intuition 是否觸發。
+- Collector's Standard 是否觸發。
+- value increase rate。
+- Collector's Focus 後的 value increase rate。
+- relic tool bonus 影響後的 rate。
+- Meticulous save rate。
+- Priming Touch 後的 Meticulous save rate。
+- Collector's Standard proc rate。
+- Scrutiny bonus。
+- 下一次 Scour / Meticulous 的預測 collectability landing points。
+
+### 已討論取捨
+
+- 決策樹分支很多，完整視覺化可能反而難用。
+- 目標不是把整棵樹畫成巨大圖，而是讓目前節點的「可決策資訊」更清楚。
+- 行動裝置上尤其要避免資訊密度過高或巢狀過深。
+
+### 可能方向
+
+- 在節點卡片加入「目前狀態 chips」。
+- 將分支路徑改成更可讀的事件時間線。
+- 對 value increase、Standard、Wise、Revisit 等隨機事件使用一致圖示與短文字。
+- 在節點旁加入一個 compact formula panel，顯示玩家當下決策最需要看的幾個機率。
+
+## 3. 檢查精選物品分類
+
+### 背景
+
+Shikhu 測試 `Calamus Root` 與 `Levin Quartz` 時，表示它們沒有作為 collectables 開啟，因此無法判斷目前 scoring preference 是否足以支援精選需求。
+
+### User Story
+
+作為想研究精選採集的玩家，我希望精選物品能正確進入收藏品 / 精選相關流程，這樣才能使用求解器或分析器評估手法。
+
+### 待查問題
+
+- `Calamus Root` 與 `Levin Quartz` 是否被資料來源標為 collectable / reduction item。
+- 目前 item classification 是否只支援一般收藏品 reward table，而漏掉 aetherial reduction。
+- 入口 UI 是否將 reduction source 排除或 fallback 到普通物品。
+- reward table 若缺資料，是否應顯示「精選 reward model 尚未完整支援」而不是完全不進收藏品模式。
+
+### 取捨
+
+- 精選 reward model 尚不完整，不應假裝支援完整靈砂收益。
+- 但即使 reward 不完整，仍可能先允許進入收藏品分析流程，並清楚標示限制。
+
+## 4. 分享、匯出、復現資料
+
+### 背景
+
+Shikhu 提到希望能在 Discord 分享設定，也可能將 JSON 用於 Icy Veins 指南上的視覺化工具。由於網站目前是 GitHub Pages 靜態網站，短網址若要包含收藏品決策樹會有實作與穩定性問題。
+
+### User Story
+
+作為研究者或指南作者，我希望能匯出一份足以重現輸入、公式版本、限制與結果的資料，這樣我可以和他人討論、驗證或嵌入其他指南工具。
+
+### 已討論取捨
+
+- 短 URL 適合簡單 rotation，但收藏品決策樹資料量可能過大。
+- JSON 檔案較適合完整復現，但目前輸出仍太雜。
+- Discord 直接貼 JSON 可能撞文字限制，但上傳文字檔應可行。
+
+### 可能方向
+
+- 保留 JSON export/import。
+- 將 export schema 瘦身，只保留能重現決策樹與報表的必要資料。
+- 匯出內容應包含：
+  - app version / commit / algorithm version。
+  - input stats / base values / item / node settings。
+  - objective / scoring preference。
+  - formula debug。
+  - limitations。
+  - report summary。
+  - policy 或 strategy analysis 必要資料。
+- 未來若做 share code，先以普通採集或簡短 rotation 為主，不要先挑收藏品決策樹。
+
+## 5. 新增兩個報表比較功能
+
+### 背景
+
+Shikhu 提到一般採集模擬器 / 分析器可用於研究，例如比較 spiritbond rotation 與 normal rotation 的產出差異。這延伸成一個更通用的需求：比較兩份分析報表。
+
+### User Story
+
+作為想比較兩種手法的玩家，我希望能把兩份分析報表並排比較，快速看出期望值、最小值、最大值、分布與資源消耗差異。
+
+### 可能比較內容
+
+- expected yield / expected score。
+- min / max outcome 與機率。
+- outcome distribution 差異。
+- GP 使用量。
+- 耐久使用量。
+- 採集成功或失敗風險。
+- tier counts / reward vector。
+- Revisit 影響前後差異。
+
+### 取捨
+
+- 一開始可以只支援「同類型報表」比較，例如 regular vs regular、collectable vs collectable。
+- 跨系統比較容易語意混亂，應延後。
+- 報表比較依賴穩定的 export/report schema，因此可與第 4 項一起規劃。
+
+## 6. 效能與 OOM 壓力測試
+
+### 背景
+
+Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的情境。這會讓更多補成功率、補價值、恢復耐久與 proc 分支變得有意義，搜尋空間可能膨脹。
+
+使用者也曾提到過 OOM crash，雖然目前已修掉某些 case，但這仍是產品面風險。
+
+### User Story
+
+作為工具使用者，我希望即使輸入極端但合理的拓荒期數值，網站也不會 crash；若計算很久，至少要能穩定完成或給出可理解的限制提示。
+
+### 待辦方向
+
+- 建立低屬性高 GP 的壓力測試案例。
+- 觀察 `statesSolved`、`branchCount`、`memoHits`、`calculationTime` 等 debug stats。
+- 設計搜尋上限或 graceful failure。
+- 檢查 Web Worker 記憶體使用。
+- 對代表性極端輸入建立回歸測試或效能門檻。
+
+### 取捨
+
+- 使用者可以接受「算很久」。
+- 不能接受 OOM crash 或整頁崩潰。
+- 不可為了效能偷刪合法分支，除非 UI 明確標示模型限制。
+
+## 7. Frontier 實驗區
+
+### 背景
+
+目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是機率、分布與疊加規則尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制，尤其 `Brazen under Collector's High Standard` 可能是 guaranteed amount。
+
+### User Story
+
+作為高階玩家或研究者，我希望能手動輸入尚未確認的 proc rate 或分布，並在隔離的實驗區測試接近 endgame 實際手法的模型，而不是等待所有資料完全確認。
+
+### 初步範圍
+
+- Brazen probability distribution。
+- Collector's High Standard proc rate。
+- Brazen under Collector's High Standard 的確定值或公式。
+- 可能允許使用者選擇節點類型或手動覆蓋 proc rate。
+
+### 已討論取捨
+
+- Frontier 區不能把未確認資料包裝成正式求解器結果。
+- UI 必須明確標示「研究 / 實驗 / 未確認」。
+- 正式秘笈仍應保守，不納入缺乏機率的機制。
+- 這對 Evercold 之後也可能有價值，因為新資料收集需要時間。
+
+## 低優先備註 A：策略編輯器可用性
+
+### 背景
+
+Shikhu 提出一個想法：與其重複寫多條條件，例如收藏價值滿後先 Solid Reason、再 Wise、最後 Collect，也許一個 strategy 可以包含多個 action 或 if/else 邏輯。
+
+### 目前判斷
+
+此方向在演算法或策略描述上合理，但 UI/UX 風險高。巢狀邏輯在手機版尤其容易變難用，也容易增加一般使用者負擔。
+
+### 未來可研究但低優先的替代方向
+
+- rule group。
+- fallback action。
+- strategy template。
+- 「滿收藏價值後收尾」這類預設策略片段。
+- 類 logic gate 的扁平化 UI。
+
+### 重要取捨
+
+不要直接實作完整巢狀條件編輯器，除非已有清楚的互動設計與手機版驗證。
+
+## 低優先備註 B：版本差異管理
+
+### 背景
+
+目前繁中服與國際服都在 7.x，採集技能相容性高。但 Evercold 後可能產生版本差距，使技能效果、公式或資料來源需要版本化。
+
+### 未來可能方向
+
+- action model versioning。
+- formula versioning。
+- data source version / server region 標記。
+- UI 讓使用者知道目前採用哪個遊戲版本模型。
+
+### 目前取捨
+
+這是長期維護議題，不應優先於目前 Shikhu 回饋中已明確阻礙使用的 UI 與資料分類問題。
