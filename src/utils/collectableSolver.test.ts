@@ -377,6 +377,44 @@ describe('solveCollectableRotation', () => {
     expect(['successI', 'successII', 'successIII', 'nextCollectSuccess']).toContain(result.policy.recommendedAction.kind);
   });
 
+  it('基礎成功率不可被技能補強時，不會把成功率技能納入收藏品求解器候選', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 10,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      nodeBonuses: {
+        baseIntegrity: 1,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          mid: { collectability: 1, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          high: { collectability: 2, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    }));
+
+    expect(collectKinds(result.policy)).not.toEqual(expect.arrayContaining([
+      'successI',
+      'successII',
+      'successIII',
+      'nextCollectSuccess'
+    ]));
+  });
+
   it('天選人模式只用最高分數評分，不為相同峰值施放成功率技能', () => {
     const result = solveCollectableRotation(createRequest({
       objectiveMode: 'max',

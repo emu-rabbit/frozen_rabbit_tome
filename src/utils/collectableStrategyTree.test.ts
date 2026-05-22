@@ -161,6 +161,39 @@ describe('collectableStrategyTree', () => {
     expect(result.root.action).toBe('collect');
   });
 
+  it('策略樹遇到基礎成功率不可補強的成功率技能時，會改用下一條可執行策略', () => {
+    const result = buildCollectableStrategyTree({
+      stats: {
+        level: 100,
+        gathering: 10,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      jobType: 'miner',
+      isTimedNode: false,
+      rules: [
+        rule('success-first', 'successIII'),
+        rule('collect-fallback', 'collect')
+      ]
+    });
+
+    expect(result.root.status).toBe('decided');
+    expect(result.root.matchedRuleId).toBe('collect-fallback');
+    expect(result.root.action).toBe('collect');
+  });
+
   it('低成功率連續採集會合併等價決策狀態，避免成功失敗排列爆炸', () => {
     const result = buildCollectableStrategyTree({
       stats: {

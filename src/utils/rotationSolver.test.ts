@@ -51,6 +51,35 @@ describe('solveGatheringRotation', () => {
     expect(new Set(successBuffs).size).toBe(successBuffs.length);
   });
 
+  it('基礎成功率不可被技能補強時，不會把成功率技能納入一般採集求解器候選', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 10,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      nodeBonuses: {
+        baseIntegrity: 2,
+        gatheringCount: 0,
+        yieldCount: 20,
+        extraRate: 0
+      },
+      temporaryGp: 930
+    }));
+
+    expect(result.bestRotation).not.toEqual(expect.arrayContaining([
+      '敏銳視野',
+      '敏銳視野II',
+      '敏銳視野III',
+      '明晰視野'
+    ]));
+  });
+
   it('會疊加富礦的饋贈 I 與 II，但不會重複同一技能', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {

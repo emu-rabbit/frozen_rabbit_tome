@@ -186,10 +186,10 @@ export function canUseCollectableAction(
   if (action === 'scrutiny') return state.collectability < COLLECTABILITY_CAP && !state.scrutinyActive;
   if (action === 'collectorsFocus') return state.collectability < COLLECTABILITY_CAP && !state.collectorsFocusActive;
   if (action === 'primingTouch') return state.collectability < COLLECTABILITY_CAP && !state.primingTouchActive;
-  if (action === 'successI') return context.baseSuccessRate + state.successBonus < 100 && !state.successIActive;
-  if (action === 'successII') return context.baseSuccessRate + state.successBonus < 100 && !state.successIIActive;
-  if (action === 'successIII') return context.baseSuccessRate + state.successBonus < 100 && !state.successIIIActive;
-  if (action === 'nextCollectSuccess') return context.baseSuccessRate + state.successBonus < 100 && state.nextCollectSuccessBonus === 0;
+  if (action === 'successI') return !state.successIActive && canRaiseCollectSuccess(state, context);
+  if (action === 'successII') return !state.successIIActive && canRaiseCollectSuccess(state, context);
+  if (action === 'successIII') return !state.successIIIActive && canRaiseCollectSuccess(state, context);
+  if (action === 'nextCollectSuccess') return state.nextCollectSuccessBonus === 0 && canRaiseCollectSuccess(state, context);
   if (action === 'restoreIntegrity') return state.integrity < context.maxIntegrity;
   if (action === 'wiseToTheWorld') return state.wiseToTheWorldActive && state.integrity < context.maxIntegrity;
 
@@ -280,6 +280,13 @@ function applyCollect(
       conditionKey: 'collectableSolver.conditions.collectFailed'
     }
   ].filter((branch) => branch.probability > 0);
+}
+
+function canRaiseCollectSuccess(
+  state: CollectableMechanicsState,
+  context: CollectableMechanicsContext
+): boolean {
+  return context.baseSuccessRate > 1 && context.baseSuccessRate + state.successBonus < 100;
 }
 
 function applyRefine(

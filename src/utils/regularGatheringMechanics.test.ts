@@ -68,6 +68,37 @@ describe('regularGatheringMechanics', () => {
     );
   });
 
+  it('一般採集機制層會拒絕基礎成功率無法被技能補強的成功率技能', () => {
+    const context = createRegularGatheringMechanicsContext({
+      stats: {
+        level: 100,
+        gathering: 10,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      }
+    });
+    const state = createInitialRegularGatheringMechanicsState(context, 930);
+
+    expect(canUseRegularGatheringAction('successI', state, context)).toBe(false);
+    expect(canUseRegularGatheringAction('successII', state, context)).toBe(false);
+    expect(canUseRegularGatheringAction('successIII', state, context)).toBe(false);
+    expect(canUseRegularGatheringAction('clearVision', state, context)).toBe(false);
+    expect(() => applyRegularGatheringAction('successIII', state, context)).toThrow(
+      /Illegal regular gathering action "successIII"/
+    );
+  });
+
   it('普通採集只有成功分支會恢復 GP，失敗分支不恢復 GP', () => {
     const context = createRegularGatheringMechanicsContext({
       stats: {

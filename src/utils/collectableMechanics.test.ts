@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_COLLECTABLE_LEVEL,
   applyCollectableAction,
+  canUseCollectableAction,
   createCollectableMechanicsContext,
   createInitialCollectableMechanicsState
 } from './collectableMechanics';
@@ -50,6 +51,37 @@ describe('collectableMechanics', () => {
 
     expect(() => applyCollectableAction('primingTouch', state, context)).toThrow(
       /Illegal collectable action "primingTouch"/
+    );
+  });
+
+  it('機制層會拒絕基礎成功率無法被技能補強的收藏品成功率技能', () => {
+    const context = createCollectableMechanicsContext({
+      stats: {
+        level: 100,
+        gathering: 10,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      }
+    });
+    const state = createInitialCollectableMechanicsState(context, 930);
+
+    expect(canUseCollectableAction('successI', state, context)).toBe(false);
+    expect(canUseCollectableAction('successII', state, context)).toBe(false);
+    expect(canUseCollectableAction('successIII', state, context)).toBe(false);
+    expect(canUseCollectableAction('nextCollectSuccess', state, context)).toBe(false);
+    expect(() => applyCollectableAction('successIII', state, context)).toThrow(
+      /Illegal collectable action "successIII"/
     );
   });
 });
