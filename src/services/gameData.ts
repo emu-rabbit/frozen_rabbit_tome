@@ -22,6 +22,7 @@ const ICONS_URL = `${BASE_URL}/item-icons.json`;
 const ACTIONS_URL = `${BASE_URL}/actions.json`;
 const ACTION_ICONS_URL = `${BASE_URL}/action-icons.json`;
 const XIVAPI_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringItem.csv';
+const XIVAPI_V2_ITEM_SHEET_URL = 'https://v2.xivapi.com/api/sheet/Item';
 const GATHERING_POINT_BASE_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPointBase.csv';
 const GATHERING_POINT_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPoint.csv';
 const ACTION_DICT_URLS: Record<string, string> = {
@@ -48,6 +49,13 @@ type GatherableItemInfo = {
   perceptionReq: number;
   gatheringItemId: number;
   isTimedNode: boolean;
+};
+
+type XivapiV2ItemRow = {
+  row_id?: unknown;
+  fields?: {
+    IsCollectable?: unknown;
+  };
 };
 
 let itemInfoMap = new Map<number, GatherableItemInfo>();
@@ -111,6 +119,36 @@ function resolveIconPath(icon: string | number | { icon?: string | number; Icon?
   if (iconValue.startsWith('/i/')) return iconValue;
   const iconId = Number(iconValue);
   return Number.isFinite(iconId) ? iconIdToPath(iconId) : iconValue;
+}
+
+function isCollectableFlag(value: unknown): boolean {
+  return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+function parseXivapiV2CollectableRows(data: unknown): Map<number, boolean> {
+  const rows = typeof data === 'object' && data !== null && Array.isArray((data as { rows?: unknown }).rows)
+    ? (data as { rows: XivapiV2ItemRow[] }).rows
+    : [];
+  const collectableMap = new Map<number, boolean>();
+
+  rows.forEach((row) => {
+    const itemId = Number(row.row_id);
+    if (!Number.isFinite(itemId) || itemId <= 0) return;
+
+    collectableMap.set(itemId, isCollectableFlag(row.fields?.IsCollectable));
+  });
+
+  return collectableMap;
+}
+
+async function fetchCollectableFlags(itemIds: number[]): Promise<Map<number, boolean>> {
+  if (itemIds.length === 0) return new Map();
+
+  const rows = itemIds.join(',');
+  const resp = await fetch(`${XIVAPI_V2_ITEM_SHEET_URL}?rows=${rows}&fields=IsCollectable`);
+  if (!resp.ok) return new Map();
+
+  return parseXivapiV2CollectableRows(await resp.json());
 }
 
 function gatheringTypeToJob(typeId: number): GatheringJob {
@@ -389,13 +427,11 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
   results.sort((a, b) => b.glv - a.glv || a.itemId - b.itemId);
   const visibleResults = results.slice(0, 50);
   if (visibleResults.length > 0) {
-    const itemIds = visibleResults.map(r => r.itemId).join(',');
-    const resp = await fetch(`https://xivapi.com/Item?ids=${itemIds}&columns=ID,IsCollectable`);
-    if (resp.ok) {
-      const data = await resp.json();
-      const collectableMap = new Map<number, boolean>();
-      data.Results?.forEach((item: any) => collectableMap.set(item.ID, item.IsCollectable === 1));
+    try {
+      const collectableMap = await fetchCollectableFlags(visibleResults.map(r => r.itemId));
       visibleResults.forEach(r => r.isCollectable = collectableMap.get(r.itemId) ?? false);
+    } catch (error) {
+      console.error('[GameData] XIVAPI v2 collectable check failed:', error);
     }
   }
   return visibleResults;
@@ -443,4 +479,8 @@ export function getGatheringItemsData() { return rawGatheringItems; }
 /** 獲取特定物品的基礎耐久度 (根據 GatheringItem ID) */
 export function getItemBaseIntegrity(gatheringItemId: number): number {
   return itemIntegrityMap.get(gatheringItemId) || 4;
+}
+
+export function __parseXivapiV2CollectableRowsForTest(data: unknown) {
+  return parseXivapiV2CollectableRows(data);
 }
