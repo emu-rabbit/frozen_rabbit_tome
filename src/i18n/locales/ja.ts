@@ -651,6 +651,7 @@ export default {
       revisitNoProc: '再発見が発動しなかったため、この採集場所は終了です。'
     },
     errors: {
+      unsupportedLevel: { title: '収集品採集にはレベル 50 が必要です', desc: '現在のレベルは {level} 未満のため、収集品採集はまだ開放されていません。レベルを上げてから収集品秘訣を使用してください。' },
       unsupportedReward: { title: '報酬テーブルが見つかりません', desc: 'このアイテムは対応済みの収集品納品、お得意様、魔法大学、ワチュメキメキ万貨街、精選、またはコスモエクスプローラーのデータにないため、まだ計算できません。' },
       workerStale: { title: 'ソルバーの再読み込みが必要です', desc: 'サイト更新直後の可能性があります。再読み込みしてからお試しください。' },
       workerFailed: { title: '収集品ソルバーを起動できません', desc: 'ページを再読み込みしてもう一度お試しください。' }
@@ -767,6 +768,8 @@ export default {
     treeKicker: '決定木カバー率',
     treeTitle: '現在の展開状態',
     loadingBaseValues: '収集品の基礎値を読み込み中です。',
+    collectableLevelLockedTitle: '収集品採集はまだ開放されていません',
+    collectableLevelLockedDesc: '収集品採集にはレベル {level} が必要です。それまでは、実験で決定木の展開や分析を実行しません。',
     actionLevelRequirement: 'レベル {level} が必要',
     ruleLevelIssue: 'この方針には現在のレベル {level} ではまだ使えないスキルがあります。スキルを調整するか、レベルを上げてください。',
     strategyLevelIssueTitle: 'この方針には使用できないスキルがあります',

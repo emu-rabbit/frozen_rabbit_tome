@@ -146,6 +146,19 @@ describe('solveCollectableRotation', () => {
     expect(result.expectedScore).toBeGreaterThan(0);
   });
 
+  it('50 級前直接呼叫收藏品求解器會被機制層拒絕', () => {
+    expect(() => solveCollectableRotation(createRequest({
+      stats: {
+        level: 49,
+        gathering: 1000,
+        perception: 1000,
+        gp: 930
+      },
+      itemLevel: 49,
+      temporaryGp: 930
+    }))).toThrow(/Collectable gathering requires level 50 or higher/);
+  });
+
   it('第一個提煉類動作結算後就會建立洞察分支', () => {
     const result = solveCollectableRotation(createRequest({
       temporaryGp: 0,
@@ -187,10 +200,10 @@ describe('solveCollectableRotation', () => {
     ]));
   });
 
-  it('GP 足夠時會考慮集中檢查或價值矚目等 buff', () => {
+  it('GP 與等級足夠時會考慮集中檢查或價值矚目等 buff', () => {
     const result = solveCollectableRotation(createRequest({
       stats: {
-        level: 24,
+        level: 95,
         gathering: 1000,
         perception: 1000,
         gp: 930
@@ -206,6 +219,55 @@ describe('solveCollectableRotation', () => {
 
     const kinds = collectKinds(result.policy);
     expect(kinds.some((kind) => ['scrutiny', 'collectorsFocus', 'primingTouch'].includes(kind))).toBe(true);
+  });
+
+  it('85 級前不會把價值矚目納入求解器候選', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 84,
+        gathering: 1000,
+        perception: 1000,
+        gp: 930
+      },
+      temporaryGp: 930,
+      nodeBonuses: {
+        baseIntegrity: 3,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      }
+    }));
+
+    expect(collectKinds(result.policy)).not.toContain('collectorsFocus');
+  });
+
+  it('95 級前不會把預備碰觸納入求解器候選', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 94,
+        gathering: 1000,
+        perception: 1000,
+        gp: 100
+      },
+      temporaryGp: 100,
+      nodeBonuses: {
+        baseIntegrity: 3,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 150, reward: { exp: 0, gil: 0, scrip: 1, items: {} } },
+          mid: { collectability: 350, reward: { exp: 0, gil: 0, scrip: 10, items: {} } },
+          high: { collectability: 550, reward: { exp: 0, gil: 0, scrip: 80, items: {} } }
+        }
+      }
+    }));
+
+    expect(collectKinds(result.policy)).not.toContain('primingTouch');
   });
 
   it('收藏價值已滿時不會推薦遊戲內無法使用的提煉與提煉 buff', () => {
@@ -246,7 +308,7 @@ describe('solveCollectableRotation', () => {
   it('預備碰觸會在 Meticulous 後被消耗', () => {
     const result = solveCollectableRotation(createRequest({
       stats: {
-        level: 24,
+        level: 95,
         gathering: 1000,
         perception: 1000,
         gp: 100

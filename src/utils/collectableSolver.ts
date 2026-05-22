@@ -14,6 +14,7 @@ import {
 import {
   COLLECTABLE_STATE_KEY_FIELDS,
   applyCollectableAction,
+  canUseCollectableAction,
   collectableStateKey,
   createCollectableMechanicsContext,
   createInitialCollectableMechanicsState,
@@ -173,30 +174,34 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   let memo = new Map<string, SearchResult>();
   let activeSearchStats: CollectableSearchDebugInfo | null = null;
 
+  function createTerminalResult(): SearchResult {
+    return {
+      expectedScore: 0,
+      expectedReward: createZeroReward(),
+      expectedTierCounts: createZeroTierCounts(),
+      outcomes: new Map([[0, 1]]),
+      minScoreDetail: {
+        score: 0,
+        probability: 1,
+        tierCounts: createZeroTierCounts()
+      },
+      maxScoreDetail: {
+        score: 0,
+        probability: 1,
+        tierCounts: createZeroTierCounts()
+      },
+      recommendedActionKind: 'collect',
+      habit: emptyHabitMetrics(),
+      gpSpent: 0,
+      actionCount: 0,
+      nodeCount: 1
+    };
+  }
+
   function solve(state: SearchState): SearchResult {
     if (state.integrity <= 0) {
       activeSearchStats && (activeSearchStats.terminalStates += 1);
-      return {
-        expectedScore: 0,
-        expectedReward: createZeroReward(),
-        expectedTierCounts: createZeroTierCounts(),
-        outcomes: new Map([[0, 1]]),
-        minScoreDetail: {
-          score: 0,
-          probability: 1,
-          tierCounts: createZeroTierCounts()
-        },
-        maxScoreDetail: {
-          score: 0,
-          probability: 1,
-          tierCounts: createZeroTierCounts()
-        },
-        recommendedActionKind: 'collect',
-        habit: emptyHabitMetrics(),
-        gpSpent: 0,
-        actionCount: 0,
-        nodeCount: 1
-      };
+      return createTerminalResult();
     }
 
     const memoKey = buildMemoKey(state);
@@ -207,7 +212,9 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     }
 
     activeSearchStats && (activeSearchStats.statesSolved += 1);
-    let best = applyCollect(state, solve);
+    let best = canUseSolverAction('collect', state)
+      ? applyCollect(state, solve)
+      : createTerminalResult();
     const actions = buildActions(state).sort((left, right) => left.priority - right.priority);
 
     actions.forEach((action) => {
@@ -230,32 +237,32 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     const actions: ActionOption[] = [];
     const canRefineCollectability = state.collectability < COLLECTABILITY_CAP;
 
-    if (canRefineCollectability && state.gp >= 200 && !state.scrutinyActive) {
+    if (canRefineCollectability && canUseSolverAction('scrutiny', state)) {
       actions.push(buffAction('scrutiny', 10, 200));
     }
 
-    if (canRefineCollectability && state.gp >= 100 && !state.collectorsFocusActive) {
+    if (canRefineCollectability && canUseSolverAction('collectorsFocus', state)) {
       actions.push(buffAction('collectorsFocus', 20, 100));
     }
 
-    if (canRefineCollectability && state.gp >= 100 && !state.primingTouchActive) {
+    if (canRefineCollectability && canUseSolverAction('primingTouch', state)) {
       actions.push(buffAction('primingTouch', 30, 100));
     }
 
     if (mechanics.baseSuccessRate + state.successBonus < 100 && !state.hasCollected) {
-      if (stats.level >= 10 && state.gp >= 250 && !state.successIIIActive) {
+      if (canUseSolverAction('successIII', state)) {
         actions.push(buffAction('successIII', 40, 250));
       }
 
-      if (stats.level >= 5 && state.gp >= 100 && !state.successIIActive) {
+      if (canUseSolverAction('successII', state)) {
         actions.push(buffAction('successII', 41, 100));
       }
 
-      if (stats.level >= 4 && state.gp >= 50 && !state.successIActive) {
+      if (canUseSolverAction('successI', state)) {
         actions.push(buffAction('successI', 42, 50));
       }
 
-      if (stats.level >= 23 && state.gp >= 50 && state.nextCollectSuccessBonus === 0) {
+      if (canUseSolverAction('nextCollectSuccess', state)) {
         actions.push(buffAction('nextCollectSuccess', 50, 50));
       }
     }
@@ -263,25 +270,34 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     addIntegrityRestoreActions(actions, state);
 
     if (canRefineCollectability) {
-      actions.push({
-        kind: 'scour',
-        priority: 70,
-        apply: (current, nextSolve) => applyRefine(current, nextSolve, 'scour')
-      });
-      actions.push({
-        kind: 'meticulous',
-        priority: 80,
-        apply: (current, nextSolve) => applyRefine(current, nextSolve, 'meticulous')
-      });
+      if (canUseSolverAction('scour', state)) {
+        actions.push({
+          kind: 'scour',
+          priority: 70,
+          apply: (current, nextSolve) => applyRefine(current, nextSolve, 'scour')
+        });
+      }
+
+      if (canUseSolverAction('meticulous', state)) {
+        actions.push({
+          kind: 'meticulous',
+          priority: 80,
+          apply: (current, nextSolve) => applyRefine(current, nextSolve, 'meticulous')
+        });
+      }
     }
 
     return actions;
   }
 
+  function canUseSolverAction(kind: CollectableActionKind, state: SearchState): boolean {
+    return canUseCollectableAction(kind, state, mechanics);
+  }
+
   function addIntegrityRestoreActions(actions: ActionOption[], state: SearchState) {
     const missingIntegrity = mechanics.maxIntegrity - state.integrity;
 
-    if (stats.level < 25 || state.gp < 300 || missingIntegrity < 1) return;
+    if (!canUseSolverAction('restoreIntegrity', state) || missingIntegrity < 1) return;
 
     actions.push({
       kind: 'restoreIntegrity',
@@ -292,7 +308,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function createWiseToTheWorldAction(state: SearchState): ActionOption | null {
     const missingIntegrity = mechanics.maxIntegrity - state.integrity;
-    if (!state.wiseToTheWorldActive || missingIntegrity < 1) return null;
+    if (!canUseSolverAction('wiseToTheWorld', state) || missingIntegrity < 1) return null;
 
     return {
       kind: 'wiseToTheWorld',
@@ -652,6 +668,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       branches: []
     };
     visited.set(memoKey, policy);
+    if (!canUseSolverAction(result.recommendedActionKind, state)) return policy;
 
     const branches = createBranchesWithReward(state, result.recommendedActionKind, (branch) => (
       result.recommendedActionKind === 'collect' && branch.labelKey === 'collectableSolver.branches.collectSuccess'

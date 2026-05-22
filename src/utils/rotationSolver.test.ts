@@ -249,6 +249,56 @@ describe('solveGatheringRotation', () => {
     expect(bountifulIndex).toBeGreaterThan(tidingsIndex);
   });
 
+  it('不會推薦角色等級尚未解鎖的一般採集技能', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 23,
+        gathering: 1000,
+        perception: 1000,
+        gp: 930
+      },
+      itemLevel: 23,
+      nodeBonuses: {
+        baseIntegrity: 10,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930
+    }));
+
+    expect(result.bestRotation).not.toEqual(expect.arrayContaining([
+      '高產',
+      '高產II',
+      '石工之理',
+      '莫非王土',
+      '莫非王土II',
+      '納爾札爾福音'
+    ]));
+  });
+
+  it('68 級前不會推薦高產II', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 67,
+        gathering: 1200,
+        perception: 1000,
+        gp: 100
+      },
+      itemLevel: 67,
+      nodeBonuses: {
+        baseIntegrity: 2,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 100
+    }));
+
+    expect(result.bestRotation).toContain('高產');
+    expect(result.bestRotation).not.toContain('高產II');
+  });
+
   it('滿 GP 時只回傳一組手法，但期望值會納入再起一次的收益', () => {
     const withRevisit = solveGatheringRotation(createRequest({
       stats: {

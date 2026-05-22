@@ -3,6 +3,7 @@ import type { SolverDebugInfo, SolverObjectiveMode, SolverRequest, SolverRespons
 import {
   REGULAR_GATHERING_STATE_KEY_FIELDS,
   applyRegularGatheringAction,
+  canUseRegularGatheringAction,
   createInitialRegularGatheringMechanicsState,
   createRegularGatheringMechanicsContext,
   gpPerGather,
@@ -236,11 +237,11 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     }
 
     if (wholeNodeBuffAllowed && state.allYieldBonus === 0) {
-      if (stats.level >= 40 && state.gp >= 500) {
+      if (canUseSolverAction('kingII', state)) {
         actions.push(setBuffAction(names.kingII, 'kingII', 30));
       }
 
-      if (stats.level >= 30 && state.gp >= 400) {
+      if (canUseSolverAction('kingI', state)) {
         actions.push(setBuffAction(names.kingI, 'kingI', 31));
       }
     }
@@ -248,9 +249,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     if (
       wholeNodeBuffAllowed &&
       !state.tidings &&
-      stats.level >= 81 &&
-      state.gp >= 200 &&
-      baseBoonChance + nodeBonuses.extraRate + state.boonBonus > 0
+      canUseSolverAction('tidings', state)
     ) {
       actions.push(setBuffAction(names.tidings, 'tidings', 22));
     }
@@ -258,22 +257,20 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     if (
       canRaiseSuccess &&
       state.nextSuccessBonus === 0 &&
-      stats.level >= 23 &&
-      state.gp >= 50 &&
-      baseSuccessRate + state.successBonus < SUCCESS_CAP
+      canUseSolverAction('clearVision', state)
     ) {
       actions.push(setBuffAction(names.clearVision, 'clearVision', 70));
     }
 
     if (state.nextYieldBonus === 0 && state.gp >= 100 && baseSuccessRate + state.successBonus > 0) {
-      if (stats.level >= 68) {
+      if (canUseSolverAction('bountifulII', state)) {
         actions.push(setBuffAction(names.bountifulII, 'bountifulII', 80));
-      } else if (stats.level >= 24) {
+      } else if (canUseSolverAction('bountifulI', state)) {
         actions.push(setBuffAction(names.bountifulI, 'bountifulI', 80));
       }
     }
 
-    if (stats.level >= 25 && state.gp >= 300) {
+    if (canUseSolverAction('restore', state)) {
       addRestoreAction(actions, state);
     }
 
@@ -281,25 +278,25 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   function addSuccessActions(actions: ActionOption[], state: SearchState) {
-    if (stats.level >= 10 && state.gp >= 250 && !state.successIIIActive) {
+    if (canUseSolverAction('successIII', state)) {
       actions.push(setBuffAction(names.successIII, 'successIII', 10));
     }
 
-    if (stats.level >= 5 && state.gp >= 100 && !state.successIIActive) {
+    if (canUseSolverAction('successII', state)) {
       actions.push(setBuffAction(names.successII, 'successII', 11));
     }
 
-    if (stats.level >= 4 && state.gp >= 50 && !state.successIActive) {
+    if (canUseSolverAction('successI', state)) {
       actions.push(setBuffAction(names.successI, 'successI', 12));
     }
   }
 
   function addBoonActions(actions: ActionOption[], state: SearchState) {
-    if (stats.level >= 50 && state.gp >= 100 && !state.giftIIActive) {
+    if (canUseSolverAction('giftII', state)) {
       actions.push(setBuffAction(names.giftII, 'giftII', 20));
     }
 
-    if (stats.level >= 15 && state.gp >= 50 && !state.giftIActive) {
+    if (canUseSolverAction('giftI', state)) {
       actions.push(setBuffAction(names.giftI, 'giftI', 21));
     }
   }
@@ -367,8 +364,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   }
 
   function createWiseToTheWorldAction(state: SearchState): ActionOption | null {
-    const missingIntegrity = maxIntegrity - state.integrity;
-    if (!state.wiseReady || missingIntegrity < 1) return null;
+    if (!canUseSolverAction('wise', state)) return null;
 
     return {
       name: WISE_TO_THE_WORLD_ACTION,
@@ -384,6 +380,10 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
         };
       }
     };
+  }
+
+  function canUseSolverAction(kind: RegularGatheringActionKind, state: SearchState): boolean {
+    return canUseRegularGatheringAction(kind, state, mechanics);
   }
 
   function setBuffAction(

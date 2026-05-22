@@ -654,6 +654,10 @@ export default {
       revisitNoProc: '再起未觸發，本次採集點結束。'
     },
     errors: {
+      unsupportedLevel: {
+        title: '收藏品採集需要 50 級',
+        desc: '目前角色等級未達 {level}，尚未開放收藏品採集。請提高等級後再使用收藏品秘笈。'
+      },
       unsupportedReward: {
         title: '找不到收藏品獎勵表',
         desc: '此物品目前不在已支援的收藏品繳納、老主顧、魔法大學、萬貨街、精選或宇宙探索資料中，暫時無法求解。'
@@ -779,6 +783,8 @@ export default {
     treeKicker: '決策樹覆蓋',
     treeTitle: '目前展開狀態',
     loadingBaseValues: '正在載入收藏品基礎值。',
+    collectableLevelLockedTitle: '收藏品採集尚未開放',
+    collectableLevelLockedDesc: '收藏品採集需要等級 {level}。目前等級不足時，實驗區不會展開決策樹或執行分析。',
     actionLevelRequirement: '需要等級 {level}',
     ruleLevelIssue: '這條策略含有目前等級 {level} 尚未學會的技能，請調整技能或提高等級。',
     strategyLevelIssueTitle: '策略含有目前不能使用的技能',

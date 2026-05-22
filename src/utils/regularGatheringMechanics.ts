@@ -83,6 +83,22 @@ export const REGULAR_GATHERING_STATE_KEY_FIELDS = [
 
 const BOON_CAP = 100;
 const SUCCESS_CAP = 100;
+const REGULAR_GATHERING_ACTION_MIN_LEVELS: Record<RegularGatheringActionKind, number> = {
+  gather: 1,
+  successI: 4,
+  successII: 5,
+  successIII: 10,
+  giftI: 15,
+  giftII: 50,
+  clearVision: 23,
+  bountifulI: 24,
+  bountifulII: 68,
+  restore: 25,
+  wise: 90,
+  kingI: 30,
+  kingII: 40,
+  tidings: 81
+};
 
 export function createRegularGatheringMechanicsContext(
   request: RegularGatheringMechanicsBuildRequest
@@ -152,6 +168,7 @@ export function canUseRegularGatheringAction(
   state: RegularGatheringMechanicsState,
   context: RegularGatheringMechanicsContext
 ): boolean {
+  if (context.level < REGULAR_GATHERING_ACTION_MIN_LEVELS[action]) return false;
   if (state.integrity <= 0) return false;
 
   if (action === 'gather') return true;
@@ -161,8 +178,8 @@ export function canUseRegularGatheringAction(
   if (action === 'successI') return state.gp >= 50 && !state.successIActive && canRaiseSuccess(state, context);
   if (action === 'successII') return state.gp >= 100 && !state.successIIActive && canRaiseSuccess(state, context);
   if (action === 'successIII') return state.gp >= 250 && !state.successIIIActive && canRaiseSuccess(state, context);
-  if (action === 'giftI') return state.gp >= 50 && !state.giftIActive && context.baseBoonChance + context.nodeBoonBonus > 1;
-  if (action === 'giftII') return state.gp >= 100 && !state.giftIIActive && context.baseBoonChance + context.nodeBoonBonus > 1;
+  if (action === 'giftI') return state.gp >= 50 && !state.giftIActive && canRaiseBoon(state, context);
+  if (action === 'giftII') return state.gp >= 100 && !state.giftIIActive && canRaiseBoon(state, context);
   if (action === 'clearVision') return state.gp >= 50 && state.nextSuccessBonus === 0 && canRaiseSuccess(state, context);
   if (action === 'bountifulI' || action === 'bountifulII') {
     return state.gp >= 100 && state.nextYieldBonus === 0 && context.baseSuccessRate + state.successBonus > 0;
@@ -181,6 +198,12 @@ export function applyRegularGatheringAction(
   state: RegularGatheringMechanicsState,
   context: RegularGatheringMechanicsContext
 ): RegularGatheringActionTransition[] {
+  if (!canUseRegularGatheringAction(action, state, context)) {
+    throw new Error(
+      `Illegal regular gathering action "${action}" for level ${context.level}, GP ${state.gp}, integrity ${state.integrity}.`
+    );
+  }
+
   if (action === 'gather') return applyGather(state, context);
   if (action === 'restore') return applyRestore(state, context);
   if (action === 'wise') {
@@ -328,6 +351,14 @@ function canRaiseSuccess(
   context: RegularGatheringMechanicsContext
 ): boolean {
   return context.baseSuccessRate > 1 && context.baseSuccessRate + state.successBonus < SUCCESS_CAP;
+}
+
+function canRaiseBoon(
+  state: RegularGatheringMechanicsState,
+  context: RegularGatheringMechanicsContext
+): boolean {
+  return context.baseBoonChance + context.nodeBoonBonus > 1
+    && context.baseBoonChance + context.nodeBoonBonus + state.boonBonus < BOON_CAP;
 }
 
 function clampPercent(value: number, cap: number): number {

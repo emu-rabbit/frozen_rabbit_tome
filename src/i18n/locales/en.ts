@@ -653,6 +653,10 @@ export default {
       revisitNoProc: 'Revisit did not trigger, so this gathering point ends.'
     },
     errors: {
+      unsupportedLevel: {
+        title: 'Collectables require level 50',
+        desc: 'Your current level is below {level}, so collectable gathering is not unlocked yet. Raise your level before using the collectable tome.'
+      },
       unsupportedReward: {
         title: 'Reward table not found',
         desc: 'This item is not in the supported collectable turn-in, custom delivery, Studium, Wachumeqimeqi, reduction, or Cosmic Exploration data yet.'
@@ -778,6 +782,8 @@ export default {
     treeKicker: 'Decision Tree Coverage',
     treeTitle: 'Current Expanded State',
     loadingBaseValues: 'Loading collectable base values.',
+    collectableLevelLockedTitle: 'Collectables are not unlocked yet',
+    collectableLevelLockedDesc: 'Collectable gathering requires level {level}. Until then, the lab will not expand a decision tree or run analysis.',
     actionLevelRequirement: 'Requires level {level}',
     ruleLevelIssue: 'This strategy includes a skill your current level {level} has not learned yet. Change the skill or raise the level.',
     strategyLevelIssueTitle: 'This strategy has a skill that cannot be used',

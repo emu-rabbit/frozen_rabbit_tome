@@ -651,6 +651,7 @@ export default {
       revisitNoProc: '再起未触发，本次采集点结束。'
     },
     errors: {
+      unsupportedLevel: { title: '收藏品采集需要 50 级', desc: '当前角色等级未达到 {level}，尚未开放收藏品采集。请提高等级后再使用收藏品秘笈。' },
       unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在已支持的收藏品缴纳、老主顾、魔法大学、万货街、精选或宇宙探索资料中，暂时无法求解。' },
       workerStale: { title: '求解器需要重新载入', desc: '网站可能刚更新完成，刷新后即可继续。' },
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }
@@ -767,6 +768,8 @@ export default {
     treeKicker: '决策树覆盖',
     treeTitle: '当前展开状态',
     loadingBaseValues: '正在载入收藏品基础值。',
+    collectableLevelLockedTitle: '收藏品采集尚未开放',
+    collectableLevelLockedDesc: '收藏品采集需要等级 {level}。当前等级不足时，实验区不会展开决策树或执行分析。',
     actionLevelRequirement: '需要等级 {level}',
     ruleLevelIssue: '这条策略含有当前等级 {level} 尚未学会的技能，请调整技能或提高等级。',
     strategyLevelIssueTitle: '策略含有当前不能使用的技能',

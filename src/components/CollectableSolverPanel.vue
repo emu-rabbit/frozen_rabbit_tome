@@ -17,6 +17,7 @@ import {
   createCollectableObjectiveOptions,
   getDefaultCollectableObjectivePresetId
 } from '../utils/collectableObjectivePresets';
+import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -52,7 +53,8 @@ let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
 const DECISION_TREE_EXPORT_SCHEMA_VERSION = 1;
 
-const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId);
+const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
+const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId && !isCollectableLevelLocked.value);
 const isWorkerError = computed(() => collectableError.value === 'workerStale' || collectableError.value === 'workerFailed');
 const activeItemJobLabel = computed(() => {
   const jobs = gatherableItemJobs(props.activeItem);
@@ -113,7 +115,7 @@ function applyDefaultObjective(table: CollectableRewardTable) {
 }
 
 async function handleSolve() {
-  if (!props.baseValues || !canSolve.value) return;
+  if (!props.baseValues || !canSolve.value || isCollectableLevelLocked.value) return;
 
   await solveCollectable({
     activeItem: props.activeItem,
@@ -424,6 +426,14 @@ function waitForUiFrame() {
         icon="pi pi-refresh"
         @click="reloadPage"
       />
+    </div>
+
+    <div v-else-if="isCollectableLevelLocked" class="collectable-alert" role="alert">
+      <i class="pi pi-exclamation-circle"></i>
+      <div>
+        <strong>{{ t('collectableSolver.errors.unsupportedLevel.title') }}</strong>
+        <p>{{ t('collectableSolver.errors.unsupportedLevel.desc', { level: MIN_COLLECTABLE_LEVEL }) }}</p>
+      </div>
     </div>
 
     <div v-if="collectableResult" class="collectable-result">

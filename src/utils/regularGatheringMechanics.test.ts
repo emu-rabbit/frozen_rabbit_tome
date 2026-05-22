@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyRegularGatheringAction,
+  canUseRegularGatheringAction,
   createInitialRegularGatheringMechanicsState,
   createRegularGatheringMechanicsContext
 } from './regularGatheringMechanics';
@@ -11,6 +12,62 @@ import {
 } from './collectableMechanics';
 
 describe('regularGatheringMechanics', () => {
+  it('一般採集機制層會拒絕尚未解鎖的技能', () => {
+    const context = createRegularGatheringMechanicsContext({
+      stats: {
+        level: 23,
+        gathering: 1000,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      itemLevel: 23,
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      }
+    });
+    const state = createInitialRegularGatheringMechanicsState(context, 930);
+
+    expect(canUseRegularGatheringAction('bountifulI', state, context)).toBe(false);
+    expect(() => applyRegularGatheringAction('bountifulI', state, context)).toThrow(
+      /Illegal regular gathering action "bountifulI"/
+    );
+  });
+
+  it('一般採集機制層會拒絕不符合當前狀態的技能', () => {
+    const context = createRegularGatheringMechanicsContext({
+      stats: {
+        level: 100,
+        gathering: 1000,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      }
+    });
+    const state = createInitialRegularGatheringMechanicsState(context, 930);
+
+    expect(canUseRegularGatheringAction('restore', state, context)).toBe(false);
+    expect(() => applyRegularGatheringAction('restore', state, context)).toThrow(
+      /Illegal regular gathering action "restore"/
+    );
+  });
+
   it('普通採集只有成功分支會恢復 GP，失敗分支不恢復 GP', () => {
     const context = createRegularGatheringMechanicsContext({
       stats: {

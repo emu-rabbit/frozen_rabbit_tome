@@ -2,11 +2,12 @@ import { ref } from 'vue';
 import type { CollectableObjective, CollectableSolverRequest, CollectableSolverResult } from '../types/collectable';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import { getCollectableRewardTable } from '../services/collectableRewards';
+import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
 import { useSettings } from './useSettings';
 
 const collectableResult = ref<CollectableSolverResult | null>(null);
 const isCollectableSolving = ref(false);
-const collectableError = ref<'unsupportedReward' | 'workerStale' | 'workerFailed' | null>(null);
+const collectableError = ref<'unsupportedLevel' | 'unsupportedReward' | 'workerStale' | 'workerFailed' | null>(null);
 const collectableObjective = ref<CollectableObjective>({ kind: 'scrip' });
 let activeCollectableWorker: Worker | null = null;
 let collectableSolveVersion = 0;
@@ -40,6 +41,13 @@ export function useCollectableSolver() {
     cancelCollectableSolve();
     collectableResult.value = null;
     collectableError.value = null;
+
+    if (payload.stats.level < MIN_COLLECTABLE_LEVEL) {
+      collectableError.value = 'unsupportedLevel';
+      isCollectableSolving.value = false;
+      return;
+    }
+
     isCollectableSolving.value = true;
     const currentVersion = collectableSolveVersion;
 

@@ -33,6 +33,7 @@ import {
   isCustomTierObjective,
   isTierCountObjective
 } from '../utils/collectableObjectivePresets';
+import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -65,9 +66,10 @@ let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const jobType = computed(() => props.activeItem.jobType || 'miner');
-const canBuildTree = computed(() => !!props.baseValues);
+const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
+const canBuildTree = computed(() => !!props.baseValues && !isCollectableLevelLocked.value);
 const treeResult = computed(() => {
-  if (!props.baseValues) return null;
+  if (!props.baseValues || isCollectableLevelLocked.value) return null;
 
   return buildCollectableStrategyTree({
     stats: props.effectiveStats,
@@ -189,7 +191,7 @@ onUnmounted(() => {
 });
 
 function runAnalysis() {
-  if (!treeResult.value?.root || !rewardTable.value || hasStrategyLevelIssue.value) return;
+  if (isCollectableLevelLocked.value || !treeResult.value?.root || !rewardTable.value || hasStrategyLevelIssue.value) return;
 
   analysis.value = analyzeCollectableStrategyTree(
     treeResult.value.root,
@@ -358,6 +360,8 @@ function formatSingleTierCount(counts: CollectableTierCounts) {
 }
 
 function addRule() {
+  if (isCollectableLevelLocked.value) return;
+
   const id = makeId();
   rules.value = [
     ...rules.value,
@@ -374,6 +378,8 @@ function addRule() {
 }
 
 function loadSimpleExampleRules() {
+  if (isCollectableLevelLocked.value) return;
+
   const highTierCollectability = rewardTable.value?.tiers.high?.collectability ?? rewardTable.value?.tiers.mid.collectability ?? 1000;
   rules.value = createSimpleCollectableStrategyRules({
     highTierCollectability,
@@ -564,14 +570,25 @@ function makeId() {
             <span>{{ t('collectableStrategyLab.strategyListKicker') }}</span>
             <h2>{{ t('collectableStrategyLab.strategyListTitle') }}</h2>
           </div>
-          <Button icon="pi pi-plus" :label="t('collectableStrategyLab.addStrategy')" class="p-button-sm rounded-xl" @click="addRule" />
+          <Button
+            icon="pi pi-plus"
+            :label="t('collectableStrategyLab.addStrategy')"
+            class="p-button-sm rounded-xl"
+            :disabled="isCollectableLevelLocked"
+            @click="addRule"
+          />
         </div>
 
-        <div v-if="rules.length === 0" class="strategy-empty">
-          <i class="pi pi-sitemap"></i>
-          <strong>{{ t('collectableStrategyLab.emptyStrategyTitle') }}</strong>
-          <p>{{ t('collectableStrategyLab.emptyStrategyDesc') }}</p>
+        <div v-if="rules.length === 0" class="strategy-empty" :class="{ 'is-locked': isCollectableLevelLocked }" :role="isCollectableLevelLocked ? 'alert' : undefined">
+          <i :class="isCollectableLevelLocked ? 'pi pi-lock' : 'pi pi-sitemap'"></i>
+          <strong>{{ isCollectableLevelLocked ? t('collectableStrategyLab.collectableLevelLockedTitle') : t('collectableStrategyLab.emptyStrategyTitle') }}</strong>
+          <p>
+            {{ isCollectableLevelLocked
+              ? t('collectableStrategyLab.collectableLevelLockedDesc', { level: MIN_COLLECTABLE_LEVEL })
+              : t('collectableStrategyLab.emptyStrategyDesc') }}
+          </p>
           <Button
+            v-if="!isCollectableLevelLocked"
             icon="pi pi-bolt"
             :label="t('collectableStrategyLab.loadSimpleExample')"
             class="p-button-sm p-button-primary rounded-xl strategy-empty-action"
@@ -629,7 +646,12 @@ function makeId() {
           </div>
         </div>
 
-        <div v-if="!canBuildTree" class="tree-empty">
+        <div v-if="isCollectableLevelLocked" class="tree-empty">
+          <i class="pi pi-lock"></i>
+          <p>{{ t('collectableStrategyLab.collectableLevelLockedDesc', { level: MIN_COLLECTABLE_LEVEL }) }}</p>
+        </div>
+
+        <div v-else-if="!canBuildTree" class="tree-empty">
           <i class="pi pi-database"></i>
           <p>{{ t('collectableStrategyLab.loadingBaseValues') }}</p>
         </div>
@@ -739,7 +761,7 @@ function makeId() {
           <Button
             class="analysis-run-button p-button-primary rounded-xl"
             :aria-label="t('collectableStrategyLab.analysis.run')"
-            :disabled="!treeResult?.root || !rewardTable || rewardError || hasStrategyLevelIssue"
+            :disabled="isCollectableLevelLocked || !treeResult?.root || !rewardTable || rewardError || hasStrategyLevelIssue"
             @click="runAnalysis"
           >
             <i class="pi pi-play"></i>
@@ -748,7 +770,12 @@ function makeId() {
         </div>
       </div>
 
-      <div v-if="rewardError" class="analysis-empty" role="alert">
+      <div v-if="isCollectableLevelLocked" class="analysis-empty" role="alert">
+        <i class="pi pi-lock"></i>
+        <p>{{ t('collectableStrategyLab.collectableLevelLockedDesc', { level: MIN_COLLECTABLE_LEVEL }) }}</p>
+      </div>
+
+      <div v-else-if="rewardError" class="analysis-empty" role="alert">
         <i class="pi pi-exclamation-circle"></i>
         <p>{{ t('collectableStrategyLab.analysis.unsupportedReward') }}</p>
       </div>
@@ -1752,9 +1779,22 @@ function makeId() {
   text-align: center;
 }
 
+.strategy-empty.is-locked {
+  height: auto;
+  min-height: 10rem;
+  align-content: center;
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
 :global(html.dark .strategy-empty) {
   border-color: #334155;
   background: rgb(2 6 23 / 0.38);
+}
+
+:global(html.dark .strategy-empty.is-locked) {
+  border-color: rgb(194 65 12 / 0.42);
+  background: rgb(154 52 18 / 0.14);
 }
 
 .strategy-empty i {
@@ -1762,9 +1802,21 @@ function makeId() {
   font-size: 1.6rem;
 }
 
+.strategy-empty.is-locked i {
+  color: #f97316;
+}
+
+:global(html.dark .strategy-empty.is-locked i) {
+  color: #fdba74;
+}
+
 .strategy-empty strong {
   color: #334155;
   font-weight: 900;
+}
+
+:global(html.dark .strategy-empty.is-locked strong) {
+  color: #fed7aa;
 }
 
 .strategy-empty p {
@@ -1773,6 +1825,10 @@ function makeId() {
   color: #64748b;
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+.strategy-empty.is-locked p {
+  color: #9a3412;
 }
 
 .strategy-empty-action {
@@ -1787,6 +1843,10 @@ function makeId() {
 
 :global(html.dark .strategy-empty p) {
   color: #94a3b8;
+}
+
+:global(html.dark .strategy-empty.is-locked p) {
+  color: #fdba74;
 }
 
 .rule-enabled {

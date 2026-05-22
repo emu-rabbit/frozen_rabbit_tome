@@ -87,7 +87,13 @@ export const COLLECTABLE_STATE_KEY_FIELDS = [
   'wiseToTheWorldActive'
 ] as const;
 
+export const MIN_COLLECTABLE_LEVEL = 50;
+
 export function createCollectableMechanicsContext(request: CollectableMechanicsBuildRequest): CollectableMechanicsContext {
+  if (request.stats.level < MIN_COLLECTABLE_LEVEL) {
+    throw new Error(`Collectable gathering requires level ${MIN_COLLECTABLE_LEVEL} or higher.`);
+  }
+
   const baseValueIncreaseRate = calculateValueIncreaseRate(request.stats.gathering, request.baseValues.Gathering);
   const valueIncreaseRate = request.hasRelicToolBonus
     ? applyRelicToolValueIncreaseBonus(baseValueIncreaseRate)
@@ -195,6 +201,12 @@ export function applyCollectableAction(
   state: CollectableMechanicsState,
   context: CollectableMechanicsContext
 ): CollectableActionTransition[] {
+  if (!canUseCollectableAction(action, state, context)) {
+    throw new Error(
+      `Illegal collectable action "${action}" for level ${context.level}, GP ${state.gp}, integrity ${state.integrity}, collectability ${state.collectability}.`
+    );
+  }
+
   if (action === 'collect') return applyCollect(state, context);
   if (action === 'scour' || action === 'meticulous') return applyRefine(action, state, context);
   if (action === 'restoreIntegrity') return applyRestoreIntegrity(state, context);
