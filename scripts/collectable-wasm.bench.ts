@@ -36,6 +36,7 @@ type WasmExports = {
   getTerminalStates: () => bigint;
   getBranchCount: () => bigint;
   getFailed: () => number;
+  getFailureReason: () => number;
   getBaseSuccessRate: () => number;
   getScourValue: () => number;
   getScoreForState: (
@@ -179,6 +180,10 @@ function runWasm(exports: WasmExports, request: CollectableSolverRequest) {
       candidateComparisons: toNumber(exports.getCandidateComparisons()),
       terminalStates: toNumber(exports.getTerminalStates()),
       branchCount: toNumber(exports.getBranchCount())
+    },
+    failure: {
+      failed: exports.getFailed(),
+      reason: exports.getFailureReason()
     },
     formulas: {
       baseSuccessRate: exports.getBaseSuccessRate(),

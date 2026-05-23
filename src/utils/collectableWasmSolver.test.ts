@@ -9,7 +9,7 @@ import {
 } from './collectableWasmSolver';
 import type { CollectableSolverRequest } from '../types/collectable';
 
-type WasmCore = Parameters<typeof solveCollectableRotationWithWasm>[1];
+type WasmCore = NonNullable<Parameters<typeof solveCollectableRotationWithWasm>[1]>;
 
 function searchCounters(overrides: Partial<{
   getStatesSolved: () => bigint;
@@ -160,6 +160,52 @@ describe('collectable WASM solver core', () => {
     expectSameSummary(wasm, ts, { expectSameRoot: false });
     expect(wasm.debug?.plans[0].search.statesSolved).toBeLessThanOrEqual(ts.debug?.plans[0].search.statesSolved ?? 0);
   }, 90000);
+
+  it('does not overflow the memo load-limit check at 2^25 capacity', async () => {
+    const core = await loadWasmCore();
+    const request = baseRequest({
+      stats: {
+        level: 100,
+        gathering: 2000,
+        perception: 5173,
+        gp: 1600
+      },
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 1600
+    });
+    const high = request.rewardTable.tiers.high;
+    const score = core.solvePlanObjective(
+      request.stats.level,
+      request.stats.gathering,
+      request.stats.perception,
+      request.stats.gp,
+      request.baseValues.Gathering,
+      request.baseValues.Perception,
+      request.itemLevel,
+      request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount,
+      request.temporaryGp,
+      request.isTimedNode ? 1 : 0,
+      request.rewardTable.tiers.low.collectability,
+      request.rewardTable.tiers.low.reward.scrip,
+      request.rewardTable.tiers.mid.collectability,
+      request.rewardTable.tiers.mid.reward.scrip,
+      high?.collectability ?? 0,
+      high?.reward.scrip ?? 0,
+      request.hasRelicToolBonus ? 1 : 0,
+      25,
+      0
+    );
+
+    expect(score).toBeGreaterThan(0);
+    expect(core.getFailed()).toBe(0);
+    expect(core.getFailureReason()).toBe(0);
+    expect(Number(core.getStatesSolved())).toBeGreaterThan(1_000_000);
+  }, 60000);
 
   it('reports memo capacity failure without retrying a larger memo table', async () => {
     let calls = 0;

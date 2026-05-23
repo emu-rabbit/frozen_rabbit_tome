@@ -266,7 +266,7 @@ function memoSet(
   preferredRestoreCount: i32,
   bestAction: i32
 ): void {
-  if ((memoSize + 1) * 100 >= capacity * MEMO_LOAD_LIMIT_PERCENT) {
+  if (<i64>(memoSize + 1) * 100 >= <i64>capacity * MEMO_LOAD_LIMIT_PERCENT) {
     failed = true;
     failureReason = FAILURE_MEMO_CAPACITY;
     abort('Collectable WASM memo table capacity exceeded.', 'collectableSolverCore.ts', 0, 0);
