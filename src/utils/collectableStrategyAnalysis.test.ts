@@ -135,4 +135,51 @@ describe('collectableStrategyAnalysis', () => {
     expect(result.expectedScore).toBe(40);
     expect(result.outcomeDistribution).toEqual([{ score: 40, probability: 100 }]);
   });
+
+  it('keeps tier-count details in the distribution for tier priority presets', () => {
+    const terminal = node({ id: 'terminal' });
+    const secondCollect = node({
+      id: 'second',
+      status: 'decided',
+      action: 'collect',
+      state: { collectability: 300, integrity: 1 },
+      branches: [
+        {
+          label: '成功',
+          labelKeys: ['collectableSolver.branches.collectSuccess'],
+          probability: 100,
+          state: { ...terminal.state },
+          child: terminal
+        }
+      ]
+    });
+    const root = node({
+      id: 'root',
+      status: 'decided',
+      action: 'collect',
+      state: { collectability: 200, integrity: 2 },
+      branches: [
+        {
+          label: '成功',
+          labelKeys: ['collectableSolver.branches.collectSuccess'],
+          probability: 100,
+          state: { ...secondCollect.state },
+          child: secondCollect
+        }
+      ]
+    });
+
+    const result = analyzeCollectableStrategyTree(root, rewardTable, {
+      kind: 'tierScore',
+      presetId: 'highValue',
+      tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
+    });
+
+    expect(result.expectedScore).toBe(101);
+    expect(result.outcomeDistribution).toEqual([{
+      score: 101,
+      probability: 100,
+      tierCounts: { none: 0, low: 0, mid: 1, high: 1 }
+    }]);
+  });
 });

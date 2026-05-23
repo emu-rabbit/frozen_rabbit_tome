@@ -2,7 +2,8 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
-import type { CollectableObjective, CollectableRewardWeights, CollectableSolverDebugInfo, CollectableTierScoreWeights } from '../types/collectable';
+import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
+import type { CollectableObjective, CollectableOutcomeDebugEntry, CollectableRewardWeights, CollectableSolverDebugInfo, CollectableTierCounts, CollectableTierScoreWeights } from '../types/collectable';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -17,6 +18,7 @@ const { t } = useI18n();
 const plans = computed(() => props.debug?.plans ?? []);
 const stateFields = computed(() => props.debug?.optimality.stateKeyFields ?? []);
 const objectiveEntries = computed(() => buildObjectiveEntries(props.debug?.objective));
+const tierCountVisibilityEpsilon = 0.000001;
 const objectiveLabel = computed(() => {
   const objective = props.debug?.objective;
   if (!objective) return '-';
@@ -34,7 +36,7 @@ const objectiveUnitLabel = computed(() => {
   if (!objective) return '-';
   if (objective.kind === 'tierScore') {
     return objective.presetId === 'customTier'
-      ? t('collectableSolver.results.pointUnit')
+      ? t('collectableStrategyLab.analysis.weightedScoreUnit')
       : t('collectableSolver.debug.objectiveUnits.tierScore');
   }
   if (objective.kind === 'scrip') {
@@ -63,6 +65,66 @@ function planTitle(kind: string) {
   return kind === 'revisit'
     ? t('collectableSolver.debug.revisitPlan')
     : t('collectableSolver.debug.primaryPlan');
+}
+
+function distributionTitle() {
+  const objective = props.debug?.objective;
+  if (isTierCountObjective(objective)) return t('collectableStrategyLab.analysis.distributionTierCounts');
+  if (isCustomTierObjective(objective)) return t('collectableStrategyLab.analysis.distributionWeightedScore');
+  return t('collectableStrategyLab.analysis.distributionScrip');
+}
+
+function distributionUnitText() {
+  const objective = props.debug?.objective;
+  if (isTierCountObjective(objective)) return t('collectableStrategyLab.analysis.distributionUnitTierCounts');
+  if (isCustomTierObjective(objective)) return t('collectableStrategyLab.analysis.distributionUnitWeightedScore');
+  return t('collectableStrategyLab.analysis.distributionUnitScrip', { unit: objectiveUnitLabel.value });
+}
+
+function distributionTierColumns(entries: CollectableOutcomeDebugEntry[]) {
+  if (!isTierCountObjective(props.debug?.objective)) return [];
+
+  const hasMixedTierOutcome = entries.some((entry) => {
+    const counts = entry.tierCounts;
+    if (!counts) return false;
+    return ['high', 'mid', 'low'].filter((key) => Math.abs(counts[key as keyof CollectableTierCounts]) > tierCountVisibilityEpsilon).length > 1;
+  });
+
+  if (hasMixedTierOutcome) return ['high', 'mid', 'low'] as const;
+
+  const visibleKeys = (['high', 'mid', 'low'] as const).filter((key) => (
+    entries.some((entry) => Math.abs(entry.tierCounts?.[key] ?? 0) > tierCountVisibilityEpsilon)
+  ));
+
+  return visibleKeys.length === 1 ? visibleKeys : (['high', 'mid', 'low'] as const);
+}
+
+function distributionTierColumnLabels(entries: CollectableOutcomeDebugEntry[]) {
+  return distributionTierColumns(entries).map((key) => t(`collectableObjective.tiers.${key}`)).join(' / ');
+}
+
+function distributionClass(entries: CollectableOutcomeDebugEntry[]) {
+  const columns = distributionTierColumns(entries);
+  return {
+    'is-score': !isTierCountObjective(props.debug?.objective),
+    'is-tier-single': isTierCountObjective(props.debug?.objective) && columns.length === 1,
+    'is-tier-vector': isTierCountObjective(props.debug?.objective) && columns.length > 1
+  };
+}
+
+function formatTierCountValue(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function formatDistributionTierCount(entry: CollectableOutcomeDebugEntry, key: 'high' | 'mid' | 'low') {
+  return formatTierCountValue(entry.tierCounts?.[key] ?? 0);
+}
+
+function debugOutcomeKey(planKind: string, entry: CollectableOutcomeDebugEntry) {
+  const counts = entry.tierCounts;
+  return counts
+    ? `${planKind}-${entry.score}-${counts.high}-${counts.mid}-${counts.low}`
+    : `${planKind}-${entry.score}`;
 }
 
 function buildObjectiveEntries(objective?: CollectableObjective) {
@@ -216,10 +278,32 @@ function buildRewardWeightEntries(weights: CollectableRewardWeights = {}, kind: 
                     <span>{{ t('solver.debug.terminalStates') }} {{ plan.search.terminalStates }}</span>
                   </div>
 
-                  <h5>{{ t('solver.debug.outcomeDistribution') }}</h5>
-                  <div class="debug-outcomes">
-                    <div v-for="entry in plan.outcomeDistribution" :key="`${plan.kind}-${entry.score}`" class="debug-outcome-row">
-                      <span>{{ entry.score }}</span>
+                  <div class="debug-distribution-header">
+                    <div>
+                      <h5>{{ distributionTitle() }}</h5>
+                      <p>{{ distributionUnitText() }}</p>
+                    </div>
+                    <span v-if="isTierCountObjective(debug.objective)">{{ distributionTierColumnLabels(plan.outcomeDistribution) }}</span>
+                  </div>
+                  <div class="debug-outcomes" :class="distributionClass(plan.outcomeDistribution)">
+                    <div v-for="entry in plan.outcomeDistribution" :key="debugOutcomeKey(plan.kind, entry)" class="debug-outcome-row">
+                      <span
+                        v-if="isTierCountObjective(debug.objective)"
+                        class="debug-outcome-value tier-count-distribution-value"
+                        :class="{ 'is-vector': distributionTierColumns(plan.outcomeDistribution).length > 1 }"
+                      >
+                        <template v-if="distributionTierColumns(plan.outcomeDistribution).length === 1">
+                          <strong>{{ formatDistributionTierCount(entry, distributionTierColumns(plan.outcomeDistribution)[0]) }}</strong>
+                          <small>{{ t(`collectableObjective.tiers.${distributionTierColumns(plan.outcomeDistribution)[0]}`) }}</small>
+                        </template>
+                        <template v-else>
+                          <template v-for="(tierKey, index) in distributionTierColumns(plan.outcomeDistribution)" :key="tierKey">
+                            <strong>{{ formatDistributionTierCount(entry, tierKey) }}</strong>
+                            <small v-if="index < distributionTierColumns(plan.outcomeDistribution).length - 1">/</small>
+                          </template>
+                        </template>
+                      </span>
+                      <span v-else class="debug-outcome-value">{{ entry.score }}</span>
                       <div class="debug-outcome-track">
                         <div :style="{ width: `${Math.min(100, entry.probability)}%` }"></div>
                       </div>
@@ -556,14 +640,48 @@ function buildRewardWeightEntries(weights: CollectableRewardWeights = {}, kind: 
 
 .debug-outcomes {
   display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 5.25rem;
   gap: 0.35rem;
+  column-gap: 0.55rem;
+  align-items: center;
+}
+
+.debug-outcomes.is-score {
+  grid-template-columns: minmax(2ch, max-content) minmax(0, 1fr) 5.25rem;
+}
+
+.debug-distribution-header {
+  display: flex;
+  align-items: end;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.3rem;
+  color: #64748b;
+}
+
+.debug-distribution-header h5 {
+  margin: 0;
+}
+
+.debug-distribution-header p {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.debug-distribution-header > span {
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+:global(html.dark .debug-distribution-header > span) {
+  color: #7dd3fc;
 }
 
 .debug-outcome-row {
-  display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) 5.25rem;
-  align-items: center;
-  gap: 0.55rem;
+  display: contents;
   color: #475569;
   font-size: 0.78rem;
   font-weight: 800;
@@ -576,6 +694,44 @@ function buildRewardWeightEntries(weights: CollectableRewardWeights = {}, kind: 
 .probability-text {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   white-space: pre;
+}
+
+.debug-outcome-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.tier-count-distribution-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.tier-count-distribution-value strong {
+  min-width: 2ch;
+  color: #334155;
+  font: inherit;
+  text-align: right;
+}
+
+:global(html.dark .tier-count-distribution-value strong) {
+  color: #e2e8f0;
+}
+
+.tier-count-distribution-value small {
+  color: #94a3b8;
+  font: inherit;
+}
+
+.tier-count-distribution-value.is-vector {
+  display: grid;
+  grid-template-columns: minmax(1.35rem, max-content) auto minmax(1.35rem, max-content) auto minmax(1.35rem, max-content);
+  column-gap: 0.2rem;
+  justify-content: start;
+}
+
+.tier-count-distribution-value.is-vector strong {
+  min-width: 1.35rem;
 }
 
 .debug-outcome-track {

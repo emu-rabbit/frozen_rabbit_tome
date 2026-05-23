@@ -16,6 +16,7 @@ import {
   COLLECTABLE_STATE_KEY_FIELDS,
   createCollectableMechanicsContext
 } from './collectableMechanics';
+import { serializeCollectableDebugOutcomes } from './collectableDebugDistribution';
 import { calculateSuccessRate } from './gatheringMath';
 import {
   attachCollectableRevisitGate,
@@ -27,7 +28,6 @@ import {
 } from './collectableWasmPolicy';
 import { summarizeCollectableRewardTable } from '../services/collectableRewards';
 import type {
-  CollectableOutcomeDebugEntry,
   CollectablePolicyNode,
   CollectablePolicyPlan,
   CollectableRewardTable,
@@ -333,7 +333,10 @@ function solveCollectableRotationWithWasmCore(
           kind: plan.kind,
           startingGp: run.startingGp,
           expectedScore: Number(run.evaluation.expectedScore.toFixed(6)),
-          outcomeDistribution: serializeOutcomes(run.evaluation.outcomes),
+          outcomeDistribution: serializeCollectableDebugOutcomes(run.evaluation.outcomes, request.objective, {
+            policy: plan.policy,
+            rewardTable: request.rewardTable
+          }),
           search: run.search
         };
       }),
@@ -394,7 +397,10 @@ function runPlan(
   return {
     startingGp: clampedGp,
     expectedScore,
-    evaluation: evaluateCollectablePolicyFromWasmCore(request, core, { startingGp: clampedGp, selector }),
+    evaluation: evaluateCollectablePolicyFromWasmCore(request, core, {
+      startingGp: clampedGp,
+      selector,
+    }),
     search: {
       startingGp: clampedGp,
       statesSolved: Number(core.getStatesSolved()),
@@ -707,15 +713,6 @@ function summarizeOutcomes(outcomes: Map<number, number>) {
     minScoreChance: (outcomes.get(minScore) ?? 0) * 100,
     maxScoreChance: (outcomes.get(maxScore) ?? 0) * 100
   };
-}
-
-function serializeOutcomes(outcomes: Map<number, number>): CollectableOutcomeDebugEntry[] {
-  return [...outcomes.entries()]
-    .sort(([leftScore], [rightScore]) => leftScore - rightScore)
-    .map(([score, probability]) => ({
-      score,
-      probability: probability * 100
-    }));
 }
 
 function combineSequentialOutcomes(left: Map<number, number>, right: Map<number, number>) {

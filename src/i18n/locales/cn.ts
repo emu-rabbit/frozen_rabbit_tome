@@ -821,8 +821,15 @@ export default {
       expectedScore: '期望{unit}',
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
-      distribution: '分数概率分布',
-      scoringNote: '结果会依目前评分偏好显示；切换齿轮设置后再分析，即可比较票据、档位个数或自定义分数。'
+      distribution: '概率分布表',
+      distributionScrip: '票据概率分布',
+      distributionWeightedScore: '加权总分概率分布',
+      distributionTierCounts: '档位个数概率分布',
+      distributionUnitScrip: '分布表单位：{unit}',
+      distributionUnitWeightedScore: '分布表单位：权重加权总分',
+      distributionUnitTierCounts: '分布表单位：档位获得个数',
+      weightedScoreUnit: '加权总分',
+      scoringNote: '分布表会依当前评分偏好切换单位：票据显示票据量，档位优先显示获得个数，自定义权重显示加权总分。'
     },
     tools: {
       moveUp: '上移',

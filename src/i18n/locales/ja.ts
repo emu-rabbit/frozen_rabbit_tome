@@ -821,8 +821,15 @@ export default {
       expectedScore: '期待{unit}',
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
-      distribution: 'スコア確率分布',
-      scoringNote: '結果は現在の評価設定で表示されます。歯車設定を切り替えて再分析すると、スクリップ、段階数、カスタム点を比較できます。'
+      distribution: '確率分布表',
+      distributionScrip: 'スクリップ確率分布',
+      distributionWeightedScore: '加重合計スコア確率分布',
+      distributionTierCounts: '段階数確率分布',
+      distributionUnitScrip: '分布表の単位：{unit}',
+      distributionUnitWeightedScore: '分布表の単位：重みによる加重合計スコア',
+      distributionUnitTierCounts: '分布表の単位：段階別の獲得数',
+      weightedScoreUnit: '加重合計スコア',
+      scoringNote: '分布表の単位は評価設定に合わせて切り替わります。スクリップはスクリップ量、段階優先は獲得数、カスタム重みは加重合計スコアを表示します。'
     },
     tools: {
       moveUp: '上へ移動',

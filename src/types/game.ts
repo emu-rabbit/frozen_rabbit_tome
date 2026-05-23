@@ -375,6 +375,7 @@ export interface StoredCollectableStrategyRule {
 export interface StoredCollectableScoreDistributionEntry {
   score: number;
   probability: number;
+  tierCounts?: CollectableTierCounts;
 }
 
 export interface StoredCollectableExperimentAnalysis {

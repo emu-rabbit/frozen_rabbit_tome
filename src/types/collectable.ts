@@ -125,6 +125,7 @@ export interface CollectableOutcomeSummary {
 export interface CollectableOutcomeDebugEntry {
   score: number;
   probability: number;
+  tierCounts?: CollectableTierCounts;
 }
 
 export type CollectablePolicyPlanKind = 'primary' | 'revisit';

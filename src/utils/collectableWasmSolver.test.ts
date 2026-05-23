@@ -135,6 +135,25 @@ describe('collectable WASM solver core', () => {
     expectSameSummary(wasm, ts);
   }, 30000);
 
+  it('includes tier-count details in debug distributions for tier priority objectives', async () => {
+    const core = await loadWasmCore();
+    const request = baseRequest({
+      objective: {
+        kind: 'tierScore',
+        presetId: 'highValue',
+        tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
+      }
+    });
+    const wasm = await solveCollectableRotationWithWasm(request, core);
+
+    expect(wasm.debug?.plans[0].outcomeDistribution.some((entry) => entry.tierCounts)).toBe(true);
+    expect(wasm.debug?.plans[0].outcomeDistribution[0].tierCounts).toEqual(expect.objectContaining({
+      low: expect.any(Number),
+      mid: expect.any(Number),
+      high: expect.any(Number)
+    }));
+  }, 30000);
+
   it('keeps the long Glv 700 low-gathering case aligned while using fewer JS allocations', async () => {
     const core = await loadWasmCore();
     const request = baseRequest({

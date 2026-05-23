@@ -6,27 +6,23 @@
 
 ### 主待辦
 
-1. **機率分布表的 score 單位與權重說明**
-   - 釐清分布圖中的 `400 / 500 / 600...` 是 weighted score，不是 collectability rating。
-   - 權重檔與 tier counts 的關係需更直覺。
-
-2. **收藏品節點儀表台改善**
+1. **收藏品節點儀表台改善**
    - 讓節點狀態、分支路徑、關鍵機率與預測落點更視覺化。
    - 目標是幫使用者更容易做策略決策。
 
-3. **分享、匯出、復現資料**
+2. **分享、匯出、復現資料**
    - 整理 JSON export/import，使其足以重現結果，但避免輸出過多噪音。
    - 保留未來 Discord 分享、指南引用、第三方復現的可能性。
 
-4. **新增兩個報表比較功能**
+3. **新增兩個報表比較功能**
    - 讓使用者比較兩份分析報表，例如 spiritbond rotation vs normal rotation。
    - 優先考慮一般採集實驗區與收藏品實驗區的共用比較模型。
 
-5. **效能與 OOM 壓力測試**
+4. **效能與 OOM 壓力測試**
    - 特別關注低 Gathering/Perception、高 GP 的版本初期情境。
    - 這是較偏後端 / 演算法品質的項目。
 
-6. **Frontier 實驗區**
+5. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
 
@@ -37,36 +33,7 @@
 
 ## 詳細內容
 
-## 1. 機率分布表的 score 單位與權重說明
-
-### 背景
-
-Shikhu 在收藏品分析報表中看到 `400 / 500 / 600 / 700 / 800` 搭配百分比時，直覺認為那些數字是 collectability rating。但在目前模型中，這些數字是依照 scoring preference / tier weights 算出的 weighted score。
-
-例如高檔位權重為 `100`、中檔位權重為 `3`、低檔位權重為 `1` 時：
-
-- `500` 可能代表 `5 High Tier`。
-- `506` 可能代表 `5 High Tier + 2 Mid Tier`。
-- 它不是收藏價值 `500`。
-
-### User Story
-
-作為收藏品工具使用者，我希望分布圖能明確告訴我數字代表「分數」而非「收藏價值」，如此我才能正確判讀結果，不會以為工具算出低於 1000 rating 的收藏品。
-
-### 已討論取捨
-
-- `Tier Counts` 應代表物品落在各 tier 的數量期望，不應被誤解為 weighted score。
-- 改變權重後，求解器可能選擇不同策略，因此 tier counts 可能跟著變；這不是因為 tier count 本身被權重相乘。
-- 在固定策略的分析器中，權重理論上應只改變 score，不應改變實際 tier counts；若行為不是如此，需要檢查。
-
-### 可能方向
-
-- 分布圖標題或座標改為 `Weighted Score` / `Score Distribution`。
-- 若目前 profile 是高檔位優先，可在 score 旁顯示近似解讀，例如 `500 points, roughly 5 High Tier items`。
-- tooltip 或說明按鈕中明確寫出 scoring formula。
-- 結果卡片避免混用 `High value` 這類容易被看成 collectability 的文字；術語修正已另行處理並準備上線。
-
-## 2. 收藏品節點儀表台改善
+## 1. 收藏品節點儀表台改善
 
 ### 背景
 
@@ -106,7 +73,7 @@ Shikhu 認為收藏品工具同時有「資訊太多」與「資訊不夠」的�
 - 對 value increase、Standard、Wise、Revisit 等隨機事件使用一致圖示與短文字。
 - 在節點旁加入一個 compact formula panel，顯示玩家當下決策最需要看的幾個機率。
 
-## 3. 分享、匯出、復現資料
+## 2. 分享、匯出、復現資料
 
 ### 背景
 
@@ -136,7 +103,7 @@ Shikhu 提到希望能在 Discord 分享設定，也可能將 JSON 用於 Icy Ve
   - policy 或 strategy analysis 必要資料。
 - 未來若做 share code，先以普通採集或簡短 rotation 為主，不要先挑收藏品決策樹。
 
-## 4. 新增兩個報表比較功能
+## 3. 新增兩個報表比較功能
 
 ### 背景
 
@@ -161,9 +128,9 @@ Shikhu 提到一般採集模擬器 / 分析器可用於研究，例如比較 spi
 
 - 一開始可以只支援「同類型報表」比較，例如 regular vs regular、collectable vs collectable。
 - 跨系統比較容易語意混亂，應延後。
-- 報表比較依賴穩定的 export/report schema，因此可與第 4 項一起規劃。
+- 報表比較依賴穩定的 export/report schema，因此可與第 2 項一起規劃。
 
-## 5. 效能與 OOM 壓力測試
+## 4. 效能與 OOM 壓力測試
 
 ### 背景
 
@@ -189,7 +156,7 @@ Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的
 - 不能接受 OOM crash、整頁崩潰，或沒有說明的 worker 失敗。
 - 不可為了效能偷刪合法分支；後續若新增剪枝，必須證明 outcome distribution、reward/tier counts 與可達高分尾端不變。
 
-## 6. Frontier 實驗區
+## 5. Frontier 實驗區
 
 ### 背景
 

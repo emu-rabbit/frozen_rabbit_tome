@@ -844,8 +844,15 @@ export default {
       expectedScore: '期望{unit}',
       maxScore: '最高{unit}',
       minScore: '最低{unit}',
-      distribution: '分數機率分布',
-      scoringNote: '結果會依目前評分偏好顯示；切換齒輪設定後再分析，即可比較票據、檔位個數或自訂分數。'
+      distribution: '機率分布表',
+      distributionScrip: '票據機率分布',
+      distributionWeightedScore: '加權總分機率分布',
+      distributionTierCounts: '檔位個數機率分布',
+      distributionUnitScrip: '分布表單位：{unit}',
+      distributionUnitWeightedScore: '分布表單位：權重加權總分',
+      distributionUnitTierCounts: '分布表單位：檔位獲得個數',
+      weightedScoreUnit: '加權總分',
+      scoringNote: '分布表會依目前評分偏好切換單位：票據顯示票據量，檔位優先顯示獲得個數，自訂權重顯示加權總分。'
     },
     tools: {
       moveUp: '上移',

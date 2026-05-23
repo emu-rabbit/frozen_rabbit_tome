@@ -4,12 +4,14 @@ import {
   getCollectableTierCountForValue,
   scoreCollectability
 } from './collectableMath';
+import { isTierCountObjective } from './collectableObjectivePresets';
 import type { CollectableObjective, CollectableRewardTable, CollectableTierCounts } from '../types/collectable';
 import type { CollectableStrategyNode } from './collectableStrategyTree';
 
 export interface CollectableStrategyScoreDistributionEntry {
   score: number;
   probability: number;
+  tierCounts?: CollectableTierCounts;
 }
 
 export interface CollectableStrategyAnalysis {
@@ -46,10 +48,7 @@ export function analyzeCollectableStrategyTree(
     expectedTierCounts: expectedTierCounts(details),
     minScoreTierCounts: representativeTierCountsForScore(details, minScore, 'min'),
     maxScoreTierCounts: representativeTierCountsForScore(details, maxScore, 'max'),
-    outcomeDistribution: scores.map((score) => ({
-      score,
-      probability: (outcomes.get(score) ?? 0) * 100
-    }))
+    outcomeDistribution: buildOutcomeDistribution(outcomes, details, objective)
   };
 }
 
@@ -176,6 +175,37 @@ function expectedTierCounts(details: Map<string, OutcomeDetail>) {
     counts = addCollectableTierCounts(counts, detail.tierCounts, detail.probability);
   });
   return counts;
+}
+
+function buildOutcomeDistribution(
+  outcomes: Map<number, number>,
+  details: Map<string, OutcomeDetail>,
+  objective: CollectableObjective
+): CollectableStrategyScoreDistributionEntry[] {
+  if (!isTierCountObjective(objective)) {
+    return [...outcomes.keys()].sort((left, right) => left - right).map((score) => ({
+      score,
+      probability: (outcomes.get(score) ?? 0) * 100
+    }));
+  }
+
+  const entries = new Map<string, CollectableStrategyScoreDistributionEntry>();
+  details.forEach((detail) => {
+    const key = outcomeDetailKey(detail.score, detail.tierCounts);
+    const current = entries.get(key);
+    entries.set(key, {
+      score: detail.score,
+      probability: (current?.probability ?? 0) + detail.probability * 100,
+      tierCounts: { ...detail.tierCounts }
+    });
+  });
+
+  return [...entries.values()].sort((left, right) => (
+    left.score - right.score
+      || (left.tierCounts?.high ?? 0) - (right.tierCounts?.high ?? 0)
+      || (left.tierCounts?.mid ?? 0) - (right.tierCounts?.mid ?? 0)
+      || (left.tierCounts?.low ?? 0) - (right.tierCounts?.low ?? 0)
+  ));
 }
 
 function representativeTierCountsForScore(

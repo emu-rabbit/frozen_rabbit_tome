@@ -333,7 +333,7 @@ function handleObjectiveChange(objective: CollectableObjective) {
 }
 
 function scoreUnitLabel() {
-  if (isCustomTierObjective(collectableObjective.value)) return t('collectableSolver.results.pointUnit');
+  if (isCustomTierObjective(collectableObjective.value)) return t('collectableStrategyLab.analysis.weightedScoreUnit');
   return analysisUnit.value;
 }
 
@@ -357,6 +357,61 @@ function formatTierCountValue(value: number) {
 function formatSingleTierCount(counts: CollectableTierCounts) {
   const entry = visibleTierMetricEntries(counts)[0];
   return entry.label ? `${formatTierCountValue(entry.value)} ${entry.label}` : `${formatTierCountValue(entry.value)}`;
+}
+
+function distributionTitle() {
+  if (isTierCountObjective(collectableObjective.value)) return t('collectableStrategyLab.analysis.distributionTierCounts');
+  if (isCustomTierObjective(collectableObjective.value)) return t('collectableStrategyLab.analysis.distributionWeightedScore');
+  return t('collectableStrategyLab.analysis.distributionScrip');
+}
+
+function distributionUnitText() {
+  if (isTierCountObjective(collectableObjective.value)) return t('collectableStrategyLab.analysis.distributionUnitTierCounts');
+  if (isCustomTierObjective(collectableObjective.value)) return t('collectableStrategyLab.analysis.distributionUnitWeightedScore');
+  return t('collectableStrategyLab.analysis.distributionUnitScrip', { unit: scoreUnitLabel() });
+}
+
+function distributionTierColumns() {
+  if (!analysis.value || !isTierCountObjective(collectableObjective.value)) return [];
+
+  const entries = analysis.value.outcomeDistribution;
+  const hasMixedTierOutcome = entries.some((entry) => {
+    const counts = entry.tierCounts;
+    if (!counts) return false;
+    return ['high', 'mid', 'low'].filter((key) => Math.abs(counts[key as keyof CollectableTierCounts]) > tierCountVisibilityEpsilon).length > 1;
+  });
+
+  if (hasMixedTierOutcome) return ['high', 'mid', 'low'] as const;
+
+  const visibleKeys = (['high', 'mid', 'low'] as const).filter((key) => (
+    entries.some((entry) => Math.abs(entry.tierCounts?.[key] ?? 0) > tierCountVisibilityEpsilon)
+  ));
+
+  return visibleKeys.length === 1 ? visibleKeys : (['high', 'mid', 'low'] as const);
+}
+
+function distributionTierColumnLabels() {
+  return distributionTierColumns().map((key) => t(`collectableObjective.tiers.${key}`)).join(' / ');
+}
+
+function formatDistributionTierCount(entry: { tierCounts?: CollectableTierCounts }, key: 'high' | 'mid' | 'low') {
+  return formatTierCountValue(entry.tierCounts?.[key] ?? 0);
+}
+
+function outcomeDistributionKey(entry: { score: number; tierCounts?: CollectableTierCounts }) {
+  const counts = entry.tierCounts;
+  return counts
+    ? `${entry.score}-${counts.high}-${counts.mid}-${counts.low}`
+    : `${entry.score}`;
+}
+
+function distributionClass() {
+  const columns = distributionTierColumns();
+  return {
+    'is-score': !isTierCountObjective(collectableObjective.value),
+    'is-tier-single': isTierCountObjective(collectableObjective.value) && columns.length === 1,
+    'is-tier-vector': isTierCountObjective(collectableObjective.value) && columns.length > 1
+  };
 }
 
 function addRule() {
@@ -824,9 +879,32 @@ function makeId() {
             <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.minScoreChance, false, false) }) }}</small>
           </div>
         </div>
-        <div class="distribution" :aria-label="t('collectableStrategyLab.analysis.distribution')">
-          <div v-for="entry in analysis.outcomeDistribution" :key="`collectable-score-${entry.score}`" class="bar-row">
-            <span>{{ entry.score }}</span>
+        <div class="distribution-header">
+          <div>
+            <h4>{{ distributionTitle() }}</h4>
+            <p>{{ distributionUnitText() }}</p>
+          </div>
+          <span v-if="isTierCountObjective(collectableObjective)">{{ distributionTierColumnLabels() }}</span>
+        </div>
+        <div class="distribution" :class="distributionClass()" :aria-label="distributionTitle()">
+          <div v-for="entry in analysis.outcomeDistribution" :key="outcomeDistributionKey(entry)" class="bar-row">
+            <span
+              v-if="isTierCountObjective(collectableObjective)"
+              class="distribution-value tier-count-distribution-value"
+              :class="{ 'is-vector': distributionTierColumns().length > 1 }"
+            >
+              <template v-if="distributionTierColumns().length === 1">
+                <strong>{{ formatDistributionTierCount(entry, distributionTierColumns()[0]) }}</strong>
+                <small>{{ t(`collectableObjective.tiers.${distributionTierColumns()[0]}`) }}</small>
+              </template>
+              <template v-else>
+                <template v-for="(tierKey, index) in distributionTierColumns()" :key="tierKey">
+                  <strong>{{ formatDistributionTierCount(entry, tierKey) }}</strong>
+                  <small v-if="index < distributionTierColumns().length - 1">/</small>
+                </template>
+              </template>
+            </span>
+            <span v-else class="distribution-value">{{ entry.score }}</span>
             <div class="bar-track">
               <div class="bar-fill" :style="{ width: `${Math.max(2, Math.min(100, entry.probability))}%` }"></div>
             </div>
@@ -1408,17 +1486,103 @@ function makeId() {
 
 .distribution {
   display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 3.75rem;
   gap: 0.45rem;
+  column-gap: 0.5rem;
+  align-items: center;
+}
+
+.distribution.is-score {
+  grid-template-columns: minmax(2ch, max-content) minmax(0, 1fr) 3.75rem;
+}
+
+.distribution.is-tier-vector {
+  grid-template-columns: max-content minmax(0, 1fr) 3.75rem;
+}
+
+.distribution-header {
+  display: flex;
+  align-items: end;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.15rem;
+  color: #64748b;
+}
+
+.distribution-header h4 {
+  margin: 0;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+:global(html.dark .distribution-header h4) {
+  color: #e2e8f0;
+}
+
+.distribution-header p {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.distribution-header > span {
+  flex-shrink: 0;
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: left;
+}
+
+:global(html.dark .distribution-header > span) {
+  color: #7dd3fc;
 }
 
 .bar-row {
-  display: grid;
-  grid-template-columns: minmax(3rem, auto) 1fr 3.75rem;
-  align-items: center;
-  gap: 0.5rem;
+  display: contents;
   color: #64748b;
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.distribution-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.tier-count-distribution-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.tier-count-distribution-value strong {
+  min-width: 2ch;
+  color: #334155;
+  font: inherit;
+  text-align: right;
+}
+
+:global(html.dark .tier-count-distribution-value strong) {
+  color: #e2e8f0;
+}
+
+.tier-count-distribution-value small {
+  color: #94a3b8;
+  font: inherit;
+}
+
+.tier-count-distribution-value.is-vector {
+  display: grid;
+  grid-template-columns: minmax(1.35rem, max-content) auto minmax(1.35rem, max-content) auto minmax(1.35rem, max-content);
+  column-gap: 0.2rem;
+  width: auto;
+  justify-content: start;
+}
+
+.tier-count-distribution-value.is-vector strong {
+  min-width: 1.35rem;
 }
 
 .bar-track {

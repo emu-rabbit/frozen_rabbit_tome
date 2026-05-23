@@ -434,7 +434,6 @@ export function evaluateCollectablePolicyFromWasmCore(
         const totalScore = immediateScore + score;
         outcomes.set(totalScore, (outcomes.get(totalScore) ?? 0) + probability * transition.probability);
       });
-
       return {
         probability: transition.probability,
         immediateScore,

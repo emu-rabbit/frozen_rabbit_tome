@@ -843,8 +843,15 @@ export default {
       expectedScore: 'Expected {unit}',
       maxScore: 'Highest {unit}',
       minScore: 'Lowest {unit}',
-      distribution: 'Score probability distribution',
-      scoringNote: 'Results use the current scoring preference. Change the gear setting and run analysis again to compare scrip, tier counts, or custom points.'
+      distribution: 'Probability distribution',
+      distributionScrip: 'Scrip probability distribution',
+      distributionWeightedScore: 'Weighted-score probability distribution',
+      distributionTierCounts: 'Tier-count probability distribution',
+      distributionUnitScrip: 'Distribution unit: {unit}',
+      distributionUnitWeightedScore: 'Distribution unit: weighted total score',
+      distributionUnitTierCounts: 'Distribution unit: tier item counts',
+      weightedScoreUnit: 'weighted total score',
+      scoringNote: 'The distribution unit follows the scoring preference: scrip shows scrip totals, tier priorities show item counts, and custom weights show weighted total score.'
     },
     tools: {
       moveUp: 'Move up',

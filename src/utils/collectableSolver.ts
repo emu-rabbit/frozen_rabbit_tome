@@ -11,6 +11,7 @@ import {
   getCollectableRewardForValue,
   scoreCollectability
 } from './collectableMath';
+import { serializeCollectableDebugOutcomes } from './collectableDebugDistribution';
 import {
   COLLECTABLE_STATE_KEY_FIELDS,
   applyCollectableAction,
@@ -916,7 +917,10 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           kind: plan.kind,
           startingGp: run.startingGp,
           expectedScore: Number(run.expectedScore.toFixed(6)),
-          outcomeDistribution: serializeOutcomes(run.outcomes),
+          outcomeDistribution: serializeCollectableDebugOutcomes(run.outcomes, objective, {
+            policy: plan.policy,
+            rewardTable
+          }),
           search: run.search
         };
       }),
@@ -1043,15 +1047,6 @@ function summarizeOutcomes(outcomes: Map<number, number>): ScoreSummary {
     minScoreChance: (outcomes.get(minScore) ?? 0) * 100,
     maxScoreChance: (outcomes.get(maxScore) ?? 0) * 100
   };
-}
-
-function serializeOutcomes(outcomes: Map<number, number>) {
-  return [...outcomes.entries()]
-    .sort(([leftScore], [rightScore]) => leftScore - rightScore)
-    .map(([score, probability]) => ({
-      score,
-      probability: probability * 100
-    }));
 }
 
 function combineSequentialOutcomes(left: Map<number, number>, right: Map<number, number>) {

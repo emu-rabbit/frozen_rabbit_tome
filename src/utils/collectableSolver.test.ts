@@ -809,6 +809,12 @@ describe('solveCollectableRotation', () => {
       presetId: 'highValue',
       tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
     });
+    expect(result.debug?.plans[0].outcomeDistribution.some((entry) => entry.tierCounts)).toBe(true);
+    expect(result.debug?.plans[0].outcomeDistribution[0].tierCounts).toEqual(expect.objectContaining({
+      low: expect.any(Number),
+      mid: expect.any(Number),
+      high: expect.any(Number)
+    }));
   });
 
 });
