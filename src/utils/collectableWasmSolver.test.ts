@@ -154,6 +154,28 @@ describe('collectable WASM solver core', () => {
     }));
   }, 30000);
 
+  it('keeps primary debug distribution scoped to the primary WASM plan when Revisit is attached', async () => {
+    const core = await loadWasmCore();
+    const request = baseRequest({
+      objective: {
+        kind: 'tierScore',
+        presetId: 'lowValue',
+        tierWeights: { none: 0, low: 100, mid: 20, high: 10 }
+      }
+    });
+    const wasm = await solveCollectableRotationWithWasm(request, core);
+    const primaryPlan = wasm.policyPlans[0];
+    const distribution = wasm.debug?.plans[0].outcomeDistribution ?? [];
+    const maxDistributionEntry = distribution.reduce((current, entry) => (
+      entry.score > current.score ? entry : current
+    ), distribution[0]);
+
+    expect(wasm.revisit).toMatchObject({ enabled: true, isFullGp: true });
+    expect(wasm.maxScore).toBeGreaterThan(primaryPlan.maxScore);
+    expect(maxDistributionEntry.score).toBe(primaryPlan.maxScore);
+    expect(maxDistributionEntry.tierCounts).toEqual(primaryPlan.maxScoreTierCounts);
+  }, 30000);
+
   it('keeps the long Glv 700 low-gathering case aligned while using fewer JS allocations', async () => {
     const core = await loadWasmCore();
     const request = baseRequest({

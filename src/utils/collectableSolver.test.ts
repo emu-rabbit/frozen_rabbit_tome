@@ -817,4 +817,25 @@ describe('solveCollectableRotation', () => {
     }));
   });
 
+  it('滿 GP 且有再起時，debug 的 primary 分布不會重複展開再起樹', () => {
+    const result = solveCollectableRotation(createRequest({
+      objective: {
+        kind: 'tierScore',
+        presetId: 'lowValue',
+        tierWeights: { none: 0, low: 100, mid: 20, high: 10 }
+      },
+      debugMode: true
+    }));
+    const primaryPlan = result.policyPlans[0];
+    const distribution = result.debug?.plans[0].outcomeDistribution ?? [];
+    const maxDistributionEntry = distribution.reduce((current, entry) => (
+      entry.score > current.score ? entry : current
+    ), distribution[0]);
+
+    expect(result.revisit).toMatchObject({ enabled: true, isFullGp: true });
+    expect(result.maxScore).toBeGreaterThan(primaryPlan.maxScore);
+    expect(maxDistributionEntry.score).toBe(primaryPlan.maxScore);
+    expect(maxDistributionEntry.tierCounts).toEqual(primaryPlan.maxScoreTierCounts);
+  });
+
 });

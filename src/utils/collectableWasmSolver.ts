@@ -290,9 +290,9 @@ function solveCollectableRotationWithWasmCore(
     ? attachCollectableRevisitGate(initial.policy, revisitPolicy, revisitChance, request.jobType)
     : initial.policy;
   const policyPlans: CollectablePolicyPlan[] = isFullGp || !revisitEnabled
-    ? [buildPolicyPlan('primary', initial, primaryPolicy)]
+    ? [buildPolicyPlan('primary', initial, initial.policy)]
     : [
-        buildPolicyPlan('primary', initial, primaryPolicy),
+        buildPolicyPlan('primary', initial, initial.policy),
         buildPolicyPlan('revisit', fullGpResult, revisitPolicy)
       ];
 

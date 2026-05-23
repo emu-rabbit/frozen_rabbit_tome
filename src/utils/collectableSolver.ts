@@ -823,7 +823,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         expectedTierCounts: initial.expectedTierCounts,
         minScoreTierCounts: initial.minScoreDetail.tierCounts,
         maxScoreTierCounts: initial.maxScoreDetail.tierCounts,
-        policy: primaryPolicy
+        policy: initial.policy
       }]
     : [
         {
@@ -838,7 +838,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
           expectedTierCounts: initial.expectedTierCounts,
           minScoreTierCounts: initial.minScoreDetail.tierCounts,
           maxScoreTierCounts: initial.maxScoreDetail.tierCounts,
-          policy: primaryPolicy
+          policy: initial.policy
         },
         {
           kind: 'revisit',
