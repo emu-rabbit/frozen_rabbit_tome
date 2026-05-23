@@ -1,9 +1,39 @@
 import { solveCollectableRotation } from '../utils/collectableSolver';
+import {
+  CollectableWasmMemoCapacityError,
+  canUseCollectableWasmSolver,
+  solveCollectableRotationWithWasm
+} from '../utils/collectableWasmSolver';
 import type { CollectableSolverRequest, CollectableSolverResult } from '../types/collectable';
 
+function rethrowWorkerError(error: unknown) {
+  setTimeout(() => {
+    throw error;
+  }, 0);
+}
+
 self.onmessage = (event: MessageEvent<CollectableSolverRequest>) => {
+  void handleCollectableSolve(event).catch(rethrowWorkerError);
+};
+
+async function handleCollectableSolve(event: MessageEvent<CollectableSolverRequest>) {
   const startTime = performance.now();
-  const result = solveCollectableRotation(event.data);
+  let result: CollectableSolverResult;
+
+  try {
+    result = canUseCollectableWasmSolver(event.data)
+      ? await solveCollectableRotationWithWasm(event.data)
+      : solveCollectableRotation(event.data);
+  } catch (error) {
+    if (error instanceof CollectableWasmMemoCapacityError) {
+      console.warn('Collectable WASM solver exceeded the device memo budget:', error);
+      throw error;
+    }
+
+    console.warn('Collectable WASM solver failed, falling back to JS solver:', error);
+    result = solveCollectableRotation(event.data);
+  }
+
   const calculationTime = Math.floor(performance.now() - startTime);
 
   if (result.debug) {
@@ -17,4 +47,4 @@ self.onmessage = (event: MessageEvent<CollectableSolverRequest>) => {
     expectedScore: Number(result.expectedScore.toFixed(6)),
     calculationTime
   } as CollectableSolverResult);
-};
+}

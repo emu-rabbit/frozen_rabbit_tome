@@ -15,12 +15,12 @@ import {
   COLLECTABLE_STATE_KEY_FIELDS,
   applyCollectableAction,
   canUseCollectableAction,
-  collectableStateKey,
   createCollectableMechanicsContext,
   createInitialCollectableMechanicsState,
   type CollectableMechanicsContext,
   type CollectableMechanicsState
 } from './collectableMechanics';
+import { createCollectableStateKeyFactory, type CollectablePackedStateKey } from './collectableSolverWasm';
 import { COLLECTABLE_ACTION_DEFINITIONS, getCollectableActionId } from '../services/collectableActions';
 import { summarizeCollectableRewardTable } from '../services/collectableRewards';
 import type {
@@ -91,6 +91,7 @@ type ScoreSummary = {
 };
 
 type SearchHabitMetrics = {
+  collectSuccessDepth: number | null;
   nextCollectSuccessDepth: number | null;
   wiseToTheWorldDepth: number | null;
   restorePreferenceScore: number;
@@ -102,9 +103,15 @@ const REGULAR_REVISIT_CHANCE = 0.05;
 const TIMED_REVISIT_CHANCE = 0.08;
 const STATE_KEY_FIELDS = [...COLLECTABLE_STATE_KEY_FIELDS];
 
+declare global {
+  var __FR_TOME_COLLECTABLE_SUCCESS_PRUNING__: boolean | undefined;
+}
+
 function emptyPolicy(state: SearchState): CollectablePolicyNode {
+  const keyFactory = createCollectableStateKeyFactory();
+  const memoKey = keyFactory.build(state);
   return {
-    id: buildMemoKey(state),
+    id: keyFactory.toPolicyId(memoKey),
     state: summarizeState(state),
     recommendedAction: actionSummary('collect', 'miner'),
     expectedScore: 0,
@@ -112,10 +119,6 @@ function emptyPolicy(state: SearchState): CollectablePolicyNode {
     expectedTierCounts: createZeroTierCounts(),
     branches: []
   };
-}
-
-function buildMemoKey(state: SearchState): string {
-  return collectableStateKey(state);
 }
 
 function summarizeState(state: SearchState): CollectableStateSummary {
@@ -171,8 +174,13 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   const objectiveMode: SolverObjectiveMode = request.objectiveMode ?? 'expected';
   const baseValueIncreaseRate = calculateValueIncreaseRate(stats.gathering, baseValues.Gathering);
   const mechanics = createCollectableMechanicsContext(request);
-  let memo = new Map<string, SearchResult>();
+  const keyFactory = createCollectableStateKeyFactory();
+  let memo = new Map<CollectablePackedStateKey, SearchResult>();
   let activeSearchStats: CollectableSearchDebugInfo | null = null;
+
+  function buildMemoKey(state: SearchState): CollectablePackedStateKey {
+    return keyFactory.build(state);
+  }
 
   function createTerminalResult(): SearchResult {
     return {
@@ -249,23 +257,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       actions.push(buffAction('primingTouch', 30, 100));
     }
 
-    if (mechanics.baseSuccessRate + state.successBonus < 100 && !state.hasCollected) {
-      if (canUseSolverAction('successIII', state)) {
-        actions.push(buffAction('successIII', 40, 250));
-      }
-
-      if (canUseSolverAction('successII', state)) {
-        actions.push(buffAction('successII', 41, 100));
-      }
-
-      if (canUseSolverAction('successI', state)) {
-        actions.push(buffAction('successI', 42, 50));
-      }
-
-      if (canUseSolverAction('nextCollectSuccess', state)) {
-        actions.push(buffAction('nextCollectSuccess', 50, 50));
-      }
-    }
+    addCollectSuccessActions(actions, state);
 
     addIntegrityRestoreActions(actions, state);
 
@@ -292,6 +284,26 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function canUseSolverAction(kind: CollectableActionKind, state: SearchState): boolean {
     return canUseCollectableAction(kind, state, mechanics);
+  }
+
+  function addCollectSuccessActions(actions: ActionOption[], state: SearchState) {
+    if (mechanics.baseSuccessRate + state.successBonus >= 100 || state.hasCollected) return;
+
+    const allSuccessCandidates: Array<{ kind: CollectableActionKind; priority: number; gpCost: number; bonus: number }> = [
+      { kind: 'successIII', priority: 40, gpCost: 250, bonus: 50 },
+      { kind: 'successII', priority: 41, gpCost: 100, bonus: 15 },
+      { kind: 'successI', priority: 42, gpCost: 50, bonus: 5 },
+      { kind: 'nextCollectSuccess', priority: 50, gpCost: 50, bonus: 15 }
+    ];
+    const successCandidates = allSuccessCandidates.filter((candidate) => canUseSolverAction(candidate.kind, state));
+    const successNeeded = 100 - mechanics.baseSuccessRate - state.successBonus;
+    const shouldPrune = globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ !== false;
+    const cappingCandidates = successCandidates.filter((candidate) => candidate.bonus >= successNeeded);
+    const candidates = shouldPrune && cappingCandidates.length > 0 ? cappingCandidates : successCandidates;
+
+    candidates.forEach((candidate) => {
+      actions.push(buffAction(candidate.kind, candidate.priority, candidate.gpCost));
+    });
   }
 
   function addIntegrityRestoreActions(actions: ActionOption[], state: SearchState) {
@@ -349,8 +361,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     kind: CollectableActionKind,
     gpSpent: number,
     actionCount: number,
-    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward(),
-    tierCountsForBranch: (branch: WeightedState) => CollectableTierCounts = () => createZeroTierCounts()
+    rewardForBranch: (branch: WeightedState) => CollectableRewardVector | undefined = () => undefined,
+    tierCountsForBranch: (branch: WeightedState) => CollectableTierCounts | undefined = () => undefined
   ): SearchResult {
     const branchesWithReward = createBranchesWithReward(state, kind, rewardForBranch, tierCountsForBranch);
     const results = branchesWithReward.map((branch) => nextSolve(branch.state));
@@ -361,21 +373,23 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   function createBranchesWithReward(
     state: SearchState,
     kind: CollectableActionKind,
-    rewardForBranch: (branch: WeightedState) => CollectableRewardVector = () => createZeroReward(),
-    tierCountsForBranch: (branch: WeightedState) => CollectableTierCounts = () => createZeroTierCounts()
+    rewardForBranch: (branch: WeightedState) => CollectableRewardVector | undefined = () => undefined,
+    tierCountsForBranch: (branch: WeightedState) => CollectableTierCounts | undefined = () => undefined
   ): WeightedState[] {
-    const branches: WeightedState[] = applyCollectableAction(kind, state, mechanics).map((transition) => ({
-      state: transition.state,
-      probability: transition.probability,
-      labelKey: transition.labelKey,
-      labelKeys: transition.labelKeys,
-      conditionKey: transition.conditionKey
-    }));
-    return branches.map((branch) => ({
-      ...branch,
-      reward: rewardForBranch(branch),
-      tierCounts: tierCountsForBranch(branch)
-    }));
+    return applyCollectableAction(kind, state, mechanics).map((transition) => {
+      const branch: WeightedState = {
+        state: transition.state,
+        probability: transition.probability,
+        labelKey: transition.labelKey,
+        labelKeys: transition.labelKeys,
+        conditionKey: transition.conditionKey
+      };
+      const reward = rewardForBranch(branch);
+      const tierCounts = tierCountsForBranch(branch);
+      if (reward) branch.reward = reward;
+      if (tierCounts) branch.tierCounts = tierCounts;
+      return branch;
+    });
   }
 
   function buildSearchResult(
@@ -392,8 +406,12 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     let nodeCount = 1;
     branches.forEach((branch, index) => {
       const result = results[index];
-      const branchReward = addCollectableRewards(branch.reward ?? createZeroReward(), result.expectedReward);
-      const branchTierCounts = addCollectableTierCounts(branch.tierCounts ?? createZeroTierCounts(), result.expectedTierCounts);
+      const branchReward = branch.reward
+        ? addCollectableRewards(branch.reward, result.expectedReward)
+        : result.expectedReward;
+      const branchTierCounts = branch.tierCounts
+        ? addCollectableTierCounts(branch.tierCounts, result.expectedTierCounts)
+        : result.expectedTierCounts;
       const immediateScore = scoreImmediateBranch(branch);
       expectedReward = addCollectableRewards(expectedReward, branchReward, branch.probability);
       expectedTierCounts = addCollectableTierCounts(expectedTierCounts, branchTierCounts, branch.probability);
@@ -448,12 +466,14 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
     branches.forEach((branch, index) => {
       const immediateScore = scoreImmediateBranch(branch);
-      const immediateTierCounts = branch.tierCounts ?? createZeroTierCounts();
+      const immediateTierCounts = branch.tierCounts;
       const childDetail = direction === 'min' ? results[index].minScoreDetail : results[index].maxScoreDetail;
       if (immediateScore + childDetail.score !== score) return;
 
       const totalScore = immediateScore + childDetail.score;
-      const totalTierCounts = addCollectableTierCounts(immediateTierCounts, childDetail.tierCounts);
+      const totalTierCounts = immediateTierCounts
+        ? addCollectableTierCounts(immediateTierCounts, childDetail.tierCounts)
+        : childDetail.tierCounts;
       const key = outcomeDetailKey(totalScore, totalTierCounts);
       const current = details.get(key);
       details.set(key, {
@@ -541,11 +561,13 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function scoreImmediateBranch(branch: WeightedState) {
+    if (!branch.reward && !branch.tierCounts) return 0;
+
     const hasReward = (branch.reward?.exp ?? 0) > 0
       || (branch.reward?.gil ?? 0) > 0
       || (branch.reward?.scrip ?? 0) > 0
       || Object.keys(branch.reward?.items ?? {}).length > 0
-      || tierCountsTotal(branch.tierCounts ?? createZeroTierCounts()) > 0;
+      || (branch.tierCounts ? tierCountsTotal(branch.tierCounts) > 0 : false);
     return hasReward ? scoreCollectability(stateCollectabilityForBranch(branch), rewardTable, objective) : 0;
   }
 
@@ -562,16 +584,19 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     if (candidateScore > currentScore + EV_EPSILON) return true;
     if (candidateScore < currentScore - EV_EPSILON) return false;
     if (candidate.gpSpent !== current.gpSpent) return candidate.gpSpent < current.gpSpent;
-    if (habitPreferenceScore(candidate) !== habitPreferenceScore(current)) {
-      return habitPreferenceScore(candidate) > habitPreferenceScore(current);
-    }
     if (candidate.actionCount !== current.actionCount) return candidate.actionCount < current.actionCount;
-    return candidate.nodeCount < current.nodeCount;
+    if (candidate.nodeCount !== current.nodeCount) return candidate.nodeCount < current.nodeCount;
+    return habitPreferenceScore(candidate) > habitPreferenceScore(current);
   }
 
   function habitPreferenceScore(result: SearchResult): number {
     let score = result.habit.restorePreferenceScore;
+    const collectSuccessDepth = result.habit.collectSuccessDepth;
     const nextCollectSuccessDepth = result.habit.nextCollectSuccessDepth;
+
+    if (collectSuccessDepth !== null) {
+      score += 1500 - collectSuccessDepth * 50;
+    }
 
     if (nextCollectSuccessDepth !== null) {
       score += 1000 - nextCollectSuccessDepth * 50;
@@ -587,6 +612,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function emptyHabitMetrics(): SearchHabitMetrics {
     return {
+      collectSuccessDepth: null,
       nextCollectSuccessDepth: null,
       wiseToTheWorldDepth: null,
       restorePreferenceScore: 0,
@@ -607,6 +633,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
     const childPreferredRestoreCount = childHabits.reduce((total, habit) => total + habit.preferredRestoreCount, 0);
 
     return {
+      collectSuccessDepth: getActionDepthFromChildHabits(kind, 'collectSuccess', childHabits),
       nextCollectSuccessDepth: getActionDepthFromChildHabits(kind, 'nextCollectSuccess', childHabits),
       wiseToTheWorldDepth: getActionDepthFromChildHabits(kind, 'wiseToTheWorld', childHabits),
       restorePreferenceScore: currentRestore.score + childRestoreScore,
@@ -616,13 +643,18 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function getActionDepthFromChildHabits(
     kind: CollectableActionKind,
-    target: 'nextCollectSuccess' | 'wiseToTheWorld',
+    target: 'collectSuccess' | 'nextCollectSuccess' | 'wiseToTheWorld',
     childHabits: SearchHabitMetrics[]
   ): number | null {
+    if (target === 'collectSuccess' && (kind === 'successI' || kind === 'successII' || kind === 'successIII')) return 0;
     if (kind === target) return 0;
 
     const childDepths = childHabits
-      .map((habit) => target === 'nextCollectSuccess' ? habit.nextCollectSuccessDepth : habit.wiseToTheWorldDepth)
+      .map((habit) => {
+        if (target === 'collectSuccess') return habit.collectSuccessDepth;
+        if (target === 'nextCollectSuccess') return habit.nextCollectSuccessDepth;
+        return habit.wiseToTheWorldDepth;
+      })
       .filter((depth): depth is number => depth !== null)
       .map((depth) => depth + 1);
 
@@ -649,7 +681,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function buildPolicyFromState(
     state: SearchState,
-    visited = new Map<string, CollectablePolicyNode>()
+    visited = new Map<CollectablePackedStateKey, CollectablePolicyNode>()
   ): CollectablePolicyNode {
     if (state.integrity <= 0) return emptyPolicy(state);
 
@@ -659,7 +691,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
     const result = solve(state);
     const policy: CollectablePolicyNode = {
-      id: memoKey,
+      id: keyFactory.toPolicyId(memoKey),
       state: summarizeState(state),
       recommendedAction: actionSummary(result.recommendedActionKind, jobType),
       expectedScore: Number(result.expectedScore.toFixed(6)),
@@ -706,7 +738,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function solveWithGp(startingGp: number): SearchRunResult {
-    memo = new Map<string, SearchResult>();
+    memo = new Map<CollectablePackedStateKey, SearchResult>();
     activeSearchStats = {
       startingGp: Math.min(stats.gp, startingGp),
       statesSolved: 0,
@@ -889,7 +921,8 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
       ],
       optimality: {
         method: 'dynamic-programming-policy-search',
-        stateKeyFields: STATE_KEY_FIELDS
+        stateKeyFields: STATE_KEY_FIELDS,
+        stateKeyEngine: keyFactory.engine
       }
     };
   }

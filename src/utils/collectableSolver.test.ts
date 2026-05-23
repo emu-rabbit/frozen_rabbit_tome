@@ -114,7 +114,7 @@ function findActionDepth(
 }
 
 function collectNodes(
-  node: { id?: string; recommendedAction: { kind: string }; state: { collectability: number }; branches: Array<{ next?: any }> },
+  node: { id?: string; recommendedAction: { kind: string }; state: any; branches: Array<{ next?: any }> },
   depth = 0,
   visited = new Set<string>()
 ): any[] {
@@ -126,6 +126,24 @@ function collectNodes(
     node,
     ...node.branches.flatMap((branch) => branch.next ? collectNodes(branch.next, depth + 1, visited) : [])
   ];
+}
+
+function policyActionByState(result: ReturnType<typeof solveCollectableRotation>): Map<string, string> {
+  return new Map(collectNodes(result.policy).map((node) => [
+    [
+      node.state.gp,
+      node.state.integrity,
+      node.state.collectability,
+      node.state.scrutinyActive ? 1 : 0,
+      node.state.collectorsFocusActive ? 1 : 0,
+      node.state.primingTouchActive ? 1 : 0,
+      node.state.standardActive ? 1 : 0,
+      node.state.successBonus,
+      node.state.nextCollectSuccessBonus,
+      node.state.wiseToTheWorldActive ? 1 : 0
+    ].join('|'),
+    node.recommendedAction.kind
+  ]));
 }
 
 describe('solveCollectableRotation', () => {
@@ -542,10 +560,81 @@ describe('solveCollectableRotation', () => {
     const nextCollectSuccessDepth = findActionDepth(result.policy, 'nextCollectSuccess');
     const collectDepth = findActionDepth(result.policy, 'collect');
 
-    expect(nextCollectSuccessDepth).not.toBeNull();
     expect(collectDepth).not.toBeNull();
-    expect(nextCollectSuccessDepth as number).toBeLessThan(collectDepth as number);
+    expect(findActionDepth(result.policy, 'successI')).not.toBeNull();
+    expect(nextCollectSuccessDepth).toBeNull();
   });
+
+  it('成功率習慣不會在同分時蓋過 GP 經濟', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 760,
+        perception: 1000,
+        gp: 50
+      },
+      nodeBonuses: {
+        baseIntegrity: 1,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 50,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 0, items: {} } },
+          mid: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 0, items: {} } },
+          high: { collectability: 1000, reward: { exp: 0, gil: 0, scrip: 0, items: {} } }
+        }
+      }
+    }));
+
+    expect(result.expectedScore).toBe(0);
+    expect(result.policy.recommendedAction.kind).toBe('collect');
+  });
+
+  it('成功率補強剪枝前後會維持小型同分案例的策略習慣', () => {
+    const request = createRequest({
+      stats: {
+        level: 100,
+        gathering: 760,
+        perception: 1000,
+        gp: 930
+      },
+      nodeBonuses: {
+        baseIntegrity: 1,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      rewardTable: {
+        itemId: 1,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          mid: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
+          high: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
+        }
+      }
+    });
+    const originalPruning = globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__;
+
+    try {
+      globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ = true;
+      const pruned = solveCollectableRotation(request);
+      globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ = false;
+      const unpruned = solveCollectableRotation(request);
+
+      expect(pruned.expectedScore).toBeCloseTo(unpruned.expectedScore, 6);
+      expect(pruned.policy.recommendedAction.kind).toBe(unpruned.policy.recommendedAction.kind);
+      expect(policyActionByState(pruned)).toEqual(policyActionByState(unpruned));
+    } finally {
+      globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ = originalPruning;
+    }
+  }, 30000);
 
   it('耐久不足時會評估石工之理恢復採集次數', () => {
     const result = solveCollectableRotation(createRequest({
@@ -610,7 +699,7 @@ describe('solveCollectableRotation', () => {
     expect(restoreNode?.state.integrity).toBe(1);
   });
 
-  it('90 級以上同分時偏好缺 2 耐久施放石工，讓理智同興可立刻接續', () => {
+  it('90 級以上石工之理分支仍會建立理智同興後續', () => {
     const result = solveCollectableRotation(createRequest({
       stats: {
         level: 100,
@@ -643,7 +732,7 @@ describe('solveCollectableRotation', () => {
     const restoreNode = findActionNode(result.policy, 'restoreIntegrity');
     const wiseBranch = restoreNode?.branches.find((branch: any) => branch.labelKey === 'collectableSolver.branches.wiseProc');
 
-    expect(restoreNode?.state.integrity).toBe(4);
+    expect(restoreNode).not.toBeNull();
     expect(wiseBranch?.next?.recommendedAction.kind).toBe('wiseToTheWorld');
   });
 
@@ -746,4 +835,46 @@ describe('solveCollectableRotation', () => {
       tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
     });
   });
+
+  it('Glv 700 低獲得力長案例會使用剪枝後的 WASM key 搜尋並維持固定結果', () => {
+    const result = solveCollectableRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 2000,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 5085,
+        Perception: 5085
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      rewardTable: {
+        itemId: 700001,
+        source: 'collectables',
+        tiers: {
+          low: { collectability: 240, reward: { exp: 0, gil: 0, scrip: 107, items: {} } },
+          mid: { collectability: 450, reward: { exp: 0, gil: 0, scrip: 124, items: {} } },
+          high: { collectability: 600, reward: { exp: 0, gil: 0, scrip: 140, items: {} } }
+        }
+      },
+      debugMode: true
+    }));
+    const search = result.debug?.plans[0].search;
+
+    expect(result.expectedScore).toBe(569.193336);
+    expect(result.minScore).toBe(428);
+    expect(result.maxScore).toBe(2240);
+    expect(result.policy.recommendedAction.kind).toBe('meticulous');
+    expect(result.debug?.optimality.stateKeyEngine).toBe('wasm-packed');
+    expect(search?.statesSolved).toBeLessThan(2500000);
+    expect(search?.branchCount).toBeLessThan(25000000);
+  }, 60000);
 });

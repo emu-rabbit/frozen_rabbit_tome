@@ -222,6 +222,9 @@ export interface CollectableSearchDebugInfo {
   statesSolved: number;
   memoHits: number;
   memoHitRate?: number;
+  memoCapacityPower?: number;
+  memoCapacity?: number;
+  memoCapacityUsable?: number;
   actionsEvaluated: number;
   candidateComparisons: number;
   terminalStates: number;
@@ -247,6 +250,7 @@ export interface CollectableSolverDebugInfo {
   optimality: {
     method: 'dynamic-programming-policy-search';
     stateKeyFields: string[];
+    stateKeyEngine?: 'wasm-packed' | 'js-packed' | 'string';
   };
 }
 

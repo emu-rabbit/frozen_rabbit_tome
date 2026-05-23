@@ -212,11 +212,10 @@ export function applyCollectableAction(
   if (action === 'restoreIntegrity') return applyRestoreIntegrity(state, context);
   if (action === 'wiseToTheWorld') {
     return [{
-      state: {
-        ...state,
+      state: cloneCollectableState(state, {
         integrity: Math.min(context.maxIntegrity, state.integrity + 1),
         wiseToTheWorldActive: false
-      },
+      }),
       probability: 1,
       labelKey: 'collectableSolver.branches.integrityRestored',
       conditionKey: 'collectableSolver.conditions.integrityRestored'
@@ -224,11 +223,7 @@ export function applyCollectableAction(
   }
 
   return [{
-    state: {
-      ...state,
-      ...getBuffPatch(action, state),
-      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost
-    },
+    state: applyBuffAction(action, state),
     probability: 1,
     labelKey: 'collectableSolver.branches.applied',
     conditionKey: 'collectableSolver.conditions.always'
@@ -250,21 +245,19 @@ function applyCollect(
   context: CollectableMechanicsContext
 ): CollectableActionTransition[] {
   const successRate = Math.min(100, Math.max(0, context.baseSuccessRate + state.successBonus + state.nextCollectSuccessBonus)) / 100;
-  const successState = {
-    ...state,
+  const successState = cloneCollectableState(state, {
     gp: Math.min(context.maxGp, state.gp + gpPerCollect(context.level)),
     integrity: state.integrity - 1,
     hasUsedCollectableAction: true,
     hasCollected: true,
     nextCollectSuccessBonus: 0
-  };
-  const failedState = {
-    ...state,
+  });
+  const failedState = cloneCollectableState(state, {
     integrity: state.integrity - 1,
     hasUsedCollectableAction: true,
     hasCollected: true,
     nextCollectSuccessBonus: 0
-  };
+  });
 
   return [
     {
@@ -332,8 +325,7 @@ function applyRefine(
             standardActive: state.standardActive,
             valueIncrease: valueBranch.valueIncrease
           });
-      const nextBase = {
-        ...state,
+      const nextBase = cloneCollectableState(state, {
         collectability: clampCollectability(state.collectability + gain),
         integrity: state.integrity - durabilityBranch.integrityCost,
         scrutinyActive: false,
@@ -341,7 +333,7 @@ function applyRefine(
         primingTouchActive: action === 'meticulous' ? false : state.primingTouchActive,
         standardActive: action === 'meticulous' ? false : state.standardActive,
         hasUsedCollectableAction: true
-      };
+      });
       const baseProbability = valueBranch.probability * durabilityBranch.probability;
       const labelKeys = [valueBranch.labelKey, durabilityBranch.labelKey];
       const canProcStandard = nextBase.integrity > 0
@@ -361,10 +353,9 @@ function applyRefine(
       }
 
       branches.push({
-        state: {
-          ...nextBase,
+        state: cloneCollectableState(nextBase, {
           standardActive: true
-        },
+        }),
         probability: baseProbability * context.standardProcRate,
         labelKey: 'collectableSolver.branches.standardProc',
         labelKeys: [...labelKeys, 'collectableSolver.branches.standardProc'],
@@ -387,11 +378,10 @@ function applyRestoreIntegrity(
   state: CollectableMechanicsState,
   context: CollectableMechanicsContext
 ): CollectableActionTransition[] {
-  const restoredState = {
-    ...state,
+  const restoredState = cloneCollectableState(state, {
     gp: state.gp - 300,
     integrity: Math.min(context.maxIntegrity, state.integrity + 1)
-  };
+  });
 
   if (context.level < 90) {
     return [{
@@ -404,7 +394,7 @@ function applyRestoreIntegrity(
 
   return [
     {
-      state: { ...restoredState, wiseToTheWorldActive: true },
+      state: cloneCollectableState(restoredState, { wiseToTheWorldActive: true }),
       probability: 0.5,
       labelKey: 'collectableSolver.branches.wiseProc',
       conditionKey: 'collectableSolver.conditions.wiseProc'
@@ -418,16 +408,86 @@ function applyRestoreIntegrity(
   ];
 }
 
-function getBuffPatch(
+function applyBuffAction(
   action: CollectableActionKind,
   state: CollectableMechanicsState
-): Partial<CollectableMechanicsState> {
-  if (action === 'scrutiny') return { scrutinyActive: true };
-  if (action === 'collectorsFocus') return { collectorsFocusActive: true };
-  if (action === 'primingTouch') return { primingTouchActive: true };
-  if (action === 'successI') return { successIActive: true, successBonus: state.successBonus + 5 };
-  if (action === 'successII') return { successIIActive: true, successBonus: state.successBonus + 15 };
-  if (action === 'successIII') return { successIIIActive: true, successBonus: state.successBonus + 50 };
-  if (action === 'nextCollectSuccess') return { nextCollectSuccessBonus: 15 };
-  return {};
+): CollectableMechanicsState {
+  if (action === 'scrutiny') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      scrutinyActive: true
+    });
+  }
+
+  if (action === 'collectorsFocus') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      collectorsFocusActive: true
+    });
+  }
+
+  if (action === 'primingTouch') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      primingTouchActive: true
+    });
+  }
+
+  if (action === 'successI') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      successIActive: true,
+      successBonus: state.successBonus + 5
+    });
+  }
+
+  if (action === 'successII') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      successIIActive: true,
+      successBonus: state.successBonus + 15
+    });
+  }
+
+  if (action === 'successIII') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      successIIIActive: true,
+      successBonus: state.successBonus + 50
+    });
+  }
+
+  if (action === 'nextCollectSuccess') {
+    return cloneCollectableState(state, {
+      gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost,
+      nextCollectSuccessBonus: 15
+    });
+  }
+
+  return cloneCollectableState(state, {
+    gp: state.gp - COLLECTABLE_ACTION_DEFINITIONS[action].gpCost
+  });
+}
+
+function cloneCollectableState(
+  state: CollectableMechanicsState,
+  patch: Partial<CollectableMechanicsState>
+): CollectableMechanicsState {
+  return {
+    gp: patch.gp ?? state.gp,
+    integrity: patch.integrity ?? state.integrity,
+    collectability: patch.collectability ?? state.collectability,
+    scrutinyActive: patch.scrutinyActive ?? state.scrutinyActive,
+    collectorsFocusActive: patch.collectorsFocusActive ?? state.collectorsFocusActive,
+    primingTouchActive: patch.primingTouchActive ?? state.primingTouchActive,
+    standardActive: patch.standardActive ?? state.standardActive,
+    hasUsedCollectableAction: patch.hasUsedCollectableAction ?? state.hasUsedCollectableAction,
+    hasCollected: patch.hasCollected ?? state.hasCollected,
+    successBonus: patch.successBonus ?? state.successBonus,
+    successIActive: patch.successIActive ?? state.successIActive,
+    successIIActive: patch.successIIActive ?? state.successIIActive,
+    successIIIActive: patch.successIIIActive ?? state.successIIIActive,
+    nextCollectSuccessBonus: patch.nextCollectSuccessBonus ?? state.nextCollectSuccessBonus,
+    wiseToTheWorldActive: patch.wiseToTheWorldActive ?? state.wiseToTheWorldActive
+  };
 }

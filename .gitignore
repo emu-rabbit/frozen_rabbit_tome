@@ -159,3 +159,4 @@ tsconfig.tsbuildinfo
 # Codex research scratch outputs
 scratch/collectable-audit-cache/
 scratch/collectable-audit-report/
+scratch/collectable-solver-core.wat
