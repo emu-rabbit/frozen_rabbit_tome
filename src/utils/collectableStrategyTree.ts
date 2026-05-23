@@ -2,6 +2,7 @@ import {
   applyCollectableAction,
   canUseCollectableAction,
   collectableDecisionKey,
+  collectableStateKey,
   createCollectableMechanicsContext,
   createInitialCollectableMechanicsState,
   type CollectableMechanicsContext,
@@ -85,6 +86,13 @@ export interface CollectableStrategyTreeResult {
   root: CollectableStrategyNode;
   summary: CollectableStrategyTreeSummary;
   uncoveredNodes: CollectableStrategyNode[];
+  limited: boolean;
+}
+
+export interface CollectableStrategyRuleApplicationSummary {
+  openStates: CollectableExperimentState[];
+  completeBranches: number;
+  totalBranches: number;
   limited: boolean;
 }
 
@@ -261,6 +269,33 @@ export function collectMatchingUncoveredStrategyNodes(
   return nodes.filter((node) => node.status === 'uncovered' && matchesRule(rule, node.state));
 }
 
+export function summarizeAppliedRuleOutcome(
+  nodes: CollectableStrategyNode[],
+  rule: CollectableStrategyRule | null | undefined,
+  mechanics: CollectableMechanicsContext | null | undefined
+): CollectableStrategyRuleApplicationSummary {
+  if (!rule?.enabled || !mechanics) {
+    return {
+      openStates: [],
+      completeBranches: 0,
+      totalBranches: 0,
+      limited: false
+    };
+  }
+
+  const matchedNodes = collectMatchingUncoveredStrategyNodes(nodes, rule);
+  const endpointStates = matchedNodes.flatMap((node) => (
+    applyRuleUntilUnmanaged(node.state, rule, mechanics)
+  ));
+
+  return {
+    openStates: uniqueCollectableStates(endpointStates.filter((state) => state.integrity > 0)),
+    completeBranches: endpointStates.filter((state) => state.integrity <= 0).length,
+    totalBranches: endpointStates.length,
+    limited: false
+  };
+}
+
 function expandNode(
   state: CollectableExperimentState,
   path: string[],
@@ -404,6 +439,62 @@ function applyAction(
     label: context.formatBranchLabel(transition.labelKeys ?? [transition.labelKey]),
     labelKeys: transition.labelKeys ?? [transition.labelKey]
   }));
+}
+
+function applyRuleActionChain(
+  state: CollectableExperimentState,
+  actions: CollectableActionKind[],
+  mechanics: CollectableMechanicsContext
+): CollectableExperimentState[] {
+  return actions.reduce<CollectableExperimentState[]>((states, action) => {
+    return states.flatMap((currentState) => {
+      if (currentState.integrity <= 0) return [currentState];
+      if (!canUseCollectableAction(action, currentState, mechanics)) return [currentState];
+
+      return applyCollectableAction(action, currentState, mechanics).map((transition) => transition.state);
+    });
+  }, [state]);
+}
+
+function applyRuleUntilUnmanaged(
+  state: CollectableExperimentState,
+  rule: CollectableStrategyRule,
+  mechanics: CollectableMechanicsContext
+): CollectableExperimentState[] {
+  const endpoints: CollectableExperimentState[] = [];
+
+  function walk(currentState: CollectableExperimentState) {
+    if (currentState.integrity <= 0 || !matchesRule(rule, currentState)) {
+      endpoints.push(currentState);
+      return;
+    }
+
+    const nextStates = applyRuleActionChain(currentState, rule.actions, mechanics);
+    const didAdvance = nextStates.some((nextState) => collectableStateKey(nextState) !== collectableStateKey(currentState));
+    if (!didAdvance) {
+      endpoints.push(currentState);
+      return;
+    }
+
+    nextStates.forEach(walk);
+  }
+
+  walk(state);
+  return endpoints;
+}
+
+function uniqueCollectableStates(states: CollectableExperimentState[]): CollectableExperimentState[] {
+  const seen = new Set<string>();
+  const uniqueStates: CollectableExperimentState[] = [];
+
+  states.forEach((state) => {
+    const key = collectableStateKey(state);
+    if (seen.has(key)) return;
+    seen.add(key);
+    uniqueStates.push(state);
+  });
+
+  return uniqueStates;
 }
 
 function stateKey(

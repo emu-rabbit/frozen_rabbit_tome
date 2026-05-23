@@ -883,6 +883,10 @@ export default {
       effectPreviewNoNodes: 'この方針はまだノードに適用されていないため、変化範囲を計算できません。',
       effectPreviewCastableNodes: '実行可能ノード：{count}',
       effectPreviewUnavailable: '現在展開されているノードでは、このアクションは実行されません。',
+      appliedStateRange: '適用後ノード状態範囲',
+      appliedStateRangeDescription: 'この方針が現在管理しているノードだけを集計し、管理外または終端になるまでこの方針を繰り返し適用します。',
+      appliedCompleteBranches: 'Complete：{complete}/{total} 分岐',
+      appliedAllComplete: 'すべての分岐が終了しました。',
       effectMetrics: {
         collectabilityGain: '収集価値 {range}',
         integrityDelta: '耐久 {range}',

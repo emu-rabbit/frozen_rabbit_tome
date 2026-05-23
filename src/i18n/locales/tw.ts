@@ -906,6 +906,10 @@ export default {
       effectPreviewNoNodes: '這條策略目前沒有套用節點，尚無可計算的變化範圍。',
       effectPreviewCastableNodes: '可施展節點：{count}',
       effectPreviewUnavailable: '此技能在目前展開節點中不會被施展。',
+      appliedStateRange: '套用後節點狀態範圍',
+      appliedStateRangeDescription: '只統計這條策略目前納管的節點；會反覆套用本策略，直到狀態不再納管或分支結束。',
+      appliedCompleteBranches: 'Complete：{complete}/{total} 分支',
+      appliedAllComplete: '所有分支都已結束',
       effectMetrics: {
         collectabilityGain: '價值提升 {range}',
         integrityDelta: '耐久 {range}',

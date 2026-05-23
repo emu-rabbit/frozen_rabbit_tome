@@ -4,6 +4,7 @@ import {
   collectableStrategyFields,
   collectMatchingUncoveredStrategyNodes,
   createSimpleCollectableStrategyRules,
+  summarizeAppliedRuleOutcome,
   type CollectableStrategyNode,
   type CollectableStrategyRule
 } from './collectableStrategyTree';
@@ -145,6 +146,95 @@ describe('collectableStrategyTree', () => {
     expect(managedFrontier).toHaveLength(1);
     expect(managedFrontier[0].status).toBe('uncovered');
     expect(collectMatchedNodes(expanded.root, improveRule.id).length).toBeGreaterThan(managedFrontier.length);
+  });
+
+  it('套用後摘要會循環套用同一策略直到終結', () => {
+    const collectRule = rule('collect-final', 'collect');
+    const request = {
+      stats: {
+        level: 100,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 4860,
+        Perception: 4860
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 3,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      jobType: 'miner' as const,
+      isTimedNode: false
+    };
+    const frontier = buildCollectableStrategyTree({
+      ...request,
+      rules: []
+    });
+    const mechanics = createCollectableMechanicsContext(request);
+
+    const summary = summarizeAppliedRuleOutcome(frontier.uncoveredNodes, collectRule, mechanics);
+
+    expect(summary.totalBranches).toBe(1);
+    expect(summary.completeBranches).toBe(1);
+    expect(summary.openStates).toHaveLength(0);
+  });
+
+  it('套用後摘要會保留未終結的唯一後續狀態供範圍卡使用', () => {
+    const improveRule: CollectableStrategyRule = {
+      id: 'improve',
+      name: 'improve',
+      enabled: true,
+      mode: 'all',
+      conditions: [
+        {
+          id: 'low-value',
+          field: 'collectability',
+          comparator: '<',
+          value: 200
+        }
+      ],
+      actions: ['meticulous']
+    };
+    const request = {
+      stats: {
+        level: 100,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 4860,
+        Perception: 4860
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      jobType: 'miner' as const,
+      isTimedNode: false
+    };
+    const frontier = buildCollectableStrategyTree({
+      ...request,
+      rules: []
+    });
+    const mechanics = createCollectableMechanicsContext(request);
+
+    const summary = summarizeAppliedRuleOutcome(frontier.uncoveredNodes, improveRule, mechanics);
+
+    expect(summary.totalBranches).toBeGreaterThan(1);
+    expect(summary.completeBranches).toBe(0);
+    expect(summary.openStates.length).toBeGreaterThan(1);
+    expect(summary.openStates.every((state) => state.integrity > 0)).toBe(true);
   });
 
   it('符合上方規則但技能不可用時，會繼續套用下一條可執行策略', () => {

@@ -19,6 +19,7 @@ import {
   createDefaultCollectableStrategyRules,
   createSimpleCollectableStrategyRules,
   isNumericStrategyField,
+  summarizeAppliedRuleOutcome,
   type CollectableStrategyCondition,
   type CollectableStrategyComparator,
   type CollectableStrategyField,
@@ -55,6 +56,7 @@ const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
 type ManagedNodeMeterKey = 'gp' | 'integrity' | 'collectability';
+type ManagedOverviewSource = Pick<CollectableStrategyNode, 'state'>;
 type ManagedOverviewMetricKey =
   | ManagedNodeMeterKey
   | 'collectSuccessRate'
@@ -169,6 +171,18 @@ const actionEffectPreviews = computed(() => buildCollectableActionEffectPreviews
   states: managedNodes.value.map((node) => node.state),
   mechanics: collectableMechanicsContext.value
 }));
+const appliedRuleOutcome = computed(() => summarizeAppliedRuleOutcome(
+  editorFrontierTreeResult.value?.uncoveredNodes ?? [],
+  editingRuleDraft.value,
+  collectableMechanicsContext.value
+));
+const appliedRuleOpenStateSources = computed<ManagedOverviewSource[]>(() => (
+  appliedRuleOutcome.value.openStates.map((state) => ({ state }))
+));
+const appliedRuleOverview = computed(() => buildManagedNodeOverview(
+  appliedRuleOpenStateSources.value,
+  collectableMechanicsContext.value
+));
 const stateFieldOptions = computed(() => [
   ...collectableStrategyFields.map((field) => ({
     field,
@@ -722,12 +736,12 @@ function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
   });
 }
 
-function buildManagedNodeOverview(nodes: CollectableStrategyNode[], mechanics: CollectableMechanicsContext | null) {
+function buildManagedNodeOverview(nodes: ManagedOverviewSource[], mechanics: CollectableMechanicsContext | null) {
   const metrics: Array<{
     key: ManagedOverviewMetricKey;
     label: string;
     icon: string;
-    getValue: (node: CollectableStrategyNode) => number;
+    getValue: (node: ManagedOverviewSource) => number;
     formatRange?: (min: number, max: number) => string;
   }> = [
     {
@@ -792,10 +806,10 @@ function buildManagedNodeOverview(nodes: CollectableStrategyNode[], mechanics: C
   };
 }
 
-function buildManagedBuffChips(nodes: CollectableStrategyNode[]) {
+function buildManagedBuffChips(nodes: ManagedOverviewSource[]) {
   if (nodes.length === 0) return [];
 
-  const buffStates: Array<{ key: string; label: string; hasBuff: (node: CollectableStrategyNode) => boolean }> = [
+  const buffStates: Array<{ key: string; label: string; hasBuff: (node: ManagedOverviewSource) => boolean }> = [
     { key: 'scrutinyActive', label: fieldLabel('scrutinyActive'), hasBuff: (node) => node.state.scrutinyActive },
     { key: 'collectorsFocusActive', label: fieldLabel('collectorsFocusActive'), hasBuff: (node) => node.state.collectorsFocusActive },
     { key: 'primingTouchActive', label: fieldLabel('primingTouchActive'), hasBuff: (node) => node.state.primingTouchActive },
@@ -1699,6 +1713,47 @@ function makeId() {
                     </p>
                   </article>
                 </div>
+              </section>
+
+              <section class="editor-section muted">
+                <div class="editor-section-title applied-section-title">
+                  <span class="editor-title-main">
+                    <i class="pi pi-sitemap"></i>
+                    <span>{{ t('collectableStrategyLab.editor.appliedStateRange') }}</span>
+                  </span>
+                  <span
+                    v-if="managedNodes.length > 0"
+                    class="applied-branch-badge"
+                    :class="{ 'is-complete': appliedRuleOutcome.openStates.length === 0 }"
+                  >
+                    <i :class="appliedRuleOutcome.openStates.length === 0 ? 'pi pi-check-circle' : 'pi pi-code-branch'"></i>
+                    {{ t('collectableStrategyLab.editor.appliedCompleteBranches', {
+                      complete: appliedRuleOutcome.completeBranches,
+                      total: appliedRuleOutcome.totalBranches
+                    }) }}
+                  </span>
+                </div>
+                <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.appliedStateRangeDescription') }}</p>
+                <p v-if="managedNodes.length === 0" class="effect-preview-empty">
+                  {{ t('collectableStrategyLab.editor.effectPreviewNoNodes') }}
+                </p>
+                <template v-else>
+                  <p v-if="appliedRuleOutcome.openStates.length === 0" class="applied-complete-message">
+                    <i class="pi pi-check-circle"></i>
+                    <span>{{ t('collectableStrategyLab.editor.appliedAllComplete') }}</span>
+                  </p>
+                  <template v-else>
+                    <div class="managed-range-grid">
+                      <div v-for="range in appliedRuleOverview.ranges" :key="`applied-range-${range.key}`" class="managed-range-card">
+                        <span><i :class="range.icon"></i>{{ range.label }}</span>
+                        <strong>{{ range.value }}</strong>
+                      </div>
+                    </div>
+                    <div class="managed-buff-overview" :aria-label="t('collectableStrategyLab.managedOverview.buffTitle')">
+                      <span v-for="chip in appliedRuleOverview.buffChips" :key="`applied-${chip.key}`">{{ chip.label }}</span>
+                    </div>
+                  </template>
+                </template>
               </section>
             </template>
           </div>
@@ -2888,6 +2943,62 @@ function makeId() {
   color: #f8fafc;
 }
 
+.applied-section-title {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.editor-title-main {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.applied-branch-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgb(82 168 144 / 0.24);
+  border-radius: 0.65rem;
+  background: #f8fafc;
+  color: #475569;
+  padding: 0.24rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.applied-branch-badge i {
+  color: #0f766e;
+  font-size: 0.72rem;
+}
+
+.applied-branch-badge.is-complete {
+  border-color: rgb(82 168 144 / 0.28);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+:global(html.dark .applied-branch-badge) {
+  border-color: rgb(94 234 212 / 0.18);
+  background: rgb(15 23 42 / 0.58);
+  color: #cbd5e1;
+}
+
+:global(html.dark .applied-branch-badge i) {
+  color: #99f6e4;
+}
+
+:global(html.dark .applied-branch-badge.is-complete) {
+  border-color: rgb(94 234 212 / 0.22);
+  background: rgb(20 83 45 / 0.24);
+  color: #99f6e4;
+}
+
 .skill-icon-strip {
   min-width: 0;
   display: flex;
@@ -3570,6 +3681,32 @@ function makeId() {
 :global(html.dark .managed-summary-card) {
   border-color: #334155;
   background: linear-gradient(180deg, rgb(30 41 59 / 0.5) 0%, rgb(20 83 45 / 0.2) 100%);
+}
+
+.applied-complete-message {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  border: 1px solid rgb(82 168 144 / 0.24);
+  border-radius: 0.75rem;
+  background: rgb(236 253 245 / 0.86);
+  color: #0f766e;
+  padding: 0.68rem 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.applied-complete-message i {
+  flex: 0 0 auto;
+}
+
+:global(html.dark .applied-complete-message) {
+  border-color: rgb(94 234 212 / 0.22);
+  background: rgb(20 83 45 / 0.24);
+  color: #99f6e4;
 }
 
 .managed-summary-header {

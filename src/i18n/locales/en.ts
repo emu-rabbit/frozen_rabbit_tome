@@ -905,6 +905,10 @@ export default {
       effectPreviewNoNodes: 'This strategy does not apply to any nodes yet, so no change range can be calculated.',
       effectPreviewCastableNodes: 'Castable nodes: {count}',
       effectPreviewUnavailable: 'This action will not be cast in the currently expanded nodes.',
+      appliedStateRange: 'Post-Apply Node State Range',
+      appliedStateRangeDescription: 'Only counts nodes currently managed by this strategy, then repeats this strategy until the state is no longer managed or the branch ends.',
+      appliedCompleteBranches: 'Complete: {complete}/{total} branches',
+      appliedAllComplete: 'All branches have ended.',
       effectMetrics: {
         collectabilityGain: 'Collectability {range}',
         integrityDelta: 'Integrity {range}',
