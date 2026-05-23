@@ -11,6 +11,25 @@ import type { CollectableSolverRequest } from '../types/collectable';
 
 type WasmCore = Parameters<typeof solveCollectableRotationWithWasm>[1];
 
+function searchCounters(overrides: Partial<{
+  getStatesSolved: () => bigint;
+  getActionsEvaluated: () => bigint;
+  getCandidateComparisons: () => bigint;
+  getTerminalStates: () => bigint;
+  getBranchCount: () => bigint;
+  getFailureReason: () => number;
+}> = {}) {
+  return {
+    getStatesSolved: () => BigInt(0),
+    getActionsEvaluated: () => BigInt(0),
+    getCandidateComparisons: () => BigInt(0),
+    getTerminalStates: () => BigInt(0),
+    getBranchCount: () => BigInt(0),
+    getFailureReason: () => 0,
+    ...overrides
+  };
+}
+
 async function loadWasmCore(): Promise<WasmCore> {
   const bytes = await readFile(new URL('../wasm/collectable-solver-core.wasm', import.meta.url));
   const module = await WebAssembly.instantiate(bytes, {
@@ -151,7 +170,11 @@ describe('collectable WASM solver core', () => {
       },
       getFailed() {
         return 1;
-      }
+      },
+      ...searchCounters({
+        getStatesSolved: () => BigInt(1),
+        getFailureReason: () => 1
+      })
     } as unknown as WasmCore;
 
     const rejection = await solveCollectableRotationWithWasm(baseRequest(), core)
@@ -159,6 +182,27 @@ describe('collectable WASM solver core', () => {
 
     expect(rejection).toBeInstanceOf(CollectableWasmMemoCapacityError);
     expect((rejection as CollectableWasmMemoCapacityError).nextMemoCapacityPower).toBe(23);
+    expect(calls).toBe(1);
+  });
+
+  it('reports startup failure separately when the wasm core fails before search starts', async () => {
+    let calls = 0;
+    const core = {
+      solvePlanObjective() {
+        calls += 1;
+        throw new WebAssembly.RuntimeError('unreachable');
+      },
+      getFailed() {
+        return 1;
+      },
+      ...searchCounters()
+    } as unknown as WasmCore;
+
+    const rejection = await solveCollectableRotationWithWasm(baseRequest({ manualMemoCapacityPower: 24 }), core)
+      .then(() => null, (error: unknown) => error);
+
+    expect(rejection).toBeInstanceOf(CollectableWasmMemoryAllocationError);
+    expect(rejection).not.toBeInstanceOf(CollectableWasmMemoCapacityError);
     expect(calls).toBe(1);
   });
 

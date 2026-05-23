@@ -18,6 +18,8 @@ const MEMO_LOAD_LIMIT_PERCENT: i32 = 85;
 const OBJECTIVE_EXPECTED: i32 = 0;
 const OBJECTIVE_MIN: i32 = 1;
 const OBJECTIVE_MAX: i32 = 2;
+const FAILURE_NONE: i32 = 0;
+const FAILURE_MEMO_CAPACITY: i32 = 1;
 const ACTION_COLLECT: i32 = 0;
 const ACTION_SCOUR: i32 = 1;
 const ACTION_METICULOUS: i32 = 2;
@@ -68,6 +70,7 @@ let used = new StaticArray<u8>(1);
 let capacity: i32 = 1;
 let mask: i32 = 0;
 let failed: bool = false;
+let failureReason: i32 = FAILURE_NONE;
 let memoSize: i32 = 0;
 
 let statesSolved: i64 = 0;
@@ -97,6 +100,9 @@ function maxI32(left: i32, right: i32): i32 {
 }
 
 function resetMemo(nextCapacity: i32): void {
+  failed = false;
+  failureReason = FAILURE_NONE;
+
   if (capacity != nextCapacity) {
     capacity = nextCapacity;
     mask = capacity - 1;
@@ -118,7 +124,6 @@ function resetMemo(nextCapacity: i32): void {
       unchecked(used[index] = 0);
     }
   }
-  failed = false;
   memoSize = 0;
   statesSolved = 0;
   memoHits = 0;
@@ -263,6 +268,7 @@ function memoSet(
 ): void {
   if ((memoSize + 1) * 100 >= capacity * MEMO_LOAD_LIMIT_PERCENT) {
     failed = true;
+    failureReason = FAILURE_MEMO_CAPACITY;
     abort('Collectable WASM memo table capacity exceeded.', 'collectableSolverCore.ts', 0, 0);
   }
 
@@ -286,6 +292,7 @@ function memoSet(
     index = (index + 1) & mask;
     if (index == startIndex) {
       failed = true;
+      failureReason = FAILURE_MEMO_CAPACITY;
       abort('Collectable WASM memo table is full.', 'collectableSolverCore.ts', 0, 0);
     }
   }
@@ -1132,6 +1139,10 @@ export function getBranchCount(): i64 {
 
 export function getFailed(): i32 {
   return failed ? 1 : 0;
+}
+
+export function getFailureReason(): i32 {
+  return failureReason;
 }
 
 export function getBaseSuccessRate(): i32 {

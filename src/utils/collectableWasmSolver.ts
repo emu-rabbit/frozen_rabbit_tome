@@ -88,6 +88,7 @@ type CollectableWasmExports = CollectableWasmPolicyCore & {
   getTerminalStates(): bigint;
   getBranchCount(): bigint;
   getFailed(): number;
+  getFailureReason(): number;
   getBaseSuccessRate(): number;
   getScourValue(): number;
 };
@@ -138,6 +139,7 @@ const MAX_SAFE_MEMO_CAPACITY_POWER = 30;
 const MEMO_ENTRY_BYTES = 132;
 const MEMO_FIXED_MEMORY_BYTES = 0;
 const MEMO_MEMORY_BUDGET_RATIO = 0.22;
+const WASM_FAILURE_MEMO_CAPACITY = 1;
 let wasmPromise: Promise<CollectableWasmExports> | null = null;
 
 export function canUseCollectableWasmSolver(request: CollectableSolverRequest): boolean {
@@ -198,7 +200,7 @@ export async function solveCollectableRotationWithWasm(
     } catch (error) {
       wasmPromise = null;
       if (wasmCore.getFailed() !== 0) {
-        throw new CollectableWasmMemoCapacityError(memoCapacityPower, supportedPower);
+        throw createWasmFailureError(wasmCore, memoCapacityPower, supportedPower);
       }
 
       if (memoCapacityPower > initialPower && isLikelyWasmMemoryAllocationFailure(error)) {
@@ -228,7 +230,7 @@ async function solveCollectableRotationWithWasmAtPower(
   } catch (error) {
     wasmPromise = null;
     if (wasmCore.getFailed() !== 0) {
-      throw new CollectableWasmMemoCapacityError(memoCapacityPower, memoCapacityPower);
+      throw createWasmFailureError(wasmCore, memoCapacityPower, memoCapacityPower);
     }
 
     if (isLikelyWasmMemoryAllocationFailure(error)) {
@@ -503,6 +505,18 @@ function isLikelyWasmMemoryAllocationFailure(error: unknown): boolean {
     || message.includes('allocation')
     || message.includes('out of bounds')
     || message.includes('aborted');
+}
+
+function createWasmFailureError(
+  core: CollectableWasmExports,
+  memoCapacityPower: number,
+  supportedMemoCapacityPower: number
+): Error {
+  if (core.getFailureReason() === WASM_FAILURE_MEMO_CAPACITY) {
+    return new CollectableWasmMemoCapacityError(memoCapacityPower, supportedMemoCapacityPower);
+  }
+
+  return new CollectableWasmMemoryAllocationError(memoCapacityPower);
 }
 
 function objectiveModeToWasm(mode: CollectableSolverRequest['objectiveMode']): number {
