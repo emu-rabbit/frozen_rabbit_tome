@@ -46,6 +46,10 @@ import {
 const { t } = useI18n();
 const route = useRoute();
 const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
+
+type RuleEditorView = 'main' | 'managedNodes' | 'actions';
+type ManagedNodesView = 'summary' | 'individual';
+
 const props = defineProps<{
   activeItem: GatherableItem;
   effectiveStats: PlayerStats;
@@ -59,6 +63,10 @@ const props = defineProps<{
 
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
 const editingRuleId = ref('');
+const editingRuleDraft = ref<CollectableStrategyRule | null>(null);
+const ruleEditorView = ref<RuleEditorView>('main');
+const managedNodesView = ref<ManagedNodesView>('summary');
+const managedNodeIndex = ref(0);
 const analysis = ref<CollectableStrategyAnalysis | null>(null);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 const rewardError = ref(false);
@@ -82,7 +90,9 @@ const strategyConditionValueLimits: Record<CollectableStrategyNumericField, { mi
 const jobType = computed(() => props.activeItem.jobType || 'miner');
 const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
 const canBuildTree = computed(() => !!props.baseValues && !isCollectableLevelLocked.value);
-const treeResult = computed(() => {
+const treeResult = computed(() => buildStrategyTreeForRules(rules.value));
+
+function buildStrategyTreeForRules(strategyRules: CollectableStrategyRule[]) {
   if (!props.baseValues || isCollectableLevelLocked.value) return null;
 
   return buildCollectableStrategyTree({
@@ -94,7 +104,7 @@ const treeResult = computed(() => {
     jobType: jobType.value,
     isTimedNode: props.activeItem.isTimedNode ?? false,
     hasRelicToolBonus: props.hasRelicToolBonus,
-    rules: rules.value,
+    rules: strategyRules,
     maxNodes: internalMaxNodes,
     formatActionLabel: actionName,
     formatBranchLabel: (labelKeys) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
@@ -102,11 +112,28 @@ const treeResult = computed(() => {
       ? t('collectableStrategyLab.pathStepWithRule', { rule: ruleName, action: actionLabel, branch: branchLabel })
       : t('collectableStrategyLab.pathStep', { action: actionLabel, branch: branchLabel })
   });
-});
+}
 const summary = computed(() => treeResult.value?.summary);
 const uncoveredNodes = computed(() => treeResult.value?.uncoveredNodes ?? []);
 const uncoveredStateGroups = computed(() => buildUncoveredStateGroups(uncoveredNodes.value));
-const editingRule = computed(() => rules.value.find((rule) => rule.id === editingRuleId.value) ?? null);
+const editingRule = computed(() => editingRuleDraft.value);
+const editorPreviewRules = computed(() => {
+  const draft = editingRuleDraft.value;
+  if (!draft) return rules.value;
+
+  const index = rules.value.findIndex((rule) => rule.id === editingRuleId.value);
+  if (index < 0) return [...rules.value, draft];
+
+  const nextRules = [...rules.value];
+  nextRules[index] = draft;
+  return nextRules;
+});
+const editorTreeResult = computed(() => buildStrategyTreeForRules(editorPreviewRules.value));
+const managedNodes = computed(() => collectManagedNodes(editorTreeResult.value?.root, editingRuleDraft.value?.id ?? ''));
+const managedStateGroups = computed(() => buildUncoveredStateGroups(managedNodes.value));
+const currentManagedNode = computed(() => managedNodes.value[managedNodeIndex.value] ?? null);
+const editorCoverageText = computed(() => t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length }));
+const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
 const stateFieldOptions = computed(() => [
   ...collectableStrategyFields.map((field) => ({
     field,
@@ -190,6 +217,14 @@ watch([
 watch(rules, () => {
   sanitizeRuleConditions();
 }, { deep: true });
+
+watch(() => managedNodes.value.length, (length) => {
+  if (length === 0) {
+    managedNodeIndex.value = 0;
+    return;
+  }
+  if (managedNodeIndex.value >= length) managedNodeIndex.value = length - 1;
+});
 
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
@@ -424,18 +459,16 @@ function addRule() {
   if (isCollectableLevelLocked.value) return;
 
   const id = makeId();
-  rules.value = [
-    ...rules.value,
-    {
-      id,
-      name: t('collectableStrategyLab.defaultRuleName', { index: rules.value.length + 1 }),
-      mode: 'all',
-      enabled: true,
-      conditions: [createCondition('collectability')],
-      actions: ['collect']
-    }
-  ];
-  editingRuleId.value = id;
+  editingRuleId.value = '';
+  editingRuleDraft.value = {
+    id,
+    name: t('collectableStrategyLab.defaultRuleName', { index: rules.value.length + 1 }),
+    mode: 'all',
+    enabled: true,
+    conditions: [createCondition('collectability')],
+    actions: ['collect']
+  };
+  resetRuleEditorView();
 }
 
 function loadSimpleExampleRules() {
@@ -468,10 +501,44 @@ function moveRule(ruleId: string, direction: -1 | 1) {
 
 function openRuleEditor(ruleId: string) {
   editingRuleId.value = ruleId;
+  const rule = rules.value.find((entry) => entry.id === ruleId);
+  editingRuleDraft.value = rule ? clonePlain(rule) : null;
+  resetRuleEditorView();
 }
 
 function closeRuleEditor() {
   editingRuleId.value = '';
+  editingRuleDraft.value = null;
+  resetRuleEditorView();
+}
+
+function saveRuleEditor() {
+  if (!editingRuleDraft.value) return;
+
+  sanitizeRule(editingRuleDraft.value);
+  const draft = clonePlain(editingRuleDraft.value);
+  const index = rules.value.findIndex((rule) => rule.id === editingRuleId.value);
+
+  if (index < 0) {
+    rules.value = [...rules.value, draft];
+  } else {
+    const nextRules = [...rules.value];
+    nextRules[index] = draft;
+    rules.value = nextRules;
+  }
+
+  closeRuleEditor();
+}
+
+function resetRuleEditorView() {
+  ruleEditorView.value = 'main';
+  managedNodesView.value = 'summary';
+  managedNodeIndex.value = 0;
+}
+
+function goRuleEditorView(view: RuleEditorView) {
+  ruleEditorView.value = view;
+  if (view === 'managedNodes') managedNodeIndex.value = 0;
 }
 
 function addCondition(rule: CollectableStrategyRule) {
@@ -504,10 +571,13 @@ function clampConditionValue(condition: CollectableStrategyCondition) {
 
 function sanitizeRuleConditions() {
   for (const rule of rules.value) {
-    for (const condition of rule.conditions) {
-      clampConditionValue(condition);
-    }
+    sanitizeRule(rule);
   }
+  if (editingRuleDraft.value) sanitizeRule(editingRuleDraft.value);
+}
+
+function sanitizeRule(rule: CollectableStrategyRule) {
+  for (const condition of rule.conditions) clampConditionValue(condition);
 }
 
 function addAction(rule: CollectableStrategyRule) {
@@ -629,6 +699,54 @@ function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
       entries
     };
   });
+}
+
+function collectManagedNodes(root: CollectableStrategyNode | undefined, ruleId: string) {
+  if (!root || !ruleId) return [];
+
+  const nodes: CollectableStrategyNode[] = [];
+  const visited = new Set<string>();
+
+  function walk(node: CollectableStrategyNode | undefined) {
+    if (!node || visited.has(node.id)) return;
+    visited.add(node.id);
+    if (node.matchedRuleId === ruleId) nodes.push(node);
+    node.branches.forEach((branch) => walk(branch.child));
+  }
+
+  walk(root);
+  return nodes;
+}
+
+function moveManagedNode(direction: -1 | 1) {
+  if (!managedNodes.value.length) return;
+  managedNodeIndex.value = Math.max(0, Math.min(managedNodes.value.length - 1, managedNodeIndex.value + direction));
+}
+
+function nodeStatusLabel(status: CollectableStrategyNode['status']) {
+  return t(`collectableStrategyLab.nodeStatuses.${status}`);
+}
+
+function formatNodeState(node: CollectableStrategyNode) {
+  return t('collectableStrategyLab.nodeState', {
+    gp: node.state.gp,
+    integrity: node.state.integrity,
+    collectability: node.state.collectability
+  });
+}
+
+function stateChips(node: CollectableStrategyNode) {
+  const chips: string[] = [];
+  if (node.state.scrutinyActive) chips.push(t('collectableStrategyLab.chips.scrutinyActive'));
+  if (node.state.collectorsFocusActive) chips.push(t('collectableStrategyLab.chips.collectorsFocusActive'));
+  if (node.state.primingTouchActive) chips.push(t('collectableStrategyLab.chips.primingTouchActive'));
+  if (node.state.standardActive) chips.push(t('collectableStrategyLab.chips.standardActive'));
+  if (node.state.wiseToTheWorldActive) chips.push(t('collectableStrategyLab.chips.wiseToTheWorldActive'));
+  if (node.state.successBonus > 0) chips.push(t('collectableStrategyLab.chips.successBonus', { value: node.state.successBonus }));
+  if (node.state.nextCollectSuccessBonus > 0) chips.push(t('collectableStrategyLab.chips.nextCollectSuccessBonus', { value: node.state.nextCollectSuccessBonus }));
+  if (node.state.hasUsedCollectableAction) chips.push(t('collectableStrategyLab.chips.hasUsedCollectableAction'));
+  if (node.state.hasCollected) chips.push(t('collectableStrategyLab.chips.hasCollected'));
+  return chips;
 }
 
 function formatDistributionPercent(percent: number) {
@@ -1052,8 +1170,7 @@ function makeId() {
         <section class="rule-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="collectable-rule-editor-title">
           <header class="rule-editor-dialog-header">
             <div>
-              <span>{{ t('collectableStrategyLab.editor.kicker') }}</span>
-              <h2 id="collectable-rule-editor-title">{{ editingRule.name }}</h2>
+              <h2 id="collectable-rule-editor-title">{{ t('collectableStrategyLab.editor.kicker') }}</h2>
             </div>
             <button type="button" class="dialog-close-button" :aria-label="t('collectableStrategyLab.editor.close')" @click="closeRuleEditor">
               <i class="pi pi-times"></i>
@@ -1061,118 +1178,242 @@ function makeId() {
           </header>
 
           <div class="rule-editor-body">
-            <label class="dialog-name-field">
-              <span>{{ t('collectableStrategyLab.editor.name') }}</span>
-              <input v-model="editingRule.name" type="text" />
-            </label>
+            <template v-if="ruleEditorView === 'main'">
+              <section class="editor-section">
+                <div class="editor-section-title">
+                  <i class="pi pi-id-card"></i>
+                  <span>{{ t('collectableStrategyLab.editor.name') }}</span>
+                </div>
+                <label class="dialog-name-field">
+                  <input v-model="editingRule.name" type="text" />
+                </label>
+              </section>
 
-            <div class="rule-mode-row">
-              <span>{{ t('collectableStrategyLab.editor.when') }}</span>
-              <select v-model="editingRule.mode">
-                <option value="all">{{ t('collectableStrategyLab.editor.allConditions') }}</option>
-                <option value="any">{{ t('collectableStrategyLab.editor.anyCondition') }}</option>
-              </select>
-              <span>{{ t('collectableStrategyLab.editor.then') }}</span>
-            </div>
-
-            <div class="condition-list">
-              <div
-                v-for="condition in editingRule.conditions"
-                :key="condition.id"
-                class="condition-row"
-                :class="{ 'is-boolean': !isNumericStrategyField(condition.field) }"
-              >
-                <select
-                  :value="condition.field"
-                  @change="updateConditionField(condition, ($event.target as HTMLSelectElement).value as CollectableStrategyField)"
-                >
-                  <option v-for="option in stateFieldOptions" :key="option.field" :value="option.field">
-                    {{ option.label }}
-                  </option>
-                </select>
-
-                <template v-if="isNumericStrategyField(condition.field)">
-                  <select v-model="condition.comparator">
-                    <option v-for="comparator in ['<', '<=', '=', '>=', '>']" :key="comparator" :value="comparator">
-                      {{ comparatorLabel(comparator as CollectableStrategyComparator) }}
-                    </option>
+              <section class="editor-section">
+                <div class="editor-section-title">
+                  <i class="pi pi-filter"></i>
+                  <span>{{ t('collectableStrategyLab.editor.conditionSection') }}</span>
+                </div>
+                <div class="rule-mode-row">
+                  <span>{{ t('collectableStrategyLab.editor.when') }}</span>
+                  <select v-model="editingRule.mode">
+                    <option value="all">{{ t('collectableStrategyLab.editor.allConditions') }}</option>
+                    <option value="any">{{ t('collectableStrategyLab.editor.anyCondition') }}</option>
                   </select>
-                  <input
-                    v-model.number="condition.value"
-                    type="number"
-                    :min="conditionValueLimit(condition.field).min"
-                    :max="conditionValueLimit(condition.field).max"
-                    @change="clampConditionValue(condition)"
-                    @blur="clampConditionValue(condition)"
-                  />
-                </template>
+                  <span>{{ t('collectableStrategyLab.editor.then') }}</span>
+                </div>
 
-                <template v-else>
-                  <select v-model="condition.value">
-                    <option :value="true">{{ t('collectableStrategyLab.booleanValues.true') }}</option>
-                    <option :value="false">{{ t('collectableStrategyLab.booleanValues.false') }}</option>
-                  </select>
-                </template>
+                <div class="condition-list">
+                  <div
+                    v-for="condition in editingRule.conditions"
+                    :key="condition.id"
+                    class="condition-row"
+                    :class="{ 'is-boolean': !isNumericStrategyField(condition.field) }"
+                  >
+                    <select
+                      :value="condition.field"
+                      @change="updateConditionField(condition, ($event.target as HTMLSelectElement).value as CollectableStrategyField)"
+                    >
+                      <option v-for="option in stateFieldOptions" :key="option.field" :value="option.field">
+                        {{ option.label }}
+                      </option>
+                    </select>
 
-                <button type="button" class="condition-remove-button" :title="t('collectableStrategyLab.editor.removeCondition')" @click="removeCondition(editingRule, condition.id)">
-                  <i class="pi pi-minus"></i>
-                </button>
+                    <template v-if="isNumericStrategyField(condition.field)">
+                      <select v-model="condition.comparator">
+                        <option v-for="comparator in ['<', '<=', '=', '>=', '>']" :key="comparator" :value="comparator">
+                          {{ comparatorLabel(comparator as CollectableStrategyComparator) }}
+                        </option>
+                      </select>
+                      <input
+                        v-model.number="condition.value"
+                        type="number"
+                        :min="conditionValueLimit(condition.field).min"
+                        :max="conditionValueLimit(condition.field).max"
+                        @change="clampConditionValue(condition)"
+                        @blur="clampConditionValue(condition)"
+                      />
+                    </template>
 
-                <p class="condition-help">
-                  {{ fieldDescription(condition.field) }}
-                </p>
-              </div>
-              <button type="button" class="text-tool" @click="addCondition(editingRule)">
-                <i class="pi pi-plus"></i>
-                {{ t('collectableStrategyLab.editor.addCondition') }}
+                    <template v-else>
+                      <select v-model="condition.value">
+                        <option :value="true">{{ t('collectableStrategyLab.booleanValues.true') }}</option>
+                        <option :value="false">{{ t('collectableStrategyLab.booleanValues.false') }}</option>
+                      </select>
+                    </template>
+
+                    <button type="button" class="condition-remove-button" :title="t('collectableStrategyLab.editor.removeCondition')" @click="removeCondition(editingRule, condition.id)">
+                      <i class="pi pi-minus condition-remove-icon-desktop"></i>
+                      <i class="pi pi-trash condition-remove-icon-mobile"></i>
+                    </button>
+
+                    <p class="condition-help">
+                      {{ fieldDescription(condition.field) }}
+                    </p>
+                  </div>
+                  <button type="button" class="text-tool" @click="addCondition(editingRule)">
+                    <i class="pi pi-plus"></i>
+                    {{ t('collectableStrategyLab.editor.addCondition') }}
+                  </button>
+                </div>
+              </section>
+
+              <button type="button" class="managed-nodes-entry" @click="goRuleEditorView('managedNodes')">
+                <i class="pi pi-sitemap"></i>
+                <span>{{ t('collectableStrategyLab.editor.viewManagedNodes') }}</span>
+                <strong>{{ editorCoverageText }}</strong>
               </button>
-            </div>
 
-            <div class="action-chain">
-              <div class="action-chain-header">
-                <span>{{ editingRule.actions.length > 1 ? t('collectableStrategyLab.editor.actionChain') : t('collectableStrategyLab.editor.singleAction') }}</span>
+              <button type="button" class="managed-nodes-entry skill-entry" @click="goRuleEditorView('actions')">
+                <i class="pi pi-sparkles"></i>
+                <span>{{ t('collectableStrategyLab.editor.skillSection') }}</span>
+                <div class="skill-icon-strip" :aria-label="t('collectableStrategyLab.editor.actionPreview')">
+                  <template v-for="(action, index) in ruleActionPreview" :key="`${editingRule.id}-preview-${action}-${index}`">
+                    <span class="skill-preview-icon" :title="actionName(action)">
+                      <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionName(action)" />
+                      <i v-else class="pi pi-sparkles"></i>
+                    </span>
+                    <i v-if="index < ruleActionPreview.length - 1" class="pi pi-angle-right skill-preview-arrow"></i>
+                  </template>
+                </div>
+              </button>
+            </template>
+
+            <template v-else-if="ruleEditorView === 'managedNodes'">
+              <div class="managed-node-toolbar">
+                <div class="editor-segmented-control">
+                  <button type="button" :class="{ active: managedNodesView === 'summary' }" @click="managedNodesView = 'summary'">
+                    {{ t('collectableStrategyLab.editor.summaryMode') }}
+                  </button>
+                  <button type="button" :class="{ active: managedNodesView === 'individual' }" @click="managedNodesView = 'individual'">
+                    {{ t('collectableStrategyLab.editor.individualMode') }}
+                  </button>
+                </div>
+                <span>{{ editorCoverageText }}</span>
+              </div>
+
+              <div v-if="managedNodes.length === 0" class="tree-empty compact">
+                <i class="pi pi-search"></i>
+                <p>{{ t('collectableStrategyLab.editor.noManagedNodes') }}</p>
+              </div>
+
+              <div v-else-if="managedNodesView === 'summary'" class="pending-overview" :aria-label="t('collectableStrategyLab.editor.summaryMode')">
+                <article v-for="group in managedStateGroups" :key="`managed-${group.key}`" class="pending-overview-group">
+                  <div class="pending-overview-group-header">
+                    <strong>{{ group.label }}</strong>
+                    <small>{{ t('collectableStrategyLab.pendingOverview.uniqueValues', { count: group.entries.length }) }}</small>
+                  </div>
+
+                  <div class="pending-overview-values">
+                    <div v-for="entry in group.entries" :key="`managed-${group.key}-${entry.value}`" class="pending-overview-value">
+                      <div class="pending-overview-value-main">
+                        <span>{{ entry.value }}</span>
+                        <strong>{{ formatDistributionPercent(entry.percentage) }}</strong>
+                      </div>
+                      <div class="pending-overview-bar" aria-hidden="true">
+                        <span :style="{ width: distributionBarWidth(entry.percentage) }"></span>
+                      </div>
+                      <small>{{ t('collectableStrategyLab.pendingOverview.nodeCount', { count: entry.count }) }}</small>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else-if="currentManagedNode" class="uncovered-layout">
+                <div class="node-pager">
+                  <button type="button" :disabled="managedNodeIndex === 0" :aria-label="t('collectableStrategyLab.previousUncovered')" @click="moveManagedNode(-1)">
+                    <i class="pi pi-chevron-left"></i>
+                  </button>
+                  <span>{{ t('collectableStrategyLab.nodePager', { current: managedNodeIndex + 1, total: managedNodes.length }) }}</span>
+                  <button type="button" :disabled="managedNodeIndex >= managedNodes.length - 1" :aria-label="t('collectableStrategyLab.nextUncovered')" @click="moveManagedNode(1)">
+                    <i class="pi pi-chevron-right"></i>
+                  </button>
+                </div>
+
+                <article class="uncovered-detail">
+                  <span class="node-status" :class="currentManagedNode.status">{{ nodeStatusLabel(currentManagedNode.status) }}</span>
+                  <h4>{{ formatNodeState(currentManagedNode) }}</h4>
+                  <div class="state-chip-list">
+                    <span v-for="chip in stateChips(currentManagedNode)" :key="chip">{{ chip }}</span>
+                    <span v-if="stateChips(currentManagedNode).length === 0">{{ t('collectableStrategyLab.noBuff') }}</span>
+                  </div>
+                  <div class="path-box">
+                    <strong>{{ t('collectableStrategyLab.pathTitle') }}</strong>
+                    <ol v-if="currentManagedNode.path.length">
+                      <li v-for="step in currentManagedNode.path" :key="step">{{ step }}</li>
+                    </ol>
+                    <p v-else>{{ t('collectableStrategyLab.noPath') }}</p>
+                  </div>
+                </article>
+              </div>
+            </template>
+
+            <template v-else>
+              <section class="editor-section">
+                <div class="editor-section-title">
+                  <i class="pi pi-sparkles"></i>
+                  <span>{{ editingRule.actions.length > 1 ? t('collectableStrategyLab.editor.actionChain') : t('collectableStrategyLab.editor.singleAction') }}</span>
+                </div>
+                <div class="action-list compact">
+                  <div
+                    v-for="(action, actionIndex) in editingRule.actions"
+                    :key="`${editingRule.id}-${actionIndex}`"
+                    class="action-select-row"
+                    :class="{ 'is-level-invalid': isActionLevelLocked(action) }"
+                  >
+                    <span class="skill-preview-icon">
+                      <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionName(action)" />
+                      <i v-else class="pi pi-sparkles"></i>
+                    </span>
+                    <select
+                      :value="action"
+                      @change="setAction(editingRule, actionIndex, ($event.target as HTMLSelectElement).value as CollectableActionKind)"
+                    >
+                      <option
+                        v-for="option in collectableStrategyActionKinds"
+                        :key="option"
+                        :value="option"
+                        :disabled="isActionLevelLocked(option)"
+                      >
+                        {{ actionName(option) }}{{ isActionLevelLocked(option) ? ` (${actionLevelRequirement(option)})` : '' }}
+                      </option>
+                    </select>
+                    <button type="button" :disabled="editingRule.actions.length <= 1" :title="t('collectableStrategyLab.editor.removeAction')" @click="removeAction(editingRule, actionIndex)">
+                      <i class="pi pi-times"></i>
+                    </button>
+                    <small v-if="isActionLevelLocked(action)">{{ actionLevelRequirement(action) }}</small>
+                  </div>
+                </div>
                 <button type="button" class="text-tool" @click="addAction(editingRule)">
                   <i class="pi pi-plus"></i>
                   {{ t('collectableStrategyLab.editor.addAction') }}
                 </button>
-              </div>
-              <div class="action-list">
-                <div
-                  v-for="(action, actionIndex) in editingRule.actions"
-                  :key="`${editingRule.id}-${actionIndex}`"
-                  class="action-chip"
-                  :class="{ 'is-level-invalid': isActionLevelLocked(action) }"
-                >
-                  <div class="selected-action">
-                    <img v-if="actionIcon(action)" :src="actionIcon(action)" alt="" />
-                    <strong>{{ actionName(action) }}</strong>
-                    <small v-if="isActionLevelLocked(action)">{{ actionLevelRequirement(action) }}</small>
-                  </div>
-                  <button type="button" :disabled="editingRule.actions.length <= 1" :title="t('collectableStrategyLab.editor.removeAction')" @click="removeAction(editingRule, actionIndex)">
-                    <i class="pi pi-times"></i>
-                  </button>
-                  <div class="action-option-list">
-                    <button
-                      v-for="option in collectableStrategyActionKinds"
-                      :key="option"
-                      type="button"
-                      class="action-option"
-                      :class="{ active: action === option }"
-                      :disabled="isActionLevelLocked(option)"
-                      :title="isActionLevelLocked(option) ? actionLevelRequirement(option) : actionName(option)"
-                      @click="setAction(editingRule, actionIndex, option)"
-                    >
-                      <img v-if="actionIcon(option)" :src="actionIcon(option)" alt="" />
-                      <span>{{ actionName(option) }}</span>
-                    </button>
-                  </div>
+              </section>
+
+              <section class="editor-section muted">
+                <div class="editor-section-title">
+                  <i class="pi pi-chart-line"></i>
+                  <span>{{ t('collectableStrategyLab.editor.effectPreview') }}</span>
                 </div>
-              </div>
-            </div>
+                <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.effectPreviewPlaceholder') }}</p>
+                <div class="skill-icon-strip">
+                  <template v-for="(action, index) in editingRule.actions" :key="`${editingRule.id}-effect-${action}-${index}`">
+                    <span class="skill-preview-icon" :title="actionName(action)">
+                      <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionName(action)" />
+                      <i v-else class="pi pi-sparkles"></i>
+                    </span>
+                    <i v-if="index < editingRule.actions.length - 1" class="pi pi-angle-right skill-preview-arrow"></i>
+                  </template>
+                </div>
+              </section>
+            </template>
           </div>
 
           <footer class="rule-editor-dialog-footer">
-            <Button :label="t('collectableStrategyLab.editor.done')" icon="pi pi-check" class="p-button-sm rounded-xl" @click="closeRuleEditor" />
+            <div class="rule-editor-footer-actions">
+              <Button v-if="ruleEditorView === 'main'" :label="t('collectableStrategyLab.editor.save')" icon="pi pi-check" class="p-button-sm rounded-xl" @click="saveRuleEditor" />
+              <Button v-else :label="t('collectableStrategyLab.editor.backToMain')" icon="pi pi-arrow-left" class="rule-editor-back-button p-button-sm p-button-outlined rounded-xl" @click="goRuleEditorView('main')" />
+            </div>
           </footer>
         </section>
       </div>
@@ -1935,7 +2176,7 @@ function makeId() {
 .column-header h2,
 .uncovered-panel h3,
 .rule-editor-dialog-header h2 {
-  margin: 0.1rem 0 0;
+  margin: 0;
   color: #334155;
   font-size: 1.05rem;
   font-weight: 900;
@@ -2083,7 +2324,8 @@ function makeId() {
 .dialog-name-field input,
 .condition-row input,
 .condition-row select,
-.rule-mode-row select {
+.rule-mode-row select,
+.action-select-row select {
   min-width: 0;
   border: 1px solid #cbd5e1;
   border-radius: 0.7rem;
@@ -2096,7 +2338,8 @@ function makeId() {
 :global(html.dark .dialog-name-field input),
 :global(html.dark .condition-row input),
 :global(html.dark .condition-row select),
-:global(html.dark .rule-mode-row select) {
+:global(html.dark .rule-mode-row select),
+:global(html.dark .action-select-row select) {
   border-color: #334155;
   background: #020617;
   color: #e2e8f0;
@@ -2167,6 +2410,10 @@ function makeId() {
   border-color: #fda4af;
   background: #ffe4e6;
   color: #9f1239;
+}
+
+.condition-remove-icon-mobile {
+  display: none;
 }
 
 :global(html.dark .condition-remove-button) {
@@ -2248,6 +2495,268 @@ function makeId() {
   padding-right: 0.25rem;
 }
 
+.editor-segmented-control button,
+.editor-secondary-action,
+.managed-nodes-entry {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid #d1fae5;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  color: #0f766e;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.editor-segmented-control button.active,
+.editor-secondary-action:hover,
+.managed-nodes-entry:hover {
+  border-color: #52a890;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.editor-secondary-action span,
+.managed-nodes-entry span,
+.managed-nodes-entry strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(html.dark .editor-segmented-control button),
+:global(html.dark .editor-secondary-action),
+:global(html.dark .managed-nodes-entry) {
+  border-color: #334155;
+  background: rgb(2 6 23 / 0.5);
+  color: #99f6e4;
+}
+
+:global(html.dark .editor-segmented-control button.active),
+:global(html.dark .editor-secondary-action:hover),
+:global(html.dark .managed-nodes-entry:hover) {
+  border-color: #5eead4;
+  background: rgb(20 83 45 / 0.24);
+  color: #ccfbf1;
+}
+
+.editor-section {
+  min-width: 0;
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+  padding: 0.85rem;
+}
+
+.editor-section.muted {
+  background: #ffffff;
+}
+
+:global(html.dark .editor-section) {
+  border-color: #334155;
+  background: rgb(30 41 59 / 0.42);
+}
+
+:global(html.dark .editor-section.muted) {
+  background: rgb(2 6 23 / 0.36);
+}
+
+.editor-section-title,
+.managed-node-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.editor-section-title {
+  justify-content: flex-start;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.editor-section-title i {
+  color: #52a890;
+}
+
+:global(html.dark .editor-section-title) {
+  color: #f8fafc;
+}
+
+.skill-icon-strip {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.skill-icon-strip {
+  flex-wrap: wrap;
+}
+
+.skill-preview-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0.65rem;
+  background: #52a890;
+  color: white;
+}
+
+.skill-preview-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.skill-preview-arrow {
+  color: #94a3b8;
+  font-size: 0.76rem;
+}
+
+.managed-nodes-entry {
+  width: 100%;
+  justify-content: flex-start;
+  border-color: rgb(82 168 144 / 0.35);
+  background: #f0fdf4;
+}
+
+.managed-nodes-entry.skill-entry {
+  align-items: center;
+}
+
+.managed-nodes-entry.skill-entry > span {
+  justify-self: start;
+  text-align: left;
+}
+
+.managed-nodes-entry.skill-entry .skill-icon-strip {
+  margin-left: auto;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+
+.managed-nodes-entry strong {
+  margin-left: auto;
+  color: #166534;
+}
+
+:global(html.dark .managed-nodes-entry strong) {
+  color: #bbf7d0;
+}
+
+.managed-node-toolbar {
+  flex-wrap: wrap;
+}
+
+.managed-node-toolbar > span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.rule-editor-dialog-header h2 {
+  font-size: 1.18rem;
+  line-height: 1.25;
+}
+
+:global(html.dark .managed-node-toolbar > span) {
+  color: #94a3b8;
+}
+
+.editor-segmented-control {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.action-list.compact {
+  gap: 0.55rem;
+}
+
+.action-select-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  background: white;
+  padding: 0.55rem;
+}
+
+.action-select-row.is-level-invalid {
+  border-color: rgb(248 113 113 / 0.7);
+  background: #fff7ed;
+}
+
+.action-select-row > button {
+  width: 2.15rem;
+  height: 2.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fecdd3;
+  border-radius: 0.65rem;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.action-select-row > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.action-select-row small {
+  grid-column: 2 / -1;
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+:global(html.dark .action-select-row) {
+  border-color: #334155;
+  background: rgb(2 6 23 / 0.38);
+}
+
+:global(html.dark .action-select-row.is-level-invalid) {
+  border-color: rgb(248 113 113 / 0.45);
+  background: rgb(127 29 29 / 0.16);
+}
+
+:global(html.dark .action-select-row > button) {
+  border-color: rgb(244 63 94 / 0.35);
+  background: rgb(127 29 29 / 0.28);
+  color: #fda4af;
+}
+
+.editor-placeholder {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+:global(html.dark .editor-placeholder) {
+  color: #94a3b8;
+}
+
 .condition-list,
 .action-chain {
   display: grid;
@@ -2267,6 +2776,10 @@ function makeId() {
 
 .condition-row.is-boolean .condition-remove-button {
   grid-column: 4;
+}
+
+.condition-row.is-boolean .condition-help {
+  grid-column: 1 / -1;
 }
 
 .condition-help {
@@ -2800,8 +3313,17 @@ function makeId() {
 }
 
 .rule-editor-dialog-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   border-bottom: 1px solid #e2e8f0;
   padding-bottom: 0.85rem;
+}
+
+.rule-editor-dialog-header > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
 }
 
 :global(html.dark .rule-editor-dialog-header) {
@@ -2830,6 +3352,16 @@ function makeId() {
   border-top: 1px solid #e2e8f0;
   padding-top: 0.85rem;
   justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.rule-editor-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-left: auto;
 }
 
 :global(html.dark .rule-editor-dialog-footer) {
@@ -2908,7 +3440,140 @@ function makeId() {
   }
 
   .condition-row {
+    grid-template-columns: minmax(0, 1fr) 2.35rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.72rem;
+  }
+
+  .condition-row:last-of-type {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  :global(html.dark .condition-row) {
+    border-bottom-color: #334155;
+  }
+
+  .condition-row > select,
+  .condition-row > input {
+    width: 100%;
+  }
+
+  .condition-row .condition-remove-button {
+    grid-column: 2;
+    grid-row: 1;
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .condition-remove-icon-desktop {
+    display: none;
+  }
+
+  .condition-remove-icon-mobile {
+    display: inline-flex;
+  }
+
+  .condition-row.is-boolean .condition-remove-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .condition-row select:first-child,
+  .condition-row.is-boolean select:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .condition-row select:nth-of-type(2),
+  .condition-row input,
+  .condition-row.is-boolean select:nth-of-type(2) {
+    grid-column: 1;
+  }
+
+  .condition-row .condition-help,
+  .condition-row.is-boolean .condition-help {
+    grid-column: 1;
+  }
+
+  .managed-nodes-entry.skill-entry {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    row-gap: 0.45rem;
+    text-align: left;
+  }
+
+  .managed-nodes-entry.skill-entry .skill-icon-strip {
+    grid-column: 1 / -1;
+    margin-left: 0;
+    justify-content: flex-start;
+    gap: 0.32rem;
+  }
+
+  .managed-nodes-entry.skill-entry .skill-preview-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+  }
+
+  .managed-nodes-entry.skill-entry .skill-preview-arrow {
+    font-size: 0.68rem;
+  }
+
+  .rule-editor-overlay {
+    align-items: stretch;
+    place-items: stretch;
+    padding: 0.65rem;
+  }
+
+  .rule-editor-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 1.3rem);
+    padding: 0.85rem;
+  }
+
+  .rule-editor-dialog-header,
+  .managed-node-toolbar,
+  .rule-editor-dialog-footer {
+    align-items: stretch;
+  }
+
+  .managed-node-toolbar {
+    flex-direction: column;
+  }
+
+  .editor-secondary-action,
+  .managed-nodes-entry {
+    justify-content: flex-start;
+  }
+
+  .editor-segmented-control,
+  .rule-editor-footer-actions {
+    width: 100%;
+  }
+
+  .rule-editor-back-button {
+    width: 100%;
+  }
+
+  .rule-editor-footer-actions {
+    display: grid;
     grid-template-columns: 1fr;
+    margin-left: 0;
+  }
+
+  .action-select-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .action-select-row > button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .action-select-row small {
+    grid-column: 1 / -1;
   }
 
   .summary-grid {

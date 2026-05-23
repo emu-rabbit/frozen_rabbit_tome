@@ -841,6 +841,12 @@ export default {
       uncoveredNodes: '尚待決策',
       terminalNodes: '終止'
     },
+    nodeStatuses: {
+      decided: '已納管',
+      uncovered: '待決策',
+      terminal: '已終止',
+      limited: '已達展開上限'
+    },
     analysis: {
       title: '分析報告',
       subtitle: '依目前策略規則計算收藏品分數、機率分布與收益落點。',
@@ -871,11 +877,24 @@ export default {
     editor: {
       kicker: '策略設定',
       close: '關閉策略設定',
+      managedNodes: '納管的節點',
+      skills: '技能選擇',
+      conditionSection: '策略條件',
+      skillSection: '選擇對應的技能',
       name: '策略名稱',
       when: '符合',
       allConditions: '全部條件',
       anyCondition: '任一條件',
       then: '時執行',
+      actionPreview: '策略技能預覽',
+      viewManagedNodes: '查看納管的節點',
+      summaryMode: '彙總',
+      individualMode: '個別',
+      noManagedNodes: '這條策略目前還沒有套用到任何節點。',
+      effectPreview: '數值變化',
+      effectPreviewPlaceholder: '此區會在下一階段接上技能串的 GP、耐久與收藏價值變化。',
+      backToMain: '返回',
+      save: '儲存',
       removeCondition: '移除條件',
       addCondition: '加條件',
       actionChain: '串聯技能',

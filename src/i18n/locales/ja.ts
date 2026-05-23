@@ -818,6 +818,12 @@ export default {
       uncoveredNodes: '未決定',
       terminalNodes: '終端'
     },
+    nodeStatuses: {
+      decided: '管理中',
+      uncovered: '判断待ち',
+      terminal: '終端',
+      limited: '展開上限'
+    },
     analysis: {
       title: '分析レポート',
       subtitle: '現在の方針ルールにもとづき、収集品スコア、確率分布、報酬の着地点を計算します。',
@@ -848,11 +854,24 @@ export default {
     editor: {
       kicker: '方針設定',
       close: '方針設定を閉じる',
+      managedNodes: '管理中ノード',
+      skills: 'スキル選択',
+      conditionSection: '方針条件',
+      skillSection: '対応するスキルを選択',
       name: '方針名',
       when: '条件',
       allConditions: 'すべての条件',
       anyCondition: 'いずれかの条件',
       then: 'に一致したら実行',
+      actionPreview: '方針スキルのプレビュー',
+      viewManagedNodes: '管理中ノードを見る',
+      summaryMode: '概要',
+      individualMode: '個別',
+      noManagedNodes: 'この方針はまだどのノードにも適用されていません。',
+      effectPreview: '数値変化',
+      effectPreviewPlaceholder: '次の段階で、選択したスキル列による GP・耐久・収集価値の変化をここに接続します。',
+      backToMain: '戻る',
+      save: '保存',
       removeCondition: '条件を削除',
       addCondition: '条件を追加',
       actionChain: '連続アクション',

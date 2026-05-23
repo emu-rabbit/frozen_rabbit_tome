@@ -840,6 +840,12 @@ export default {
       uncoveredNodes: 'Open',
       terminalNodes: 'Completed'
     },
+    nodeStatuses: {
+      decided: 'Managed',
+      uncovered: 'Needs decision',
+      terminal: 'Terminal',
+      limited: 'Expansion limited'
+    },
     analysis: {
       title: 'Analysis Report',
       subtitle: 'Calculates collectable score, probability distribution, and reward outcomes for the current strategy rules.',
@@ -870,11 +876,24 @@ export default {
     editor: {
       kicker: 'Strategy Settings',
       close: 'Close strategy settings',
+      managedNodes: 'Managed Nodes',
+      skills: 'Skill Selection',
+      conditionSection: 'Strategy Conditions',
+      skillSection: 'Select Matching Skills',
       name: 'Strategy Name',
       when: 'When',
       allConditions: 'all conditions',
       anyCondition: 'any condition',
       then: 'match, run',
+      actionPreview: 'Strategy skill preview',
+      viewManagedNodes: 'View Managed Nodes',
+      summaryMode: 'Summary',
+      individualMode: 'Individual',
+      noManagedNodes: 'This strategy does not manage any nodes yet.',
+      effectPreview: 'Value Changes',
+      effectPreviewPlaceholder: 'This area will connect to GP, integrity, and collectability changes for the selected skill chain in the next phase.',
+      backToMain: 'Back',
+      save: 'Save',
       removeCondition: 'Remove condition',
       addCondition: 'Add Condition',
       actionChain: 'Action Chain',
