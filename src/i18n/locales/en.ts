@@ -667,8 +667,8 @@ export default {
       memoCapacity: {
         title: 'Not enough memory to finish this solve',
         desc: 'This setup has reached the memory limit available for collectable decisions on this device. Narrow the conditions or use a simpler scenario.',
-        raiseBudget: 'Raise memory and try again',
-        manualRisk: 'Warning: raising memory can slow the browser, freeze the tab, or cause the system to close it.'
+        raiseBudget: 'Try with more memory',
+        manualRisk: 'Using more memory may briefly slow the browser or make this tab stop responding; if the device is short on resources, the system may close the tab.'
       },
       memoAllocationFailed: {
         title: 'Could not start the higher-memory solve',

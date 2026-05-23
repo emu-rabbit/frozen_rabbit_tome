@@ -668,8 +668,8 @@ export default {
       memoCapacity: {
         title: '記憶體不足，無法完成求解',
         desc: '這組條件需要的收藏品決策記憶體已達此裝置可用上限。請先縮小條件或改用較簡單的情境。',
-        raiseBudget: '承擔風險，提高記憶體再試',
-        manualRisk: '警告：提高記憶體可能讓瀏覽器變慢、分頁停止回應，甚至被系統關閉。'
+        raiseBudget: '提高記憶體再試',
+        manualRisk: '提高記憶體後，瀏覽器可能短暫變慢或分頁停止回應；若裝置資源不足，系統可能會關閉分頁。'
       },
       memoAllocationFailed: {
         title: '無法啟動更高記憶體求解',

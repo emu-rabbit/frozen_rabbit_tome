@@ -656,7 +656,7 @@ export default {
     errors: {
       unsupportedLevel: { title: '收藏品采集需要 50 级', desc: '当前角色等级未达到 {level}，尚未开放收藏品采集。请提高等级后再使用收藏品秘笈。' },
       unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在已支持的收藏品缴纳、老主顾、魔法大学、万货街、精选或宇宙探索资料中，暂时无法求解。' },
-      memoCapacity: { title: '内存不足，无法完成求解', desc: '这组条件需要的收藏品决策内存已达到此设备可用上限。请先缩小条件或改用较简单的情境。', raiseBudget: '承担风险，提高内存再试', manualRisk: '警告：提高内存可能让浏览器变慢、标签页停止响应，甚至被系统关闭。' },
+      memoCapacity: { title: '内存不足，无法完成求解', desc: '这组条件需要的收藏品决策内存已达到此设备可用上限。请先缩小条件或改用较简单的情境。', raiseBudget: '提高内存再试', manualRisk: '提高内存后，浏览器可能短暂变慢或标签页停止响应；如果设备资源不足，系统可能会关闭该标签页。' },
       memoAllocationFailed: { title: '无法启动更高内存求解', desc: '浏览器无法分配这次求解需要的内存。请缩小条件或改用较简单的情境。' },
       workerStale: { title: '求解器需要重新载入', desc: '网站可能刚更新完成，刷新后即可继续。' },
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }

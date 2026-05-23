@@ -426,9 +426,16 @@ function waitForUiFrame() {
       </div>
     </header>
 
-    <div v-if="collectableError" class="collectable-alert" role="alert">
-      <i class="pi pi-exclamation-circle"></i>
-      <div>
+    <div
+      v-if="collectableError"
+      class="collectable-alert"
+      :class="{ 'collectable-alert-with-actions': isWorkerError || canRaiseMemoBudget }"
+      role="alert"
+    >
+      <span class="collectable-alert-icon" aria-hidden="true">
+        <i class="pi pi-exclamation-circle"></i>
+      </span>
+      <div class="collectable-alert-body">
         <strong>{{ t(`collectableSolver.errors.${collectableError}.title`) }}</strong>
         <p>{{ t(`collectableSolver.errors.${collectableError}.desc`) }}</p>
       </div>
@@ -438,9 +445,9 @@ function waitForUiFrame() {
         </p>
         <Button
           v-if="canRaiseMemoBudget"
-          class="p-button-sm p-button-danger collectable-alert-action"
+          class="p-button-sm collectable-alert-action"
           :label="t('collectableSolver.errors.memoCapacity.raiseBudget')"
-          icon="pi pi-exclamation-triangle"
+          icon="pi pi-refresh"
           :loading="isCollectableSolving"
           @click="handleRaiseMemoBudget"
         />
@@ -455,8 +462,10 @@ function waitForUiFrame() {
     </div>
 
     <div v-else-if="isCollectableLevelLocked" class="collectable-alert" role="alert">
-      <i class="pi pi-exclamation-circle"></i>
-      <div>
+      <span class="collectable-alert-icon" aria-hidden="true">
+        <i class="pi pi-exclamation-circle"></i>
+      </span>
+      <div class="collectable-alert-body">
         <strong>{{ t('collectableSolver.errors.unsupportedLevel.title') }}</strong>
         <p>{{ t('collectableSolver.errors.unsupportedLevel.desc', { level: MIN_COLLECTABLE_LEVEL }) }}</p>
       </div>
@@ -662,15 +671,19 @@ function waitForUiFrame() {
 }
 
 .collectable-alert {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.75rem 0.85rem;
   align-items: flex-start;
   border: 1px solid #fed7aa;
   border-radius: 0.85rem;
   background: #fff7ed;
-  padding: 0.9rem;
+  padding: 0.95rem 1rem;
   color: #c2410c;
+}
+
+.collectable-alert-with-actions {
+  grid-template-columns: 1.5rem minmax(0, 1fr) minmax(17rem, 0.78fr);
 }
 
 :global(html.dark .collectable-alert) {
@@ -679,39 +692,109 @@ function waitForUiFrame() {
   color: #fdba74;
 }
 
-.collectable-alert strong {
-  display: block;
-  margin-bottom: 0.15rem;
+.collectable-alert-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.05rem;
+  border-radius: 0.55rem;
+  background: rgb(249 115 22 / 0.1);
+  color: #ea580c;
 }
 
-.collectable-alert > div {
+:global(html.dark .collectable-alert-icon) {
+  background: rgb(251 146 60 / 0.14);
+  color: #fdba74;
+}
+
+.collectable-alert strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #9a3412;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+:global(html.dark .collectable-alert strong) {
+  color: #fed7aa;
+}
+
+.collectable-alert-body {
   min-width: 0;
-  flex: 1 1 14rem;
 }
 
 .collectable-alert-actions {
-  flex: 1 1 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.65rem;
+  grid-column: 3;
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 1px solid rgb(251 146 60 / 0.28);
+}
+
+:global(html.dark .collectable-alert-actions) {
+  border-left-color: rgb(251 146 60 / 0.22);
 }
 
 .collectable-alert-risk {
-  flex: 1 1 18rem;
+  width: 100%;
+  max-width: 24rem;
+  border: 1px solid rgb(251 146 60 / 0.28);
+  border-radius: 0.75rem;
+  background: rgb(255 237 213 / 0.58);
+  padding: 0.6rem 0.7rem;
   color: #9a3412;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 :global(html.dark .collectable-alert-risk) {
+  border-color: rgb(251 146 60 / 0.24);
+  background: rgb(124 45 18 / 0.24);
   color: #fed7aa;
 }
 
 :deep(.collectable-alert-action) {
-  flex: 0 0 auto;
+  border-color: #ea580c;
   border-radius: 0.75rem;
+  background: #ea580c;
+  color: white;
   font-weight: 800;
+  box-shadow: 0 8px 18px rgb(234 88 12 / 0.16);
+}
+
+:deep(.collectable-alert-action:hover),
+:deep(.collectable-alert-action:enabled:hover),
+:deep(.collectable-alert-action:active),
+:deep(.collectable-alert-action:enabled:active) {
+  border-color: #c2410c;
+  background: #c2410c;
+  color: white;
+}
+
+:global(html.dark) :deep(.collectable-alert-action) {
+  border-color: rgb(251 146 60 / 0.72);
+  background: rgb(194 65 12 / 0.9);
+  color: #fff7ed;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.22);
+}
+
+:global(html.dark) :deep(.collectable-alert-action:hover),
+:global(html.dark) :deep(.collectable-alert-action:enabled:hover),
+:global(html.dark) :deep(.collectable-alert-action:active),
+:global(html.dark) :deep(.collectable-alert-action:enabled:active) {
+  border-color: rgb(253 186 116 / 0.82);
+  background: rgb(154 52 18 / 0.95);
+  color: #fff7ed;
+}
+
+:deep(.collectable-alert-action:focus-visible) {
+  outline: 2px solid rgb(251 146 60 / 0.72);
+  outline-offset: 2px;
 }
 
 .collectable-result {
@@ -765,6 +848,34 @@ function waitForUiFrame() {
 
   .solver-result-action-bar {
     grid-template-columns: 1fr;
+  }
+
+  .collectable-alert,
+  .collectable-alert-with-actions {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+  }
+
+  .collectable-alert-actions {
+    grid-column: 1 / -1;
+    justify-items: stretch;
+    padding-left: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgb(251 146 60 / 0.28);
+    border-left: 0;
+  }
+
+  :global(html.dark .collectable-alert-actions) {
+    border-top-color: rgb(251 146 60 / 0.22);
+    border-left: 0;
+  }
+
+  .collectable-alert-risk {
+    max-width: none;
+  }
+
+  :deep(.collectable-alert-action) {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
