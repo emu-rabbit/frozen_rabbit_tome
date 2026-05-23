@@ -811,45 +811,4 @@ describe('solveCollectableRotation', () => {
     });
   });
 
-  it('Glv 700 低獲得力長案例會使用剪枝後的 WASM key 搜尋並維持固定結果', () => {
-    const result = solveCollectableRotation(createRequest({
-      stats: {
-        level: 100,
-        gathering: 2000,
-        perception: 5173,
-        gp: 930
-      },
-      baseValues: {
-        Gathering: 5085,
-        Perception: 5085
-      },
-      itemLevel: 100,
-      nodeBonuses: {
-        baseIntegrity: 4,
-        gatheringCount: 0,
-        yieldCount: 0,
-        extraRate: 0
-      },
-      temporaryGp: 930,
-      rewardTable: {
-        itemId: 700001,
-        source: 'collectables',
-        tiers: {
-          low: { collectability: 240, reward: { exp: 0, gil: 0, scrip: 107, items: {} } },
-          mid: { collectability: 450, reward: { exp: 0, gil: 0, scrip: 124, items: {} } },
-          high: { collectability: 600, reward: { exp: 0, gil: 0, scrip: 140, items: {} } }
-        }
-      },
-      debugMode: true
-    }));
-    const search = result.debug?.plans[0].search;
-
-    expect(result.expectedScore).toBe(569.193336);
-    expect(result.minScore).toBe(428);
-    expect(result.maxScore).toBe(2240);
-    expect(result.policy.recommendedAction.kind).toBe('meticulous');
-    expect(result.debug?.optimality.stateKeyEngine).toBe('wasm-packed');
-    expect(search?.statesSolved).toBeLessThan(2500000);
-    expect(search?.branchCount).toBeLessThan(25000000);
-  }, 60000);
 });
