@@ -11,12 +11,13 @@ import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
 import { useSettings } from './useSettings';
+import { normalizeCollectableObjective } from '../config/inputLimits';
 
 const collectableResult = ref<CollectableSolverResult | null>(null);
 const isCollectableSolving = ref(false);
 const collectableError = ref<'unsupportedLevel' | 'unsupportedReward' | CollectableWorkerErrorType | 'workerStale' | 'workerFailed' | null>(null);
 const collectableErrorDetail = ref<CollectableWorkerErrorResponse | null>(null);
-const collectableObjective = ref<CollectableObjective>({ kind: 'scrip' });
+const collectableObjective = ref<CollectableObjective>(normalizeCollectableObjective({ kind: 'scrip' }));
 let activeCollectableWorker: Worker | null = null;
 let collectableSolveVersion = 0;
 
@@ -101,7 +102,7 @@ export function useCollectableSolver() {
       temporaryGp: payload.temporaryGp,
       jobType: payload.activeItem.jobType || 'miner',
       rewardTable,
-      objective: payload.objective ?? collectableObjective.value,
+      objective: normalizeCollectableObjective(payload.objective ?? collectableObjective.value),
       objectiveMode: solverSettings.value.objectiveMode,
       hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
       isTimedNode: payload.activeItem.isTimedNode ?? false,

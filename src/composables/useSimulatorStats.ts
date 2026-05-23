@@ -7,6 +7,12 @@ import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import { useSimulator } from './useSimulator';
+import {
+  DEFAULT_NODE_BONUSES,
+  maxGatheringCountForBaseIntegrity,
+  normalizeNodeBonuses,
+  normalizePlayerStats
+} from '../config/inputLimits';
 
 type SyncFromSettingsOptions = {
   forceStats?: boolean;
@@ -43,7 +49,17 @@ const lastSyncedSettingsProfileSignatures: Partial<Record<GatheringJob, string>>
 const areStatsEqual = (a: PlayerStats, b: PlayerStats) =>
   a.level === b.level && a.gathering === b.gathering && a.perception === b.perception && a.gp === b.gp;
 
+const areNodeBonusesEqual = (left: NodeBonuses, right: NodeBonuses) => (
+  left.baseIntegrity === right.baseIntegrity
+  && left.gatheringCount === right.gatheringCount
+  && left.yieldCount === right.yieldCount
+  && left.extraRate === right.extraRate
+);
+
 const cloneStats = (s: PlayerStats): PlayerStats => ({ ...s });
+const DEFAULT_SIMULATOR_STATS: PlayerStats = { ...simStats.value };
+const normalizeStatsForSimulator = (stats?: Partial<PlayerStats>) => normalizePlayerStats(stats, DEFAULT_SIMULATOR_STATS);
+const normalizeNodeBonusesForSimulator = (bonuses?: Partial<NodeBonuses>) => normalizeNodeBonuses(bonuses, DEFAULT_NODE_BONUSES);
 const createProfileSignature = (profile: GearStatProfile) => JSON.stringify({
   jobs: profile.jobs,
   level: profile.level,
@@ -58,6 +74,7 @@ const createProfileSignature = (profile: GearStatProfile) => JSON.stringify({
 export function useSimulatorStats() {
   const { solverSettings } = useSettings();
   const { defaultProfileForJob } = useGearProfiles();
+  const gatheringCountMax = computed(() => maxGatheringCountForBaseIntegrity(nodeBonuses.value.baseIntegrity));
 
   // ── 遊戲資料載入 ──
   const fetchItemLevelData = async () => {
@@ -69,7 +86,10 @@ export function useSimulatorStats() {
     if (!loading) {
       fetchItemLevelData();
       if (activeItem.value?.gatheringItemId) {
-        nodeBonuses.value.baseIntegrity = getItemBaseIntegrity(activeItem.value.gatheringItemId);
+        nodeBonuses.value = normalizeNodeBonusesForSimulator({
+          ...nodeBonuses.value,
+          baseIntegrity: getItemBaseIntegrity(activeItem.value.gatheringItemId)
+        });
       }
     }
   }, { immediate: true });
@@ -79,7 +99,7 @@ export function useSimulatorStats() {
     if (!activeItem.value) return;
     const job: GatheringJob = activeItem.value.jobType || 'miner';
     const profile = defaultProfileForJob(job);
-    const stats = profileToStats(profile);
+    const stats = normalizeStatsForSimulator(profileToStats(profile));
     const profileSignature = createProfileSignature(profile);
     const prev = lastSyncedSettingsStats[job];
     const prevProfileSignature = lastSyncedSettingsProfileSignatures[job];
@@ -101,13 +121,13 @@ export function useSimulatorStats() {
   };
 
   const applyGearProfile = (profile: GearStatProfile) => {
-    simStats.value = profileToStats(profile);
+    simStats.value = normalizeStatsForSimulator(profileToStats(profile));
     selectedFood.value = { ...profile.food };
     solverSettings.value.collectableRelicToolBonus = profile.collectableRelicToolBonus;
     temporaryGp.value = Math.min(profile.currentGp, effectiveStats.value.gp);
 
     for (const job of profile.jobs) {
-      lastSyncedSettingsStats[job] = profileToStats(profile);
+      lastSyncedSettingsStats[job] = normalizeStatsForSimulator(profileToStats(profile));
       lastSyncedSettingsProfileSignatures[job] = createProfileSignature(profile);
     }
   };
@@ -126,12 +146,12 @@ export function useSimulatorStats() {
 
     // 不同物品 → 完整重置
     activeItem.value = item;
-    nodeBonuses.value = {
+    nodeBonuses.value = normalizeNodeBonusesForSimulator({
       baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
       gatheringCount: 0,
       yieldCount: 0,
       extraRate: 0
-    };
+    });
     selectedFood.value = { foodId: null, quality: 'hq' };
 
     // 重置模擬手法與分析結果
@@ -146,7 +166,7 @@ export function useSimulatorStats() {
   const displayName = computed(() => activeItem.value ? getItemName(activeItem.value.itemId) : '');
   const selectedFoodItem = computed(() => getGatheringFood(selectedFood.value.foodId));
   const foodBonus = computed(() => calculateFoodBonus(simStats.value, selectedFoodItem.value, selectedFood.value.quality));
-  const effectiveStats = computed(() => applyFoodBonus(simStats.value, foodBonus.value));
+  const effectiveStats = computed(() => normalizeStatsForSimulator(applyFoodBonus(simStats.value, foodBonus.value)));
 
   const baseValues = computed(() => {
     if (!activeItem.value || !itemLevelData.value) return null;
@@ -188,6 +208,20 @@ export function useSimulatorStats() {
     }
   }, { immediate: true });
 
+  watch(simStats, (stats) => {
+    const normalized = normalizeStatsForSimulator(stats);
+    if (!areStatsEqual(stats, normalized)) {
+      simStats.value = normalized;
+    }
+  }, { deep: true, immediate: true });
+
+  watch(nodeBonuses, (bonuses) => {
+    const normalized = normalizeNodeBonusesForSimulator(bonuses);
+    if (!areNodeBonusesEqual(bonuses, normalized)) {
+      nodeBonuses.value = normalized;
+    }
+  }, { deep: true, immediate: true });
+
   return {
     activeItem,
     simStats,
@@ -196,6 +230,7 @@ export function useSimulatorStats() {
     foodBonus,
     effectiveStats,
     nodeBonuses,
+    gatheringCountMax,
     temporaryGp,
     isDataLoading: isGameDataLoading,
     fetchItemLevelData,

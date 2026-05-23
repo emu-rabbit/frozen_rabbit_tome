@@ -14,6 +14,10 @@ import {
   createTierScoreObjective,
   getDefaultCollectableObjectivePresetId
 } from '../utils/collectableObjectivePresets';
+import {
+  COLLECTABLE_INPUT_LIMITS,
+  normalizeCollectableTierScoreWeights
+} from '../config/inputLimits';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -30,6 +34,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const selectedPresetId = ref<CollectableObjectivePresetId>('highValue');
 const customWeights = ref<Required<CollectableTierScoreWeights>>({ ...DEFAULT_CUSTOM_TIER_WEIGHTS });
+const customTierScoreLimit = COLLECTABLE_INPUT_LIMITS.customTierScore;
 
 const options = computed(() => props.rewardTable
   ? createCollectableObjectiveOptions(props.rewardTable, customWeights.value)
@@ -49,11 +54,18 @@ watch(() => props.objective, (objective) => {
 
 function resetDraft(objective: CollectableObjective) {
   selectedPresetId.value = objective.presetId ?? (objective.kind === 'scrip' ? 'scrip' : 'highValue');
-  customWeights.value = {
-    ...DEFAULT_CUSTOM_TIER_WEIGHTS,
-    ...(objective.presetId === 'customTier' ? objective.tierWeights : {})
-  };
+  customWeights.value = normalizeCollectableTierScoreWeights(
+    objective.presetId === 'customTier' ? objective.tierWeights : undefined,
+    DEFAULT_CUSTOM_TIER_WEIGHTS
+  );
 }
+
+watch(customWeights, (weights) => {
+  const normalized = normalizeCollectableTierScoreWeights(weights, DEFAULT_CUSTOM_TIER_WEIGHTS);
+  if (JSON.stringify(weights) !== JSON.stringify(normalized)) {
+    customWeights.value = normalized;
+  }
+}, { deep: true });
 
 watch(() => props.rewardTable, (rewardTable) => {
   if (!rewardTable) return;
@@ -123,19 +135,19 @@ function closeAfterApply() {
         <div v-if="selectedPresetId === 'customTier'" class="custom-weight-grid">
           <label>
             <span>{{ t('collectableObjective.tiers.none') }}</span>
-            <input v-model.number="customWeights.none" type="number" min="0" />
+            <input v-model.number="customWeights.none" type="number" :min="customTierScoreLimit.min" :max="customTierScoreLimit.max" />
           </label>
           <label>
             <span>{{ t('collectableObjective.tiers.low') }}</span>
-            <input v-model.number="customWeights.low" type="number" min="0" />
+            <input v-model.number="customWeights.low" type="number" :min="customTierScoreLimit.min" :max="customTierScoreLimit.max" />
           </label>
           <label>
             <span>{{ t('collectableObjective.tiers.mid') }}</span>
-            <input v-model.number="customWeights.mid" type="number" min="0" />
+            <input v-model.number="customWeights.mid" type="number" :min="customTierScoreLimit.min" :max="customTierScoreLimit.max" />
           </label>
           <label>
             <span>{{ t('collectableObjective.tiers.high') }}</span>
-            <input v-model.number="customWeights.high" type="number" min="0" />
+            <input v-model.number="customWeights.high" type="number" :min="customTierScoreLimit.min" :max="customTierScoreLimit.max" />
           </label>
         </div>
 

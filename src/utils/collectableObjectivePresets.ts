@@ -5,6 +5,7 @@ import type {
   CollectableRewardTable,
   CollectableTierScoreWeights
 } from '../types/collectable';
+import { normalizeCollectableTierScoreWeights } from '../config/inputLimits';
 
 export type CollectableObjectiveOption = {
   id: CollectableObjectivePresetId;
@@ -32,7 +33,7 @@ export function createTierScoreObjective(
   return {
     kind: 'tierScore',
     presetId,
-    tierWeights: { ...tierWeights }
+    tierWeights: normalizeCollectableTierScoreWeights(tierWeights, DEFAULT_CUSTOM_TIER_WEIGHTS)
   };
 }
 

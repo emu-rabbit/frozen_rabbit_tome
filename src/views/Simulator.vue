@@ -25,6 +25,13 @@ import type { SimulationRequest } from '../utils/rotationSimulator';
 import type { GearStatProfile, SimulationResponse } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
+import {
+  NODE_BONUS_INPUT_LIMITS,
+  PLAYER_INPUT_LIMITS,
+  clampIntegerInput,
+  normalizeNodeBonuses,
+  normalizePlayerStats
+} from '../config/inputLimits';
 
 type RelicToolOption = {
   label: string;
@@ -42,6 +49,7 @@ const {
   selectedFoodItem,
   effectiveStats,
   nodeBonuses,
+  gatheringCountMax,
   temporaryGp,
   baseValues,
   itemRealLevel,
@@ -398,15 +406,15 @@ function loadExperimentFromRoute() {
   setSelectedItem(item);
   
   // 2. 設置數值 (需要確保 setSelectedItem 觸發的 syncFromSettings 不會蓋掉這些)
-  solverStats.value = { ...experiment.stats };
+  solverStats.value = normalizePlayerStats(experiment.stats);
   selectedFood.value = { ...experiment.food };
-  nodeBonuses.value = {
+  nodeBonuses.value = normalizeNodeBonuses({
     baseIntegrity: experiment.nodeBonuses.baseIntegrity ?? (item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4),
     gatheringCount: experiment.nodeBonuses.gatheringCount,
     yieldCount: experiment.nodeBonuses.yieldCount,
     extraRate: experiment.nodeBonuses.extraRate
-  };
-  temporaryGp.value = experiment.temporaryGp;
+  });
+  temporaryGp.value = clampIntegerInput(experiment.temporaryGp, PLAYER_INPUT_LIMITS.gp.min, effectiveStats.value.gp, effectiveStats.value.gp);
   
   // 3. 設置手法
   if (experiment.kind === 'collectable') {
@@ -523,9 +531,9 @@ function progressPercent(range: number[], maxValue: number) {
           />
         </div>
         <div class="input-grid stats-input-grid" :class="{ 'is-collectable': activeItem.isCollectable }">
-          <label class="field-level"><span>{{ t('game.stats.level') }}</span><InputNumber v-model="solverStats.level" :min="1" :max="100" fluid /></label>
-          <label class="field-gathering"><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="solverStats.gathering" :min="0" fluid /></label>
-          <label class="field-perception"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="solverStats.perception" :min="0" fluid /></label>
+          <label class="field-level"><span>{{ t('game.stats.level') }}</span><InputNumber v-model="solverStats.level" :min="PLAYER_INPUT_LIMITS.level.min" :max="PLAYER_INPUT_LIMITS.level.max" fluid /></label>
+          <label class="field-gathering"><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="solverStats.gathering" :min="PLAYER_INPUT_LIMITS.gathering.min" :max="PLAYER_INPUT_LIMITS.gathering.max" fluid /></label>
+          <label class="field-perception"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="solverStats.perception" :min="PLAYER_INPUT_LIMITS.perception.min" :max="PLAYER_INPUT_LIMITS.perception.max" fluid /></label>
           <label class="field-food">
             <span>{{ t('solver.food.label') }}</span>
             <FoodAutoComplete
@@ -538,12 +546,12 @@ function progressPercent(range: number[], maxValue: number) {
             />
           </label>
           <span v-if="!activeItem.isCollectable" class="stats-grid-spacer" aria-hidden="true"></span>
-          <label class="field-current-gp"><span>{{ t('solver.currentGp') }}</span><InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" fluid /></label>
-          <label class="field-max-gp"><span>{{ t('solver.maxGp') }}</span><InputNumber v-model="solverStats.gp" :min="0" fluid /></label>
-          <label class="field-gathering-count"><span>{{ t('solver.nodeBonuses.gatheringCount') }}</span><InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid /></label>
+          <label class="field-current-gp"><span>{{ t('solver.currentGp') }}</span><InputNumber v-model="temporaryGp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="effectiveStats.gp" fluid /></label>
+          <label class="field-max-gp"><span>{{ t('solver.maxGp') }}</span><InputNumber v-model="solverStats.gp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="PLAYER_INPUT_LIMITS.gp.max" fluid /></label>
+          <label class="field-gathering-count"><span>{{ t('solver.nodeBonuses.gatheringCount') }}</span><InputNumber v-model="nodeBonuses.gatheringCount" :min="NODE_BONUS_INPUT_LIMITS.gatheringCount.min" :max="gatheringCountMax" fluid /></label>
           <template v-if="!activeItem.isCollectable">
-            <label class="field-yield-count"><span>{{ t('solver.nodeBonuses.yieldCount') }}</span><InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid /></label>
-            <label class="field-extra-rate"><span>{{ t('solver.nodeBonuses.extraRate') }}</span><InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid /></label>
+            <label class="field-yield-count"><span>{{ t('solver.nodeBonuses.yieldCount') }}</span><InputNumber v-model="nodeBonuses.yieldCount" :min="NODE_BONUS_INPUT_LIMITS.yieldCount.min" :max="NODE_BONUS_INPUT_LIMITS.yieldCount.max" fluid /></label>
+            <label class="field-extra-rate"><span>{{ t('solver.nodeBonuses.extraRate') }}</span><InputNumber v-model="nodeBonuses.extraRate" :min="NODE_BONUS_INPUT_LIMITS.extraRate.min" :max="NODE_BONUS_INPUT_LIMITS.extraRate.max" fluid /></label>
           </template>
           <template v-if="activeItem.isCollectable">
             <label class="field-relic-tool">

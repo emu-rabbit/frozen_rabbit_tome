@@ -1,17 +1,13 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { FoodSelection, GearStatProfile, GatheringJob, PlayerStats, UserStats } from '../types/game';
+import { DEFAULT_PLAYER_STATS, PLAYER_INPUT_LIMITS, clampIntegerInput, normalizePlayerStats } from '../config/inputLimits';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-gear-profiles';
 const LEGACY_USER_STATS_KEY = 'frozen-rabbit-tome-user-stats';
 const DEFAULT_PROFILE_IDS = ['default-miner', 'default-botanist'] as const;
 
-const DEFAULT_STATS: PlayerStats = {
-  level: 100,
-  gathering: 5345,
-  perception: 5173,
-  gp: 930
-};
+const DEFAULT_STATS: PlayerStats = DEFAULT_PLAYER_STATS;
 
 const NO_FOOD: FoodSelection = {
   foodId: null,
@@ -37,17 +33,7 @@ function cloneFood(food: FoodSelection): FoodSelection {
 }
 
 function normalizeStats(stats?: Partial<PlayerStats>): PlayerStats {
-  return {
-    level: clampInt(stats?.level, 1, 100, DEFAULT_STATS.level),
-    gathering: clampInt(stats?.gathering, 0, 99999, DEFAULT_STATS.gathering),
-    perception: clampInt(stats?.perception, 0, 99999, DEFAULT_STATS.perception),
-    gp: clampInt(stats?.gp, 0, 99999, DEFAULT_STATS.gp)
-  };
-}
-
-function clampInt(value: unknown, min: number, max: number, fallback: number) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
-  return Math.min(max, Math.max(min, Math.floor(value)));
+  return normalizePlayerStats(stats, DEFAULT_STATS);
 }
 
 function createDefaultProfile(job: GatheringJob, stats: PlayerStats = DEFAULT_STATS): GearStatProfile {
@@ -94,17 +80,22 @@ function normalizeProfile(profile: Partial<GearStatProfile>, fallbackJob: Gather
       ? profile.jobs.filter((job): job is GatheringJob => job === 'miner' || job === 'botanist')
       : [fallbackJob];
   const uniqueJobs: GatheringJob[] = [...new Set(jobs)];
-  const maxGp = clampInt(profile.maxGp, 0, 99999, DEFAULT_STATS.gp);
+  const maxGp = clampIntegerInput(
+    profile.maxGp,
+    PLAYER_INPUT_LIMITS.gp.min,
+    PLAYER_INPUT_LIMITS.gp.max,
+    DEFAULT_STATS.gp
+  );
 
   return {
     id: profile.id || newId(),
     kind,
     name: typeof profile.name === 'string' ? profile.name : '',
     jobs: uniqueJobs.length > 0 ? uniqueJobs : [fallbackJob],
-    level: clampInt(profile.level, 1, 100, DEFAULT_STATS.level),
-    gathering: clampInt(profile.gathering, 0, 99999, DEFAULT_STATS.gathering),
-    perception: clampInt(profile.perception, 0, 99999, DEFAULT_STATS.perception),
-    currentGp: clampInt(profile.currentGp, 0, 99999, maxGp),
+    level: clampIntegerInput(profile.level, PLAYER_INPUT_LIMITS.level.min, PLAYER_INPUT_LIMITS.level.max, DEFAULT_STATS.level),
+    gathering: clampIntegerInput(profile.gathering, PLAYER_INPUT_LIMITS.gathering.min, PLAYER_INPUT_LIMITS.gathering.max, DEFAULT_STATS.gathering),
+    perception: clampIntegerInput(profile.perception, PLAYER_INPUT_LIMITS.perception.min, PLAYER_INPUT_LIMITS.perception.max, DEFAULT_STATS.perception),
+    currentGp: clampIntegerInput(profile.currentGp, PLAYER_INPUT_LIMITS.gp.min, maxGp, maxGp),
     maxGp,
     food: cloneFood(profile.food ?? NO_FOOD),
     collectableRelicToolBonus: !!profile.collectableRelicToolBonus,

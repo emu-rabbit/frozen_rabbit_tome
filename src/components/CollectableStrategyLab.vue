@@ -21,6 +21,7 @@ import {
   type CollectableStrategyCondition,
   type CollectableStrategyComparator,
   type CollectableStrategyField,
+  type CollectableStrategyNumericField,
   type CollectableStrategyNode,
   type CollectableStrategyRule
 } from '../utils/collectableStrategyTree';
@@ -34,6 +35,13 @@ import {
   isTierCountObjective
 } from '../utils/collectableObjectivePresets';
 import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
+import {
+  COLLECTABLE_INPUT_LIMITS,
+  PLAYER_INPUT_LIMITS,
+  WASM_PACKED_STATE_LIMITS,
+  clampIntegerInput,
+  normalizeCollectableObjective
+} from '../config/inputLimits';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -64,6 +72,13 @@ const tierCountVisibilityEpsilon = 0.000001;
 const { collectableObjective } = useCollectableSolver();
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
+const strategyConditionValueLimits: Record<CollectableStrategyNumericField, { min: number; max: number }> = {
+  gp: PLAYER_INPUT_LIMITS.gp,
+  integrity: WASM_PACKED_STATE_LIMITS.integrity,
+  collectability: COLLECTABLE_INPUT_LIMITS.collectability,
+  successBonus: COLLECTABLE_INPUT_LIMITS.successBonus,
+  nextCollectSuccessBonus: COLLECTABLE_INPUT_LIMITS.nextCollectSuccessBonus
+};
 
 const jobType = computed(() => props.activeItem.jobType || 'miner');
 const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
@@ -185,6 +200,10 @@ watch([
   isSaved.value = false;
 }, { deep: true });
 
+watch(rules, () => {
+  sanitizeRuleConditions();
+}, { deep: true });
+
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
   if (copyTimer) window.clearTimeout(copyTimer);
@@ -300,7 +319,7 @@ function loadCollectableExperimentFromRoute() {
     rules.value = clonePlain(experiment.collectableRules) as CollectableStrategyRule[];
   }
   if (experiment.collectableObjective) {
-    collectableObjective.value = clonePlain(experiment.collectableObjective);
+    collectableObjective.value = normalizeCollectableObjective(clonePlain(experiment.collectableObjective));
   }
   analysis.value = null;
 }
@@ -324,11 +343,11 @@ function previewRuleActionIcons(rule: CollectableStrategyRule) {
 function applyDefaultObjective(table: CollectableRewardTable) {
   const defaultId = getDefaultCollectableObjectivePresetId(table);
   const option = createCollectableObjectiveOptions(table).find((entry) => entry.id === defaultId);
-  if (option) collectableObjective.value = option.objective;
+  if (option) collectableObjective.value = normalizeCollectableObjective(option.objective);
 }
 
 function handleObjectiveChange(objective: CollectableObjective) {
-  collectableObjective.value = objective;
+  collectableObjective.value = normalizeCollectableObjective(objective);
   analysis.value = null;
 }
 
@@ -480,6 +499,28 @@ function updateConditionField(condition: CollectableStrategyCondition, field: Co
   condition.field = field;
   condition.comparator = '=';
   condition.value = isNumericStrategyField(field) ? 0 : true;
+  clampConditionValue(condition);
+}
+
+function conditionValueLimit(field: CollectableStrategyField) {
+  return isNumericStrategyField(field)
+    ? strategyConditionValueLimits[field]
+    : COLLECTABLE_INPUT_LIMITS.collectability;
+}
+
+function clampConditionValue(condition: CollectableStrategyCondition) {
+  if (!isNumericStrategyField(condition.field)) return;
+
+  const limit = conditionValueLimit(condition.field);
+  condition.value = clampIntegerInput(condition.value, limit.min, limit.max, limit.min);
+}
+
+function sanitizeRuleConditions() {
+  for (const rule of rules.value) {
+    for (const condition of rule.conditions) {
+      clampConditionValue(condition);
+    }
+  }
 }
 
 function addAction(rule: CollectableStrategyRule) {
@@ -1059,7 +1100,14 @@ function makeId() {
                       {{ comparatorLabel(comparator as CollectableStrategyComparator) }}
                     </option>
                   </select>
-                  <input v-model.number="condition.value" type="number" />
+                  <input
+                    v-model.number="condition.value"
+                    type="number"
+                    :min="conditionValueLimit(condition.field).min"
+                    :max="conditionValueLimit(condition.field).max"
+                    @change="clampConditionValue(condition)"
+                    @blur="clampConditionValue(condition)"
+                  />
                 </template>
 
                 <template v-else>

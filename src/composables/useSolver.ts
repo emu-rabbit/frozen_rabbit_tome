@@ -8,6 +8,13 @@ import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse } from '../types/game';
+import {
+  DEFAULT_NODE_BONUSES,
+  clampIntegerInput,
+  maxGatheringCountForBaseIntegrity,
+  normalizeNodeBonuses,
+  normalizePlayerStats
+} from '../config/inputLimits';
 
 type TomeEditingOptions = {
   syncObjectiveMode?: boolean;
@@ -21,12 +28,13 @@ const activeItem = useLocalStorage<GatherableItem | null>('frozen-rabbit-tome-ac
 if (shouldHideCrystalGatheringItem(activeItem.value)) {
   activeItem.value = null;
 }
-const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', {
+const DEFAULT_SOLVER_STATS: PlayerStats = {
   level: 100,
   gathering: 5345,
   perception: 5137,
   gp: 930
-});
+};
+const solverStats = useLocalStorage<PlayerStats>('frozen-rabbit-tome-solver-stats', DEFAULT_SOLVER_STATS);
 
 const selectedFood = useLocalStorage<FoodSelection>('frozen-rabbit-tome-selected-food', {
   foodId: null,
@@ -78,7 +86,16 @@ const areStatsEqual = (left: PlayerStats, right: PlayerStats) => (
   && left.gp === right.gp
 );
 
+const areNodeBonusesEqual = (left: NodeBonuses, right: NodeBonuses) => (
+  left.baseIntegrity === right.baseIntegrity
+  && left.gatheringCount === right.gatheringCount
+  && left.yieldCount === right.yieldCount
+  && left.extraRate === right.extraRate
+);
+
 const cloneStats = (stats: PlayerStats): PlayerStats => ({ ...stats });
+const normalizeStatsForSolver = (stats?: Partial<PlayerStats>) => normalizePlayerStats(stats, DEFAULT_SOLVER_STATS);
+const normalizeNodeBonusesForSolver = (bonuses?: Partial<NodeBonuses>) => normalizeNodeBonuses(bonuses, DEFAULT_NODE_BONUSES);
 const createProfileSignature = (profile: GearStatProfile) => JSON.stringify({
   jobs: profile.jobs,
   level: profile.level,
@@ -93,6 +110,7 @@ const createProfileSignature = (profile: GearStatProfile) => JSON.stringify({
 export function useSolver() {
   const { debugSettings, solverSettings } = useSettings();
   const { defaultProfileForJob } = useGearProfiles();
+  const gatheringCountMax = computed(() => maxGatheringCountForBaseIntegrity(nodeBonuses.value.baseIntegrity));
 
   const fetchItemLevelData = async () => {
     const levels = getItemLevelData();
@@ -114,7 +132,10 @@ export function useSolver() {
       fetchItemLevelData();
       // 資料載入後，若已有選擇物品，則更新一次基礎次數
       if (activeItem.value?.gatheringItemId) {
-        nodeBonuses.value.baseIntegrity = getItemBaseIntegrity(activeItem.value.gatheringItemId);
+        nodeBonuses.value = normalizeNodeBonusesForSolver({
+          ...nodeBonuses.value,
+          baseIntegrity: getItemBaseIntegrity(activeItem.value.gatheringItemId)
+        });
       }
     }
   }, { immediate: true });
@@ -156,12 +177,12 @@ export function useSolver() {
 
     activeItem.value = item;
     // 重設節點獎勵
-    nodeBonuses.value = {
+    nodeBonuses.value = normalizeNodeBonusesForSolver({
       baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
       gatheringCount: 0,
       yieldCount: 0,
       extraRate: 0
-    };
+    });
     syncFromSettings({ forceStats: true, resetTemporaryGp: true });
   };
 
@@ -171,7 +192,7 @@ export function useSolver() {
 
     const job: GatheringJob = activeItem.value.jobType || 'miner';
     const profile = defaultProfileForJob(job);
-    const stats = profileToStats(profile);
+    const stats = normalizeStatsForSolver(profileToStats(profile));
     const profileSignature = createProfileSignature(profile);
     const previousSyncedStats = lastSyncedSettingsStats[job];
     const previousProfileSignature = lastSyncedSettingsProfileSignatures[job];
@@ -196,13 +217,13 @@ export function useSolver() {
   };
 
   const applyGearProfile = (profile: GearStatProfile) => {
-    solverStats.value = profileToStats(profile);
+    solverStats.value = normalizeStatsForSolver(profileToStats(profile));
     selectedFood.value = { ...profile.food };
     solverSettings.value.collectableRelicToolBonus = profile.collectableRelicToolBonus;
     temporaryGp.value = Math.min(profile.currentGp, effectiveStats.value.gp);
 
     for (const job of profile.jobs) {
-      lastSyncedSettingsStats[job] = profileToStats(profile);
+      lastSyncedSettingsStats[job] = normalizeStatsForSolver(profileToStats(profile));
       lastSyncedSettingsProfileSignatures[job] = createProfileSignature(profile);
     }
   };
@@ -216,15 +237,15 @@ export function useSolver() {
 
     cancelActiveSolve();
     activeItem.value = tome.kind === 'collectable' ? { ...item, isCollectable: true } : item;
-    solverStats.value = { ...tome.stats };
+    solverStats.value = normalizeStatsForSolver(tome.stats);
     selectedFood.value = { ...tome.food };
-    nodeBonuses.value = {
+    nodeBonuses.value = normalizeNodeBonusesForSolver({
       baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
       gatheringCount: tome.nodeBonuses.gatheringCount,
       yieldCount: tome.nodeBonuses.yieldCount,
       extraRate: tome.nodeBonuses.extraRate
-    };
-    temporaryGp.value = tome.temporaryGp;
+    });
+    temporaryGp.value = clampIntegerInput(tome.temporaryGp, 0, effectiveStats.value.gp, effectiveStats.value.gp);
     if (shouldSyncObjectiveMode) {
       solverSettings.value.objectiveMode = tomeObjectiveMode;
     }
@@ -252,7 +273,7 @@ export function useSolver() {
     selectedFood.value.quality
   ));
 
-  const effectiveStats = computed(() => applyFoodBonus(solverStats.value, foodBonus.value));
+  const effectiveStats = computed(() => normalizeStatsForSolver(applyFoodBonus(solverStats.value, foodBonus.value)));
 
   // 基礎值查詢
   const baseValues = computed(() => {
@@ -308,6 +329,20 @@ export function useSolver() {
     }
   }, { immediate: true });
 
+  watch(solverStats, (stats) => {
+    const normalized = normalizeStatsForSolver(stats);
+    if (!areStatsEqual(stats, normalized)) {
+      solverStats.value = normalized;
+    }
+  }, { deep: true, immediate: true });
+
+  watch(nodeBonuses, (bonuses) => {
+    const normalized = normalizeNodeBonusesForSolver(bonuses);
+    if (!areNodeBonusesEqual(bonuses, normalized)) {
+      nodeBonuses.value = normalized;
+    }
+  }, { deep: true, immediate: true });
+
   latestSolveInputSignature = createSolveInputSignature();
 
   watch([activeItem, solverStats, nodeBonuses, temporaryGp, selectedFood, solverSettings], () => {
@@ -326,6 +361,7 @@ export function useSolver() {
     foodBonus,
     effectiveStats,
     nodeBonuses,
+    gatheringCountMax,
     temporaryGp,
     isDataLoading: isGameDataLoading,
     fetchItemLevelData,

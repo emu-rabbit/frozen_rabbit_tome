@@ -12,6 +12,7 @@ import type { FoodQuality, GearStatProfile, GatheringJob } from '../types/game';
 import { isDefaultGearProfile, useGearProfiles } from '../composables/useGearProfiles';
 import { getGatheringFood } from '../services/foodData';
 import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
+import { PLAYER_INPUT_LIMITS, clampIntegerInput, normalizePlayerStats } from '../config/inputLimits';
 
 type DraftProfile = {
   id: string | null;
@@ -48,6 +49,12 @@ const listPanelStyle = computed(() => (
   measuredEditorHeight.value > 0
     ? { '--gear-editor-height': `${measuredEditorHeight.value}px` }
     : {}
+));
+const currentGpMax = computed(() => clampIntegerInput(
+  draft.value.maxGp,
+  PLAYER_INPUT_LIMITS.gp.min,
+  PLAYER_INPUT_LIMITS.gp.max,
+  PLAYER_INPUT_LIMITS.gp.max
 ));
 
 const selectedFoodModel = computed<FoodOption | null>({
@@ -131,14 +138,20 @@ function toggleJob(job: GatheringJob) {
 }
 
 function saveDraft() {
-  const maxGp = Math.max(0, Math.floor(draft.value.maxGp || 0));
-  const currentGp = Math.max(0, Math.floor(draft.value.currentGp || 0));
-  const payload = {
-    name: draft.value.name.trim(),
-    jobs: [...draft.value.jobs],
+  const stats = normalizePlayerStats({
     level: draft.value.level,
     gathering: draft.value.gathering,
     perception: draft.value.perception,
+    gp: draft.value.maxGp
+  });
+  const maxGp = stats.gp;
+  const currentGp = clampIntegerInput(draft.value.currentGp, PLAYER_INPUT_LIMITS.gp.min, maxGp, maxGp);
+  const payload = {
+    name: draft.value.name.trim(),
+    jobs: [...draft.value.jobs],
+    level: stats.level,
+    gathering: stats.gathering,
+    perception: stats.perception,
     currentGp,
     maxGp,
     food: {
@@ -303,11 +316,11 @@ onMounted(async () => {
             </div>
           </div>
 
-          <label class="gear-field"><span>{{ t('game.stats.level') }}</span><InputNumber v-model="draft.level" :min="1" :max="100" fluid /></label>
-          <label class="gear-field"><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="draft.gathering" :min="0" fluid /></label>
-          <label class="gear-field"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="draft.perception" :min="0" fluid /></label>
-          <label class="gear-field"><span>{{ t('gearProfiles.editor.currentGp') }}</span><InputNumber v-model="draft.currentGp" :min="0" fluid /></label>
-          <label class="gear-field"><span>{{ t('gearProfiles.editor.maxGp') }}</span><InputNumber v-model="draft.maxGp" :min="0" fluid /></label>
+          <label class="gear-field"><span>{{ t('game.stats.level') }}</span><InputNumber v-model="draft.level" :min="PLAYER_INPUT_LIMITS.level.min" :max="PLAYER_INPUT_LIMITS.level.max" fluid /></label>
+          <label class="gear-field"><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="draft.gathering" :min="PLAYER_INPUT_LIMITS.gathering.min" :max="PLAYER_INPUT_LIMITS.gathering.max" fluid /></label>
+          <label class="gear-field"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="draft.perception" :min="PLAYER_INPUT_LIMITS.perception.min" :max="PLAYER_INPUT_LIMITS.perception.max" fluid /></label>
+          <label class="gear-field"><span>{{ t('gearProfiles.editor.currentGp') }}</span><InputNumber v-model="draft.currentGp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="currentGpMax" fluid /></label>
+          <label class="gear-field"><span>{{ t('gearProfiles.editor.maxGp') }}</span><InputNumber v-model="draft.maxGp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="PLAYER_INPUT_LIMITS.gp.max" fluid /></label>
 
           <label class="gear-field">
             <span>{{ t('solver.food.label') }}</span>

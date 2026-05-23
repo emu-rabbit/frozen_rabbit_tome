@@ -24,6 +24,7 @@ import { calculateCollectableScourValue } from '../utils/collectableMath';
 import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { buildFoodOption, type FoodOption } from '../services/foodOptions';
+import { NODE_BONUS_INPUT_LIMITS, PLAYER_INPUT_LIMITS } from '../config/inputLimits';
 
 const { t, locale } = useI18n();
 const {
@@ -45,6 +46,7 @@ const {
   displayName,
   temporaryGp,
   nodeBonuses,
+  gatheringCountMax,
   solve,
   rotationResult,
   isSolving,
@@ -499,7 +501,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
             <div class="flex flex-col sm:grid sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.level') }}</label>
-                <InputNumber v-model="solverStats.level" :min="1" :max="100" class="w-full" fluid />
+                <InputNumber v-model="solverStats.level" :min="PLAYER_INPUT_LIMITS.level.min" :max="PLAYER_INPUT_LIMITS.level.max" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.food.label') }}</label>
@@ -515,28 +517,28 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                   <span>{{ t('game.stats.gathering') }}</span>
                   <span v-if="foodBonus.gathering > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.gathering }} = {{ effectiveStats.gathering }}</span>
                 </label>
-                <InputNumber v-model="solverStats.gathering" :min="0" class="w-full" fluid />
+                <InputNumber v-model="solverStats.gathering" :min="PLAYER_INPUT_LIMITS.gathering.min" :max="PLAYER_INPUT_LIMITS.gathering.max" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2">
                   <span>{{ t('game.stats.perception') }}</span>
                   <span v-if="foodBonus.perception > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.perception }} = {{ effectiveStats.perception }}</span>
                 </label>
-                <InputNumber v-model="solverStats.perception" :min="0" class="w-full" fluid />
+                <InputNumber v-model="solverStats.perception" :min="PLAYER_INPUT_LIMITS.perception.min" :max="PLAYER_INPUT_LIMITS.perception.max" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex flex-wrap items-center justify-between gap-1">
                   <span>{{ t('solver.currentGp') }}</span>
                   <span class="text-[10px] text-amber-600">{{ t('solver.effectiveMaxGp') }}: {{ effectiveStats.gp }}</span>
                 </label>
-                <InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" class="w-full" fluid />
+                <InputNumber v-model="temporaryGp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="effectiveStats.gp" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2" :title="t('solver.maxGp')">
                   <span class="truncate">{{ t('solver.maxGp') }}</span>
                   <span v-if="foodBonus.gp > 0" class="text-soft-green-600 dark:text-soft-green-300 flex-shrink-0">+{{ foodBonus.gp }} = {{ effectiveStats.gp }}</span>
                 </label>
-                <InputNumber v-model="solverStats.gp" :min="0" class="w-full" fluid />
+                <InputNumber v-model="solverStats.gp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="PLAYER_INPUT_LIMITS.gp.max" class="w-full" fluid />
               </div>
             </div>
           </div>
@@ -598,7 +600,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               <span>{{ t('solver.nodeBonuses.gatheringCount') }}</span>
               <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{{ t('game.units.times') }}</span>
             </label>
-            <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
+            <InputNumber v-model="nodeBonuses.gatheringCount" :min="NODE_BONUS_INPUT_LIMITS.gatheringCount.min" :max="gatheringCountMax" fluid class="p-inputtext-sm mt-auto" />
           </div>
 
           <button
@@ -695,7 +697,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
               <!-- 第一排：等級與食物 -->
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('game.stats.level') }}</label>
-                <InputNumber v-model="solverStats.level" :min="1" :max="100" class="w-full" fluid />
+                <InputNumber v-model="solverStats.level" :min="PLAYER_INPUT_LIMITS.level.min" :max="PLAYER_INPUT_LIMITS.level.max" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('solver.food.label') }}</label>
@@ -713,14 +715,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                   <span>{{ t('game.stats.gathering') }}</span>
                   <span v-if="foodBonus.gathering > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.gathering }} = {{ effectiveStats.gathering }}</span>
                 </label>
-                <InputNumber v-model="solverStats.gathering" :min="0" class="w-full" fluid />
+                <InputNumber v-model="solverStats.gathering" :min="PLAYER_INPUT_LIMITS.gathering.min" :max="PLAYER_INPUT_LIMITS.gathering.max" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2">
                   <span>{{ t('game.stats.perception') }}</span>
                   <span v-if="foodBonus.perception > 0" class="text-soft-green-600 dark:text-soft-green-300">+{{ foodBonus.perception }} = {{ effectiveStats.perception }}</span>
                 </label>
-                <InputNumber v-model="solverStats.perception" :min="0" class="w-full" fluid />
+                <InputNumber v-model="solverStats.perception" :min="PLAYER_INPUT_LIMITS.perception.min" :max="PLAYER_INPUT_LIMITS.perception.max" class="w-full" fluid />
               </div>
 
               <!-- 第三排：當前 GP 與 最大 GP -->
@@ -729,14 +731,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                   <span>{{ t('solver.currentGp') }}</span>
                   <span class="text-[10px] text-amber-600">{{ t('solver.effectiveMaxGp') }}: {{ effectiveStats.gp }}</span>
                 </label>
-                <InputNumber v-model="temporaryGp" :min="0" :max="effectiveStats.gp" class="w-full" fluid />
+                <InputNumber v-model="temporaryGp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="effectiveStats.gp" class="w-full" fluid />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between gap-2" :title="t('solver.maxGp')">
                   <span class="truncate">{{ t('solver.maxGp') }}</span>
                   <span v-if="foodBonus.gp > 0" class="text-soft-green-600 dark:text-soft-green-300 flex-shrink-0">+{{ foodBonus.gp }} = {{ effectiveStats.gp }}</span>
                 </label>
-                <InputNumber v-model="solverStats.gp" :min="0" class="w-full" fluid />
+                <InputNumber v-model="solverStats.gp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="PLAYER_INPUT_LIMITS.gp.max" class="w-full" fluid />
               </div>
             </div>
           </div>
@@ -814,7 +816,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <span class="leading-tight">{{ t('solver.nodeBonuses.gatheringCount') }}</span>
                 <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ml-2">{{ t('game.units.times') }}</span>
               </label>
-              <InputNumber v-model="nodeBonuses.gatheringCount" :min="0" :max="10" fluid class="p-inputtext-sm mt-auto" />
+              <InputNumber v-model="nodeBonuses.gatheringCount" :min="NODE_BONUS_INPUT_LIMITS.gatheringCount.min" :max="gatheringCountMax" fluid class="p-inputtext-sm mt-auto" />
             </div>
 
             <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
@@ -822,7 +824,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <span class="leading-tight">{{ t('solver.nodeBonuses.yieldCount') }}</span>
                 <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ml-2">{{ t('game.units.count') }}</span>
               </label>
-              <InputNumber v-model="nodeBonuses.yieldCount" :min="0" :max="50" fluid class="p-inputtext-sm mt-auto" />
+              <InputNumber v-model="nodeBonuses.yieldCount" :min="NODE_BONUS_INPUT_LIMITS.yieldCount.min" :max="NODE_BONUS_INPUT_LIMITS.yieldCount.max" fluid class="p-inputtext-sm mt-auto" />
             </div>
 
             <div class="flex flex-col py-3 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
@@ -830,7 +832,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
                 <span class="leading-tight">{{ t('solver.nodeBonuses.extraRate') }}</span>
                 <span class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ml-2">{{ t('game.units.percent') }}</span>
               </label>
-              <InputNumber v-model="nodeBonuses.extraRate" :min="0" :max="100" fluid class="p-inputtext-sm mt-auto" />
+              <InputNumber v-model="nodeBonuses.extraRate" :min="NODE_BONUS_INPUT_LIMITS.extraRate.min" :max="NODE_BONUS_INPUT_LIMITS.extraRate.max" fluid class="p-inputtext-sm mt-auto" />
             </div>
           </div>
         </div>
