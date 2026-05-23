@@ -873,6 +873,7 @@ export default {
       viewManagedNodes: '管理中ノードを見る',
       summaryMode: '概要',
       individualMode: '個別',
+      managedNodesNotice: 'この方針を適用する前に、未決定で条件に一致しているノードだけを表示します。この方針のスキルによる後続状態は含みません。',
       noManagedNodes: 'この方針はまだどのノードにも適用されていません。',
       effectPreview: '数値変化',
       effectPreviewPlaceholder: '次の段階で、選択したスキル列による GP・耐久・収集価値の変化をここに接続します。',

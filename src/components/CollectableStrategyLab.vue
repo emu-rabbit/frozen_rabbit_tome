@@ -1368,6 +1368,10 @@ function makeId() {
                   </button>
                 </div>
               </div>
+              <p class="managed-node-notice">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ t('collectableStrategyLab.editor.managedNodesNotice') }}</span>
+              </p>
 
               <div v-if="managedNodes.length === 0" class="tree-empty compact">
                 <i class="pi pi-search"></i>
@@ -2764,6 +2768,32 @@ function makeId() {
   font-weight: 900;
 }
 
+.managed-node-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  border: 1px solid rgb(82 168 144 / 0.22);
+  border-radius: 0.75rem;
+  background: rgb(240 253 244 / 0.76);
+  color: #166534;
+  margin: 0;
+  padding: 0.48rem 0.62rem;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.managed-node-notice i {
+  flex: 0 0 auto;
+  margin-top: 0.12rem;
+  color: #0f766e;
+  font-size: 0.82rem;
+}
+
+.managed-node-notice span {
+  min-width: 0;
+}
+
 .rule-editor-dialog-header h2 {
   font-size: 1.18rem;
   line-height: 1.25;
@@ -2771,6 +2801,16 @@ function makeId() {
 
 :global(html.dark .managed-node-toolbar > span) {
   color: #94a3b8;
+}
+
+:global(html.dark .managed-node-notice) {
+  border-color: rgb(94 234 212 / 0.18);
+  background: rgb(20 83 45 / 0.22);
+  color: #bbf7d0;
+}
+
+:global(html.dark .managed-node-notice i) {
+  color: #99f6e4;
 }
 
 .editor-segmented-control {

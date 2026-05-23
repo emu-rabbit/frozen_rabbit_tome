@@ -896,6 +896,7 @@ export default {
       viewManagedNodes: '查看納管的節點',
       summaryMode: '彙總',
       individualMode: '個別',
+      managedNodesNotice: '僅列出策略展開至本項前，尚待決策且符合此條件的節點；不包含套用本策略技能後才產生的後續狀態。',
       noManagedNodes: '這條策略目前還沒有套用到任何節點。',
       effectPreview: '數值變化',
       effectPreviewPlaceholder: '此區會在下一階段接上技能串的 GP、耐久與收藏價值變化。',

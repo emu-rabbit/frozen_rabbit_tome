@@ -895,6 +895,7 @@ export default {
       viewManagedNodes: 'View Managed Nodes',
       summaryMode: 'Summary',
       individualMode: 'Individual',
+      managedNodesNotice: "Shows only undecided states that match this rule before it is applied; outcomes from this rule's skills are not included.",
       noManagedNodes: 'This strategy does not manage any nodes yet.',
       effectPreview: 'Value Changes',
       effectPreviewPlaceholder: 'This area will connect to GP, integrity, and collectability changes for the selected skill chain in the next phase.',
