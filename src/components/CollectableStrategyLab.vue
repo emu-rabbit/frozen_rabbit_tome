@@ -585,9 +585,9 @@ function addAction(rule: CollectableStrategyRule) {
   rule.actions.push('collect');
 }
 
-function removeAction(rule: CollectableStrategyRule, index: number) {
+function removeLastAction(rule: CollectableStrategyRule) {
   if (rule.actions.length <= 1) return;
-  rule.actions.splice(index, 1);
+  rule.actions.pop();
 }
 
 function setAction(rule: CollectableStrategyRule, actionIndex: number, action: CollectableActionKind) {
@@ -1474,16 +1474,24 @@ function makeId() {
                         {{ actionName(option) }}{{ isActionLevelLocked(option) ? ` (${actionLevelRequirement(option)})` : '' }}
                       </option>
                     </select>
-                    <button type="button" :disabled="editingRule.actions.length <= 1" :title="t('collectableStrategyLab.editor.removeAction')" @click="removeAction(editingRule, actionIndex)">
-                      <i class="pi pi-times"></i>
-                    </button>
                     <small v-if="isActionLevelLocked(action)">{{ actionLevelRequirement(action) }}</small>
                   </div>
                 </div>
-                <button type="button" class="text-tool" @click="addAction(editingRule)">
-                  <i class="pi pi-plus"></i>
-                  {{ t('collectableStrategyLab.editor.addAction') }}
-                </button>
+                <div class="action-tools">
+                  <button type="button" class="text-tool" @click="addAction(editingRule)">
+                    <i class="pi pi-plus"></i>
+                    {{ t('collectableStrategyLab.editor.addAction') }}
+                  </button>
+                  <button
+                    v-if="editingRule.actions.length > 1"
+                    type="button"
+                    class="text-tool danger"
+                    @click="removeLastAction(editingRule)"
+                  >
+                    <i class="pi pi-minus"></i>
+                    {{ t('collectableStrategyLab.editor.removeAction') }}
+                  </button>
+                </div>
               </section>
 
               <section class="editor-section muted">
@@ -2820,63 +2828,36 @@ function makeId() {
 }
 
 .action-list.compact {
-  gap: 0.55rem;
+  gap: 0.7rem;
 }
 
 .action-select-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.55rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  background: white;
-  padding: 0.55rem;
+  padding: 0;
 }
 
-.action-select-row.is-level-invalid {
+.action-select-row.is-level-invalid select {
   border-color: rgb(248 113 113 / 0.7);
   background: #fff7ed;
 }
 
-.action-select-row > button {
-  width: 2.15rem;
-  height: 2.15rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #fecdd3;
-  border-radius: 0.65rem;
-  background: #fff1f2;
-  color: #be123c;
-}
-
-.action-select-row > button:disabled {
-  cursor: not-allowed;
-  opacity: 0.42;
-}
-
 .action-select-row small {
-  grid-column: 2 / -1;
+  grid-column: 2;
   color: #dc2626;
   font-size: 0.72rem;
   font-weight: 850;
 }
 
-:global(html.dark .action-select-row) {
-  border-color: #334155;
-  background: rgb(2 6 23 / 0.38);
-}
-
-:global(html.dark .action-select-row.is-level-invalid) {
+:global(html.dark .action-select-row.is-level-invalid select) {
   border-color: rgb(248 113 113 / 0.45);
   background: rgb(127 29 29 / 0.16);
 }
 
-:global(html.dark .action-select-row > button) {
-  border-color: rgb(244 63 94 / 0.35);
-  background: rgb(127 29 29 / 0.28);
+:global(html.dark .text-tool.danger) {
   color: #fda4af;
 }
 
@@ -2941,6 +2922,17 @@ function makeId() {
   padding: 0.25rem;
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.text-tool.danger {
+  color: #be123c;
+}
+
+.action-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.8rem;
 }
 
 .action-list {
@@ -3919,13 +3911,8 @@ function makeId() {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .action-select-row > button {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-
   .action-select-row small {
-    grid-column: 1 / -1;
+    grid-column: 2;
   }
 
   .summary-grid {

@@ -884,7 +884,7 @@ export default {
       actionChain: '串联技能',
       singleAction: '单一技能',
       addAction: '加技能',
-      removeAction: '移除技能',
+      removeAction: '删技能',
       done: '完成'
     },
     fields: {

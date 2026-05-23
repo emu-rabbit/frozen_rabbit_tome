@@ -906,7 +906,7 @@ export default {
       actionChain: 'Action Chain',
       singleAction: 'Single Action',
       addAction: 'Add Action',
-      removeAction: 'Remove action',
+      removeAction: 'Remove Action',
       done: 'Done'
     },
     fields: {
