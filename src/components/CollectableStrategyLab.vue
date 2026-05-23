@@ -1480,7 +1480,7 @@ function makeId() {
                 <div class="action-tools">
                   <button type="button" class="text-tool" @click="addAction(editingRule)">
                     <i class="pi pi-plus"></i>
-                    {{ t('collectableStrategyLab.editor.addAction') }}
+                    {{ t('collectableStrategyLab.editor.appendAction') }}
                   </button>
                   <button
                     v-if="editingRule.actions.length > 1"
@@ -1489,7 +1489,7 @@ function makeId() {
                     @click="removeLastAction(editingRule)"
                   >
                     <i class="pi pi-minus"></i>
-                    {{ t('collectableStrategyLab.editor.removeAction') }}
+                    {{ t('collectableStrategyLab.editor.removeLastAction') }}
                   </button>
                 </div>
               </section>

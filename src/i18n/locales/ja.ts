@@ -883,8 +883,8 @@ export default {
       addCondition: '条件を追加',
       actionChain: '連続アクション',
       singleAction: '単一アクション',
-      addAction: 'アクションを追加',
-      removeAction: 'アクションを削除',
+      appendAction: 'アクションを追加',
+      removeLastAction: 'アクションを削除',
       done: '完了'
     },
     fields: {

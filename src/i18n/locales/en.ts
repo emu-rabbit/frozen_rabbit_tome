@@ -905,8 +905,8 @@ export default {
       addCondition: 'Add Condition',
       actionChain: 'Action Chain',
       singleAction: 'Single Action',
-      addAction: 'Add Action',
-      removeAction: 'Remove Action',
+      appendAction: 'Add Action',
+      removeLastAction: 'Remove Action',
       done: 'Done'
     },
     fields: {

@@ -883,8 +883,8 @@ export default {
       addCondition: '加条件',
       actionChain: '串联技能',
       singleAction: '单一技能',
-      addAction: '加技能',
-      removeAction: '删技能',
+      appendAction: '加技能',
+      removeLastAction: '删技能',
       done: '完成'
     },
     fields: {
