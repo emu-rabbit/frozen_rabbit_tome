@@ -861,24 +861,11 @@ function solve(gp: i32, integrity: i32, collectability: i32, flags: i32, success
   }
 
   if ((flags & FLAG_HAS_COLLECTED) == 0 && baseSuccessRate + successBonus < 100) {
-    const successNeeded = 100 - baseSuccessRate - successBonus;
-    const canCapWithIII = canUse(ACTION_SUCCESS_III, gp, integrity, collectability, flags, successBonus, nextBonus) && 50 >= successNeeded;
-    const canCapWithII = canUse(ACTION_SUCCESS_II, gp, integrity, collectability, flags, successBonus, nextBonus) && 15 >= successNeeded;
-    const canCapWithI = canUse(ACTION_SUCCESS_I, gp, integrity, collectability, flags, successBonus, nextBonus) && 5 >= successNeeded;
-    const canCapWithNext = canUse(ACTION_NEXT_COLLECT_SUCCESS, gp, integrity, collectability, flags, successBonus, nextBonus) && 15 >= successNeeded;
-    const hasCappingCandidate = canCapWithIII || canCapWithII || canCapWithI || canCapWithNext;
-
     for (let orderIndex = 0; orderIndex < 4; orderIndex++) {
       const action = orderIndex == 0
         ? ACTION_SUCCESS_III
         : (orderIndex == 1 ? ACTION_SUCCESS_II : (orderIndex == 2 ? ACTION_SUCCESS_I : ACTION_NEXT_COLLECT_SUCCESS));
       if (!canUse(action, gp, integrity, collectability, flags, successBonus, nextBonus)) continue;
-      if (hasCappingCandidate) {
-        if (action == ACTION_SUCCESS_III && !canCapWithIII) continue;
-        if (action == ACTION_SUCCESS_II && !canCapWithII) continue;
-        if (action == ACTION_SUCCESS_I && !canCapWithI) continue;
-        if (action == ACTION_NEXT_COLLECT_SUCCESS && !canCapWithNext) continue;
-      }
       actionsEvaluated += 1;
       candidateComparisons += 1;
       evaluateCandidate(action, gp, integrity, collectability, flags, successBonus, nextBonus);

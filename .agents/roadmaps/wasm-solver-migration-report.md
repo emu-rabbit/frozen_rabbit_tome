@@ -9,12 +9,12 @@
 
 不過目前最重要的結論不是「WASM 已經完全安全」，而是：
 
-- 數值輸出可以 match：期望值、極值、機率分布、reward、tier counts 都可以透過 TS oracle 測試對齊。
+- 數值輸出可以 match：期望值、極值、機率分布、reward、tier counts 都必須透過 TS oracle 測試對齊。
 - 完整決策樹不一定會 match：等價分數下的 tie-break / skill habit 會因剪枝或 WASM action 選擇細節而改變。
-- 本輪收藏品求解決策已接受「score-safe 但不 tree-safe」的直接剪枝：若剪枝前後分數與分布一致，policy tree 形狀可以不同。
+- 2026-05-23 後續驗證撤回了「成功率補滿即剪掉較弱補強」的直接剪枝；高分尾端即使機率極低，也必須保留在分布中。
 - skill habit 只能作為最後 tie-break，不能保護剪枝前的策略形狀，也不能排在 objective score、GP、action count、node count 之前。
 
-下一步若要討論一般採集求解器搬 WASM，應該先明確定義該 solver 的 pruning contract：是只要求數值不變，還是要求完整匯出樹也不變。若選擇 score-safe pruning，就不要再用完整樹相同作為硬性驗收；若普通採集 UI 需要保留樹形習慣，則必須先建立完整匯出樹 golden diff。
+下一步若要討論一般採集求解器搬 WASM，應該先明確定義該 solver 的 pruning contract：至少要保證完整 outcome distribution 與可達尾端不變；若 UI 也依賴完整匯出樹，還必須建立 policy tree golden diff。
 
 ## 本次實作概況
 
@@ -52,7 +52,7 @@ worker 接線位於：
 - 遺物工具效果：關閉
 - reward score：低 107，中 124，高 140
 
-目前採用直接成功率剪枝後的結果：
+曾採用直接成功率剪枝時的結果：
 
 - `2^20` memo table 不足，會觸發容量 guard。
 - `2^21` memo table 可完成。
@@ -66,7 +66,7 @@ worker 接線位於：
 
 同樣耐久 6 但獲得力 5345、成功率 100%、Scour 200 的案例只需要 `112,585` states，`2^20` memo table 即可完成，WASM memory 約 `138MB`。因此耐久不是唯一的容量指標，不能只用耐久決定初始 table。
 
-曾經短暫測試過 dominance-safe 成功率剪枝。它比較能保留未補滿但省 GP 的候選，但同一個黑鐵礦案例會需要 `2^23` 才能完成，WASM memory 約 `1,090MB`，實際 `statesSolved` 約 `3,986,919`。使用者最後決定回到直接剪枝，以換取更低 memo 壓力，即使這會破壞習慣的強烈度或改變等價策略樹。
+曾經短暫測試過 dominance-safe 成功率剪枝。它比較能保留未補滿但省 GP 的候選，但同一個黑鐵礦案例會需要 `2^23` 才能完成，WASM memory 約 `1,090MB`，實際 `statesSolved` 約 `3,986,919`。後續黑鐵礦匯出比對確認，直接補滿剪枝會移除 `304` / `342` 這類極低機率但可達的高分尾端，因此正式路徑不可使用這種剪枝。
 
 目前採動態容量策略：小案例從 `2^20` 或 `2^21` 開始；若容量 guard 觸發，改用 fresh WASM instance 重試下一級。手機或低記憶體裝置上限維持 `2^21`，桌面級裝置最多可重試到 `2^23`。這樣小案例不會先吃下大型 table，高強度桌面案例仍有擴張空間。
 
@@ -91,24 +91,24 @@ worker 接線位於：
 - benchmark 直接 core 使用 `2^22` memo table，因此該 run 的 WASM memory 約 `546MB`；正式 wrapper 仍會依案例從較小容量開始。
 - `expectedScore` match：`51.64761`
 
-這裡的 TS 已經包含本輪先前加入的等價剪枝與 key packing，所以 WASM 對「已優化 TS」仍有明顯改善。
+這裡的 TS 當時仍包含本輪先前加入的成功率補強剪枝與 key packing；剪枝撤回後，效能數字需重新量測，WASM 對 object allocation 與 packed memo 的優勢仍是主要方向。
 
-## 等價剪枝現況
+## 成功率補強剪枝現況
 
-目前 TS solver 有成功率補正的等價剪枝：
+目前 TS solver 已撤回成功率補正的直接剪枝：
 
 - `src/utils/collectableSolver.ts`
 - 函式：`addCollectSuccessActions`
-- 邏輯：如果某些成功率補正技能都能把成功率補到上限，只保留能達上限的候選，不再枚舉所有較弱補正。
+- 邏輯：只做合法性過濾；若仍可提高收藏品採集成功率，保留所有可用的成功率補強候選。
 
-WASM core 也有對應邏輯：
+WASM core 也同步撤回對應剪枝：
 
 - `assembly/collectableSolverCore.ts`
-- 變數：`successNeeded`、`canCapWithIII`、`canCapWithII`、`canCapWithI`、`canCapWithNext`
+- 原先的 `successNeeded`、`canCapWithIII`、`canCapWithII`、`canCapWithI`、`canCapWithNext` 補滿判斷已移除。
 
-重要注意：這種剪枝對 score 是等價的，但不一定對「決策樹外觀 / skill habit tie-break」等價。若舊 solver 會在同分情境中偏好某個較早或較自然的技能，剪枝可能讓那個候選從搜尋中消失，最後產生不同樹。
+重要注意：補滿成功率不是 dominance。較弱但便宜的補強技能可能省下 GP，讓後續多使用一次 `restoreIntegrity` / `wiseToTheWorld`，進而保留極低機率的更高分尾端。
 
-本輪決策：收藏品求解器接受這個差異。剪枝的目的優先於維持剪枝前的習慣形狀；habit preference 只在 objective score、GP 花費、action count、node count 都相同後才比較。一般採集 solver 若要導入類似剪枝，必須先取得同樣決策，不能預設使用者也接受樹形差異。
+本輪更新後的決策：收藏品求解器不接受會改變 outcome distribution 極值或高分尾端可達性的剪枝。未來若要重新加入效能剪枝，必須先證明 summary、完整分布與可達尾端不變，不能只看 expectedScore。
 
 ## 決策樹差異案例
 
@@ -145,7 +145,7 @@ WASM core 也有對應邏輯：
 - 第二份推薦：`successIII`
 - 兩者該節點 expectedScore 都是 `114.97337`
 
-判斷：這不是 reward/math 錯誤，而是同分下的 action selection / tie-break / 剪枝造成的 policy tree 差異。本輪最後接受第二種較小樹與較低 memo 壓力的方向；root action 可因直接剪枝變成 `successIII`，只要 summary、分布與 reward/tier counts 維持一致即可。
+後續更完整的黑鐵礦案例證明：直接成功率補滿剪枝不只改變 policy tree，還會移除 `304` / `342` 這類極低機率但可達的 primary 高分尾端，combined max 也會從 `684` 降到 `532`。因此這類剪枝已撤回；不能只因 expectedScore 近似相同就隱藏可達路徑。
 
 ## 三種 solver mode 現況
 
@@ -271,16 +271,16 @@ WASM 的優勢剛好符合前幾項：
 
 然後 WASM 必須照這份規則輸出 action，不只是輸出 score。
 
-### 4. 先定義「score 等價但樹不等價」是否可接受
+### 4. 先定義 distribution-safe pruning 契約
 
-收藏品案例已經證明：等價剪枝可以大幅加速，但會改變樹。
+收藏品案例已經證明：只看 expected value 的剪枝可以大幅加速，但可能移除可達高分尾端。
 
 一般採集若要使用剪枝，需要分兩層：
 
-- `score-safe pruning`：只保證總值不變
-- `tree-safe pruning`：保證同分 tie-break 與匯出樹也不變
+- `distribution-safe pruning`：保證 outcome distribution、min/max 與尾端可達性不變
+- `tree-safe pruning`：保證同分 tie-break、匯出 policy tree 與 guided path 也不變
 
-本輪收藏品求解器選擇讓 `score-safe pruning` 進正式 solver path，原因是它能把黑鐵礦慢案例的 memo 需求從約 `2^23` / `1.09GB` 降回 `2^21` / `274MB`。普通採集移植前要先確認使用者是否接受同樣取捨；若不接受，就必須改採 tree-safe pruning 或把 score-safe pruning 限制在實驗模式。
+本輪收藏品求解器已撤回直接成功率補滿剪枝，因為它不是 distribution-safe。普通採集移植前也不能預設 expected value 近似相同就足夠；若剪枝會改變分布尾端，應限制在研究模式或不使用。
 
 ### 5. 先做 WASM core，不急著把全部輸出搬入 WASM
 
@@ -295,8 +295,8 @@ WASM 的優勢剛好符合前幾項：
 
 收藏品 solver 繼續收斂：
 
-1. 用使用者提供的黑鐵礦兩份匯出作為 regression fixture，重點驗證 summary、distribution、reward/tier counts 與 memo counters。
-2. 若未來改變剪枝策略，重新跑黑鐵礦案例確認 `2^21` 是否仍可完成。
+1. 用使用者提供的黑鐵礦兩份匯出作為 regression fixture，重點驗證 summary、完整 distribution、reward/tier counts 與高分尾端可達性。
+2. 若未來改變剪枝策略，重新跑黑鐵礦案例確認 `304` / `342` primary 尾端與 `684` combined max 沒有消失，再討論 memo 容量成本。
 3. 保留 TS/WASM summary parity 測試；對等價 root action 差異採寬鬆驗收。
 4. 在 debug/export 中標示 solver engine，例如 `wasm-core` / `ts-core`，方便未來追查。
 5. 若要重新追求完整 policy tree parity，必須先接受 memo/時間成本可能大幅上升。
@@ -313,4 +313,4 @@ WASM 的優勢剛好符合前幾項：
 
 收藏品 solver 的 WASM 遷移方向是成立的，且效能改善幅度足以抵消維護成本。但目前不能只用「期望值 / 分布 / 極值 match」宣告完全完成；完整決策樹 parity 還需要補強。
 
-一般採集 solver 是否值得搬 WASM，應以同樣標準評估：先證明熱點相同，再明確決定 score-safe pruning 與 tree-safe pruning 的產品契約，最後才建立 oracle / golden 測試並接正式網站路徑。
+一般採集 solver 是否值得搬 WASM，應以同樣標準評估：先證明熱點相同，再明確決定 pruning 的正確性契約。若剪枝會移除可達尾端，即使 expected value 幾乎不變，也不應進正式網站路徑。

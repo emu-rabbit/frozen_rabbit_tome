@@ -67,6 +67,13 @@ interface ActionOption {
   apply: (state: SearchState, solve: (state: SearchState) => SearchResult) => SearchResult;
 }
 
+interface CollectSuccessActionCandidate {
+  kind: CollectableActionKind;
+  priority: number;
+  gpCost: number;
+  bonus: number;
+}
+
 type WeightedState = {
   state: SearchState;
   probability: number;
@@ -103,8 +110,15 @@ const REGULAR_REVISIT_CHANCE = 0.05;
 const TIMED_REVISIT_CHANCE = 0.08;
 const STATE_KEY_FIELDS = [...COLLECTABLE_STATE_KEY_FIELDS];
 
-declare global {
-  var __FR_TOME_COLLECTABLE_SUCCESS_PRUNING__: boolean | undefined;
+export function filterCollectSuccessActionCandidates<T extends CollectSuccessActionCandidate>(
+  candidates: T[],
+  baseSuccessRate: number,
+  successBonus: number,
+  hasCollected: boolean
+): T[] {
+  if (baseSuccessRate + successBonus >= 100 || hasCollected) return [];
+
+  return candidates;
 }
 
 function emptyPolicy(state: SearchState): CollectablePolicyNode {
@@ -287,21 +301,20 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
   }
 
   function addCollectSuccessActions(actions: ActionOption[], state: SearchState) {
-    if (mechanics.baseSuccessRate + state.successBonus >= 100 || state.hasCollected) return;
-
-    const allSuccessCandidates: Array<{ kind: CollectableActionKind; priority: number; gpCost: number; bonus: number }> = [
+    const allSuccessCandidates: CollectSuccessActionCandidate[] = [
       { kind: 'successIII', priority: 40, gpCost: 250, bonus: 50 },
       { kind: 'successII', priority: 41, gpCost: 100, bonus: 15 },
       { kind: 'successI', priority: 42, gpCost: 50, bonus: 5 },
       { kind: 'nextCollectSuccess', priority: 50, gpCost: 50, bonus: 15 }
     ];
-    const successCandidates = allSuccessCandidates.filter((candidate) => canUseSolverAction(candidate.kind, state));
-    const successNeeded = 100 - mechanics.baseSuccessRate - state.successBonus;
-    const shouldPrune = globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ !== false;
-    const cappingCandidates = successCandidates.filter((candidate) => candidate.bonus >= successNeeded);
-    const candidates = shouldPrune && cappingCandidates.length > 0 ? cappingCandidates : successCandidates;
+    const successCandidates = filterCollectSuccessActionCandidates(
+      allSuccessCandidates.filter((candidate) => canUseSolverAction(candidate.kind, state)),
+      mechanics.baseSuccessRate,
+      state.successBonus,
+      state.hasCollected
+    );
 
-    candidates.forEach((candidate) => {
+    successCandidates.forEach((candidate) => {
       actions.push(buffAction(candidate.kind, candidate.priority, candidate.gpCost));
     });
   }

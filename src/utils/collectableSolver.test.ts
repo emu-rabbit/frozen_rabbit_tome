@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { solveCollectableRotation } from './collectableSolver';
+import { filterCollectSuccessActionCandidates, solveCollectableRotation } from './collectableSolver';
 import type { CollectableSolverRequest } from '../types/collectable';
 
 function createRequest(overrides: Partial<CollectableSolverRequest> = {}): CollectableSolverRequest {
@@ -595,46 +595,21 @@ describe('solveCollectableRotation', () => {
     expect(result.policy.recommendedAction.kind).toBe('collect');
   });
 
-  it('成功率補強剪枝前後會維持小型同分案例的策略習慣', () => {
-    const request = createRequest({
-      stats: {
-        level: 100,
-        gathering: 760,
-        perception: 1000,
-        gp: 930
-      },
-      nodeBonuses: {
-        baseIntegrity: 1,
-        gatheringCount: 0,
-        yieldCount: 0,
-        extraRate: 0
-      },
-      temporaryGp: 930,
-      rewardTable: {
-        itemId: 1,
-        source: 'collectables',
-        tiers: {
-          low: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
-          mid: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } },
-          high: { collectability: 0, reward: { exp: 0, gil: 0, scrip: 100, items: {} } }
-        }
-      }
-    });
-    const originalPruning = globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__;
+  it('成功率補強即使有補滿候選也保留較省 GP 的合法候選', () => {
+    const candidates = filterCollectSuccessActionCandidates([
+      { kind: 'successIII' as const, priority: 40, gpCost: 250, bonus: 50 },
+      { kind: 'successII' as const, priority: 41, gpCost: 100, bonus: 15 },
+      { kind: 'successI' as const, priority: 42, gpCost: 50, bonus: 5 },
+      { kind: 'nextCollectSuccess' as const, priority: 50, gpCost: 50, bonus: 15 }
+    ], 67, 0, false);
 
-    try {
-      globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ = true;
-      const pruned = solveCollectableRotation(request);
-      globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ = false;
-      const unpruned = solveCollectableRotation(request);
-
-      expect(pruned.expectedScore).toBeCloseTo(unpruned.expectedScore, 6);
-      expect(pruned.policy.recommendedAction.kind).toBe(unpruned.policy.recommendedAction.kind);
-      expect(policyActionByState(pruned)).toEqual(policyActionByState(unpruned));
-    } finally {
-      globalThis.__FR_TOME_COLLECTABLE_SUCCESS_PRUNING__ = originalPruning;
-    }
-  }, 30000);
+    expect(candidates.map((candidate) => candidate.kind)).toEqual([
+      'successIII',
+      'successII',
+      'successI',
+      'nextCollectSuccess'
+    ]);
+  });
 
   it('耐久不足時會評估石工之理恢復採集次數', () => {
     const result = solveCollectableRotation(createRequest({
