@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCollectableStrategyTree,
   collectableStrategyFields,
+  collectMatchingUncoveredStrategyNodes,
   createSimpleCollectableStrategyRules,
+  type CollectableStrategyNode,
   type CollectableStrategyRule
 } from './collectableStrategyTree';
 import {
@@ -20,6 +22,21 @@ function rule(id: string, action: CollectableStrategyRule['actions'][number]): C
     conditions: [],
     actions: [action]
   };
+}
+
+function collectMatchedNodes(root: CollectableStrategyNode, ruleId: string) {
+  const nodes: CollectableStrategyNode[] = [];
+  const visited = new Set<string>();
+
+  function walk(node: CollectableStrategyNode | undefined) {
+    if (!node || visited.has(node.id)) return;
+    visited.add(node.id);
+    if (node.matchedRuleId === ruleId) nodes.push(node);
+    node.branches.forEach((branch) => walk(branch.child));
+  }
+
+  walk(root);
+  return nodes;
 }
 
 describe('collectableStrategyTree', () => {
@@ -66,6 +83,68 @@ describe('collectableStrategyTree', () => {
         enabled: true
       }
     ]);
+  });
+
+  it('納管節點只統計目前尚未決策且被條件命中的節點，不包含套用後才展開出的後續節點', () => {
+    const improveRule = createSimpleCollectableStrategyRules({
+      highTierCollectability: 800,
+      improveName: '提高價值',
+      collectName: '採集'
+    })[0];
+
+    const frontier = buildCollectableStrategyTree({
+      stats: {
+        level: 100,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 4860,
+        Perception: 4860
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      jobType: 'miner',
+      isTimedNode: false,
+      rules: []
+    });
+    const expanded = buildCollectableStrategyTree({
+      stats: {
+        level: 100,
+        gathering: 5345,
+        perception: 5173,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 4860,
+        Perception: 4860
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 930,
+      jobType: 'miner',
+      isTimedNode: false,
+      rules: [improveRule],
+      maxNodes: 80
+    });
+
+    const managedFrontier = collectMatchingUncoveredStrategyNodes(frontier.uncoveredNodes, improveRule);
+
+    expect(managedFrontier).toHaveLength(1);
+    expect(managedFrontier[0].status).toBe('uncovered');
+    expect(collectMatchedNodes(expanded.root, improveRule.id).length).toBeGreaterThan(managedFrontier.length);
   });
 
   it('符合上方規則但技能不可用時，會繼續套用下一條可執行策略', () => {

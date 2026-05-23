@@ -15,6 +15,7 @@ import {
   buildCollectableStrategyTree,
   collectableStrategyActionKinds,
   collectableStrategyFields,
+  collectMatchingUncoveredStrategyNodes,
   createDefaultCollectableStrategyRules,
   createSimpleCollectableStrategyRules,
   isNumericStrategyField,
@@ -49,6 +50,7 @@ const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
 
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
+type ManagedNodeMeterKey = 'gp' | 'integrity' | 'collectability';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -76,6 +78,12 @@ const isSaved = ref(false);
 const isReportCopied = ref(false);
 const internalMaxNodes = 1200;
 const tierCountVisibilityEpsilon = 0.000001;
+const compactPathHiddenBranchKeys = new Set([
+  'collectableSolver.branches.standardProc',
+  'collectableSolver.branches.standardNoProc',
+  'collectableSolver.branches.wiseProc',
+  'collectableSolver.branches.wiseNoProc'
+]);
 const { collectableObjective } = useCollectableSolver();
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -108,28 +116,29 @@ function buildStrategyTreeForRules(strategyRules: CollectableStrategyRule[]) {
     maxNodes: internalMaxNodes,
     formatActionLabel: actionName,
     formatBranchLabel: (labelKeys) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
-    formatPathStep: ({ ruleName, actionLabel, branchLabel }) => ruleName
-      ? t('collectableStrategyLab.pathStepWithRule', { rule: ruleName, action: actionLabel, branch: branchLabel })
-      : t('collectableStrategyLab.pathStep', { action: actionLabel, branch: branchLabel })
+    formatPathStep: ({ ruleName, actionLabel, branchLabel, branchLabelKeys }) => formatCompactPathStep({
+      ruleName,
+      actionLabel,
+      branchLabel,
+      branchLabelKeys
+    })
   });
 }
 const summary = computed(() => treeResult.value?.summary);
 const uncoveredNodes = computed(() => treeResult.value?.uncoveredNodes ?? []);
 const uncoveredStateGroups = computed(() => buildUncoveredStateGroups(uncoveredNodes.value));
 const editingRule = computed(() => editingRuleDraft.value);
-const editorPreviewRules = computed(() => {
+const activeGpMax = computed(() => Math.max(1, props.effectiveStats.gp));
+const activeIntegrityMax = computed(() => Math.max(1, props.nodeBonuses.baseIntegrity + props.nodeBonuses.gatheringCount));
+const editorFrontierRules = computed(() => {
   const draft = editingRuleDraft.value;
   if (!draft) return rules.value;
 
   const index = rules.value.findIndex((rule) => rule.id === editingRuleId.value);
-  if (index < 0) return [...rules.value, draft];
-
-  const nextRules = [...rules.value];
-  nextRules[index] = draft;
-  return nextRules;
+  return index < 0 ? rules.value : rules.value.slice(0, index);
 });
-const editorTreeResult = computed(() => buildStrategyTreeForRules(editorPreviewRules.value));
-const managedNodes = computed(() => collectManagedNodes(editorTreeResult.value?.root, editingRuleDraft.value?.id ?? ''));
+const editorFrontierTreeResult = computed(() => buildStrategyTreeForRules(editorFrontierRules.value));
+const managedNodes = computed(() => collectMatchingUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value));
 const managedStateGroups = computed(() => buildUncoveredStateGroups(managedNodes.value));
 const currentManagedNode = computed(() => managedNodes.value[managedNodeIndex.value] ?? null);
 const editorCoverageText = computed(() => t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length }));
@@ -144,15 +153,11 @@ const stateFieldOptions = computed(() => [
 const ruleCoverage = computed(() => {
   const counts = new Map<string, number>();
 
-  function walk(node?: CollectableStrategyNode, visited = new Set<string>()) {
-    if (!node) return;
-    if (visited.has(node.id)) return;
-    visited.add(node.id);
-    if (node.matchedRuleId) counts.set(node.matchedRuleId, (counts.get(node.matchedRuleId) ?? 0) + 1);
-    node.branches.forEach((branch) => walk(branch.child, visited));
-  }
+  rules.value.forEach((rule, index) => {
+    const frontier = buildStrategyTreeForRules(rules.value.slice(0, index))?.uncoveredNodes ?? [];
+    counts.set(rule.id, collectMatchingUncoveredStrategyNodes(frontier, rule).length);
+  });
 
-  walk(treeResult.value?.root);
   return counts;
 });
 const analysisUnit = computed(() => t(getCollectableScripRewardMeta(rewardTable.value?.rewardItemId).labelKey));
@@ -512,6 +517,11 @@ function closeRuleEditor() {
   resetRuleEditorView();
 }
 
+function closeRuleEditorFromBackdrop() {
+  if (ruleEditorView.value !== 'main') return;
+  closeRuleEditor();
+}
+
 function saveRuleEditor() {
   if (!editingRuleDraft.value) return;
 
@@ -701,30 +711,9 @@ function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
   });
 }
 
-function collectManagedNodes(root: CollectableStrategyNode | undefined, ruleId: string) {
-  if (!root || !ruleId) return [];
-
-  const nodes: CollectableStrategyNode[] = [];
-  const visited = new Set<string>();
-
-  function walk(node: CollectableStrategyNode | undefined) {
-    if (!node || visited.has(node.id)) return;
-    visited.add(node.id);
-    if (node.matchedRuleId === ruleId) nodes.push(node);
-    node.branches.forEach((branch) => walk(branch.child));
-  }
-
-  walk(root);
-  return nodes;
-}
-
 function moveManagedNode(direction: -1 | 1) {
   if (!managedNodes.value.length) return;
   managedNodeIndex.value = Math.max(0, Math.min(managedNodes.value.length - 1, managedNodeIndex.value + direction));
-}
-
-function nodeStatusLabel(status: CollectableStrategyNode['status']) {
-  return t(`collectableStrategyLab.nodeStatuses.${status}`);
 }
 
 function formatNodeState(node: CollectableStrategyNode) {
@@ -733,6 +722,23 @@ function formatNodeState(node: CollectableStrategyNode) {
     integrity: node.state.integrity,
     collectability: node.state.collectability
   });
+}
+
+function formatCompactPathStep(payload: {
+  ruleName?: string;
+  actionLabel: string;
+  branchLabel: string;
+  branchLabelKeys: string[];
+}) {
+  const visibleBranchKeys = payload.branchLabelKeys.filter((key) => !compactPathHiddenBranchKeys.has(key));
+  const branchLabel = visibleBranchKeys.length > 0
+    ? visibleBranchKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner'))
+    : '';
+
+  if (!branchLabel) return payload.ruleName ? `${payload.ruleName} -> ${payload.actionLabel}` : payload.actionLabel;
+  return payload.ruleName
+    ? t('collectableStrategyLab.pathStepWithRule', { rule: payload.ruleName, action: payload.actionLabel, branch: branchLabel })
+    : t('collectableStrategyLab.pathStep', { action: payload.actionLabel, branch: branchLabel });
 }
 
 function stateChips(node: CollectableStrategyNode) {
@@ -744,9 +750,32 @@ function stateChips(node: CollectableStrategyNode) {
   if (node.state.wiseToTheWorldActive) chips.push(t('collectableStrategyLab.chips.wiseToTheWorldActive'));
   if (node.state.successBonus > 0) chips.push(t('collectableStrategyLab.chips.successBonus', { value: node.state.successBonus }));
   if (node.state.nextCollectSuccessBonus > 0) chips.push(t('collectableStrategyLab.chips.nextCollectSuccessBonus', { value: node.state.nextCollectSuccessBonus }));
-  if (node.state.hasUsedCollectableAction) chips.push(t('collectableStrategyLab.chips.hasUsedCollectableAction'));
   if (node.state.hasCollected) chips.push(t('collectableStrategyLab.chips.hasCollected'));
   return chips;
+}
+
+function managedNodeMeters(node: CollectableStrategyNode) {
+  const meters: Array<{ key: ManagedNodeMeterKey; label: string; value: number; max: number; icon: string }> = [
+    { key: 'gp', label: t('collectableStrategyLab.pendingOverview.gp'), value: node.state.gp, max: activeGpMax.value, icon: 'pi pi-bolt' },
+    { key: 'integrity', label: t('collectableStrategyLab.pendingOverview.integrity'), value: node.state.integrity, max: activeIntegrityMax.value, icon: 'pi pi-shield' },
+    { key: 'collectability', label: t('collectableStrategyLab.pendingOverview.collectability'), value: node.state.collectability, max: 1000, icon: 'pi pi-sparkles' }
+  ];
+
+  return meters.map((meter) => ({
+    ...meter,
+    percent: progressPercent(meter.value, meter.max)
+  }));
+}
+
+function progressPercent(value: number, max: number) {
+  if (max <= 0) return '0%';
+  const percent = Math.max(0, Math.min(100, (value / max) * 100));
+  return `${percent}%`;
+}
+
+function pathStepIcon(index: number) {
+  if (index === 0) return 'pi pi-play';
+  return 'pi pi-arrow-right';
 }
 
 function formatDistributionPercent(percent: number) {
@@ -1165,18 +1194,18 @@ function makeId() {
     />
 
     <Teleport to="body">
-      <div v-if="editingRule" class="rule-editor-overlay" role="presentation" @click.self="closeRuleEditor">
+      <div v-if="editingRule" class="rule-editor-overlay" role="presentation" @click.self="closeRuleEditorFromBackdrop">
         <section class="rule-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="collectable-rule-editor-title">
           <header class="rule-editor-dialog-header">
             <div>
               <h2 id="collectable-rule-editor-title">{{ t('collectableStrategyLab.editor.kicker') }}</h2>
             </div>
-            <button type="button" class="dialog-close-button" :aria-label="t('collectableStrategyLab.editor.close')" @click="closeRuleEditor">
+            <button v-if="ruleEditorView === 'main'" type="button" class="dialog-close-button" :aria-label="t('collectableStrategyLab.editor.close')" @click="closeRuleEditor">
               <i class="pi pi-times"></i>
             </button>
           </header>
 
-          <div class="rule-editor-body">
+          <div class="rule-editor-body" :class="{ 'managed-nodes-body': ruleEditorView === 'managedNodes' }">
             <template v-if="ruleEditorView === 'main'">
               <section class="editor-section">
                 <div class="editor-section-title">
@@ -1288,7 +1317,6 @@ function makeId() {
                     {{ t('collectableStrategyLab.editor.individualMode') }}
                   </button>
                 </div>
-                <span>{{ editorCoverageText }}</span>
               </div>
 
               <div v-if="managedNodes.length === 0" class="tree-empty compact">
@@ -1330,16 +1358,33 @@ function makeId() {
                 </div>
 
                 <article class="uncovered-detail">
-                  <span class="node-status" :class="currentManagedNode.status">{{ nodeStatusLabel(currentManagedNode.status) }}</span>
-                  <h4>{{ formatNodeState(currentManagedNode) }}</h4>
+                  <div class="managed-meter-list" :aria-label="formatNodeState(currentManagedNode)">
+                    <div
+                      v-for="meter in managedNodeMeters(currentManagedNode)"
+                      :key="meter.key"
+                      class="managed-meter"
+                      :class="meter.key"
+                    >
+                      <div class="managed-meter-header">
+                        <span><i :class="meter.icon"></i>{{ meter.label }}</span>
+                        <strong>{{ meter.value }} / {{ meter.max }}</strong>
+                      </div>
+                      <div class="managed-meter-track" aria-hidden="true">
+                        <span :style="{ width: meter.percent }"></span>
+                      </div>
+                    </div>
+                  </div>
                   <div class="state-chip-list">
                     <span v-for="chip in stateChips(currentManagedNode)" :key="chip">{{ chip }}</span>
                     <span v-if="stateChips(currentManagedNode).length === 0">{{ t('collectableStrategyLab.noBuff') }}</span>
                   </div>
                   <div class="path-box">
-                    <strong>{{ t('collectableStrategyLab.pathTitle') }}</strong>
-                    <ol v-if="currentManagedNode.path.length">
-                      <li v-for="step in currentManagedNode.path" :key="step">{{ step }}</li>
+                    <strong><i class="pi pi-sitemap"></i>{{ t('collectableStrategyLab.pathTitle') }}</strong>
+                    <ol v-if="currentManagedNode.path.length" class="path-timeline">
+                      <li v-for="(step, index) in currentManagedNode.path" :key="`${index}-${step}`">
+                        <i :class="pathStepIcon(index)"></i>
+                        <span>{{ step }}</span>
+                      </li>
                     </ol>
                     <p v-else>{{ t('collectableStrategyLab.noPath') }}</p>
                   </div>
@@ -1485,7 +1530,6 @@ function makeId() {
 :global(html.dark .column-header h2),
 :global(html.dark .uncovered-panel h3),
 :global(html.dark .rule-editor-dialog-header h2),
-:global(html.dark .uncovered-detail h4),
 :global(html.dark .analysis-title h2),
 :global(html.dark .analysis-card h3),
 :global(html.dark .path-box strong) {
@@ -2489,9 +2533,14 @@ function makeId() {
 .rule-editor-body {
   display: grid;
   gap: 0.8rem;
+  align-content: start;
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.25rem;
+}
+
+.rule-editor-body.managed-nodes-body {
+  gap: 0.5rem;
 }
 
 .editor-segmented-control button,
@@ -2660,6 +2709,7 @@ function makeId() {
 
 .managed-node-toolbar {
   flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .managed-node-toolbar > span {
@@ -3126,32 +3176,6 @@ function makeId() {
   background: #475569;
 }
 
-.node-status {
-  display: inline-flex;
-  margin-bottom: 0.45rem;
-  border-radius: 999px;
-  padding: 0.18rem 0.5rem;
-  background: #e2e8f0;
-  color: #475569;
-  font-size: 0.72rem;
-  font-weight: 900;
-}
-
-.node-status.decided {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.node-status.uncovered {
-  background: #ffedd5;
-  color: #c2410c;
-}
-
-.node-status.terminal {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
 .tree-empty {
   display: grid;
   justify-items: center;
@@ -3193,7 +3217,8 @@ function makeId() {
 
 .uncovered-layout {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.5rem;
+  align-content: start;
 }
 
 .node-pager {
@@ -3255,12 +3280,89 @@ function makeId() {
   align-self: start;
 }
 
-.uncovered-detail h4 {
-  margin: 0;
+.managed-meter-list {
+  display: grid;
+  gap: 0.68rem;
+}
+
+.managed-meter {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.managed-meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.managed-meter-header span,
+.path-box strong {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.managed-meter-header span i,
+.path-box strong i {
+  color: #52a890;
+}
+
+.managed-meter-header strong {
+  flex: 0 0 auto;
   color: #0f172a;
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
-  font-weight: 900;
-  line-height: 1.18;
+  font-size: 0.88rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.managed-meter-track {
+  height: 0.52rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.managed-meter-track span {
+  display: block;
+  height: 100%;
+  min-width: 0.3rem;
+  border-radius: inherit;
+  background: #52a890;
+}
+
+.managed-meter.gp .managed-meter-track span {
+  background: #38bdf8;
+}
+
+.managed-meter.collectability .managed-meter-track span {
+  background: #a78bfa;
+}
+
+:global(html.dark .managed-meter-header span),
+:global(html.dark .managed-meter-header strong) {
+  color: #f8fafc;
+}
+
+:global(html.dark .managed-meter-track) {
+  background: #1e293b;
+}
+
+:global(html.dark .managed-meter.gp .managed-meter-track span) {
+  background: #0ea5e9;
+}
+
+:global(html.dark .managed-meter.integrity .managed-meter-track span) {
+  background: #52a890;
+}
+
+:global(html.dark .managed-meter.collectability .managed-meter-track span) {
+  background: #8b5cf6;
 }
 
 .state-chip-list {
@@ -3280,16 +3382,49 @@ function makeId() {
   border-top-color: #334155;
 }
 
-.path-box ol {
+.path-timeline {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
   margin: 0;
-  padding-left: 1.2rem;
+  padding: 0;
   color: #475569;
   font-size: 0.8rem;
   line-height: 1.5;
 }
 
-:global(html.dark .path-box ol) {
+.path-timeline li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.45rem;
+}
+
+.path-timeline li i {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.45rem;
+  background: #f0fdf4;
+  color: #0f766e;
+  font-size: 0.72rem;
+}
+
+.path-timeline li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:global(html.dark .path-timeline) {
   color: #cbd5e1;
+}
+
+:global(html.dark .path-timeline li i) {
+  background: rgb(20 83 45 / 0.28);
+  color: #99f6e4;
 }
 
 .rule-editor-overlay {

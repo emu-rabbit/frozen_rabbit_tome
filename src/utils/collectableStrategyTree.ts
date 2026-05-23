@@ -104,7 +104,7 @@ export interface CollectableStrategyBuildRequest {
   maxNodes?: number;
   formatActionLabel?: (action: CollectableActionKind) => string;
   formatBranchLabel?: (labelKeys: string[]) => string;
-  formatPathStep?: (payload: { ruleName?: string; actionLabel: string; branchLabel: string }) => string;
+  formatPathStep?: (payload: { ruleName?: string; actionLabel: string; branchLabel: string; branchLabelKeys: string[] }) => string;
 }
 
 interface BuildContext {
@@ -117,7 +117,7 @@ interface BuildContext {
   uncoveredNodes: CollectableStrategyNode[];
   formatActionLabel: (action: CollectableActionKind) => string;
   formatBranchLabel: (labelKeys: string[]) => string;
-  formatPathStep: (payload: { ruleName?: string; actionLabel: string; branchLabel: string }) => string;
+  formatPathStep: (payload: { ruleName?: string; actionLabel: string; branchLabel: string; branchLabelKeys: string[] }) => string;
 }
 
 export const collectableStrategyNumericFields: CollectableStrategyNumericField[] = [
@@ -253,6 +253,14 @@ export function isNumericStrategyField(field: CollectableStrategyField): field i
   return collectableStrategyNumericFields.includes(field as CollectableStrategyNumericField);
 }
 
+export function collectMatchingUncoveredStrategyNodes(
+  nodes: CollectableStrategyNode[],
+  rule: CollectableStrategyRule | null | undefined
+): CollectableStrategyNode[] {
+  if (!rule?.enabled) return [];
+  return nodes.filter((node) => node.status === 'uncovered' && matchesRule(rule, node.state));
+}
+
 function expandNode(
   state: CollectableExperimentState,
   path: string[],
@@ -290,7 +298,7 @@ function expandNode(
       ...branch,
       child: expandNode(
         branch.state,
-        [...path, context.formatPathStep({ actionLabel: context.formatActionLabel(pendingAction), branchLabel: branch.label })],
+        [...path, context.formatPathStep({ actionLabel: context.formatActionLabel(pendingAction), branchLabel: branch.label, branchLabelKeys: branch.labelKeys })],
         pendingActions.slice(1),
         context
       )
@@ -318,7 +326,7 @@ function expandNode(
     ...branch,
     child: expandNode(
       branch.state,
-      [...path, context.formatPathStep({ ruleName: matchedRule.name, actionLabel: context.formatActionLabel(action), branchLabel: branch.label })],
+      [...path, context.formatPathStep({ ruleName: matchedRule.name, actionLabel: context.formatActionLabel(action), branchLabel: branch.label, branchLabelKeys: branch.labelKeys })],
       nextPending,
       context
     )
