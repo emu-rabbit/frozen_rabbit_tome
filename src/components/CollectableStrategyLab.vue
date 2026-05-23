@@ -899,7 +899,6 @@ function makeId() {
           <section class="uncovered-panel">
             <div class="panel-title-row">
               <h3>{{ t('collectableStrategyLab.uncoveredTitle') }}</h3>
-              <span>{{ t('collectableStrategyLab.pendingOverview.total', { count: uncoveredNodes.length }) }}</span>
             </div>
 
             <div v-if="uncoveredNodes.length === 0" class="tree-empty compact">
