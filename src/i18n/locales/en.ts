@@ -815,6 +815,9 @@ export default {
     managedOverview: {
       rangesTitle: 'State ranges',
       buffTitle: 'Buff overview',
+      collectSuccessRate: 'Collect success rate',
+      valueIncreaseRate: 'Value increase rate',
+      meticulousSaveRate: 'Meticulous Save Rate',
       someHasBuff: 'Some has {buff}',
       allHasBuff: 'All has {buff}'
     },

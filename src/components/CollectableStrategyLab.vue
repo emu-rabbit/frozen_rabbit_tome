@@ -35,7 +35,7 @@ import {
   isCustomTierObjective,
   isTierCountObjective
 } from '../utils/collectableObjectivePresets';
-import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
+import { createCollectableMechanicsContext, MIN_COLLECTABLE_LEVEL, type CollectableMechanicsContext } from '../utils/collectableMechanics';
 import {
   COLLECTABLE_INPUT_LIMITS,
   PLAYER_INPUT_LIMITS,
@@ -51,7 +51,11 @@ const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
 type ManagedNodeMeterKey = 'gp' | 'integrity' | 'collectability';
-type ManagedOverviewMetricKey = 'gp' | 'integrity' | 'collectability';
+type ManagedOverviewMetricKey =
+  | ManagedNodeMeterKey
+  | 'collectSuccessRate'
+  | 'valueIncreaseRate'
+  | 'meticulousSaveRate';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -140,7 +144,19 @@ const editorFrontierRules = computed(() => {
 });
 const editorFrontierTreeResult = computed(() => buildStrategyTreeForRules(editorFrontierRules.value));
 const managedNodes = computed(() => collectMatchingUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value));
-const managedNodeOverview = computed(() => buildManagedNodeOverview(managedNodes.value));
+const collectableMechanicsContext = computed(() => {
+  if (!props.baseValues || isCollectableLevelLocked.value) return null;
+
+  return createCollectableMechanicsContext({
+    stats: props.effectiveStats,
+    baseValues: props.baseValues,
+    itemLevel: props.itemRealLevel,
+    nodeBonuses: props.nodeBonuses,
+    isTimedNode: props.activeItem.isTimedNode ?? false,
+    hasRelicToolBonus: props.hasRelicToolBonus
+  });
+});
+const managedNodeOverview = computed(() => buildManagedNodeOverview(managedNodes.value, collectableMechanicsContext.value));
 const currentManagedNode = computed(() => managedNodes.value[managedNodeIndex.value] ?? null);
 const editorCoverageText = computed(() => t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length }));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
@@ -697,22 +713,70 @@ function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
   });
 }
 
-function buildManagedNodeOverview(nodes: CollectableStrategyNode[]) {
-  const metrics: Array<{ key: ManagedOverviewMetricKey; label: string; icon: string }> = [
-    { key: 'gp', label: t('collectableStrategyLab.pendingOverview.gp'), icon: 'pi pi-bolt' },
-    { key: 'integrity', label: t('collectableStrategyLab.pendingOverview.integrity'), icon: 'pi pi-shield' },
-    { key: 'collectability', label: t('collectableStrategyLab.pendingOverview.collectability'), icon: 'pi pi-sparkles' }
+function buildManagedNodeOverview(nodes: CollectableStrategyNode[], mechanics: CollectableMechanicsContext | null) {
+  const metrics: Array<{
+    key: ManagedOverviewMetricKey;
+    label: string;
+    icon: string;
+    getValue: (node: CollectableStrategyNode) => number;
+    formatRange?: (min: number, max: number) => string;
+  }> = [
+    {
+      key: 'gp',
+      label: t('collectableStrategyLab.pendingOverview.gp'),
+      icon: 'pi pi-bolt',
+      getValue: (node) => node.state.gp
+    },
+    {
+      key: 'integrity',
+      label: t('collectableStrategyLab.pendingOverview.integrity'),
+      icon: 'pi pi-shield',
+      getValue: (node) => node.state.integrity
+    },
+    {
+      key: 'collectability',
+      label: t('collectableStrategyLab.pendingOverview.collectability'),
+      icon: 'pi pi-sparkles',
+      getValue: (node) => node.state.collectability
+    },
+    {
+      key: 'collectSuccessRate',
+      label: t('collectableStrategyLab.managedOverview.collectSuccessRate'),
+      icon: 'pi pi-check-circle',
+      getValue: (node) => mechanics
+        ? clampPercent(mechanics.baseSuccessRate + node.state.successBonus + node.state.nextCollectSuccessBonus)
+        : 0,
+      formatRange: formatPercentRange
+    },
+    {
+      key: 'valueIncreaseRate',
+      label: t('collectableStrategyLab.managedOverview.valueIncreaseRate'),
+      icon: 'pi pi-chart-line',
+      getValue: (node) => mechanics
+        ? (node.state.collectorsFocusActive ? mechanics.focusedValueIncreaseRate : mechanics.valueIncreaseRate)
+        : 0,
+      formatRange: formatPercentRange
+    },
+    {
+      key: 'meticulousSaveRate',
+      label: t('collectableStrategyLab.managedOverview.meticulousSaveRate'),
+      icon: 'pi pi-lock-open',
+      getValue: (node) => mechanics
+        ? (node.state.primingTouchActive ? mechanics.primedMeticulousRate : mechanics.meticulousRate)
+        : 0,
+      formatRange: formatPercentRange
+    }
   ];
 
   return {
     ranges: metrics.map((metric) => {
-      const values = nodes.map((node) => node.state[metric.key]);
+      const values = nodes.map(metric.getValue);
       const min = values.length > 0 ? Math.min(...values) : 0;
       const max = values.length > 0 ? Math.max(...values) : 0;
 
       return {
         ...metric,
-        value: formatStateRange(min, max)
+        value: metric.formatRange ? metric.formatRange(min, max) : formatStateRange(min, max)
       };
     }),
     buffChips: buildManagedBuffChips(nodes)
@@ -760,6 +824,20 @@ function buildManagedBuffChips(nodes: CollectableStrategyNode[]) {
 
 function formatStateRange(min: number, max: number) {
   return min === max ? `${min}` : `${min}~${max}`;
+}
+
+function formatPercentRange(min: number, max: number) {
+  const minText = formatPercentValue(min);
+  const maxText = formatPercentValue(max);
+  return minText === maxText ? minText : `${minText}~${maxText}`;
+}
+
+function formatPercentValue(value: number) {
+  return Number.isInteger(value) ? `${value}%` : `${value.toFixed(2)}%`;
+}
+
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
 }
 
 function moveManagedNode(direction: -1 | 1) {

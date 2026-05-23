@@ -793,6 +793,9 @@ export default {
     managedOverview: {
       rangesTitle: '状態範囲',
       buffTitle: 'Buff 概要',
+      collectSuccessRate: '採集成功率',
+      valueIncreaseRate: '価値上昇率',
+      meticulousSaveRate: '慎重純化の耐久保存率',
       someHasBuff: '一部に {buff}',
       allHasBuff: 'すべてに {buff}'
     },

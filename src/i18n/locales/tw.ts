@@ -816,6 +816,9 @@ export default {
     managedOverview: {
       rangesTitle: '狀態範圍',
       buffTitle: 'Buff 總覽',
+      collectSuccessRate: '採集成功率',
+      valueIncreaseRate: '價值提升率',
+      meticulousSaveRate: '慎重提煉不耗耐久率',
       someHasBuff: '部分有 {buff}',
       allHasBuff: '全部有 {buff}'
     },

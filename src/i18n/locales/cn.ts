@@ -793,6 +793,9 @@ export default {
     managedOverview: {
       rangesTitle: '状态范围',
       buffTitle: 'Buff 总览',
+      collectSuccessRate: '采集成功率',
+      valueIncreaseRate: '价值提升率',
+      meticulousSaveRate: '慎重提炼不耗耐久率',
       someHasBuff: '部分有 {buff}',
       allHasBuff: '全部有 {buff}'
     },
