@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
@@ -10,9 +10,9 @@ import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { getItemName } from '../services/gameData';
-import { analyzeCollectableStrategyTree, type CollectableStrategyAnalysis } from '../utils/collectableStrategyAnalysis';
+import { analyzeCollectableStrategyTreeAsync, type CollectableStrategyAnalysis } from '../utils/collectableStrategyAnalysis';
 import {
-  buildCollectableStrategyTree,
+  buildCollectableStrategyTreeAsync,
   collectableStrategyActionKinds,
   collectableStrategyFields,
   collectMatchingUncoveredStrategyNodes,
@@ -24,7 +24,9 @@ import {
   type CollectableStrategyComparator,
   type CollectableStrategyField,
   type CollectableStrategyNumericField,
+  type CollectableStrategyBuildRequest,
   type CollectableStrategyNode,
+  type CollectableStrategyTreeResult,
   type CollectableStrategyRule
 } from '../utils/collectableStrategyTree';
 import { getCollectableActionIcon, getCollectableActionMinLevel, getCollectableActionName } from '../services/collectableActions';
@@ -48,6 +50,7 @@ import {
   clampIntegerInput,
   normalizeCollectableObjective
 } from '../config/inputLimits';
+import { isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeScheduler';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -87,6 +90,11 @@ const isObjectiveDialogOpen = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
 const isSaved = ref(false);
 const isReportCopied = ref(false);
+const treeResult = ref<CollectableStrategyTreeResult | null>(null);
+const editorFrontierTreeResult = ref<CollectableStrategyTreeResult | null>(null);
+const isTreeBuilding = ref(false);
+const isEditorFrontierBuilding = ref(false);
+const isAnalysisRunning = ref(false);
 const internalMaxNodes = 1200;
 const tierCountVisibilityEpsilon = 0.000001;
 const compactPathHiddenBranchKeys = new Set([
@@ -98,6 +106,12 @@ const compactPathHiddenBranchKeys = new Set([
 const { collectableObjective } = useCollectableSolver();
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
+let treeBuildAbort: AbortController | null = null;
+let editorBuildAbort: AbortController | null = null;
+let analysisAbort: AbortController | null = null;
+let treeBuildSequence = 0;
+let editorBuildSequence = 0;
+let analysisSequence = 0;
 const strategyConditionValueLimits: Record<CollectableStrategyNumericField, { min: number; max: number }> = {
   gp: PLAYER_INPUT_LIMITS.gp,
   integrity: WASM_PACKED_STATE_LIMITS.integrity,
@@ -109,16 +123,14 @@ const strategyConditionValueLimits: Record<CollectableStrategyNumericField, { mi
 const jobType = computed(() => props.activeItem.jobType || 'miner');
 const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
 const canBuildTree = computed(() => !!props.baseValues && !isCollectableLevelLocked.value);
-const treeResult = computed(() => buildStrategyTreeForRules(rules.value));
-
-function buildStrategyTreeForRules(strategyRules: CollectableStrategyRule[]) {
+function buildStrategyTreeRequest(strategyRules: CollectableStrategyRule[]): CollectableStrategyBuildRequest | null {
   if (!props.baseValues || isCollectableLevelLocked.value) return null;
 
-  return buildCollectableStrategyTree({
-    stats: props.effectiveStats,
-    baseValues: props.baseValues,
+  return {
+    stats: { ...props.effectiveStats },
+    baseValues: { ...props.baseValues },
     itemLevel: props.itemRealLevel,
-    nodeBonuses: props.nodeBonuses,
+    nodeBonuses: { ...props.nodeBonuses },
     temporaryGp: props.temporaryGp,
     jobType: jobType.value,
     isTimedNode: props.activeItem.isTimedNode ?? false,
@@ -133,7 +145,7 @@ function buildStrategyTreeForRules(strategyRules: CollectableStrategyRule[]) {
       branchLabel,
       branchLabelKeys
     })
-  });
+  };
 }
 const summary = computed(() => treeResult.value?.summary);
 const uncoveredNodes = computed(() => treeResult.value?.uncoveredNodes ?? []);
@@ -148,7 +160,6 @@ const editorFrontierRules = computed(() => {
   const index = rules.value.findIndex((rule) => rule.id === editingRuleId.value);
   return index < 0 ? rules.value : rules.value.slice(0, index);
 });
-const editorFrontierTreeResult = computed(() => buildStrategyTreeForRules(editorFrontierRules.value));
 const managedNodes = computed(() => collectMatchingUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value));
 const collectableMechanicsContext = computed(() => {
   if (!props.baseValues || isCollectableLevelLocked.value) return null;
@@ -164,7 +175,11 @@ const collectableMechanicsContext = computed(() => {
 });
 const managedNodeOverview = computed(() => buildManagedNodeOverview(managedNodes.value, collectableMechanicsContext.value));
 const currentManagedNode = computed(() => managedNodes.value[managedNodeIndex.value] ?? null);
-const editorCoverageText = computed(() => t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length }));
+const editorCoverageText = computed(() => (
+  isEditorFrontierBuilding.value
+    ? t('collectableStrategyLab.editor.calculatingNodes')
+    : t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length })
+));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
 const actionEffectPreviews = computed(() => buildCollectableActionEffectPreviews({
   actions: editingRuleDraft.value?.actions ?? [],
@@ -212,6 +227,15 @@ const strategyLevelIssues = computed(() => rules.value.flatMap((rule) => {
 }));
 const hasStrategyLevelIssue = computed(() => strategyLevelIssues.value.length > 0);
 const firstStrategyLevelIssue = computed(() => strategyLevelIssues.value[0] ?? null);
+const canRunAnalysis = computed(() => (
+  !isCollectableLevelLocked.value
+  && !isTreeBuilding.value
+  && !isAnalysisRunning.value
+  && !!treeResult.value?.root
+  && !!rewardTable.value
+  && !rewardError.value
+  && !hasStrategyLevelIssue.value
+));
 
 watch(() => props.activeItem.itemId, async () => {
   analysis.value = null;
@@ -242,9 +266,36 @@ watch([
   () => props.itemRealLevel,
   () => props.nodeBonuses,
   () => props.temporaryGp,
+  () => props.hasRelicToolBonus
+], () => {
+  rebuildStrategyTree();
+}, { deep: true, immediate: true });
+
+watch([
+  editorFrontierRules,
+  () => !!editingRuleDraft.value,
+  () => editingRuleId.value,
+  () => props.effectiveStats,
+  () => props.baseValues,
+  () => props.itemRealLevel,
+  () => props.nodeBonuses,
+  () => props.temporaryGp,
+  () => props.hasRelicToolBonus
+], () => {
+  rebuildEditorFrontierTree();
+}, { deep: true, immediate: true });
+
+watch([
+  rules,
+  () => props.effectiveStats,
+  () => props.baseValues,
+  () => props.itemRealLevel,
+  () => props.nodeBonuses,
+  () => props.temporaryGp,
   () => props.hasRelicToolBonus,
   collectableObjective
 ], () => {
+  analysisAbort?.abort();
   analysis.value = null;
   isSaved.value = false;
 }, { deep: true });
@@ -264,16 +315,130 @@ watch(() => managedNodes.value.length, (length) => {
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
   if (copyTimer) window.clearTimeout(copyTimer);
+  treeBuildAbort?.abort();
+  editorBuildAbort?.abort();
+  analysisAbort?.abort();
 });
 
-function runAnalysis() {
-  if (isCollectableLevelLocked.value || !treeResult.value?.root || !rewardTable.value || hasStrategyLevelIssue.value) return;
+async function rebuildStrategyTree() {
+  treeBuildAbort?.abort();
+  analysisAbort?.abort();
+  const sequence = treeBuildSequence += 1;
+  const request = buildStrategyTreeRequest(clonePlain(rules.value));
 
-  analysis.value = analyzeCollectableStrategyTree(
-    treeResult.value.root,
-    rewardTable.value,
-    collectableObjective.value
-  );
+  if (!request) {
+    treeResult.value = null;
+    isTreeBuilding.value = false;
+    analysis.value = null;
+    return;
+  }
+
+  const controller = new AbortController();
+  treeBuildAbort = controller;
+  treeResult.value = null;
+  analysis.value = null;
+  isSaved.value = false;
+  isTreeBuilding.value = true;
+
+  try {
+    await nextTick();
+    await yieldToEventQueue();
+    const result = await buildCollectableStrategyTreeAsync(request, {
+      signal: controller.signal,
+      yieldEvery: 60
+    });
+    if (sequence === treeBuildSequence && !controller.signal.aborted) {
+      treeResult.value = result;
+    }
+  } catch (error) {
+    if (!isCooperativeAbort(error)) {
+      console.error('Collectable strategy tree build failed:', error);
+    }
+  } finally {
+    if (sequence === treeBuildSequence) {
+      isTreeBuilding.value = false;
+    }
+  }
+}
+
+async function rebuildEditorFrontierTree() {
+  editorBuildAbort?.abort();
+  const sequence = editorBuildSequence += 1;
+
+  if (!editingRuleDraft.value) {
+    editorFrontierTreeResult.value = null;
+    isEditorFrontierBuilding.value = false;
+    return;
+  }
+
+  const request = buildStrategyTreeRequest(clonePlain(editorFrontierRules.value));
+  if (!request) {
+    editorFrontierTreeResult.value = null;
+    isEditorFrontierBuilding.value = false;
+    return;
+  }
+
+  const controller = new AbortController();
+  editorBuildAbort = controller;
+  editorFrontierTreeResult.value = null;
+  isEditorFrontierBuilding.value = true;
+
+  try {
+    await nextTick();
+    await yieldToEventQueue();
+    const result = await buildCollectableStrategyTreeAsync(request, {
+      signal: controller.signal,
+      yieldEvery: 60
+    });
+    if (sequence === editorBuildSequence && !controller.signal.aborted) {
+      editorFrontierTreeResult.value = result;
+    }
+  } catch (error) {
+    if (!isCooperativeAbort(error)) {
+      console.error('Collectable editor frontier build failed:', error);
+    }
+  } finally {
+    if (sequence === editorBuildSequence) {
+      isEditorFrontierBuilding.value = false;
+    }
+  }
+}
+
+async function runAnalysis() {
+  if (!canRunAnalysis.value || !treeResult.value?.root || !rewardTable.value) return;
+
+  analysisAbort?.abort();
+  const sequence = analysisSequence += 1;
+  const controller = new AbortController();
+  analysisAbort = controller;
+  analysis.value = null;
+  isSaved.value = false;
+  isAnalysisRunning.value = true;
+
+  try {
+    await nextTick();
+    await yieldToEventQueue();
+    const result = await analyzeCollectableStrategyTreeAsync(
+      treeResult.value.root,
+      rewardTable.value,
+      clonePlain(collectableObjective.value),
+      {
+        signal: controller.signal,
+        yieldEvery: 80
+      }
+    );
+    if (sequence === analysisSequence && !controller.signal.aborted) {
+      analysis.value = result;
+    }
+  } catch (error) {
+    if (!isCooperativeAbort(error)) {
+      console.error('Collectable strategy analysis failed:', error);
+    }
+  } finally {
+    if (sequence === analysisSequence) {
+      isAnalysisRunning.value = false;
+    }
+  }
 }
 
 function defaultExperimentName() {
@@ -1135,6 +1300,11 @@ function makeId() {
           <p>{{ t('collectableStrategyLab.loadingBaseValues') }}</p>
         </div>
 
+        <div v-else-if="isTreeBuilding" class="tree-empty">
+          <i class="pi pi-spinner pi-spin"></i>
+          <p>{{ t('collectableStrategyLab.calculatingTree') }}</p>
+        </div>
+
         <template v-else-if="summary">
           <section class="summary-grid">
             <div>
@@ -1234,11 +1404,11 @@ function makeId() {
           <Button
             class="analysis-run-button p-button-primary rounded-xl"
             :aria-label="t('collectableStrategyLab.analysis.run')"
-            :disabled="isCollectableLevelLocked || !treeResult?.root || !rewardTable || rewardError || hasStrategyLevelIssue"
+            :disabled="!canRunAnalysis"
             @click="runAnalysis"
           >
-            <i class="pi pi-play"></i>
-            <span>{{ t('collectableStrategyLab.analysis.run') }}</span>
+            <i :class="isAnalysisRunning ? 'pi pi-spinner pi-spin' : 'pi pi-play'"></i>
+            <span>{{ t(isAnalysisRunning ? 'collectableStrategyLab.analysis.running' : 'collectableStrategyLab.analysis.run') }}</span>
           </Button>
         </div>
       </div>
@@ -1251,6 +1421,11 @@ function makeId() {
       <div v-else-if="rewardError" class="analysis-empty" role="alert">
         <i class="pi pi-exclamation-circle"></i>
         <p>{{ t('collectableStrategyLab.analysis.unsupportedReward') }}</p>
+      </div>
+
+      <div v-else-if="isAnalysisRunning" class="analysis-empty" role="status" aria-live="polite">
+        <i class="pi pi-spinner pi-spin"></i>
+        <p>{{ t('collectableStrategyLab.analysis.runningDesc') }}</p>
       </div>
 
       <div v-else-if="!analysis" class="analysis-empty">
@@ -1557,7 +1732,12 @@ function makeId() {
                 <span>{{ t('collectableStrategyLab.editor.managedNodesNotice') }}</span>
               </p>
 
-              <div v-if="managedNodes.length === 0" class="tree-empty compact">
+              <div v-if="isEditorFrontierBuilding" class="tree-empty compact" role="status" aria-live="polite">
+                <i class="pi pi-spinner pi-spin"></i>
+                <p>{{ t('collectableStrategyLab.editor.calculatingNodes') }}</p>
+              </div>
+
+              <div v-else-if="managedNodes.length === 0" class="tree-empty compact">
                 <i class="pi pi-search"></i>
                 <p>{{ t('collectableStrategyLab.editor.noManagedNodes') }}</p>
               </div>
@@ -1684,7 +1864,11 @@ function makeId() {
                   <span>{{ t('collectableStrategyLab.editor.effectPreview') }}</span>
                 </div>
                 <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.effectPreviewDescription') }}</p>
-                <p v-if="managedNodes.length === 0" class="effect-preview-empty">
+                <p v-if="isEditorFrontierBuilding" class="effect-preview-empty">
+                  <i class="pi pi-spinner pi-spin"></i>
+                  {{ t('collectableStrategyLab.editor.calculatingNodes') }}
+                </p>
+                <p v-else-if="managedNodes.length === 0" class="effect-preview-empty">
                   {{ t('collectableStrategyLab.editor.effectPreviewNoNodes') }}
                 </p>
                 <div v-else class="effect-preview-list">
@@ -1734,7 +1918,11 @@ function makeId() {
                   </span>
                 </div>
                 <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.appliedStateRangeDescription') }}</p>
-                <p v-if="managedNodes.length === 0" class="effect-preview-empty">
+                <p v-if="isEditorFrontierBuilding" class="effect-preview-empty">
+                  <i class="pi pi-spinner pi-spin"></i>
+                  {{ t('collectableStrategyLab.editor.calculatingNodes') }}
+                </p>
+                <p v-else-if="managedNodes.length === 0" class="effect-preview-empty">
                   {{ t('collectableStrategyLab.editor.effectPreviewNoNodes') }}
                 </p>
                 <template v-else>

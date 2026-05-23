@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCollectableStrategyTreeAsync,
   buildCollectableStrategyTree,
   collectableStrategyFields,
   collectMatchingUncoveredStrategyNodes,
@@ -394,5 +395,40 @@ describe('collectableStrategyTree', () => {
     expect(result.limited).toBe(false);
     expect(result.summary.totalNodes).toBeLessThan(40);
     expect(result.summary.terminalNodes).toBe(7);
+  });
+
+  it('非同步策略樹展開會保留同步版本的摘要結果', async () => {
+    const request = {
+      stats: {
+        level: 100,
+        gathering: 400,
+        perception: 1000,
+        gp: 930
+      },
+      baseValues: {
+        Gathering: 1000,
+        Perception: 1000
+      },
+      itemLevel: 100,
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 0,
+      jobType: 'miner' as const,
+      isTimedNode: false,
+      rules: [
+        rule('collect-fallback', 'collect')
+      ],
+      maxNodes: 1200
+    };
+
+    const syncResult = buildCollectableStrategyTree(request);
+    const asyncResult = await buildCollectableStrategyTreeAsync(request, { yieldEvery: 1 });
+
+    expect(asyncResult.summary).toEqual(syncResult.summary);
+    expect(asyncResult.limited).toBe(syncResult.limited);
   });
 });

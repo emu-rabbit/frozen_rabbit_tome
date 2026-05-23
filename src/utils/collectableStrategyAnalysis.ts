@@ -5,6 +5,7 @@ import {
   scoreCollectability
 } from './collectableMath';
 import { isTierCountObjective } from './collectableObjectivePresets';
+import { createCooperativeScheduler, type CooperativeSchedulerOptions } from './cooperativeScheduler';
 import type { CollectableObjective, CollectableRewardTable, CollectableTierCounts } from '../types/collectable';
 import type { CollectableStrategyNode } from './collectableStrategyTree';
 
@@ -38,6 +39,35 @@ export function analyzeCollectableStrategyTree(
   const scores = [...outcomes.keys()].sort((left, right) => left - right);
   const minScore = scores[0] ?? 0;
   const maxScore = scores[scores.length - 1] ?? 0;
+
+  return {
+    expectedScore: roundScore(expectedValue(outcomes)),
+    minScore,
+    maxScore,
+    minScoreChance: (outcomes.get(minScore) ?? 0) * 100,
+    maxScoreChance: (outcomes.get(maxScore) ?? 0) * 100,
+    expectedTierCounts: expectedTierCounts(details),
+    minScoreTierCounts: representativeTierCountsForScore(details, minScore, 'min'),
+    maxScoreTierCounts: representativeTierCountsForScore(details, maxScore, 'max'),
+    outcomeDistribution: buildOutcomeDistribution(outcomes, details, objective)
+  };
+}
+
+export async function analyzeCollectableStrategyTreeAsync(
+  root: CollectableStrategyNode,
+  rewardTable: CollectableRewardTable,
+  objective: CollectableObjective,
+  options: CooperativeSchedulerOptions = {}
+): Promise<CollectableStrategyAnalysis> {
+  const scheduler = createCooperativeScheduler(options);
+  await scheduler.yieldNow();
+  const outcomes = await scoreNodeAsync(root, rewardTable, objective, new Map(), scheduler);
+  const details = await scoreNodeDetailsAsync(root, rewardTable, objective, new Map(), scheduler);
+  const scores = [...outcomes.keys()].sort((left, right) => left - right);
+  const minScore = scores[0] ?? 0;
+  const maxScore = scores[scores.length - 1] ?? 0;
+
+  await scheduler.step();
 
   return {
     expectedScore: roundScore(expectedValue(outcomes)),
@@ -88,6 +118,44 @@ function scoreNode(
       outcomes.set(totalScore, (outcomes.get(totalScore) ?? 0) + branchProbability * childProbability);
     });
   });
+
+  return outcomes;
+}
+
+async function scoreNodeAsync(
+  node: CollectableStrategyNode,
+  rewardTable: CollectableRewardTable,
+  objective: CollectableObjective,
+  memo: Map<string, Map<number, number>>,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<Map<number, number>> {
+  await scheduler.step();
+
+  const cached = memo.get(node.id);
+  if (cached) return cached;
+
+  if (node.status !== 'decided' || !node.action || node.branches.length === 0) {
+    const terminal = new Map([[0, 1]]);
+    memo.set(node.id, terminal);
+    return terminal;
+  }
+
+  const outcomes = new Map<number, number>();
+  memo.set(node.id, outcomes);
+
+  for (const branch of node.branches) {
+    await scheduler.step();
+    const branchProbability = branch.probability / 100;
+    const immediateScore = scoreImmediateBranch(node, branch, rewardTable, objective);
+    const childOutcomes = branch.child
+      ? await scoreNodeAsync(branch.child, rewardTable, objective, memo, scheduler)
+      : new Map([[0, 1]]);
+
+    for (const [childScore, childProbability] of childOutcomes) {
+      const totalScore = immediateScore + childScore;
+      outcomes.set(totalScore, (outcomes.get(totalScore) ?? 0) + branchProbability * childProbability);
+    }
+  }
 
   return outcomes;
 }
@@ -150,6 +218,59 @@ function scoreNodeDetails(
       });
     });
   });
+
+  return details;
+}
+
+async function scoreNodeDetailsAsync(
+  node: CollectableStrategyNode,
+  rewardTable: CollectableRewardTable,
+  objective: CollectableObjective,
+  memo: Map<string, Map<string, OutcomeDetail>>,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<Map<string, OutcomeDetail>> {
+  await scheduler.step();
+
+  const cached = memo.get(node.id);
+  if (cached) return cached;
+
+  if (node.status !== 'decided' || !node.action || node.branches.length === 0) {
+    const tierCounts = createZeroTierCounts();
+    const terminal = new Map([[outcomeDetailKey(0, tierCounts), { score: 0, probability: 1, tierCounts }]]);
+    memo.set(node.id, terminal);
+    return terminal;
+  }
+
+  const details = new Map<string, OutcomeDetail>();
+  memo.set(node.id, details);
+
+  for (const branch of node.branches) {
+    await scheduler.step();
+    const branchProbability = branch.probability / 100;
+    const immediateScore = scoreImmediateBranch(node, branch, rewardTable, objective);
+    const immediateTierCounts = isSuccessfulCollect(node, branch)
+      ? getCollectableTierCountForValue(node.state.collectability, rewardTable)
+      : createZeroTierCounts();
+    const childDetails = branch.child
+      ? await scoreNodeDetailsAsync(branch.child, rewardTable, objective, memo, scheduler)
+      : new Map([[outcomeDetailKey(0, createZeroTierCounts()), {
+          score: 0,
+          probability: 1,
+          tierCounts: createZeroTierCounts()
+        }]]);
+
+    for (const child of childDetails.values()) {
+      const score = immediateScore + child.score;
+      const tierCounts = addCollectableTierCounts(immediateTierCounts, child.tierCounts);
+      const key = outcomeDetailKey(score, tierCounts);
+      const current = details.get(key);
+      details.set(key, {
+        score,
+        probability: (current?.probability ?? 0) + branchProbability * child.probability,
+        tierCounts
+      });
+    }
+  }
 
   return details;
 }

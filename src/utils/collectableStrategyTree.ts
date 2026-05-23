@@ -8,6 +8,7 @@ import {
   type CollectableMechanicsContext,
   type CollectableMechanicsState
 } from './collectableMechanics';
+import { createCooperativeScheduler, type CooperativeSchedulerOptions } from './cooperativeScheduler';
 import { COLLECTABLE_ACTION_DEFINITIONS } from '../services/collectableActions';
 import type { CollectableActionKind } from '../types/collectable';
 import type { NodeBonuses, PlayerStats } from '../types/game';
@@ -126,6 +127,10 @@ interface BuildContext {
   formatActionLabel: (action: CollectableActionKind) => string;
   formatBranchLabel: (labelKeys: string[]) => string;
   formatPathStep: (payload: { ruleName?: string; actionLabel: string; branchLabel: string; branchLabelKeys: string[] }) => string;
+}
+
+interface AsyncBuildContext extends BuildContext {
+  scheduler: ReturnType<typeof createCooperativeScheduler>;
 }
 
 export const collectableStrategyNumericFields: CollectableStrategyNumericField[] = [
@@ -296,6 +301,44 @@ export function summarizeAppliedRuleOutcome(
   };
 }
 
+export async function buildCollectableStrategyTreeAsync(
+  request: CollectableStrategyBuildRequest,
+  options: CooperativeSchedulerOptions = {}
+): Promise<CollectableStrategyTreeResult> {
+  const mechanics = createCollectableMechanicsContext(request);
+  const scheduler = createCooperativeScheduler(options);
+  const context: AsyncBuildContext = {
+    mechanics,
+    rules: request.rules.filter((rule) => rule.enabled),
+    maxNodes: request.maxNodes ?? 1200,
+    nodeCache: new Map(),
+    limited: false,
+    uncoveredNodes: [],
+    summary: {
+      totalNodes: 0,
+      decidedNodes: 0,
+      uncoveredNodes: 0,
+      terminalNodes: 0,
+      limitedNodes: 0,
+      maxDepth: 0
+    },
+    formatActionLabel: request.formatActionLabel ?? defaultActionLabel,
+    formatBranchLabel: request.formatBranchLabel ?? defaultBranchLabel,
+    formatPathStep: request.formatPathStep ?? defaultPathStep,
+    scheduler
+  };
+  await scheduler.yieldNow();
+  const rootState = createInitialCollectableMechanicsState(mechanics, request.temporaryGp);
+  const root = await expandNodeAsync(rootState, [], [], context);
+
+  return {
+    root,
+    summary: context.summary,
+    uncoveredNodes: context.uncoveredNodes,
+    limited: context.limited
+  };
+}
+
 function expandNode(
   state: CollectableExperimentState,
   path: string[],
@@ -366,6 +409,92 @@ function expandNode(
       context
     )
   }));
+
+  return node;
+}
+
+async function expandNodeAsync(
+  state: CollectableExperimentState,
+  path: string[],
+  pendingActions: CollectableActionKind[],
+  context: AsyncBuildContext
+): Promise<CollectableStrategyNode> {
+  await context.scheduler.step();
+
+  const decisionKey = collectableDecisionKey(state, pendingActions);
+  const cached = context.nodeCache.get(decisionKey);
+  if (cached) return cached;
+
+  context.summary.totalNodes += 1;
+  context.summary.maxDepth = Math.max(context.summary.maxDepth, path.length);
+
+  if (context.summary.totalNodes > context.maxNodes) {
+    context.limited = true;
+    context.summary.limitedNodes += 1;
+    const node = createNode(state, path, 'limited', pendingActions);
+    context.nodeCache.set(decisionKey, node);
+    return node;
+  }
+
+  if (state.integrity <= 0) {
+    context.summary.terminalNodes += 1;
+    const node = createNode(state, path, 'terminal', pendingActions);
+    context.nodeCache.set(decisionKey, node);
+    return node;
+  }
+
+  const pendingAction = pendingActions[0];
+  if (pendingAction && canUseAction(pendingAction, state, context)) {
+    const node = createNode(state, path, 'decided', pendingActions.slice(1), undefined, undefined, pendingAction);
+    context.nodeCache.set(decisionKey, node);
+    context.summary.decidedNodes += 1;
+    const branches: CollectableStrategyBranch[] = [];
+    for (const branch of applyAction(pendingAction, state, context)) {
+      await context.scheduler.step();
+      branches.push({
+        ...branch,
+        child: await expandNodeAsync(
+          branch.state,
+          [...path, context.formatPathStep({ actionLabel: context.formatActionLabel(pendingAction), branchLabel: branch.label, branchLabelKeys: branch.labelKeys })],
+          pendingActions.slice(1),
+          context
+        )
+      });
+    }
+    node.branches = branches;
+    return node;
+  }
+
+  const executableMatch = findExecutableRule(context.rules, state, context);
+  const matchedRule = executableMatch?.rule;
+  const action = executableMatch?.action;
+
+  if (!matchedRule || !action) {
+    const node = createNode(state, path, 'uncovered', [], matchedRule?.id, matchedRule?.name);
+    context.nodeCache.set(decisionKey, node);
+    context.summary.uncoveredNodes += 1;
+    context.uncoveredNodes.push(node);
+    return node;
+  }
+
+  const nextPending = matchedRule.actions.slice(matchedRule.actions.indexOf(action) + 1);
+  const node = createNode(state, path, 'decided', nextPending, matchedRule.id, matchedRule.name, action);
+  context.nodeCache.set(decisionKey, node);
+  context.summary.decidedNodes += 1;
+  const branches: CollectableStrategyBranch[] = [];
+  for (const branch of applyAction(action, state, context)) {
+    await context.scheduler.step();
+    branches.push({
+      ...branch,
+      child: await expandNodeAsync(
+        branch.state,
+        [...path, context.formatPathStep({ ruleName: matchedRule.name, actionLabel: context.formatActionLabel(action), branchLabel: branch.label, branchLabelKeys: branch.labelKeys })],
+        nextPending,
+        context
+      )
+    });
+  }
+  node.branches = branches;
 
   return node;
 }

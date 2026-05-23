@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeCollectableStrategyTree } from './collectableStrategyAnalysis';
+import { analyzeCollectableStrategyTree, analyzeCollectableStrategyTreeAsync } from './collectableStrategyAnalysis';
 import type { CollectableRewardTable } from '../types/collectable';
 import type { CollectableStrategyNode } from './collectableStrategyTree';
 
@@ -181,5 +181,34 @@ describe('collectableStrategyAnalysis', () => {
       probability: 100,
       tierCounts: { none: 0, low: 0, mid: 1, high: 1 }
     }]);
+  });
+
+  it('async analysis matches the synchronous score while yielding between chunks', async () => {
+    const terminal = node({ id: 'terminal' });
+    const root = node({
+      id: 'root',
+      status: 'decided',
+      action: 'collect',
+      state: { collectability: 250, integrity: 1 },
+      branches: [
+        {
+          label: '成功',
+          labelKeys: ['collectableSolver.branches.collectSuccess'],
+          probability: 80,
+          state: { ...terminal.state },
+          child: terminal
+        },
+        {
+          label: '失敗',
+          labelKeys: ['collectableSolver.branches.collectFailed'],
+          probability: 20,
+          state: { ...terminal.state },
+          child: terminal
+        }
+      ]
+    });
+
+    await expect(analyzeCollectableStrategyTreeAsync(root, rewardTable, { kind: 'scrip' }, { yieldEvery: 1 }))
+      .resolves.toEqual(analyzeCollectableStrategyTree(root, rewardTable, { kind: 'scrip' }));
   });
 });
