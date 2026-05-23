@@ -169,7 +169,7 @@ Shikhu 提到一般採集模擬器 / 分析器可用於研究，例如比較 spi
 
 Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的情境。這會讓更多補成功率、補價值、恢復耐久與 proc 分支變得有意義，搜尋空間可能膨脹。
 
-使用者也曾提到過 OOM crash，雖然目前已修掉某些 case，但這仍是產品面風險。
+2026-05-23 後收藏品求解器已改為 WASM-first，部分舊 JS heap OOM case 已大幅緩解；現況請以 `.agents/roadmaps/wasm-solver-migration-report.md` 為主。不過極端輸入仍可能遇到 memo capacity / memory allocation guard，因此這裡的產品風險已從「整頁 OOM crash」收斂為「需要穩定完成、可控失敗、清楚告知使用者限制」。
 
 ### User Story
 
@@ -178,16 +178,16 @@ Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的
 ### 待辦方向
 
 - 建立低屬性高 GP 的壓力測試案例。
-- 觀察 `statesSolved`、`branchCount`、`memoHits`、`calculationTime` 等 debug stats。
-- 設計搜尋上限或 graceful failure。
-- 檢查 Web Worker 記憶體使用。
+- 觀察 `statesSolved`、`branchCount`、`memoHits`、`calculationTime`、`stateKeyEngine`、memo capacity 等 debug stats。
+- 確認 memo capacity / allocation failure 會回傳可理解提示，不會 fallback 到更危險的高壓 JS 路徑。
+- 檢查 Web Worker 與 WASM memory 使用。
 - 對代表性極端輸入建立回歸測試或效能門檻。
 
 ### 取捨
 
 - 使用者可以接受「算很久」。
-- 不能接受 OOM crash 或整頁崩潰。
-- 不可為了效能偷刪合法分支，除非 UI 明確標示模型限制。
+- 不能接受 OOM crash、整頁崩潰，或沒有說明的 worker 失敗。
+- 不可為了效能偷刪合法分支；後續若新增剪枝，必須證明 outcome distribution、reward/tier counts 與可達高分尾端不變。
 
 ## 6. Frontier 實驗區
 

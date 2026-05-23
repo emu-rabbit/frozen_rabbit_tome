@@ -76,6 +76,7 @@ Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/util
 - 證明 DP / memo / 剪枝沒有漏掉合法分支。
 - 在正式 solver 進行效能優化後，仍能用小案例確認結果一致。
 - 對同分結果，oracle 應允許多個等價最優解；正式 solver 可再用 habit tie-break 決定使用者看到的順序。
+- 收藏品 WASM core 應與 TS solver 保持 oracle / parity 關係。若 root action 或 policy shape 因同分 tie-break 不同而不完全一致，必須至少證明 summary、outcome distribution、reward/tier counts、min/max 與可達尾端一致，並在測試中明確標示寬鬆驗收原因。
 
 ## 效能與狀態數門檻
 
@@ -88,6 +89,13 @@ Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/util
 - `candidateComparisons`
 - `terminalStates`
 - `branchCount`
+
+收藏品 WASM 路徑另需注意：
+
+- `stateKeyEngine` 或等價欄位應能辨識 `wasm-packed`、`js-packed`、`string` 等 key 建立路徑。
+- memo capacity / allocation failure 必須回傳受控錯誤，不應讓頁面或 worker 直接 OOM。
+- 若手動提高 memo capacity，debug/export 應保留足夠線索讓第三方知道該結果使用的 engine 與容量。
+- WASM 與 TS fallback 的 summary parity 不代表完整 policy tree parity；測試與文件需分清楚兩者。
 
 代表性案例應設寬鬆上限，目標是防止搜尋空間意外爆炸，而不是限制合理的演算法調整。若重構後狀態數增加，Agent 必須判斷：
 
@@ -128,6 +136,7 @@ Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/util
   - 每個 plan 的 outcome distribution。
   - `expected/min/max` 與 endpoint chance。
   - 搜尋統計。
+  - 收藏品 WASM / TS engine、state key engine、memo capacity 或相關 capacity guard 資訊。
   - policy tree 或 rotation plans。
 - 限制聲明
   - 普通採集與收藏品各自的支援技能。
@@ -163,7 +172,11 @@ Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/util
   "formulaDebug": {},
   "plans": [],
   "combined": {},
-  "search": {},
+  "search": {
+    "engine": "wasm-core | ts-core",
+    "stateKeyEngine": "wasm-packed | js-packed | string",
+    "memoCapacityPower": null
+  },
   "policy": {},
   "rotationPlans": []
 }
@@ -175,6 +188,7 @@ JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 change
 
 - 修改核心演算法時，至少跑 `npm run test:unit`。
 - 若修改普通採集或收藏品求解器，必須檢查公式表測試、invariant 測試、golden scenario 與 oracle 是否仍符合模型。
+- 若修改收藏品 WASM core、wrapper、policy materialization、objective scoring 或剪枝策略，必須檢查 `src/utils/collectableWasmSolver.test.ts` 與 TS/WASM parity，並確認不會移除極低機率但可達的高分尾端。
 - 若新增支援技能或新 reward model，必須同步更新：
   - `.agents/skills/business/ffxiv_gathering_skills.md`
   - `.agents/skills/business/gathering_math_formulas.md`

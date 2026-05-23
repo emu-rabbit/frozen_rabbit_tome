@@ -22,12 +22,12 @@
 - 石工之理 / 農夫之智在 90 級前於耐久缺 1 點時施放；90 級以上於耐久缺 2 點時施放，若觸發理智同興預備則立即施展理智同興。
 
 暫不納入普通採集秘笈推薦的技能：
-- 收藏品採集、提煉、大膽提煉、慎重提煉、集中檢查、價值矚目、預備碰觸：收藏品專用，未來獨立處理。
+- 收藏品採集、提煉、大膽提煉、慎重提煉、集中檢查、價值矚目、預備碰觸：收藏品專用，已由收藏品秘笈獨立處理，不應塞回普通採集 `rotationSolver.ts`。
 - 十二神加護、大地恩惠：水晶相關，待水晶策略需求確認後再納入。
 
 ## 收藏品秘笈 action model
 
-收藏品秘笈目前使用獨立的 `src/utils/collectableSolver.ts`，不要把收藏品邏輯塞回普通採集 `rotationSolver.ts`。收藏品輸出是 policy tree / 判斷表，不是可做巨集的固定序列。
+收藏品秘笈目前是獨立 action model。正式求解路徑預設優先使用 `assembly/collectableSolverCore.ts` 與 `src/utils/collectableWasmSolver.ts` 的 WASM core / wrapper，並以 `src/utils/collectableSolver.ts` 作為 TS fallback、oracle 與 parity 參考。不要把收藏品邏輯塞回普通採集 `rotationSolver.ts`。收藏品輸出是 policy tree / 判斷表，不是可做巨集的固定序列。
 
 目前納入收藏品秘笈推薦的技能與狀態：
 

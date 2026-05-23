@@ -47,8 +47,12 @@
 
 - 現有核心檔案：
   - `src/utils/collectableMath.ts`：收藏品公式、reward tier、reward vector scoring。
-  - `src/utils/collectableSolver.ts`：DP + memo 的 policy search。
-  - `src/workers/collectableSolver.worker.ts`：收藏品 worker。
+  - `assembly/collectableSolverCore.ts`：收藏品 WASM core，負責 DP / memo / objective score / best action / search counters。
+  - `src/wasm/collectable-solver-core.wasm`：由 AssemblyScript 產出的收藏品 WASM 核心。
+  - `src/utils/collectableWasmSolver.ts`：WASM wrapper、memo capacity 選擇、TS/WASM result 組裝與錯誤分類。
+  - `src/utils/collectableWasmPolicy.ts`：沿 WASM 選出的 action 重建使用者可讀 policy tree。
+  - `src/utils/collectableSolver.ts`：TS 版 DP + memo policy search；目前作為 fallback、oracle 與 parity 參考，不應被視為唯一正式核心。
+  - `src/workers/collectableSolver.worker.ts`：收藏品 worker；預設優先走 WASM，WASM 一般失敗時才 fallback 到 TS solver。若失敗原因是 memo capacity / allocation，應回傳受控錯誤，不要改回高壓 JS 路徑硬算。
   - `src/services/collectableRewards.ts`：純收藏品、老主顧、薩雷安魔法大學與珠串萬貨街 reward table 載入。
   - `src/services/collectableActions.ts`：收藏品 action id、名稱與 icon fallback。
   - `src/components/CollectableSolverPanel.vue`、`CollectablePolicyView.vue`、`CollectableDebugDialog.vue`：收藏品秘笈 UI。
@@ -56,6 +60,7 @@
 - 收藏品結果是 **policy tree / 判斷表**，不是固定 linear rotation；藏書庫儲存的也應是 policy preview。
 - 收藏品秘笈不提供巨集。若使用者要照指定手法跑結果，應歸入實驗系統。
 - 目前可依 `expected`、`min`、`max` 等模式排序；對外仍只能稱「推薦」或「依目前模型推算」。
+- WASM summary parity 不等於完整 policy tree parity。若調整 WASM core、TS fallback、policy materialization 或剪枝策略，必須讀 `.agents/roadmaps/wasm-solver-migration-report.md` 與 `.agents/skills/business/algorithm_verification.md`，並確認 outcome distribution、reward/tier counts 與可達尾端沒有被破壞。
 - Debug 必須保留限制提示：`Brazen / 大膽提煉`、`Collector's High Standard / 強化洞察` 與精選 reward model 仍不納入目前秘笈推薦。
 
 ## 與既有 Skill 的關係

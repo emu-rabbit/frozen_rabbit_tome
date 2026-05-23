@@ -40,6 +40,7 @@
 
 ## 檔案編碼規範 (Encoding Standards)
 - **UTF-8 優先**：所有檔案必須以 `UTF-8 (無 BOM)` 編碼儲存。
-- **避免 Windows 終端機直接輸出**：在 Windows 環境下，避免使用 `cat` 或 `dir` 等命令直接讀取含有中文字元的檔案內容，因為這可能導致顯示或寫回時編碼損壞。
-- **編輯工具安全性**：優先使用 `view_file` 與 `replace_file_content` 工具進行讀寫，並在寫回前確認內容不含亂碼。
-- **損壞復原**：若發現檔案出現 `?` 或亂碼，應立即使用 `git checkout` 復原，不可繼續在其基礎上修改。
+- **Windows 讀檔安全**：在 Windows PowerShell 中讀取 `.agents`、skill、workflow 或 Markdown 脈絡檔時，必須使用 `Get-Content -Encoding UTF8 <path>`。避免使用未指定編碼的 `Get-Content`、`type`、`cat` 或 `dir` 來判讀中文內容。
+- **搜尋與編輯工具**：搜尋優先使用 `rg`；手動修改檔案時優先使用 Codex 的 `apply_patch`。若任務需要大量格式化，可先用工具執行，再檢查 diff。
+- **舊工具名轉換**：若舊文件提到 Antigravity 專用工具或舊式檔案讀寫工具，請理解其意圖，改用目前 Codex 可用的 UTF-8 讀檔、`rg`、`apply_patch` 與 shell 工具。
+- **損壞復原**：若發現讀取結果出現 `?`、亂碼或不可辨識字元，先停止依該內容推論並用 UTF-8 重新讀取。若檔案真的已被寫壞，先回報並確認復原範圍；不可擅自還原使用者或其他 Agent 的變更。

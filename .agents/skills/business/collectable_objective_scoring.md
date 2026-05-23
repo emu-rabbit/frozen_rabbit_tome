@@ -1,6 +1,6 @@
 # 收藏品評分偏好與自訂權重設計筆記
 
-本文件整理 2026-05-19 針對收藏品求解器目標函數的討論結果。後續 Agent 若要修改 `src/utils/collectableSolver.ts`、`src/utils/collectableMath.ts`、收藏品 UI、設定頁、實驗分析器或 Tome Library 的收藏品儲存格式，請先讀本文件。
+本文件整理 2026-05-19 針對收藏品求解器目標函數的討論結果，並於 WASM 遷移後補充目前核心路徑。後續 Agent 若要修改 `assembly/collectableSolverCore.ts`、`src/utils/collectableWasmSolver.ts`、`src/utils/collectableWasmPolicy.ts`、`src/utils/collectableSolver.ts`、`src/utils/collectableMath.ts`、收藏品 UI、設定頁、實驗分析器或 Tome Library 的收藏品儲存格式，請先讀本文件。
 
 ## 問題背景
 
@@ -123,6 +123,8 @@ collectability -> tier / custom breakpoint -> score
 
 目前收藏品 action engine 已是 DP + memo policy search，支援 `Collect`、`Scour`、`Meticulous`、`Scrutiny`、`Collector's Focus`、`Priming Touch`、成功率補強、恢復耐久與 `Revisit`。
 
+WASM 遷移後，正式路徑是 WASM core 負責 DP / memo / objective score / best action / search counters，TS wrapper 負責 request parsing、reward table、objective preset、policy materialization、export 與 debug。TS solver 仍是 fallback 與 parity 參考。修改 scoring layer 時必須同步考慮 WASM 介面能否表達該 objective。
+
 這次問題應改 scoring layer，不應重寫動作模型。
 
 ### 2. 擴充 objective 型別
@@ -175,6 +177,8 @@ export interface CollectableBreakpointScore {
   score: number;
 }
 ```
+
+WASM core 目前只接收可壓成 reward tier scalar score 的 objective。若未來 objective 需要依「路徑形狀」、「第 N 次採集」、「任意多檔 reward table」或特殊 breakpoint 動態計分，不能只改 TS UI；必須同步設計 WASM input shape、TS fallback parity 與 export/debug 呈現。
 
 ### 3. 新增 collectability scoring helper
 
@@ -275,6 +279,7 @@ UI 可顯示為：
 - 老主顧預設應偏向高標，但使用者仍應能改回票據總量或自訂權重。
 - 精選 reward model 不可直接沿用一般三檔票據模型；若用收藏價值評分，必須明確標示它是「推薦排序權重」而不是完整 reduction 期望。
 - 宇宙探索若缺 mission score / 銀星金星 reward 公式，也只能先用收藏價值偏好做參考推薦，不可宣稱完整支援。
+- WASM summary parity 不等於完整 policy tree parity。objective / tie-break / scoring 變更至少要驗證 TS 與 WASM 的 summary、distribution、reward/tier counts 與可達尾端；同分 root action 差異可視情況寬鬆驗收，但必須能解釋。
 - 對外文案仍只能使用「推薦」、「依目前模型」、「評分偏好」等保守語氣，不可宣稱「最佳」或「唯一正解」。
 
 ## 最短落地路線
