@@ -6,23 +6,19 @@
 
 ### 主待辦
 
-1. **收藏品節點儀表台改善**
-   - 讓節點狀態、分支路徑、關鍵機率與預測落點更視覺化。
-   - 目標是幫使用者更容易做策略決策。
-
-2. **分享、匯出、復現資料**
+1. **分享、匯出、復現資料**
    - 整理 JSON export/import，使其足以重現結果，但避免輸出過多噪音。
    - 保留未來 Discord 分享、指南引用、第三方復現的可能性。
 
-3. **新增兩個報表比較功能**
+2. **新增兩個報表比較功能**
    - 讓使用者比較兩份分析報表，例如 spiritbond rotation vs normal rotation。
    - 優先考慮一般採集實驗區與收藏品實驗區的共用比較模型。
 
-4. **效能與 OOM 壓力測試**
+3. **效能與 OOM 壓力測試**
    - 特別關注低 Gathering/Perception、高 GP 的版本初期情境。
    - 這是較偏後端 / 演算法品質的項目。
 
-5. **Frontier 實驗區**
+4. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
 
@@ -33,47 +29,7 @@
 
 ## 詳細內容
 
-## 1. 收藏品節點儀表台改善
-
-### 背景
-
-Shikhu 認為收藏品工具同時有「資訊太多」與「資訊不夠」的問題。他能理解決策樹概念，但難以追蹤每個 state，以及不知道如何有效使用 Collector's Standard 分支。
-
-他也希望工具顯示更多遊戲 UI 中能看到、或玩家做決策時需要的數值。
-
-### User Story
-
-作為正在調整收藏品策略的玩家，我希望在每個節點清楚看到目前 GP、耐久、收藏價值、已觸發的 proc、下一步可能落點與關鍵機率，這樣我才能判斷下一條策略規則應該怎麼寫。
-
-### 應優先顯示的資訊
-
-- 目前 GP / integrity / collectability。
-- 分支路徑摘要：目前節點是如何走到這裡的。
-- value increase / Collector's Intuition 是否觸發。
-- Collector's Standard 是否觸發。
-- value increase rate。
-- Collector's Focus 後的 value increase rate。
-- relic tool bonus 影響後的 rate。
-- Meticulous save rate。
-- Priming Touch 後的 Meticulous save rate。
-- Collector's Standard proc rate。
-- Scrutiny bonus。
-- 下一次 Scour / Meticulous 的預測 collectability landing points。
-
-### 已討論取捨
-
-- 決策樹分支很多，完整視覺化可能反而難用。
-- 目標不是把整棵樹畫成巨大圖，而是讓目前節點的「可決策資訊」更清楚。
-- 行動裝置上尤其要避免資訊密度過高或巢狀過深。
-
-### 可能方向
-
-- 在節點卡片加入「目前狀態 chips」。
-- 將分支路徑改成更可讀的事件時間線。
-- 對 value increase、Standard、Wise、Revisit 等隨機事件使用一致圖示與短文字。
-- 在節點旁加入一個 compact formula panel，顯示玩家當下決策最需要看的幾個機率。
-
-## 2. 分享、匯出、復現資料
+## 1. 分享、匯出、復現資料
 
 ### 背景
 
@@ -103,7 +59,7 @@ Shikhu 提到希望能在 Discord 分享設定，也可能將 JSON 用於 Icy Ve
   - policy 或 strategy analysis 必要資料。
 - 未來若做 share code，先以普通採集或簡短 rotation 為主，不要先挑收藏品決策樹。
 
-## 3. 新增兩個報表比較功能
+## 2. 新增兩個報表比較功能
 
 ### 背景
 
@@ -128,9 +84,9 @@ Shikhu 提到一般採集模擬器 / 分析器可用於研究，例如比較 spi
 
 - 一開始可以只支援「同類型報表」比較，例如 regular vs regular、collectable vs collectable。
 - 跨系統比較容易語意混亂，應延後。
-- 報表比較依賴穩定的 export/report schema，因此可與第 2 項一起規劃。
+- 報表比較依賴穩定的 export/report schema，因此可與第 1 項一起規劃。
 
-## 4. 效能與 OOM 壓力測試
+## 3. 效能與 OOM 壓力測試
 
 ### 背景
 
@@ -156,7 +112,7 @@ Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的
 - 不能接受 OOM crash、整頁崩潰，或沒有說明的 worker 失敗。
 - 不可為了效能偷刪合法分支；後續若新增剪枝，必須證明 outcome distribution、reward/tier counts 與可達高分尾端不變。
 
-## 5. Frontier 實驗區
+## 4. Frontier 實驗區
 
 ### 背景
 
@@ -217,4 +173,4 @@ Shikhu 提出一個想法：與其重複寫多條條件，例如收藏價值滿�
 
 ### 目前取捨
 
-這是長期維護議題，不應優先於目前 Shikhu 回饋中已明確阻礙使用的 UI 與資料分類問題。
+這是長期維護議題，不應優先於目前 Shikhu 回饋中已明確阻礙使用的資料分享、報表比較、效能與 Frontier 實驗問題。
