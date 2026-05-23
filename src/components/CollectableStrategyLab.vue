@@ -35,6 +35,10 @@ import {
   isCustomTierObjective,
   isTierCountObjective
 } from '../utils/collectableObjectivePresets';
+import {
+  buildCollectableActionEffectPreviews,
+  type CollectableEffectMetric
+} from '../utils/collectableActionEffectPreview';
 import { createCollectableMechanicsContext, MIN_COLLECTABLE_LEVEL, type CollectableMechanicsContext } from '../utils/collectableMechanics';
 import {
   COLLECTABLE_INPUT_LIMITS,
@@ -160,6 +164,11 @@ const managedNodeOverview = computed(() => buildManagedNodeOverview(managedNodes
 const currentManagedNode = computed(() => managedNodes.value[managedNodeIndex.value] ?? null);
 const editorCoverageText = computed(() => t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length }));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
+const actionEffectPreviews = computed(() => buildCollectableActionEffectPreviews({
+  actions: editingRuleDraft.value?.actions ?? [],
+  states: managedNodes.value.map((node) => node.state),
+  mechanics: collectableMechanicsContext.value
+}));
 const stateFieldOptions = computed(() => [
   ...collectableStrategyFields.map((field) => ({
     field,
@@ -834,6 +843,89 @@ function formatPercentRange(min: number, max: number) {
 
 function formatPercentValue(value: number) {
   return Number.isInteger(value) ? `${value}%` : `${value.toFixed(2)}%`;
+}
+
+function formatEffectMetric(action: CollectableActionKind, metric: CollectableEffectMetric) {
+  if (metric.kind === 'collectabilityGain' && metric.range) {
+    return t('collectableStrategyLab.editor.effectMetrics.collectabilityGain', {
+      range: formatPositiveRange(metric.range.min, metric.range.max)
+    });
+  }
+
+  if (metric.kind === 'integrityDelta' && metric.range) {
+    return t('collectableStrategyLab.editor.effectMetrics.integrityDelta', {
+      range: formatIntegrityDeltaRange(action, metric.range.min, metric.range.max)
+    });
+  }
+
+  if (metric.kind === 'scrutinyBonus') {
+    return t('collectableStrategyLab.editor.effectMetrics.scrutinyBonus', {
+      value: formatSignedValue(metric.value ?? 0)
+    });
+  }
+
+  if (metric.kind === 'valueIncreaseRate') {
+    return t('collectableStrategyLab.editor.effectMetrics.valueIncreaseRate', {
+      from: formatPercentValue(metric.from ?? 0),
+      to: formatPercentValue(metric.to ?? 0),
+      delta: formatSignedPercent(metric.delta ?? 0)
+    });
+  }
+
+  if (metric.kind === 'meticulousSaveRate') {
+    return t('collectableStrategyLab.editor.effectMetrics.meticulousSaveRate', {
+      from: formatPercentValue(metric.from ?? 0),
+      to: formatPercentValue(metric.to ?? 0),
+      delta: formatSignedPercent(metric.delta ?? 0)
+    });
+  }
+
+  if (metric.kind === 'collectSuccessBonus') {
+    return t('collectableStrategyLab.editor.effectMetrics.collectSuccessBonus', {
+      value: formatSignedPercent(metric.value ?? 0)
+    });
+  }
+
+  if (metric.kind === 'nextCollectSuccessBonus') {
+    return t('collectableStrategyLab.editor.effectMetrics.nextCollectSuccessBonus', {
+      value: formatSignedPercent(metric.value ?? 0)
+    });
+  }
+
+  if (metric.kind === 'collectSuccessRate' && metric.range) {
+    return t('collectableStrategyLab.editor.effectMetrics.collectSuccessRate', {
+      range: formatPercentRange(metric.range.min, metric.range.max)
+    });
+  }
+
+  if (metric.kind === 'collectSuccessGp' && metric.range) {
+    return t('collectableStrategyLab.editor.effectMetrics.collectSuccessGp', {
+      range: formatPositiveRange(metric.range.min, metric.range.max)
+    });
+  }
+
+  return '';
+}
+
+function formatPositiveRange(min: number, max: number) {
+  return min === max ? formatSignedValue(min) : `${formatSignedValue(min)}~${formatSignedValue(max)}`;
+}
+
+function formatIntegrityDeltaRange(action: CollectableActionKind, min: number, max: number) {
+  if (min === max) return formatSignedValue(min);
+  if (action === 'meticulous' && min === -1 && max === 0) return `0~${formatSignedValue(min)}`;
+  if (min === 0 && max > 0) return `${formatSignedValue(min)}~${formatSignedValue(max)}`;
+  return `${formatSignedValue(min)}~${formatSignedValue(max)}`;
+}
+
+function formatSignedPercent(value: number) {
+  return `${formatSignedValue(value)}%`;
+}
+
+function formatSignedValue(value: number) {
+  if (value > 0) return `+${value}`;
+  if (value === 0) return '+0';
+  return `${value}`;
 }
 
 function clampPercent(value: number) {
@@ -1577,15 +1669,35 @@ function makeId() {
                   <i class="pi pi-chart-line"></i>
                   <span>{{ t('collectableStrategyLab.editor.effectPreview') }}</span>
                 </div>
-                <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.effectPreviewPlaceholder') }}</p>
-                <div class="skill-icon-strip">
-                  <template v-for="(action, index) in editingRule.actions" :key="`${editingRule.id}-effect-${action}-${index}`">
-                    <span class="skill-preview-icon" :title="actionName(action)">
-                      <img v-if="actionIcon(action)" :src="actionIcon(action)" :alt="actionName(action)" />
-                      <i v-else class="pi pi-sparkles"></i>
-                    </span>
-                    <i v-if="index < editingRule.actions.length - 1" class="pi pi-angle-right skill-preview-arrow"></i>
-                  </template>
+                <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.effectPreviewDescription') }}</p>
+                <p v-if="managedNodes.length === 0" class="effect-preview-empty">
+                  {{ t('collectableStrategyLab.editor.effectPreviewNoNodes') }}
+                </p>
+                <div v-else class="effect-preview-list">
+                  <article
+                    v-for="(preview, previewIndex) in actionEffectPreviews"
+                    :key="`${editingRule.id}-effect-${previewIndex}-${preview.action}`"
+                    class="effect-preview-card"
+                  >
+                    <div class="effect-preview-card-header">
+                      <span class="skill-preview-icon" :title="actionName(preview.action)">
+                        <img v-if="actionIcon(preview.action)" :src="actionIcon(preview.action)" :alt="actionName(preview.action)" />
+                        <i v-else class="pi pi-sparkles"></i>
+                      </span>
+                      <div>
+                        <strong>{{ actionName(preview.action) }}</strong>
+                        <small>{{ t('collectableStrategyLab.editor.effectPreviewCastableNodes', { count: preview.castableStateCount }) }}</small>
+                      </div>
+                    </div>
+                    <ul v-if="preview.metrics.length > 0" class="effect-preview-metrics">
+                      <li v-for="metric in preview.metrics" :key="`${preview.action}-${metric.kind}`">
+                        {{ formatEffectMetric(preview.action, metric) }}
+                      </li>
+                    </ul>
+                    <p v-else class="effect-preview-unavailable">
+                      {{ t('collectableStrategyLab.editor.effectPreviewUnavailable') }}
+                    </p>
+                  </article>
                 </div>
               </section>
             </template>
@@ -2949,6 +3061,115 @@ function makeId() {
 
 :global(html.dark .editor-placeholder) {
   color: #94a3b8;
+}
+
+.effect-preview-empty,
+.effect-preview-unavailable {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+:global(html.dark .effect-preview-empty),
+:global(html.dark .effect-preview-unavailable) {
+  color: #94a3b8;
+}
+
+.effect-preview-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.effect-preview-card {
+  min-width: 0;
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid rgb(82 168 144 / 0.22);
+  border-radius: 0.75rem;
+  background: rgb(248 250 252 / 0.82);
+  padding: 0.65rem;
+}
+
+:global(html.dark .effect-preview-card) {
+  border-color: rgb(94 234 212 / 0.18);
+  background: rgb(15 23 42 / 0.52);
+}
+
+.effect-preview-card-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.effect-preview-card-header div {
+  min-width: 0;
+}
+
+.effect-preview-card-header strong,
+.effect-preview-card-header small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.effect-preview-card-header strong {
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+:global(html.dark .effect-preview-card-header strong) {
+  color: #f8fafc;
+}
+
+.effect-preview-card-header small {
+  margin-top: 0.08rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+:global(html.dark .effect-preview-card-header small) {
+  color: #94a3b8;
+}
+
+.effect-preview-metrics {
+  display: grid;
+  gap: 0.32rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.effect-preview-metrics li {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.effect-preview-metrics li::before {
+  content: "";
+  width: 0.38rem;
+  height: 0.38rem;
+  flex: 0 0 auto;
+  margin-top: 0.42rem;
+  border-radius: 999px;
+  background: #52a890;
+}
+
+:global(html.dark .effect-preview-metrics li) {
+  color: #cbd5e1;
 }
 
 .condition-list,
