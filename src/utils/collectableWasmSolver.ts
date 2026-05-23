@@ -93,8 +93,14 @@ type CollectableWasmExports = CollectableWasmPolicyCore & {
 };
 
 export class CollectableWasmMemoCapacityError extends Error {
-  constructor(memoCapacityPower: number) {
-    super(`Collectable WASM memo table exceeded capacity 2^${memoCapacityPower}.`);
+  constructor(
+    readonly memoCapacityPower: number,
+    readonly supportedMemoCapacityPower = memoCapacityPower
+  ) {
+    const supportedText = supportedMemoCapacityPower === memoCapacityPower
+      ? ''
+      : ` The current environment supports up to 2^${supportedMemoCapacityPower}.`;
+    super(`Collectable WASM memo table exceeded capacity 2^${memoCapacityPower}.${supportedText}`);
     this.name = 'CollectableWasmMemoCapacityError';
   }
 }
@@ -118,7 +124,11 @@ const REGULAR_REVISIT_CHANCE = 0.05;
 const TIMED_REVISIT_CHANCE = 0.08;
 const DEFAULT_MEMO_CAPACITY_POWER = 20;
 const EXTENDED_MEMO_CAPACITY_POWER = 21;
+const UNKNOWN_DESKTOP_MEMO_CAPACITY_POWER = 22;
 const DESKTOP_MAX_MEMO_CAPACITY_POWER = 23;
+const MEMO_ENTRY_BYTES = 96;
+const MEMO_FIXED_MEMORY_BYTES = 16 * 1024 * 1024;
+const MEMO_MEMORY_BUDGET_RATIO = 0.22;
 let wasmPromise: Promise<CollectableWasmExports> | null = null;
 
 export function canUseCollectableWasmSolver(request: CollectableSolverRequest): boolean {
@@ -160,28 +170,36 @@ export async function solveCollectableRotationWithWasm(
     throw new Error(`Collectable WASM solver does not support objective mode "${request.objectiveMode}".`);
   }
 
-  const memoCapacityPowers = selectMemoCapacityPowers(request);
-  let lastError: unknown;
+  const initialPower = selectInitialMemoCapacityPower(request);
+  const supportedPower = selectSupportedMemoCapacityPower();
+  if (supportedPower < initialPower) {
+    throw new CollectableWasmMemoCapacityError(initialPower, supportedPower);
+  }
 
-  for (let index = 0; index < memoCapacityPowers.length; index += 1) {
-    const memoCapacityPower = memoCapacityPowers[index];
-    const wasmCore = core
-      ? core
-      : index === 0
-        ? await loadCollectableWasmCore()
-        : await instantiateCollectableWasmCore();
+  for (let memoCapacityPower = supportedPower; memoCapacityPower >= initialPower; memoCapacityPower -= 1) {
+    const wasmCore = core ?? (memoCapacityPower === supportedPower ? await loadCollectableWasmCore() : await instantiateCollectableWasmCore());
 
     try {
       return solveCollectableRotationWithWasmCore(request, wasmCore, memoCapacityPower);
     } catch (error) {
-      lastError = wasmCore.getFailed() !== 0
-        ? new CollectableWasmMemoCapacityError(memoCapacityPower)
-        : error;
       wasmPromise = null;
+      if (wasmCore.getFailed() !== 0) {
+        throw new CollectableWasmMemoCapacityError(memoCapacityPower, supportedPower);
+      }
+
+      if (memoCapacityPower > initialPower && isLikelyWasmMemoryAllocationFailure(error)) {
+        continue;
+      }
+
+      if (isLikelyWasmMemoryAllocationFailure(error)) {
+        throw new CollectableWasmMemoCapacityError(memoCapacityPower, supportedPower);
+      }
+
+      throw error;
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error('Collectable WASM solver failed.');
+  throw new CollectableWasmMemoCapacityError(initialPower, supportedPower);
 }
 
 function solveCollectableRotationWithWasmCore(
@@ -370,23 +388,55 @@ function selectInitialMemoCapacityPower(request: CollectableSolverRequest): numb
   return DEFAULT_MEMO_CAPACITY_POWER;
 }
 
-function selectMemoCapacityPowers(request: CollectableSolverRequest): number[] {
-  const initialPower = selectInitialMemoCapacityPower(request);
-  const maxPower = getMaxMemoCapacityPower();
-  const powers: number[] = [];
+function selectSupportedMemoCapacityPower(): number {
+  const signals = [
+    getDeviceMemoCapacityPower(),
+    getHeapMemoCapacityPower()
+  ].filter((power): power is number => power !== null);
 
-  for (let power = initialPower; power <= maxPower; power += 1) {
-    powers.push(power);
+  if (signals.length > 0) {
+    return clampMemoCapacityPower(Math.min(...signals));
   }
 
-  return powers;
+  if (isLikelyMobileDevice()) return EXTENDED_MEMO_CAPACITY_POWER;
+  return UNKNOWN_DESKTOP_MEMO_CAPACITY_POWER;
 }
 
-function getMaxMemoCapacityPower(): number {
+function getDeviceMemoCapacityPower(): number | null {
   const deviceMemory = getDeviceMemoryGb();
-  if (deviceMemory !== null && deviceMemory <= 4) return EXTENDED_MEMO_CAPACITY_POWER;
-  if (deviceMemory === null && isLikelyMobileDevice()) return EXTENDED_MEMO_CAPACITY_POWER;
+  if (deviceMemory === null) return null;
+  if (deviceMemory <= 2) return DEFAULT_MEMO_CAPACITY_POWER;
+  if (deviceMemory <= 4) return EXTENDED_MEMO_CAPACITY_POWER;
+  if (deviceMemory <= 8) return UNKNOWN_DESKTOP_MEMO_CAPACITY_POWER;
   return DESKTOP_MAX_MEMO_CAPACITY_POWER;
+}
+
+function getHeapMemoCapacityPower(): number | null {
+  const maybePerformance = globalThis.performance as (Performance & {
+    memory?: {
+      jsHeapSizeLimit?: number;
+    };
+  }) | undefined;
+  const heapLimit = maybePerformance?.memory?.jsHeapSizeLimit;
+  if (typeof heapLimit !== 'number' || !Number.isFinite(heapLimit) || heapLimit <= 0) return null;
+
+  const budgetBytes = heapLimit * MEMO_MEMORY_BUDGET_RATIO;
+  let power = DEFAULT_MEMO_CAPACITY_POWER;
+  while (
+    power < DESKTOP_MAX_MEMO_CAPACITY_POWER
+    && estimateMemoBytes(power + 1) <= budgetBytes
+  ) {
+    power += 1;
+  }
+  return power;
+}
+
+function estimateMemoBytes(memoCapacityPower: number): number {
+  return (2 ** memoCapacityPower) * MEMO_ENTRY_BYTES + MEMO_FIXED_MEMORY_BYTES;
+}
+
+function clampMemoCapacityPower(power: number): number {
+  return Math.min(DESKTOP_MAX_MEMO_CAPACITY_POWER, Math.max(DEFAULT_MEMO_CAPACITY_POWER, power));
 }
 
 function getDeviceMemoryGb(): number | null {
@@ -398,6 +448,15 @@ function getDeviceMemoryGb(): number | null {
 function isLikelyMobileDevice(): boolean {
   const maybeNavigator = globalThis.navigator as (Navigator & { userAgent?: string }) | undefined;
   return /Android|iPhone|iPad|iPod|Mobile/i.test(maybeNavigator?.userAgent ?? '');
+}
+
+function isLikelyWasmMemoryAllocationFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return message.includes('memory')
+    || message.includes('allocation')
+    || message.includes('out of bounds')
+    || message.includes('aborted');
 }
 
 function objectiveModeToWasm(mode: CollectableSolverRequest['objectiveMode']): number {

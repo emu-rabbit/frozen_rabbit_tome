@@ -665,8 +665,8 @@ export default {
         desc: 'This item is not in the supported collectable turn-in, custom delivery, Studium, Wachumeqimeqi, reduction, or Cosmic Exploration data yet.'
       },
       memoCapacity: {
-        title: 'Search space is too large to solve',
-        desc: 'This setup creates too many collectable decision branches and exceeds the memory budget available on this device. Narrow the conditions or try a simpler scenario.'
+        title: 'Not enough memory to finish this solve',
+        desc: 'This setup has reached the memory limit available for collectable decisions on this device. Narrow the conditions or use a simpler scenario.'
       },
       workerStale: {
         title: 'Solver needs reload',

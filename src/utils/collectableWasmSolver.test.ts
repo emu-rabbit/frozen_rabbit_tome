@@ -2,7 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { solveCollectableRotation } from './collectableSolver';
-import { solveCollectableRotationWithWasm } from './collectableWasmSolver';
+import { CollectableWasmMemoCapacityError, solveCollectableRotationWithWasm } from './collectableWasmSolver';
 import type { CollectableSolverRequest } from '../types/collectable';
 
 type WasmCore = Parameters<typeof solveCollectableRotationWithWasm>[1];
@@ -137,4 +137,40 @@ describe('collectable WASM solver core', () => {
     expectSameSummary(wasm, ts, { expectSameRoot: false });
     expect(wasm.debug?.plans[0].search.statesSolved).toBeLessThanOrEqual(ts.debug?.plans[0].search.statesSolved ?? 0);
   }, 90000);
+
+  it('reports memo capacity failure without retrying a larger memo table', async () => {
+    let calls = 0;
+    const core = {
+      solvePlanObjective() {
+        calls += 1;
+        throw new Error('Collectable WASM core aborted.');
+      },
+      getFailed() {
+        return 1;
+      }
+    } as unknown as WasmCore;
+
+    await expect(solveCollectableRotationWithWasm(baseRequest(), core))
+      .rejects
+      .toBeInstanceOf(CollectableWasmMemoCapacityError);
+    expect(calls).toBe(1);
+  });
+
+  it('tries lower memo tables when the selected table cannot allocate', async () => {
+    let calls = 0;
+    const core = {
+      solvePlanObjective() {
+        calls += 1;
+        throw new Error('WebAssembly memory allocation failed.');
+      },
+      getFailed() {
+        return 0;
+      }
+    } as unknown as WasmCore;
+
+    await expect(solveCollectableRotationWithWasm(baseRequest(), core))
+      .rejects
+      .toBeInstanceOf(CollectableWasmMemoCapacityError);
+    expect(calls).toBe(3);
+  });
 });
