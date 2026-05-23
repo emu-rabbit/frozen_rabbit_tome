@@ -802,8 +802,16 @@ export default {
     strategyLevelIssueTitle: 'This strategy has a skill that cannot be used',
     strategyLevelIssueDesc: '{action} requires level {level}. Open the strategy settings to remove or replace it, or adjust the character level before analysis.',
     limitWarning: 'This strategy expands too widely, so expansion stopped early. Add narrower rules and check again.',
-    uncoveredTitle: 'States Awaiting Decisions',
+    uncoveredTitle: 'States Awaiting Decisions Overview',
     noUncoveredDesc: 'Every branch can currently continue until integrity reaches zero.',
+    pendingOverview: {
+      total: '{count} undecided state(s)',
+      uniqueValues: '{count} value(s)',
+      nodeCount: '{count} node(s)',
+      gp: 'GP',
+      integrity: 'Integrity',
+      collectability: 'Collectability'
+    },
     previousUncovered: 'Previous undecided state',
     nextUncovered: 'Next undecided state',
     nodePager: '{current} / {total}',

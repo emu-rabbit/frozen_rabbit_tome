@@ -59,7 +59,6 @@ const props = defineProps<{
 
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
 const editingRuleId = ref('');
-const selectedUncoveredId = ref('');
 const analysis = ref<CollectableStrategyAnalysis | null>(null);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 const rewardError = ref(false);
@@ -106,14 +105,8 @@ const treeResult = computed(() => {
 });
 const summary = computed(() => treeResult.value?.summary);
 const uncoveredNodes = computed(() => treeResult.value?.uncoveredNodes ?? []);
+const uncoveredStateGroups = computed(() => buildUncoveredStateGroups(uncoveredNodes.value));
 const editingRule = computed(() => rules.value.find((rule) => rule.id === editingRuleId.value) ?? null);
-const selectedUncoveredNode = computed(() => (
-  uncoveredNodes.value.find((node) => node.id === selectedUncoveredId.value) ?? uncoveredNodes.value[0]
-));
-const selectedUncoveredIndex = computed(() => {
-  const index = uncoveredNodes.value.findIndex((node) => node.id === selectedUncoveredNode.value?.id);
-  return index >= 0 ? index : 0;
-});
 const stateFieldOptions = computed(() => [
   ...collectableStrategyFields.map((field) => ({
     field,
@@ -157,12 +150,6 @@ const strategyLevelIssues = computed(() => rules.value.flatMap((rule) => {
 }));
 const hasStrategyLevelIssue = computed(() => strategyLevelIssues.value.length > 0);
 const firstStrategyLevelIssue = computed(() => strategyLevelIssues.value[0] ?? null);
-
-watch(uncoveredNodes, (nodes) => {
-  if (!nodes.some((node) => node.id === selectedUncoveredId.value)) {
-    selectedUncoveredId.value = nodes[0]?.id ?? '';
-  }
-}, { immediate: true });
 
 watch(() => props.activeItem.itemId, async () => {
   analysis.value = null;
@@ -578,14 +565,6 @@ function comparatorLabel(comparator: CollectableStrategyComparator) {
   return labels[comparator];
 }
 
-function formatNodeState(node: CollectableStrategyNode) {
-  return t('collectableStrategyLab.nodeState', {
-    gp: node.state.gp,
-    integrity: node.state.integrity,
-    collectability: node.state.collectability
-  });
-}
-
 function formatProbability(chance: number, useSpacePadding = false, includePercent = true) {
   const percentSuffix = includePercent ? '%' : '';
   if (chance > 0 && chance < 0.01) {
@@ -596,20 +575,6 @@ function formatProbability(chance: number, useSpacePadding = false, includePerce
     return formatted.padStart(6, ' ') + percentSuffix;
   }
   return formatted + percentSuffix;
-}
-
-function formatStateChips(node: CollectableStrategyNode) {
-  return [
-    node.state.scrutinyActive ? t('collectableStrategyLab.chips.scrutinyActive') : '',
-    node.state.collectorsFocusActive ? t('collectableStrategyLab.chips.collectorsFocusActive') : '',
-    node.state.primingTouchActive ? t('collectableStrategyLab.chips.primingTouchActive') : '',
-    node.state.standardActive ? t('collectableStrategyLab.chips.standardActive') : '',
-    node.state.wiseToTheWorldActive ? t('collectableStrategyLab.chips.wiseToTheWorldActive') : '',
-    node.state.successBonus ? t('collectableStrategyLab.chips.successBonus', { value: node.state.successBonus }) : '',
-    node.state.nextCollectSuccessBonus ? t('collectableStrategyLab.chips.nextCollectSuccessBonus', { value: node.state.nextCollectSuccessBonus }) : '',
-    node.state.hasUsedCollectableAction ? t('collectableStrategyLab.chips.hasUsedCollectableAction') : '',
-    node.state.hasCollected ? t('collectableStrategyLab.chips.hasCollected') : ''
-  ].filter(Boolean);
 }
 
 function coverageText(rule: CollectableStrategyRule) {
@@ -636,10 +601,47 @@ function actionSummary(rule: CollectableStrategyRule) {
   return rule.actions.map(actionName).join(' -> ');
 }
 
-function goToUncoveredNode(direction: -1 | 1) {
-  if (uncoveredNodes.value.length === 0) return;
-  const nextIndex = (selectedUncoveredIndex.value + direction + uncoveredNodes.value.length) % uncoveredNodes.value.length;
-  selectedUncoveredId.value = uncoveredNodes.value[nextIndex].id;
+function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
+  const total = nodes.length;
+  const metrics: Array<{ key: CollectableStrategyNumericField; label: string }> = [
+    { key: 'gp', label: t('collectableStrategyLab.pendingOverview.gp') },
+    { key: 'integrity', label: t('collectableStrategyLab.pendingOverview.integrity') },
+    { key: 'collectability', label: t('collectableStrategyLab.pendingOverview.collectability') }
+  ];
+
+  return metrics.map((metric) => {
+    const counts = new Map<number, number>();
+    nodes.forEach((node) => {
+      const value = node.state[metric.key];
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    });
+
+    const entries = [...counts.entries()]
+      .map(([value, count]) => ({
+        value,
+        count,
+        percentage: total > 0 ? (count / total) * 100 : 0
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    return {
+      ...metric,
+      entries
+    };
+  });
+}
+
+function formatDistributionPercent(percent: number) {
+  if (percent > 0 && percent < 0.01) return '<0.01%';
+  const formatted = Number.isInteger(percent)
+    ? percent.toFixed(0)
+    : percent.toFixed(2).replace(/\.?0+$/, '');
+  return `${formatted}%`;
+}
+
+function distributionBarWidth(percent: number) {
+  if (percent <= 0) return '0%';
+  return `${Math.max(4, Math.min(100, percent))}%`;
 }
 
 function createCondition(field: CollectableStrategyField): CollectableStrategyCondition {
@@ -779,6 +781,7 @@ function makeId() {
           <section class="uncovered-panel">
             <div class="panel-title-row">
               <h3>{{ t('collectableStrategyLab.uncoveredTitle') }}</h3>
+              <span>{{ t('collectableStrategyLab.pendingOverview.total', { count: uncoveredNodes.length }) }}</span>
             </div>
 
             <div v-if="uncoveredNodes.length === 0" class="tree-empty compact">
@@ -786,30 +789,24 @@ function makeId() {
               <p>{{ t('collectableStrategyLab.noUncoveredDesc') }}</p>
             </div>
 
-            <div v-else class="uncovered-layout">
-              <div class="node-pager">
-                <button type="button" :aria-label="t('collectableStrategyLab.previousUncovered')" @click="goToUncoveredNode(-1)">
-                  <i class="pi pi-angle-left"></i>
-                </button>
-                <span>{{ t('collectableStrategyLab.nodePager', { current: selectedUncoveredIndex + 1, total: uncoveredNodes.length }) }}</span>
-                <button type="button" :aria-label="t('collectableStrategyLab.nextUncovered')" @click="goToUncoveredNode(1)">
-                  <i class="pi pi-angle-right"></i>
-                </button>
-              </div>
-
-              <article v-if="selectedUncoveredNode" class="uncovered-detail">
-                <span>{{ t('collectableStrategyLab.pendingState') }}</span>
-                <h4>{{ formatNodeState(selectedUncoveredNode) }}</h4>
-                <div class="state-chip-list">
-                  <span v-for="chip in formatStateChips(selectedUncoveredNode)" :key="chip">{{ chip }}</span>
-                  <span v-if="formatStateChips(selectedUncoveredNode).length === 0">{{ t('collectableStrategyLab.noBuff') }}</span>
+            <div v-else class="pending-overview" :aria-label="t('collectableStrategyLab.uncoveredTitle')">
+              <article v-for="group in uncoveredStateGroups" :key="group.key" class="pending-overview-group">
+                <div class="pending-overview-group-header">
+                  <strong>{{ group.label }}</strong>
+                  <small>{{ t('collectableStrategyLab.pendingOverview.uniqueValues', { count: group.entries.length }) }}</small>
                 </div>
-                <div class="path-box">
-                  <strong>{{ t('collectableStrategyLab.pathTitle') }}</strong>
-                  <ol v-if="selectedUncoveredNode.path.length">
-                    <li v-for="(step, index) in selectedUncoveredNode.path" :key="`${step}-${index}`">{{ step }}</li>
-                  </ol>
-                  <p v-else>{{ t('collectableStrategyLab.noPath') }}</p>
+
+                <div class="pending-overview-values">
+                  <div v-for="entry in group.entries" :key="`${group.key}-${entry.value}`" class="pending-overview-value">
+                    <div class="pending-overview-value-main">
+                      <span>{{ entry.value }}</span>
+                      <strong>{{ formatDistributionPercent(entry.percentage) }}</strong>
+                    </div>
+                    <div class="pending-overview-bar" aria-hidden="true">
+                      <span :style="{ width: distributionBarWidth(entry.percentage) }"></span>
+                    </div>
+                    <small>{{ t('collectableStrategyLab.pendingOverview.nodeCount', { count: entry.count }) }}</small>
+                  </div>
                 </div>
               </article>
             </div>
@@ -2502,6 +2499,121 @@ function makeId() {
   gap: 0.65rem;
 }
 
+.pending-overview {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.pending-overview-group {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+  padding: 0.78rem 0.85rem;
+}
+
+:global(html.dark .pending-overview-group) {
+  border-color: #334155;
+  background: rgb(30 41 59 / 0.38);
+}
+
+.pending-overview-group-header,
+.pending-overview-value-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pending-overview-group-header strong {
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.pending-overview-group-header small,
+.pending-overview-value small {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+:global(html.dark .pending-overview-group-header strong) {
+  color: #f8fafc;
+}
+
+:global(html.dark .pending-overview-group-header small),
+:global(html.dark .pending-overview-value small) {
+  color: #94a3b8;
+}
+
+.pending-overview-values {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.pending-overview-value {
+  min-width: 0;
+  display: grid;
+  gap: 0.34rem;
+  border-top: 1px solid #e2e8f0;
+  padding: 0.58rem 0 0.1rem;
+}
+
+:global(html.dark .pending-overview-value) {
+  border-top-color: rgb(51 65 85 / 0.78);
+}
+
+.pending-overview-value-main span {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.pending-overview-value-main strong {
+  flex: 0 0 auto;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+:global(html.dark .pending-overview-value-main span) {
+  color: #f8fafc;
+}
+
+:global(html.dark .pending-overview-value-main strong) {
+  color: #cbd5e1;
+}
+
+.pending-overview-bar {
+  height: 0.26rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+
+.pending-overview-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #d5dedc;
+}
+
+:global(html.dark .pending-overview-bar) {
+  background: #1e293b;
+}
+
+:global(html.dark .pending-overview-bar span) {
+  background: #475569;
+}
+
 .node-status {
   display: inline-flex;
   margin-bottom: 0.45rem;
@@ -2552,12 +2664,19 @@ function makeId() {
 }
 
 .panel-title-row span {
+  border: 1px solid #e2e8f0;
   border-radius: 999px;
-  background: #ffedd5;
-  color: #c2410c;
+  background: #f8fafc;
+  color: #64748b;
   padding: 0.2rem 0.55rem;
   font-size: 0.76rem;
   font-weight: 900;
+}
+
+:global(html.dark .panel-title-row span) {
+  border-color: #334155;
+  background: rgb(30 41 59 / 0.5);
+  color: #94a3b8;
 }
 
 .uncovered-layout {

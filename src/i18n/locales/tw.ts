@@ -803,8 +803,16 @@ export default {
     strategyLevelIssueTitle: '策略含有目前不能使用的技能',
     strategyLevelIssueDesc: '{action} 需要等級 {level}。請回到策略設定移除或替換該技能，或調整角色等級後再分析。',
     limitWarning: '目前策略展開過大，已先停止後續展開；請新增更收斂的策略再觀察。',
-    uncoveredTitle: '尚待決策節點',
+    uncoveredTitle: '尚待決策節點總覽',
     noUncoveredDesc: '目前所有分枝都能一路走到耐久歸零。',
+    pendingOverview: {
+      total: '共 {count} 個待決節點',
+      uniqueValues: '{count} 種數值',
+      nodeCount: '{count} 節點',
+      gp: 'GP',
+      integrity: '耐久',
+      collectability: '收藏價值'
+    },
     previousUncovered: '上一個待決節點',
     nextUncovered: '下一個待決節點',
     nodePager: '第 {current} / {total} 個',

@@ -780,8 +780,16 @@ export default {
     strategyLevelIssueTitle: '策略含有当前不能使用的技能',
     strategyLevelIssueDesc: '{action} 需要等级 {level}。请回到策略设置移除或替换该技能，或调整角色等级后再分析。',
     limitWarning: '当前策略展开过大，已先停止后续展开；请新增更收敛的策略再观察。',
-    uncoveredTitle: '尚待决策节点',
+    uncoveredTitle: '尚待决策节点总览',
     noUncoveredDesc: '当前所有分支都能一路走到耐久归零。',
+    pendingOverview: {
+      total: '共 {count} 个待决节点',
+      uniqueValues: '{count} 种数值',
+      nodeCount: '{count} 节点',
+      gp: 'GP',
+      integrity: '耐久',
+      collectability: '收藏价值'
+    },
     previousUncovered: '上一个待决节点',
     nextUncovered: '下一个待决节点',
     nodePager: '第 {current} / {total} 个',

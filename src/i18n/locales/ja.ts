@@ -780,8 +780,16 @@ export default {
     strategyLevelIssueTitle: 'この方針には使用できないスキルがあります',
     strategyLevelIssueDesc: '{action} はレベル {level} が必要です。方針設定で削除または置き換えるか、キャラクターレベルを調整してから分析してください。',
     limitWarning: '現在の方針では展開が大きすぎるため、途中で停止しました。より絞り込んだ方針を追加して確認してください。',
-    uncoveredTitle: '未決定ノード',
+    uncoveredTitle: '未決定ノード概要',
     noUncoveredDesc: '現在、すべての分岐は耐久 0 まで進めます。',
+    pendingOverview: {
+      total: '未決定ノード {count} 件',
+      uniqueValues: '{count} 種類の値',
+      nodeCount: '{count} ノード',
+      gp: 'GP',
+      integrity: '耐久',
+      collectability: '収集価値'
+    },
     previousUncovered: '前の未決定ノード',
     nextUncovered: '次の未決定ノード',
     nodePager: '{current} / {total}',
