@@ -2856,10 +2856,50 @@ function makeId() {
 
 @media (max-width: 700px) {
   .column-header,
-  .analysis-header,
-  .rule-card-header {
+  .analysis-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .rule-card-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .rule-enabled {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .rule-name-display {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .rule-name-display {
+    width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .coverage-pill {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rule-tools {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    flex-wrap: nowrap;
   }
 
   .analysis-action-group {
