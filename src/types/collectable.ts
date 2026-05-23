@@ -274,6 +274,14 @@ export interface CollectableSolverResult {
   debug?: CollectableSolverDebugInfo;
 }
 
+export type CollectableWorkerErrorType = 'memoCapacity';
+
+export interface CollectableWorkerErrorResponse {
+  errorType: CollectableWorkerErrorType;
+}
+
+export type CollectableWorkerResponse = CollectableSolverResult | CollectableWorkerErrorResponse;
+
 export interface StoredCollectablePolicyBranch {
   labelKey: string;
   conditionKey: string;

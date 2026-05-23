@@ -1,5 +1,10 @@
 import { ref } from 'vue';
-import type { CollectableObjective, CollectableSolverRequest, CollectableSolverResult } from '../types/collectable';
+import type {
+  CollectableObjective,
+  CollectableSolverRequest,
+  CollectableSolverResult,
+  CollectableWorkerResponse
+} from '../types/collectable';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
@@ -7,7 +12,7 @@ import { useSettings } from './useSettings';
 
 const collectableResult = ref<CollectableSolverResult | null>(null);
 const isCollectableSolving = ref(false);
-const collectableError = ref<'unsupportedLevel' | 'unsupportedReward' | 'workerStale' | 'workerFailed' | null>(null);
+const collectableError = ref<'unsupportedLevel' | 'unsupportedReward' | 'memoCapacity' | 'workerStale' | 'workerFailed' | null>(null);
 const collectableObjective = ref<CollectableObjective>({ kind: 'scrip' });
 let activeCollectableWorker: Worker | null = null;
 let collectableSolveVersion = 0;
@@ -103,8 +108,17 @@ export function useCollectableSolver() {
       collectableError.value = 'workerFailed';
       return;
     }
-    worker.onmessage = (event: MessageEvent<CollectableSolverResult>) => {
+    worker.onmessage = (event: MessageEvent<CollectableWorkerResponse>) => {
       if (currentVersion !== collectableSolveVersion || activeCollectableWorker !== worker) {
+        worker.terminate();
+        return;
+      }
+
+      if ('errorType' in event.data) {
+        collectableResult.value = null;
+        collectableError.value = event.data.errorType;
+        isCollectableSolving.value = false;
+        activeCollectableWorker = null;
         worker.terminate();
         return;
       }

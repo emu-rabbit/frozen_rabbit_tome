@@ -4,7 +4,11 @@ import {
   canUseCollectableWasmSolver,
   solveCollectableRotationWithWasm
 } from '../utils/collectableWasmSolver';
-import type { CollectableSolverRequest, CollectableSolverResult } from '../types/collectable';
+import type {
+  CollectableSolverRequest,
+  CollectableSolverResult,
+  CollectableWorkerErrorResponse
+} from '../types/collectable';
 
 function rethrowWorkerError(error: unknown) {
   setTimeout(() => {
@@ -27,7 +31,8 @@ async function handleCollectableSolve(event: MessageEvent<CollectableSolverReque
   } catch (error) {
     if (error instanceof CollectableWasmMemoCapacityError) {
       console.warn('Collectable WASM solver exceeded the device memo budget:', error);
-      throw error;
+      self.postMessage({ errorType: 'memoCapacity' } satisfies CollectableWorkerErrorResponse);
+      return;
     }
 
     console.warn('Collectable WASM solver failed, falling back to JS solver:', error);

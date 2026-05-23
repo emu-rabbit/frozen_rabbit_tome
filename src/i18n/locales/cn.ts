@@ -656,6 +656,7 @@ export default {
     errors: {
       unsupportedLevel: { title: '收藏品采集需要 50 级', desc: '当前角色等级未达到 {level}，尚未开放收藏品采集。请提高等级后再使用收藏品秘笈。' },
       unsupportedReward: { title: '找不到收藏品奖励表', desc: '此物品目前不在已支持的收藏品缴纳、老主顾、魔法大学、万货街、精选或宇宙探索资料中，暂时无法求解。' },
+      memoCapacity: { title: '搜索空间过大，无法继续求解', desc: '这组条件需要展开的收藏品决策分支太多，已超过此设备可用的内存预算。请先缩小条件或改用较简单的情境再试。' },
       workerStale: { title: '求解器需要重新载入', desc: '网站可能刚更新完成，刷新后即可继续。' },
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }
     },
