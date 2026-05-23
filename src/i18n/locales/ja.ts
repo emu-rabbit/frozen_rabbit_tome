@@ -790,6 +790,12 @@ export default {
       integrity: '耐久',
       collectability: '収集価値'
     },
+    managedOverview: {
+      rangesTitle: '状態範囲',
+      buffTitle: 'Buff 概要',
+      someHasBuff: '一部に {buff}',
+      allHasBuff: 'すべてに {buff}'
+    },
     previousUncovered: '前の未決定ノード',
     nextUncovered: '次の未決定ノード',
     nodePager: '{current} / {total}',

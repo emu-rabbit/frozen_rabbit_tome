@@ -813,6 +813,12 @@ export default {
       integrity: '耐久',
       collectability: '收藏價值'
     },
+    managedOverview: {
+      rangesTitle: '狀態範圍',
+      buffTitle: 'Buff 總覽',
+      someHasBuff: '部分有 {buff}',
+      allHasBuff: '全部有 {buff}'
+    },
     previousUncovered: '上一個待決節點',
     nextUncovered: '下一個待決節點',
     nodePager: '第 {current} / {total} 個',

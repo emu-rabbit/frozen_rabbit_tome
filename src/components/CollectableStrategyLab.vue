@@ -51,6 +51,7 @@ const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
 type ManagedNodeMeterKey = 'gp' | 'integrity' | 'collectability';
+type ManagedOverviewMetricKey = 'gp' | 'integrity' | 'collectability';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -139,7 +140,7 @@ const editorFrontierRules = computed(() => {
 });
 const editorFrontierTreeResult = computed(() => buildStrategyTreeForRules(editorFrontierRules.value));
 const managedNodes = computed(() => collectMatchingUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value));
-const managedStateGroups = computed(() => buildUncoveredStateGroups(managedNodes.value));
+const managedNodeOverview = computed(() => buildManagedNodeOverview(managedNodes.value));
 const currentManagedNode = computed(() => managedNodes.value[managedNodeIndex.value] ?? null);
 const editorCoverageText = computed(() => t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length }));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
@@ -150,16 +151,6 @@ const stateFieldOptions = computed(() => [
     type: isNumericStrategyField(field) ? 'number' : 'boolean'
   }))
 ]);
-const ruleCoverage = computed(() => {
-  const counts = new Map<string, number>();
-
-  rules.value.forEach((rule, index) => {
-    const frontier = buildStrategyTreeForRules(rules.value.slice(0, index))?.uncoveredNodes ?? [];
-    counts.set(rule.id, collectMatchingUncoveredStrategyNodes(frontier, rule).length);
-  });
-
-  return counts;
-});
 const analysisUnit = computed(() => t(getCollectableScripRewardMeta(rewardTable.value?.rewardItemId).labelKey));
 const selectedObjectiveLabel = computed(() => {
   if (!rewardTable.value) return t('collectableObjective.title');
@@ -657,11 +648,6 @@ function formatProbability(chance: number, useSpacePadding = false, includePerce
   return formatted + percentSuffix;
 }
 
-function coverageText(rule: CollectableStrategyRule) {
-  const count = ruleCoverage.value.get(rule.id) ?? 0;
-  return t('collectableStrategyLab.coverageNodes', { count });
-}
-
 function conditionSummary(rule: CollectableStrategyRule) {
   if (rule.conditions.length === 0) return t('collectableStrategyLab.noConditions');
   const joiner = rule.mode === 'all' ? t('collectableStrategyLab.joiners.all') : t('collectableStrategyLab.joiners.any');
@@ -709,6 +695,71 @@ function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
       entries
     };
   });
+}
+
+function buildManagedNodeOverview(nodes: CollectableStrategyNode[]) {
+  const metrics: Array<{ key: ManagedOverviewMetricKey; label: string; icon: string }> = [
+    { key: 'gp', label: t('collectableStrategyLab.pendingOverview.gp'), icon: 'pi pi-bolt' },
+    { key: 'integrity', label: t('collectableStrategyLab.pendingOverview.integrity'), icon: 'pi pi-shield' },
+    { key: 'collectability', label: t('collectableStrategyLab.pendingOverview.collectability'), icon: 'pi pi-sparkles' }
+  ];
+
+  return {
+    ranges: metrics.map((metric) => {
+      const values = nodes.map((node) => node.state[metric.key]);
+      const min = values.length > 0 ? Math.min(...values) : 0;
+      const max = values.length > 0 ? Math.max(...values) : 0;
+
+      return {
+        ...metric,
+        value: formatStateRange(min, max)
+      };
+    }),
+    buffChips: buildManagedBuffChips(nodes)
+  };
+}
+
+function buildManagedBuffChips(nodes: CollectableStrategyNode[]) {
+  if (nodes.length === 0) return [];
+
+  const buffStates: Array<{ key: string; label: string; hasBuff: (node: CollectableStrategyNode) => boolean }> = [
+    { key: 'scrutinyActive', label: fieldLabel('scrutinyActive'), hasBuff: (node) => node.state.scrutinyActive },
+    { key: 'collectorsFocusActive', label: fieldLabel('collectorsFocusActive'), hasBuff: (node) => node.state.collectorsFocusActive },
+    { key: 'primingTouchActive', label: fieldLabel('primingTouchActive'), hasBuff: (node) => node.state.primingTouchActive },
+    { key: 'standardActive', label: fieldLabel('standardActive'), hasBuff: (node) => node.state.standardActive },
+    { key: 'wiseToTheWorldActive', label: fieldLabel('wiseToTheWorldActive'), hasBuff: (node) => node.state.wiseToTheWorldActive },
+    { key: 'successIActive', label: fieldLabel('successIActive'), hasBuff: (node) => node.state.successIActive },
+    { key: 'successIIActive', label: fieldLabel('successIIActive'), hasBuff: (node) => node.state.successIIActive },
+    { key: 'successIIIActive', label: fieldLabel('successIIIActive'), hasBuff: (node) => node.state.successIIIActive },
+    { key: 'successBonus', label: fieldLabel('successBonus'), hasBuff: (node) => node.state.successBonus > 0 },
+    { key: 'nextCollectSuccessBonus', label: fieldLabel('nextCollectSuccessBonus'), hasBuff: (node) => node.state.nextCollectSuccessBonus > 0 }
+  ];
+
+  const chips = buffStates.flatMap((buff) => {
+    const count = nodes.filter(buff.hasBuff).length;
+    if (count === 0) return [];
+
+    return [{
+      key: buff.key,
+      label: t(
+        count === nodes.length
+          ? 'collectableStrategyLab.managedOverview.allHasBuff'
+          : 'collectableStrategyLab.managedOverview.someHasBuff',
+        { buff: buff.label }
+      )
+    }];
+  });
+
+  if (chips.length > 0) return chips;
+
+  return [{
+    key: 'noBuff',
+    label: t('collectableStrategyLab.noBuff')
+  }];
+}
+
+function formatStateRange(min: number, max: number) {
+  return min === max ? `${min}` : `${min}~${max}`;
 }
 
 function moveManagedNode(direction: -1 | 1) {
@@ -854,7 +905,6 @@ function makeId() {
                 <span>#{{ ruleIndex + 1 }}</span>
               </label>
               <strong class="rule-name-display">{{ rule.name }}</strong>
-              <span class="coverage-pill">{{ coverageText(rule) }}</span>
               <div class="rule-tools">
                 <button type="button" :disabled="ruleIndex === 0" :title="t('collectableStrategyLab.tools.moveUp')" @click="moveRule(rule.id, -1)">
                   <i class="pi pi-arrow-up"></i>
@@ -1324,24 +1374,22 @@ function makeId() {
                 <p>{{ t('collectableStrategyLab.editor.noManagedNodes') }}</p>
               </div>
 
-              <div v-else-if="managedNodesView === 'summary'" class="pending-overview" :aria-label="t('collectableStrategyLab.editor.summaryMode')">
-                <article v-for="group in managedStateGroups" :key="`managed-${group.key}`" class="pending-overview-group">
-                  <div class="pending-overview-group-header">
-                    <strong>{{ group.label }}</strong>
-                    <small>{{ t('collectableStrategyLab.pendingOverview.uniqueValues', { count: group.entries.length }) }}</small>
+              <div v-else-if="managedNodesView === 'summary'" class="managed-summary-overview" :aria-label="t('collectableStrategyLab.editor.summaryMode')">
+                <article class="managed-summary-card">
+                  <div class="managed-summary-header">
+                    <strong>{{ t('collectableStrategyLab.managedOverview.rangesTitle') }}</strong>
+                    <small>{{ editorCoverageText }}</small>
                   </div>
 
-                  <div class="pending-overview-values">
-                    <div v-for="entry in group.entries" :key="`managed-${group.key}-${entry.value}`" class="pending-overview-value">
-                      <div class="pending-overview-value-main">
-                        <span>{{ entry.value }}</span>
-                        <strong>{{ formatDistributionPercent(entry.percentage) }}</strong>
-                      </div>
-                      <div class="pending-overview-bar" aria-hidden="true">
-                        <span :style="{ width: distributionBarWidth(entry.percentage) }"></span>
-                      </div>
-                      <small>{{ t('collectableStrategyLab.pendingOverview.nodeCount', { count: entry.count }) }}</small>
+                  <div class="managed-range-grid">
+                    <div v-for="range in managedNodeOverview.ranges" :key="`managed-range-${range.key}`" class="managed-range-card">
+                      <span><i :class="range.icon"></i>{{ range.label }}</span>
+                      <strong>{{ range.value }}</strong>
                     </div>
+                  </div>
+
+                  <div class="managed-buff-overview" :aria-label="t('collectableStrategyLab.managedOverview.buffTitle')">
+                    <span v-for="chip in managedNodeOverview.buffChips" :key="chip.key">{{ chip.label }}</span>
                   </div>
                 </article>
               </div>
@@ -1495,7 +1543,6 @@ function makeId() {
   background: #0f172a;
 }
 
-.coverage-pill,
 .state-chip-list span {
   display: inline-flex;
   align-items: center;
@@ -1507,7 +1554,6 @@ function makeId() {
   line-height: 1.35;
 }
 
-.coverage-pill,
 .state-chip-list span {
   padding: 0.2rem 0.5rem;
 }
@@ -3176,6 +3222,144 @@ function makeId() {
   background: #475569;
 }
 
+.managed-summary-overview {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.managed-summary-card {
+  display: grid;
+  gap: 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f0fdf4 100%);
+  padding: 0.85rem;
+}
+
+:global(html.dark .managed-summary-card) {
+  border-color: #334155;
+  background: linear-gradient(180deg, rgb(30 41 59 / 0.5) 0%, rgb(20 83 45 / 0.2) 100%);
+}
+
+.managed-summary-header {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.managed-summary-header strong {
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.managed-summary-header small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+:global(html.dark .managed-summary-header strong) {
+  color: #f8fafc;
+}
+
+:global(html.dark .managed-summary-header small) {
+  color: #94a3b8;
+}
+
+.managed-range-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.managed-range-card {
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid rgb(82 168 144 / 0.22);
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.78);
+  padding: 0.62rem 0.68rem;
+}
+
+.managed-range-card span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.managed-range-card span i {
+  color: #52a890;
+  font-size: 0.78rem;
+}
+
+.managed-range-card strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 1.02rem;
+  font-weight: 950;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+:global(html.dark .managed-range-card) {
+  border-color: rgb(94 234 212 / 0.18);
+  background: rgb(2 6 23 / 0.38);
+}
+
+:global(html.dark .managed-range-card span) {
+  color: #cbd5e1;
+}
+
+:global(html.dark .managed-range-card span i) {
+  color: #99f6e4;
+}
+
+:global(html.dark .managed-range-card strong) {
+  color: #f8fafc;
+}
+
+.managed-buff-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  border-top: 1px solid rgb(203 213 225 / 0.75);
+  padding-top: 0.72rem;
+}
+
+.managed-buff-overview span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(82 168 144 / 0.22);
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #15803d;
+  padding: 0.24rem 0.58rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+:global(html.dark .managed-buff-overview) {
+  border-top-color: rgb(51 65 85 / 0.75);
+}
+
+:global(html.dark .managed-buff-overview span) {
+  border-color: rgb(94 234 212 / 0.22);
+  background: rgb(20 83 45 / 0.28);
+  color: #bbf7d0;
+}
+
 .tree-empty {
   display: grid;
   justify-items: center;
@@ -3551,16 +3735,6 @@ function makeId() {
     overflow-wrap: anywhere;
   }
 
-  .coverage-pill {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: start;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .rule-tools {
     grid-column: 3;
     grid-row: 1;
@@ -3675,6 +3849,10 @@ function makeId() {
 
   .managed-node-toolbar {
     flex-direction: column;
+  }
+
+  .managed-range-grid {
+    grid-template-columns: 1fr;
   }
 
   .editor-secondary-action,

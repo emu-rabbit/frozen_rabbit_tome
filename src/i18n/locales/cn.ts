@@ -790,6 +790,12 @@ export default {
       integrity: '耐久',
       collectability: '收藏价值'
     },
+    managedOverview: {
+      rangesTitle: '状态范围',
+      buffTitle: 'Buff 总览',
+      someHasBuff: '部分有 {buff}',
+      allHasBuff: '全部有 {buff}'
+    },
     previousUncovered: '上一个待决节点',
     nextUncovered: '下一个待决节点',
     nodePager: '第 {current} / {total} 个',

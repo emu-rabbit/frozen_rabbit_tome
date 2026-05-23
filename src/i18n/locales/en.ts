@@ -812,6 +812,12 @@ export default {
       integrity: 'Integrity',
       collectability: 'Collectability'
     },
+    managedOverview: {
+      rangesTitle: 'State ranges',
+      buffTitle: 'Buff overview',
+      someHasBuff: 'Some has {buff}',
+      allHasBuff: 'All has {buff}'
+    },
     previousUncovered: 'Previous undecided state',
     nextUncovered: 'Next undecided state',
     nodePager: '{current} / {total}',
