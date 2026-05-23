@@ -40,6 +40,7 @@ const {
   collectableResult,
   isCollectableSolving,
   collectableError,
+  collectableErrorDetail,
   solveCollectable,
   clearCollectableResult
 } = useCollectableSolver();
@@ -56,6 +57,8 @@ const DECISION_TREE_EXPORT_SCHEMA_VERSION = 1;
 const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId && !isCollectableLevelLocked.value);
 const isWorkerError = computed(() => collectableError.value === 'workerStale' || collectableError.value === 'workerFailed');
+const nextMemoCapacityPower = computed(() => collectableErrorDetail.value?.nextMemoCapacityPower ?? null);
+const canRaiseMemoBudget = computed(() => collectableError.value === 'memoCapacity' && nextMemoCapacityPower.value !== null);
 const activeItemJobLabel = computed(() => {
   const jobs = gatherableItemJobs(props.activeItem);
   return jobs.length > 0 ? jobs.map((job) => t(`game.jobs.${job}`)).join(' / ') : '-';
@@ -115,6 +118,15 @@ function applyDefaultObjective(table: CollectableRewardTable) {
 }
 
 async function handleSolve() {
+  await runCollectableSolve();
+}
+
+async function handleRaiseMemoBudget() {
+  if (nextMemoCapacityPower.value === null) return;
+  await runCollectableSolve(nextMemoCapacityPower.value);
+}
+
+async function runCollectableSolve(manualMemoCapacityPower?: number) {
   if (!props.baseValues || !canSolve.value || isCollectableLevelLocked.value) return;
 
   await solveCollectable({
@@ -128,7 +140,8 @@ async function handleSolve() {
     nodeBonuses: { ...props.nodeBonuses },
     temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
     debugMode: props.debugMode,
-    objective: collectableObjective.value
+    objective: collectableObjective.value,
+    manualMemoCapacityPower
   });
 }
 
@@ -419,13 +432,26 @@ function waitForUiFrame() {
         <strong>{{ t(`collectableSolver.errors.${collectableError}.title`) }}</strong>
         <p>{{ t(`collectableSolver.errors.${collectableError}.desc`) }}</p>
       </div>
-      <Button
-        v-if="isWorkerError"
-        class="p-button-sm p-button-warning collectable-alert-action"
-        :label="t('solver.strategy.workerErrors.reload')"
-        icon="pi pi-refresh"
-        @click="reloadPage"
-      />
+      <div v-if="isWorkerError || canRaiseMemoBudget" class="collectable-alert-actions">
+        <p v-if="canRaiseMemoBudget" class="collectable-alert-risk">
+          {{ t('collectableSolver.errors.memoCapacity.manualRisk') }}
+        </p>
+        <Button
+          v-if="canRaiseMemoBudget"
+          class="p-button-sm p-button-danger collectable-alert-action"
+          :label="t('collectableSolver.errors.memoCapacity.raiseBudget')"
+          icon="pi pi-exclamation-triangle"
+          :loading="isCollectableSolving"
+          @click="handleRaiseMemoBudget"
+        />
+        <Button
+          v-if="isWorkerError"
+          class="p-button-sm p-button-warning collectable-alert-action"
+          :label="t('solver.strategy.workerErrors.reload')"
+          icon="pi pi-refresh"
+          @click="reloadPage"
+        />
+      </div>
     </div>
 
     <div v-else-if="isCollectableLevelLocked" class="collectable-alert" role="alert">
@@ -661,6 +687,25 @@ function waitForUiFrame() {
 .collectable-alert > div {
   min-width: 0;
   flex: 1 1 14rem;
+}
+
+.collectable-alert-actions {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.collectable-alert-risk {
+  flex: 1 1 18rem;
+  color: #9a3412;
+  font-weight: 700;
+}
+
+:global(html.dark .collectable-alert-risk) {
+  color: #fed7aa;
 }
 
 :deep(.collectable-alert-action) {

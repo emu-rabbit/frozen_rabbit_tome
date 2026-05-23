@@ -95,13 +95,21 @@ type CollectableWasmExports = CollectableWasmPolicyCore & {
 export class CollectableWasmMemoCapacityError extends Error {
   constructor(
     readonly memoCapacityPower: number,
-    readonly supportedMemoCapacityPower = memoCapacityPower
+    readonly supportedMemoCapacityPower = memoCapacityPower,
+    readonly nextMemoCapacityPower = memoCapacityPower + 1
   ) {
     const supportedText = supportedMemoCapacityPower === memoCapacityPower
       ? ''
       : ` The current environment supports up to 2^${supportedMemoCapacityPower}.`;
     super(`Collectable WASM memo table exceeded capacity 2^${memoCapacityPower}.${supportedText}`);
     this.name = 'CollectableWasmMemoCapacityError';
+  }
+}
+
+export class CollectableWasmMemoryAllocationError extends Error {
+  constructor(readonly memoCapacityPower: number) {
+    super(`Collectable WASM memory could not be allocated for memo table 2^${memoCapacityPower}.`);
+    this.name = 'CollectableWasmMemoryAllocationError';
   }
 }
 
@@ -126,8 +134,9 @@ const DEFAULT_MEMO_CAPACITY_POWER = 20;
 const EXTENDED_MEMO_CAPACITY_POWER = 21;
 const UNKNOWN_DESKTOP_MEMO_CAPACITY_POWER = 22;
 const DESKTOP_MAX_MEMO_CAPACITY_POWER = 23;
-const MEMO_ENTRY_BYTES = 96;
-const MEMO_FIXED_MEMORY_BYTES = 16 * 1024 * 1024;
+const MAX_SAFE_MEMO_CAPACITY_POWER = 30;
+const MEMO_ENTRY_BYTES = 132;
+const MEMO_FIXED_MEMORY_BYTES = 0;
 const MEMO_MEMORY_BUDGET_RATIO = 0.22;
 let wasmPromise: Promise<CollectableWasmExports> | null = null;
 
@@ -171,6 +180,11 @@ export async function solveCollectableRotationWithWasm(
   }
 
   const initialPower = selectInitialMemoCapacityPower(request);
+  const manualMemoCapacityPower = normalizeManualMemoCapacityPower(request.manualMemoCapacityPower, initialPower);
+  if (manualMemoCapacityPower !== null) {
+    return solveCollectableRotationWithWasmAtPower(request, manualMemoCapacityPower, core);
+  }
+
   const supportedPower = selectSupportedMemoCapacityPower();
   if (supportedPower < initialPower) {
     throw new CollectableWasmMemoCapacityError(initialPower, supportedPower);
@@ -192,7 +206,7 @@ export async function solveCollectableRotationWithWasm(
       }
 
       if (isLikelyWasmMemoryAllocationFailure(error)) {
-        throw new CollectableWasmMemoCapacityError(memoCapacityPower, supportedPower);
+        throw new CollectableWasmMemoryAllocationError(memoCapacityPower);
       }
 
       throw error;
@@ -200,6 +214,29 @@ export async function solveCollectableRotationWithWasm(
   }
 
   throw new CollectableWasmMemoCapacityError(initialPower, supportedPower);
+}
+
+async function solveCollectableRotationWithWasmAtPower(
+  request: CollectableSolverRequest,
+  memoCapacityPower: number,
+  core?: CollectableWasmExports
+): Promise<CollectableSolverResult> {
+  const wasmCore = core ?? await instantiateCollectableWasmCore();
+
+  try {
+    return solveCollectableRotationWithWasmCore(request, wasmCore, memoCapacityPower);
+  } catch (error) {
+    wasmPromise = null;
+    if (wasmCore.getFailed() !== 0) {
+      throw new CollectableWasmMemoCapacityError(memoCapacityPower, memoCapacityPower);
+    }
+
+    if (isLikelyWasmMemoryAllocationFailure(error)) {
+      throw new CollectableWasmMemoryAllocationError(memoCapacityPower);
+    }
+
+    throw error;
+  }
 }
 
 function solveCollectableRotationWithWasmCore(
@@ -400,6 +437,15 @@ function selectSupportedMemoCapacityPower(): number {
 
   if (isLikelyMobileDevice()) return EXTENDED_MEMO_CAPACITY_POWER;
   return UNKNOWN_DESKTOP_MEMO_CAPACITY_POWER;
+}
+
+function normalizeManualMemoCapacityPower(power: number | undefined, initialPower: number): number | null {
+  if (typeof power !== 'number' || !Number.isFinite(power)) return null;
+  const normalizedPower = Math.max(initialPower, Math.floor(power));
+  if (normalizedPower > MAX_SAFE_MEMO_CAPACITY_POWER) {
+    throw new CollectableWasmMemoryAllocationError(normalizedPower);
+  }
+  return normalizedPower;
 }
 
 function getDeviceMemoCapacityPower(): number | null {

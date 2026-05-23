@@ -3,6 +3,8 @@ import type {
   CollectableObjective,
   CollectableSolverRequest,
   CollectableSolverResult,
+  CollectableWorkerErrorResponse,
+  CollectableWorkerErrorType,
   CollectableWorkerResponse
 } from '../types/collectable';
 import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
@@ -12,7 +14,8 @@ import { useSettings } from './useSettings';
 
 const collectableResult = ref<CollectableSolverResult | null>(null);
 const isCollectableSolving = ref(false);
-const collectableError = ref<'unsupportedLevel' | 'unsupportedReward' | 'memoCapacity' | 'workerStale' | 'workerFailed' | null>(null);
+const collectableError = ref<'unsupportedLevel' | 'unsupportedReward' | CollectableWorkerErrorType | 'workerStale' | 'workerFailed' | null>(null);
+const collectableErrorDetail = ref<CollectableWorkerErrorResponse | null>(null);
 const collectableObjective = ref<CollectableObjective>({ kind: 'scrip' });
 let activeCollectableWorker: Worker | null = null;
 let collectableSolveVersion = 0;
@@ -31,6 +34,7 @@ export function useCollectableSolver() {
     cancelCollectableSolve();
     collectableResult.value = null;
     collectableError.value = null;
+    collectableErrorDetail.value = null;
   };
 
   const solveCollectable = async (payload: {
@@ -42,13 +46,16 @@ export function useCollectableSolver() {
     temporaryGp: number;
     debugMode: boolean;
     objective?: CollectableObjective;
+    manualMemoCapacityPower?: number;
   }) => {
     cancelCollectableSolve();
     collectableResult.value = null;
     collectableError.value = null;
+    collectableErrorDetail.value = null;
 
     if (payload.stats.level < MIN_COLLECTABLE_LEVEL) {
       collectableError.value = 'unsupportedLevel';
+      collectableErrorDetail.value = null;
       isCollectableSolving.value = false;
       return;
     }
@@ -63,12 +70,14 @@ export function useCollectableSolver() {
       console.error('Collectable reward table loading failed:', error);
       isCollectableSolving.value = false;
       collectableError.value = 'unsupportedReward';
+      collectableErrorDetail.value = null;
       return;
     }
 
     if (!rewardTable) {
       isCollectableSolving.value = false;
       collectableError.value = 'unsupportedReward';
+      collectableErrorDetail.value = null;
       return;
     }
 
@@ -79,6 +88,7 @@ export function useCollectableSolver() {
       console.error('Collectable worker creation failed:', error);
       isCollectableSolving.value = false;
       collectableError.value = typeof window === 'undefined' ? 'workerFailed' : 'workerStale';
+      collectableErrorDetail.value = null;
       return;
     }
 
@@ -95,7 +105,8 @@ export function useCollectableSolver() {
       objectiveMode: solverSettings.value.objectiveMode,
       hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
       isTimedNode: payload.activeItem.isTimedNode ?? false,
-      debugMode: payload.debugMode
+      debugMode: payload.debugMode,
+      manualMemoCapacityPower: payload.manualMemoCapacityPower
     };
 
     try {
@@ -106,6 +117,7 @@ export function useCollectableSolver() {
       activeCollectableWorker = null;
       isCollectableSolving.value = false;
       collectableError.value = 'workerFailed';
+      collectableErrorDetail.value = null;
       return;
     }
     worker.onmessage = (event: MessageEvent<CollectableWorkerResponse>) => {
@@ -117,6 +129,7 @@ export function useCollectableSolver() {
       if ('errorType' in event.data) {
         collectableResult.value = null;
         collectableError.value = event.data.errorType;
+        collectableErrorDetail.value = event.data;
         isCollectableSolving.value = false;
         activeCollectableWorker = null;
         worker.terminate();
@@ -125,6 +138,7 @@ export function useCollectableSolver() {
 
       collectableResult.value = event.data;
       collectableError.value = null;
+      collectableErrorDetail.value = null;
       isCollectableSolving.value = false;
       activeCollectableWorker = null;
       worker.terminate();
@@ -141,6 +155,7 @@ export function useCollectableSolver() {
       activeCollectableWorker = null;
       worker.terminate();
       collectableError.value = 'workerFailed';
+      collectableErrorDetail.value = null;
     };
   };
 
@@ -149,6 +164,7 @@ export function useCollectableSolver() {
     collectableResult,
     isCollectableSolving,
     collectableError,
+    collectableErrorDetail,
     solveCollectable,
     clearCollectableResult,
     cancelCollectableSolve

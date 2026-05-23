@@ -1,5 +1,6 @@
 import { solveCollectableRotation } from '../utils/collectableSolver';
 import {
+  CollectableWasmMemoryAllocationError,
   CollectableWasmMemoCapacityError,
   canUseCollectableWasmSolver,
   solveCollectableRotationWithWasm
@@ -31,7 +32,29 @@ async function handleCollectableSolve(event: MessageEvent<CollectableSolverReque
   } catch (error) {
     if (error instanceof CollectableWasmMemoCapacityError) {
       console.warn('Collectable WASM solver exceeded the device memo budget:', error);
-      self.postMessage({ errorType: 'memoCapacity' } satisfies CollectableWorkerErrorResponse);
+      self.postMessage({
+        errorType: 'memoCapacity',
+        memoCapacityPower: error.memoCapacityPower,
+        nextMemoCapacityPower: error.nextMemoCapacityPower
+      } satisfies CollectableWorkerErrorResponse);
+      return;
+    }
+
+    if (error instanceof CollectableWasmMemoryAllocationError) {
+      console.warn('Collectable WASM solver could not allocate the requested memory:', error);
+      self.postMessage({
+        errorType: 'memoAllocationFailed',
+        memoCapacityPower: error.memoCapacityPower
+      } satisfies CollectableWorkerErrorResponse);
+      return;
+    }
+
+    if (event.data.manualMemoCapacityPower !== undefined) {
+      console.warn('Manual high-memory collectable WASM solve failed before completion:', error);
+      self.postMessage({
+        errorType: 'memoAllocationFailed',
+        memoCapacityPower: event.data.manualMemoCapacityPower
+      } satisfies CollectableWorkerErrorResponse);
       return;
     }
 

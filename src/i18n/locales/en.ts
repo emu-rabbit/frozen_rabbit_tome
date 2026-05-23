@@ -666,7 +666,13 @@ export default {
       },
       memoCapacity: {
         title: 'Not enough memory to finish this solve',
-        desc: 'This setup has reached the memory limit available for collectable decisions on this device. Narrow the conditions or use a simpler scenario.'
+        desc: 'This setup has reached the memory limit available for collectable decisions on this device. Narrow the conditions or use a simpler scenario.',
+        raiseBudget: 'Raise memory and try again',
+        manualRisk: 'Warning: raising memory can slow the browser, freeze the tab, or cause the system to close it.'
+      },
+      memoAllocationFailed: {
+        title: 'Could not start the higher-memory solve',
+        desc: 'The browser could not allocate the memory needed for this solve. Narrow the conditions or use a simpler scenario.'
       },
       workerStale: {
         title: 'Solver needs reload',

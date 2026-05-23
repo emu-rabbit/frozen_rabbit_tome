@@ -185,6 +185,7 @@ export interface CollectableSolverRequest {
   hasRelicToolBonus?: boolean;
   isTimedNode?: boolean;
   debugMode?: boolean;
+  manualMemoCapacityPower?: number;
 }
 
 export interface CollectableFormulaDebugInfo {
@@ -274,10 +275,12 @@ export interface CollectableSolverResult {
   debug?: CollectableSolverDebugInfo;
 }
 
-export type CollectableWorkerErrorType = 'memoCapacity';
+export type CollectableWorkerErrorType = 'memoCapacity' | 'memoAllocationFailed';
 
 export interface CollectableWorkerErrorResponse {
   errorType: CollectableWorkerErrorType;
+  memoCapacityPower?: number;
+  nextMemoCapacityPower?: number;
 }
 
 export type CollectableWorkerResponse = CollectableSolverResult | CollectableWorkerErrorResponse;

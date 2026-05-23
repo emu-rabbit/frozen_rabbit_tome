@@ -2,7 +2,11 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { solveCollectableRotation } from './collectableSolver';
-import { CollectableWasmMemoCapacityError, solveCollectableRotationWithWasm } from './collectableWasmSolver';
+import {
+  CollectableWasmMemoryAllocationError,
+  CollectableWasmMemoCapacityError,
+  solveCollectableRotationWithWasm
+} from './collectableWasmSolver';
 import type { CollectableSolverRequest } from '../types/collectable';
 
 type WasmCore = Parameters<typeof solveCollectableRotationWithWasm>[1];
@@ -150,9 +154,11 @@ describe('collectable WASM solver core', () => {
       }
     } as unknown as WasmCore;
 
-    await expect(solveCollectableRotationWithWasm(baseRequest(), core))
-      .rejects
-      .toBeInstanceOf(CollectableWasmMemoCapacityError);
+    const rejection = await solveCollectableRotationWithWasm(baseRequest(), core)
+      .then(() => null, (error: unknown) => error);
+
+    expect(rejection).toBeInstanceOf(CollectableWasmMemoCapacityError);
+    expect((rejection as CollectableWasmMemoCapacityError).nextMemoCapacityPower).toBe(23);
     expect(calls).toBe(1);
   });
 
@@ -170,7 +176,25 @@ describe('collectable WASM solver core', () => {
 
     await expect(solveCollectableRotationWithWasm(baseRequest(), core))
       .rejects
-      .toBeInstanceOf(CollectableWasmMemoCapacityError);
+      .toBeInstanceOf(CollectableWasmMemoryAllocationError);
     expect(calls).toBe(3);
+  });
+
+  it('does not step down when a manual higher memo table cannot allocate', async () => {
+    let calls = 0;
+    const core = {
+      solvePlanObjective() {
+        calls += 1;
+        throw new Error('WebAssembly memory allocation failed.');
+      },
+      getFailed() {
+        return 0;
+      }
+    } as unknown as WasmCore;
+
+    await expect(solveCollectableRotationWithWasm(baseRequest({ manualMemoCapacityPower: 24 }), core))
+      .rejects
+      .toBeInstanceOf(CollectableWasmMemoryAllocationError);
+    expect(calls).toBe(1);
   });
 });
