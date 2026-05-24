@@ -13,7 +13,7 @@ import SelectButton from 'primevue/selectbutton';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getGatheringFood } from '../services/foodData';
-import { getRotationActionIconById, getRotationActionName } from '../services/actionIcons';
+import { getRotationActionIconById } from '../services/actionIcons';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { StoredCollectableStrategyRule, StoredExperiment, StoredTomeRotationStep } from '../types/game';
@@ -22,16 +22,13 @@ import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 
 const { t, locale } = useI18n();
 const router = useRouter();
-const { visibleExperiments, deleteExperiment, searchQuery, fromStoredRotationStep } = useExperimentLibrary();
+const { visibleExperiments, deleteExperiment, searchQuery } = useExperimentLibrary();
 
-const copiedExperimentId = ref<string | null>(null);
 const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-experiment-database-display-mode', 'detailed');
 const displayModeOptions = computed(() => [
   { label: t('common.displayModes.compact'), value: 'compact' },
   { label: t('common.displayModes.detailed'), value: 'detailed' }
 ]);
-let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
-
 const filteredExperiments = computed(() => {
   currentLanguage.value;
   const query = searchQuery.value.trim().toLowerCase();
@@ -122,16 +119,6 @@ function formatChance(chance: number) {
   return Number(chance.toFixed(2)).toString();
 }
 
-function actionLabel(step: StoredTomeRotationStep) {
-  const actionName = fromStoredRotationStep(step);
-  return getRotationActionName(
-    actionName,
-    t('solver.strategy.gatherAction'),
-    t('solver.strategy.conditionalSuffix'),
-    t('solver.strategy.conditionalGatherSuffix')
-  );
-}
-
 function collectableActionLabel(experiment: StoredExperiment, action: CollectableActionKind) {
   return getCollectableActionName(action, itemMeta(experiment)?.jobType ?? 'miner');
 }
@@ -188,103 +175,6 @@ function minChance(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
     ? experiment.collectableAnalysis?.minScoreChance ?? 0
     : experiment.analysis?.total.minYieldChance ?? 0;
-}
-
-async function copyReportFromDb(experiment: StoredExperiment) {
-  if (experiment.kind === 'collectable') {
-    const report = {
-      kind: 'collectable',
-      id: experiment.id,
-      name: experiment.name,
-      itemId: experiment.itemId,
-      stats: experiment.stats,
-      temporaryGp: experiment.temporaryGp,
-      food: experiment.food,
-      nodeBonuses: experiment.nodeBonuses,
-      hasRelicToolBonus: experiment.collectableHasRelicToolBonus,
-      objective: experiment.collectableObjective,
-      rewardTable: experiment.collectableRewardTableSummary,
-      strategyRules: experiment.collectableRules ?? [],
-      analysis: experiment.collectableAnalysis
-    };
-
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-      copiedExperimentId.value = experiment.id;
-      if (copyTimer) window.clearTimeout(copyTimer);
-      copyTimer = window.setTimeout(() => {
-        if (copiedExperimentId.value === experiment.id) {
-          copiedExperimentId.value = null;
-        }
-        copyTimer = null;
-      }, 1600);
-    } catch (error) {
-      console.error('Failed to copy collectable experiment report:', error);
-    }
-    return;
-  }
-
-  const mapRotation = (rotation: StoredTomeRotationStep[]) => rotation.map(step => {
-    if (step.type === 'gather') return { type: 'gather', actionName: actionLabel(step) };
-    return { type: 'action', actionId: step.actionId, actionName: actionLabel(step) };
-  });
-
-  const cleanAnalysis = (analysisData: any) => {
-    const { primary, revisit, total, ...rest } = analysisData;
-    const cleanRotation = (obj: any) => {
-      if (!obj) return obj;
-      const { rotation, ...cleaned } = obj;
-      return cleaned;
-    };
-    if (hideRevisitExperimentFeatures) {
-      const { revisitChance, ...singleRunRest } = rest;
-      return {
-        ...singleRunRest,
-        rotation: cleanRotation(primary),
-        total: cleanRotation(total)
-      };
-    }
-    return {
-      ...rest,
-      primary: cleanRotation(primary),
-      ...(revisit ? { revisit: cleanRotation(revisit) } : {}),
-      total: cleanRotation(total)
-    };
-  };
-
-  const { primaryRotation = [], revisitRotation = [], analysis: storedAnalysis, ...experimentMeta } = experiment;
-  const report = {
-    ...experimentMeta,
-    ...(hideRevisitExperimentFeatures
-      ? { rotation: mapRotation(primaryRotation) }
-      : {
-          primaryRotation: mapRotation(primaryRotation),
-          revisitRotation: mapRotation(revisitRotation)
-        }),
-    analysis: storedAnalysis ? cleanAnalysis(storedAnalysis) : null
-  };
-
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-    copiedExperimentId.value = experiment.id;
-    if (copyTimer) window.clearTimeout(copyTimer);
-    copyTimer = window.setTimeout(() => {
-      if (copiedExperimentId.value === experiment.id) {
-        copiedExperimentId.value = null;
-      }
-      copyTimer = null;
-    }, 1600);
-  } catch (error) {
-    console.error('Failed to copy report:', error);
-  }
-}
-
-function copyReportIcon(experiment: StoredExperiment) {
-  return copiedExperimentId.value === experiment.id ? 'pi pi-check' : 'pi pi-file-edit';
-}
-
-function copyReportLabel(experiment: StoredExperiment) {
-  return copiedExperimentId.value === experiment.id ? t('experimentDatabase.actions.copied') : t('experimentDatabase.actions.copyReport');
 }
 
 </script>
@@ -365,7 +255,6 @@ function copyReportLabel(experiment: StoredExperiment) {
 
         <div v-if="displayMode === 'compact'" class="compact-action-bar action-bar">
           <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
-          <Button :icon="copyReportIcon(experiment)" :label="copyReportLabel(experiment)" class="p-button-sm p-button-text library-action" @click="copyReportFromDb(experiment)" />
           <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
         </div>
 
@@ -469,7 +358,6 @@ function copyReportLabel(experiment: StoredExperiment) {
           <span>{{ t('experimentDatabase.createdAt', { time: formatCreatedAt(experiment.createdAt) }) }}</span>
           <div class="action-bar">
             <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
-            <Button :icon="copyReportIcon(experiment)" :label="copyReportLabel(experiment)" class="p-button-sm p-button-text library-action" @click="copyReportFromDb(experiment)" />
             <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
           </div>
         </div>

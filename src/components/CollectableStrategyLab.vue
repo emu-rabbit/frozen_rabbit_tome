@@ -32,6 +32,7 @@ import {
 import { getCollectableActionIcon, getCollectableActionMinLevel, getCollectableActionName } from '../services/collectableActions';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
 import SaveEntryDialog from './SaveEntryDialog.vue';
+import FloatingJsonExportButton from './FloatingJsonExportButton.vue';
 import {
   createCollectableObjectiveOptions,
   getDefaultCollectableObjectivePresetId,
@@ -51,6 +52,11 @@ import {
   normalizeCollectableObjective
 } from '../config/inputLimits';
 import { isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeScheduler';
+import {
+  buildCollectableExperimentJsonExport,
+  buildJsonExportFileName,
+  downloadJsonFile
+} from '../utils/tomeJsonExport';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -89,7 +95,7 @@ const rewardError = ref(false);
 const isObjectiveDialogOpen = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
 const isSaved = ref(false);
-const isReportCopied = ref(false);
+const isJsonExported = ref(false);
 const treeResult = ref<CollectableStrategyTreeResult | null>(null);
 const editorFrontierTreeResult = ref<CollectableStrategyTreeResult | null>(null);
 const isTreeBuilding = ref(false);
@@ -105,7 +111,7 @@ const compactPathHiddenBranchKeys = new Set([
 ]);
 const { collectableObjective } = useCollectableSolver();
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
-let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
+let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let treeBuildAbort: AbortController | null = null;
 let editorBuildAbort: AbortController | null = null;
 let analysisAbort: AbortController | null = null;
@@ -314,7 +320,7 @@ watch(() => managedNodes.value.length, (length) => {
 
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
-  if (copyTimer) window.clearTimeout(copyTimer);
+  if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
   treeBuildAbort?.abort();
   editorBuildAbort?.abort();
   analysisAbort?.abort();
@@ -500,34 +506,48 @@ function confirmSaveExperiment(name: string) {
   }, 1600);
 }
 
-async function copyReport() {
-  if (!analysis.value) return;
+function handleExportCollectableExperimentJson() {
+  if (!analysis.value || !props.baseValues) return;
 
-  const report = {
-    kind: 'collectable',
-    itemId: props.activeItem.itemId,
-    stats: { ...props.effectiveStats },
-    temporaryGp: props.temporaryGp,
-    food: { ...props.selectedFood },
-    nodeBonuses: { ...props.nodeBonuses },
-    hasRelicToolBonus: !!props.hasRelicToolBonus,
+  const payload = buildCollectableExperimentJsonExport({
+    meta: {},
+    item: props.activeItem,
+    request: {
+      stats: { ...props.effectiveStats },
+      baseValues: { ...props.baseValues },
+      itemLevel: props.itemRealLevel,
+      nodeBonuses: { ...props.nodeBonuses },
+      temporaryGp: props.temporaryGp,
+      jobType: jobType.value,
+      isTimedNode: props.activeItem.isTimedNode ?? false,
+      hasRelicToolBonus: props.hasRelicToolBonus
+    },
+    rewardTable: rewardTable.value,
+    rewardTableSummary: rewardTableSummary(rewardTable.value),
     objective: collectableObjective.value,
-    rewardTable: rewardTableSummary(rewardTable.value),
-    strategyRules: storedRules(),
-    analysis: analysis.value
-  };
+    rules: storedRules(),
+    tree: treeResult.value,
+    analysis: analysis.value,
+    food: {
+      selection: { ...props.selectedFood }
+    }
+  });
 
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-    isReportCopied.value = true;
-    if (copyTimer) window.clearTimeout(copyTimer);
-    copyTimer = window.setTimeout(() => {
-      isReportCopied.value = false;
-      copyTimer = null;
-    }, 1600);
-  } catch (error) {
-    console.error('Failed to copy collectable experiment report:', error);
-  }
+  downloadJsonFile(payload, buildJsonExportFileName({
+    item: props.activeItem,
+    scenario: 'experiment.collectable',
+    scenarioLabel: t('jsonExport.scenarios.experimentCollectable')
+  }));
+  markJsonExported();
+}
+
+function markJsonExported() {
+  isJsonExported.value = true;
+  if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
+  jsonExportTimer = window.setTimeout(() => {
+    isJsonExported.value = false;
+    jsonExportTimer = null;
+  }, 1600);
 }
 
 function loadCollectableExperimentFromRoute() {
@@ -1510,16 +1530,6 @@ function makeId() {
       <div v-if="analysis" class="collectable-analysis-actions">
         <Button
           class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
-          :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isReportCopied }"
-          :aria-label="t('simulator.actions.copyReport')"
-          :disabled="!analysis"
-          @click="copyReport"
-        >
-          <i :class="isReportCopied ? 'pi pi-check' : 'pi pi-file-edit'"></i>
-          <span>{{ isReportCopied ? t('simulator.actions.copied') : t('simulator.actions.copyReport') }}</span>
-        </Button>
-        <Button
-          class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
           :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isSaved }"
           :aria-label="t('simulator.actions.save')"
           :disabled="isSaved"
@@ -1600,6 +1610,13 @@ function makeId() {
       :objective="collectableObjective"
       context="analysis"
       @change="handleObjectiveChange"
+    />
+    <FloatingJsonExportButton
+      v-if="analysis"
+      :label="t('common.exportJson')"
+      :exported-label="t('common.exportedJson')"
+      :exported="isJsonExported"
+      @click="handleExportCollectableExperimentJson"
     />
 
     <Teleport to="body">
@@ -4094,13 +4111,6 @@ function makeId() {
 
 :global(html.dark .node-pager span) {
   color: #e2e8f0;
-}
-
-@media (min-width: 640px) {
-  .collectable-analysis-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
 }
 
 @media (max-width: 520px) {

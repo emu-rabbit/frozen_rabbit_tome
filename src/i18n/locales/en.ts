@@ -7,6 +7,9 @@ export default {
   common: {
     cancel: 'Cancel',
     backToSelection: 'Back to Selection',
+    exportJson: 'Export JSON',
+    exportingJson: 'Exporting JSON',
+    exportedJson: 'JSON exported',
     displayMode: 'Display Mode',
     displayModes: {
       compact: 'Compact',
@@ -15,6 +18,14 @@ export default {
     pending: {
       collectableDesc: 'The collectable gathering system is currently under development. Stay tuned!',
       crystalDesc: 'The crystal gathering system is currently under development. Stay tuned!'
+    }
+  },
+  jsonExport: {
+    scenarios: {
+      tomeRegular: 'Regular Gathering Tome',
+      tomeCollectable: 'Collectable Tome',
+      experimentRegular: 'Regular Gathering Experiment',
+      experimentCollectable: 'Collectable Experiment'
     }
   },
   saveEntry: {
@@ -202,9 +213,7 @@ export default {
     actions: {
       simulate: 'Analyze',
       save: 'Save Experiment',
-      saved: 'Saved',
-      copyReport: 'Copy Report',
-      copied: 'Copied'
+      saved: 'Saved'
     },
     analysis: {
       title: 'Analysis Report',
@@ -259,8 +268,6 @@ export default {
     },
     actions: {
       edit: 'Edit',
-      copyReport: 'Copy Report',
-      copied: 'Copied',
       delete: 'Delete Experiment'
     }
   },
@@ -534,9 +541,6 @@ export default {
     },
     actions: {
       solve: 'Solve',
-      exportDecisionTree: 'Export Decision Tree',
-      exportingDecisionTree: 'Exporting',
-      exportedDecisionTree: 'Exported',
       collect: 'Collect',
       scour: 'Scour',
       meticulous: 'Meticulous',

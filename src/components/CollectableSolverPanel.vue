@@ -2,30 +2,36 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
-import type { GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
+import type { AppliedFoodBonus, FoodSelection, GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import type { CollectableObjective, CollectableRewardTable, CollectableSolverResult } from '../types/collectable';
-import packageInfo from '../../package.json';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import CollectablePolicyView from './CollectablePolicyView.vue';
 import CollectableDebugDialog from './CollectableDebugDialog.vue';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
+import FloatingJsonExportButton from './FloatingJsonExportButton.vue';
 import { getCollectableRewardTable } from '../services/collectableRewards';
-import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { useSettings } from '../composables/useSettings';
-import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import {
   createCollectableObjectiveOptions,
   getDefaultCollectableObjectivePresetId
 } from '../utils/collectableObjectivePresets';
 import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
+import {
+  buildCollectableSolverJsonExportAsync,
+  buildJsonExportFileName,
+  downloadJsonFile
+} from '../utils/tomeJsonExport';
 
 const props = defineProps<{
   activeItem: GatherableItem;
+  baseStats: PlayerStats;
   effectiveStats: PlayerStats;
   baseValues: { Gathering: number; Perception: number } | null;
   itemRealLevel: number;
   nodeBonuses: NodeBonuses;
   temporaryGp: number;
+  selectedFood: FoodSelection;
+  appliedFoodBonus: AppliedFoodBonus;
   debugMode: boolean;
 }>();
 
@@ -52,17 +58,12 @@ const isDecisionTreeExporting = ref(false);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
-const DECISION_TREE_EXPORT_SCHEMA_VERSION = 1;
 
 const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId && !isCollectableLevelLocked.value);
 const isWorkerError = computed(() => collectableError.value === 'workerStale' || collectableError.value === 'workerFailed');
 const nextMemoCapacityPower = computed(() => collectableErrorDetail.value?.nextMemoCapacityPower ?? null);
 const canRaiseMemoBudget = computed(() => collectableError.value === 'memoCapacity' && nextMemoCapacityPower.value !== null);
-const activeItemJobLabel = computed(() => {
-  const jobs = gatherableItemJobs(props.activeItem);
-  return jobs.length > 0 ? jobs.map((job) => t(`game.jobs.${job}`)).join(' / ') : '-';
-});
 const selectedObjectiveLabel = computed(() => {
   if (!rewardTable.value) return t('collectableObjective.title');
   const option = createCollectableObjectiveOptions(rewardTable.value)
@@ -164,17 +165,49 @@ function reloadPage() {
 }
 
 async function handleExportDecisionTree() {
-  if (!collectableResult.value || isDecisionTreeExported.value || isDecisionTreeExporting.value) return;
+  if (!collectableResult.value || !props.baseValues || !rewardTable.value || isDecisionTreeExported.value || isDecisionTreeExporting.value) return;
 
   isDecisionTreeExporting.value = true;
   await nextTick();
   await waitForUiFrame();
 
   try {
-    downloadTextFile(
-      [await buildDecisionTreeJson(collectableResult.value)],
-      buildDecisionTreeFileName()
-    );
+    const request = {
+      stats: { ...props.effectiveStats },
+      baseValues: {
+        Gathering: props.baseValues.Gathering,
+        Perception: props.baseValues.Perception
+      },
+      itemLevel: props.itemRealLevel,
+      nodeBonuses: { ...props.nodeBonuses },
+      temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
+      jobType: props.activeItem.jobType || 'miner',
+      rewardTable: rewardTable.value,
+      objective: collectableResult.value.objective,
+      objectiveMode: collectableResult.value.objectiveMode,
+      hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
+      isTimedNode: props.activeItem.isTimedNode ?? false,
+      debugMode: !!collectableResult.value.debug
+    };
+    const payload = await buildCollectableSolverJsonExportAsync({
+      meta: { locale: locale.value },
+      item: props.activeItem,
+      request,
+      result: collectableResult.value,
+      food: {
+        selection: { ...props.selectedFood },
+        appliedBonus: { ...props.appliedFoodBonus },
+        baseStats: { ...props.baseStats }
+      }
+    }, {
+      yieldEvery: 40
+    });
+
+    downloadJsonFile(payload, buildJsonExportFileName({
+      item: props.activeItem,
+      scenario: 'tome.collectable',
+      scenarioLabel: t('jsonExport.scenarios.tomeCollectable')
+    }));
 
     isDecisionTreeExported.value = true;
     if (exportedTimer) {
@@ -187,190 +220,6 @@ async function handleExportDecisionTree() {
   } finally {
     isDecisionTreeExporting.value = false;
   }
-}
-
-async function buildDecisionTreeJson(result: CollectableSolverResult) {
-  const policyGraph = await serializePolicyGraph(result.policy);
-  const planGraphs = [];
-
-  for (let index = 0; index < result.policyPlans.length; index += 1) {
-    const plan = result.policyPlans[index];
-    planGraphs.push({
-      kind: plan.kind,
-      startingGp: plan.startingGp,
-      expectedScore: plan.expectedScore,
-      minScore: plan.minScore,
-      maxScore: plan.maxScore,
-      minScoreChance: plan.minScoreChance,
-      maxScoreChance: plan.maxScoreChance,
-      expectedReward: plan.expectedReward,
-      expectedTierCounts: plan.expectedTierCounts,
-      minScoreTierCounts: plan.minScoreTierCounts,
-      maxScoreTierCounts: plan.maxScoreTierCounts,
-      policy: await serializePolicyGraph(plan.policy)
-    });
-  }
-
-  const payload = {
-    schemaVersion: DECISION_TREE_EXPORT_SCHEMA_VERSION,
-    manifest: {
-      app: 'frozen_rabbit_tome',
-      version: packageInfo.version,
-      commit: import.meta.env.VITE_APP_COMMIT ?? null,
-      algorithm: 'collectable',
-      exportType: 'decision-tree',
-      generatedAt: new Date().toISOString(),
-      locale: locale.value,
-      limitations: result.debug?.limitations ?? [
-        'brazen-excluded',
-        'high-standard-excluded',
-        'reduction-reward-model-excluded'
-      ]
-    },
-    input: {
-      item: {
-        itemId: props.activeItem.itemId,
-        nameLocale: props.activeItem.nameLocale,
-        nameEn: props.activeItem.nameEn,
-        jobType: props.activeItem.jobType || 'miner',
-        jobTypes: gatherableItemJobs(props.activeItem),
-        isTimedNode: props.activeItem.isTimedNode ?? false
-      },
-      stats: { ...props.effectiveStats },
-      baseValues: props.baseValues ? { ...props.baseValues } : null,
-      itemLevel: props.itemRealLevel,
-      nodeBonuses: { ...props.nodeBonuses },
-      temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
-      objectiveMode: result.objectiveMode,
-      objective: result.objective,
-      hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
-      rewardTable: rewardTable.value
-    },
-    display: {
-      title: t('collectableSolver.export.title', { item: props.activeItem.nameLocale || props.activeItem.nameEn }),
-      job: activeItemJobLabel.value,
-      expectedScoreLabel: t('collectableSolver.results.expectedScore', { unit: formatScripUnit(result.rewardItemId) })
-    },
-    formulaDebug: result.debug?.formulas ?? null,
-    plans: planGraphs,
-    combined: {
-      expectedScore: result.expectedScore,
-      minScore: result.minScore,
-      maxScore: result.maxScore,
-      minScoreChance: result.minScoreChance,
-      maxScoreChance: result.maxScoreChance,
-      expectedReward: result.expectedReward,
-      expectedTierCounts: result.expectedTierCounts,
-      minScoreTierCounts: result.minScoreTierCounts,
-      maxScoreTierCounts: result.maxScoreTierCounts,
-      revisit: result.revisit,
-      calculationTime: result.calculationTime,
-      debug: result.debug?.combined ?? null
-    },
-    search: {
-      plans: result.debug?.plans ?? null,
-      optimality: result.debug?.optimality ?? null
-    },
-    policy: policyGraph,
-    rotationPlans: []
-  };
-
-  return `${JSON.stringify(payload, null, 2)}\n`;
-}
-
-async function serializePolicyGraph(root: CollectableSolverResult['policy']) {
-  const nodes = [];
-  const visited = new Set<string>();
-  const stack = [root];
-  let processed = 0;
-
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (!node || visited.has(node.id)) continue;
-
-    visited.add(node.id);
-    nodes.push({
-      id: node.id,
-      state: node.state,
-      recommendedAction: node.recommendedAction,
-      expectedScore: node.expectedScore,
-      expectedReward: node.expectedReward,
-      branches: node.branches.map((branch) => {
-        const revisitGate = getInlineRevisitGate(branch.next);
-
-        if (branch.next && !revisitGate && !visited.has(branch.next.id)) {
-          stack.push(branch.next);
-        }
-
-        return {
-          labelKey: branch.labelKey,
-          labelKeys: branch.labelKeys,
-          conditionKey: branch.conditionKey,
-          probability: branch.probability,
-          outcome: branch.outcome,
-          nextId: revisitGate ? null : branch.next?.id ?? null,
-          revisitGate
-        };
-      })
-    });
-
-    processed += 1;
-    if (processed % 200 === 0) {
-      await waitForUiFrame();
-    }
-  }
-
-  return {
-    rootId: root.id,
-    nodeCount: nodes.length,
-    nodes
-  };
-}
-
-function getInlineRevisitGate(node?: CollectableSolverResult['policy']) {
-  if (!node || node.recommendedAction.kind !== 'revisitCheck') return null;
-
-  const procBranch = node.branches.find((branch) => branch.next);
-  const noProcBranch = node.branches.find((branch) => !branch.next);
-  if (!procBranch?.next || !noProcBranch) return null;
-
-  return {
-    procProbability: procBranch.probability,
-    procNextId: procBranch.next.id,
-    noProcProbability: noProcBranch.probability
-  };
-}
-
-function formatScripUnit(rewardItemId?: number) {
-  return t(getCollectableScripRewardMeta(rewardItemId).labelKey);
-}
-
-function buildDecisionTreeFileName() {
-  const itemName = props.activeItem.nameLocale || props.activeItem.nameEn || `item-${props.activeItem.itemId}`;
-  const date = new Date().toISOString().slice(0, 10);
-  return sanitizeFileName(`${itemName} - ${t('collectableSolver.actions.exportDecisionTree')} - ${date}.json`);
-}
-
-function sanitizeFileName(fileName: string) {
-  return fileName
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
-    .replace(/\s+/g, ' ')
-    .replace(/[. ]+$/g, '')
-    .slice(0, 160);
-}
-
-function downloadTextFile(chunks: string[], fileName: string) {
-  const blob = new Blob(chunks, { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = fileName;
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function waitForUiFrame() {
@@ -493,17 +342,6 @@ function waitForUiFrame() {
       <div class="solver-result-action-bar">
         <Button
           class="solver-action-button p-button-outlined rounded-xl"
-          :class="{ 'is-tome-saved': isDecisionTreeExported }"
-          :aria-label="t('collectableSolver.actions.exportDecisionTree')"
-          :loading="isDecisionTreeExporting"
-          :disabled="isDecisionTreeExported || isDecisionTreeExporting"
-          @click="handleExportDecisionTree"
-        >
-          <i class="p-button-icon p-button-icon-left" :class="isDecisionTreeExporting ? 'pi pi-spin pi-spinner' : isDecisionTreeExported ? 'pi pi-check' : 'pi pi-download'"></i>
-          <span class="solver-action-label p-button-label">{{ isDecisionTreeExporting ? t('collectableSolver.actions.exportingDecisionTree') : isDecisionTreeExported ? t('collectableSolver.actions.exportedDecisionTree') : t('collectableSolver.actions.exportDecisionTree') }}</span>
-        </Button>
-        <Button
-          class="solver-action-button p-button-outlined rounded-xl"
           :class="{ 'is-tome-saved': isSaved }"
           :aria-label="t('solver.strategy.saveTome')"
           :disabled="isSaved"
@@ -532,6 +370,16 @@ function waitForUiFrame() {
       :objective="collectableObjective"
       context="solver"
       @change="handleObjectiveChange"
+    />
+    <FloatingJsonExportButton
+      v-if="collectableResult"
+      :label="t('common.exportJson')"
+      :busy-label="t('common.exportingJson')"
+      :exported-label="t('common.exportedJson')"
+      :disabled="isDecisionTreeExporting"
+      :busy="isDecisionTreeExporting"
+      :exported="isDecisionTreeExported"
+      @click="handleExportDecisionTree"
     />
   </div>
 </template>
@@ -804,7 +652,7 @@ function waitForUiFrame() {
 
 .solver-result-action-bar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.75rem;
 }
 

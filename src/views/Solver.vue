@@ -14,6 +14,7 @@ import SolverDebugDialog from '../components/SolverDebugDialog.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import PendingFeature from '../components/PendingFeature.vue';
 import CollectableSolverPanel from '../components/CollectableSolverPanel.vue';
+import FloatingJsonExportButton from '../components/FloatingJsonExportButton.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
 import FoodAutoComplete from '../components/FoodAutoComplete.vue';
 import { useSettings } from '../composables/useSettings';
@@ -25,6 +26,11 @@ import { isCustomTierObjective, isTierCountObjective } from '../utils/collectabl
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { buildFoodOption, type FoodOption } from '../services/foodOptions';
 import { NODE_BONUS_INPUT_LIMITS, PLAYER_INPUT_LIMITS } from '../config/inputLimits';
+import {
+  buildJsonExportFileName,
+  buildRegularSolverJsonExport,
+  downloadJsonFile
+} from '../utils/tomeJsonExport';
 
 const { t, locale } = useI18n();
 const {
@@ -70,9 +76,11 @@ const isTomeSaved = ref(false);
 const isMacroPreviewOpen = ref(false);
 const isDebugDialogOpen = ref(false);
 const isSaveTomeDialogOpen = ref(false);
+const isJsonExported = ref(false);
 const macroPreview = ref<MacroBuildResult | null>(null);
 const pendingCollectableSaveResult = ref<CollectableSolverResult | null>(null);
 let tomeSavedTimer: ReturnType<typeof window.setTimeout> | null = null;
+let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const strategyActionLineBreaks: Record<string, Partial<Record<StrategyActionKey, string[]>>> = {
   en: {
@@ -241,6 +249,52 @@ function handleOpenDebugDialog() {
   isDebugDialogOpen.value = true;
 }
 
+function handleExportRegularSolverJson() {
+  if (!activeItem.value || !baseValues.value || !rotationResult.value) return;
+
+  const request = {
+    stats: { ...effectiveStats.value },
+    baseValues: {
+      Gathering: baseValues.value.Gathering,
+      Perception: baseValues.value.Perception
+    },
+    itemLevel: itemRealLevel.value,
+    nodeBonuses: { ...nodeBonuses.value },
+    temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
+    jobType: activeItem.value.jobType || 'miner',
+    isTimedNode: activeItem.value.isTimedNode ?? false,
+    objectiveMode: rotationResult.value.objectiveMode,
+    debugMode: !!rotationResult.value.debug
+  };
+  const payload = buildRegularSolverJsonExport({
+    meta: { locale: locale.value },
+    item: activeItem.value,
+    request,
+    result: rotationResult.value,
+    food: {
+      selection: { ...selectedFood.value },
+      appliedBonus: { ...foodBonus.value },
+      baseStats: { ...solverStats.value }
+    }
+  });
+
+  downloadJsonFile(payload, buildJsonExportFileName({
+    item: activeItem.value,
+    scenario: 'tome.regular',
+    scenarioLabel: t('jsonExport.scenarios.tomeRegular')
+  }));
+  markJsonExported();
+}
+
+function markJsonExported() {
+  isJsonExported.value = true;
+  if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
+  jsonExportTimer = window.setTimeout(() => {
+    isJsonExported.value = false;
+    jsonExportTimer = null;
+  }, 1600);
+}
+
 function toggleCollectableRelicToolBonus() {
   solverSettings.value.collectableRelicToolBonus = !solverSettings.value.collectableRelicToolBonus;
 }
@@ -395,6 +449,9 @@ function savePreviewMetrics() {
 onBeforeUnmount(() => {
   if (tomeSavedTimer) {
     window.clearTimeout(tomeSavedTimer);
+  }
+  if (jsonExportTimer) {
+    window.clearTimeout(jsonExportTimer);
   }
 });
 
@@ -626,11 +683,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 
       <CollectableSolverPanel
         :active-item="activeItem"
+        :base-stats="solverStats"
         :effective-stats="effectiveStats"
         :base-values="baseValues"
         :item-real-level="itemRealLevel"
         :node-bonuses="nodeBonuses"
         :temporary-gp="temporaryGp"
+        :selected-food="selectedFood"
+        :applied-food-bonus="foodBonus"
         :debug-mode="debugSettings.solverDebugMode"
         @save="handleSaveCollectableTome"
       />
@@ -1071,6 +1131,13 @@ function strategyActionLabelLines(key: StrategyActionKey) {
         </div>
       </article>
     </SaveEntryDialog>
+    <FloatingJsonExportButton
+      v-if="activeItem?.itemId && !activeItem.isCollectable && rotationResult"
+      :label="t('common.exportJson')"
+      :exported-label="t('common.exportedJson')"
+      :exported="isJsonExported"
+      @click="handleExportRegularSolverJson"
+    />
   </div>
 </template>
 

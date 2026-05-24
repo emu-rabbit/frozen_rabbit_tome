@@ -7,6 +7,9 @@ export default {
   common: {
     cancel: 'キャンセル',
     backToSelection: 'アイテム選択に戻る',
+    exportJson: 'JSONを書き出す',
+    exportingJson: 'JSONを書き出し中',
+    exportedJson: 'JSONを書き出しました',
     displayMode: '表示モード',
     displayModes: {
       compact: '簡潔',
@@ -15,6 +18,14 @@ export default {
     pending: {
       collectableDesc: '収集品採集システムは現在開発中です。公開まで今しばらくお待ちください。',
       crystalDesc: 'クリスタル採集システムは現在開発中です。公開まで今しばらくお待ちください。'
+    }
+  },
+  jsonExport: {
+    scenarios: {
+      tomeRegular: '通常採集秘伝書',
+      tomeCollectable: '収集品秘伝書',
+      experimentRegular: '通常採集実験',
+      experimentCollectable: '収集品実験'
     }
   },
   saveEntry: {
@@ -202,9 +213,7 @@ export default {
     actions: {
       simulate: '分析する',
       save: '実験を保存',
-      saved: '保存済み',
-      copyReport: 'レポートをコピー',
-      copied: 'コピー済み'
+      saved: '保存済み'
     },
     analysis: {
       title: '分析レポート',
@@ -259,8 +268,6 @@ export default {
     },
     actions: {
       edit: '編集',
-      copyReport: 'レポートをコピー',
-      copied: 'コピー済み',
       delete: '実験を削除'
     }
   },
@@ -532,9 +539,6 @@ export default {
     stats: { scourValue: '純化基礎値' },
     actions: {
       solve: '計算',
-      exportDecisionTree: '決定木を書き出す',
-      exportingDecisionTree: '書き出し中',
-      exportedDecisionTree: '書き出し済み',
       collect: '収集品採集',
       scour: '純化',
       meticulous: '慎重純化',

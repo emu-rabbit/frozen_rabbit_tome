@@ -7,6 +7,9 @@ export default {
   common: {
     cancel: '取消',
     backToSelection: '返回物品选择',
+    exportJson: '导出 JSON',
+    exportingJson: '正在导出 JSON',
+    exportedJson: '已导出 JSON',
     displayMode: '显示模式',
     displayModes: {
       compact: '简洁',
@@ -15,6 +18,14 @@ export default {
     pending: {
       collectableDesc: '收藏品采集系统目前尚在开发中，敬请期待。',
       crystalDesc: '水晶采集系统目前尚在开发中，敬请期待。'
+    }
+  },
+  jsonExport: {
+    scenarios: {
+      tomeRegular: '一般采集秘籍',
+      tomeCollectable: '收藏品秘籍',
+      experimentRegular: '一般采集实验',
+      experimentCollectable: '收藏品实验'
     }
   },
   saveEntry: {
@@ -202,9 +213,7 @@ export default {
     actions: {
       simulate: '进行分析',
       save: '保存实验',
-      saved: '已保存',
-      copyReport: '复制报告',
-      copied: '已复制'
+      saved: '已保存'
     },
     analysis: {
       title: '分析报告',
@@ -259,8 +268,6 @@ export default {
     },
     actions: {
       edit: '编辑',
-      copyReport: '复制报告',
-      copied: '已复制',
       delete: '删除实验'
     }
   },
@@ -532,9 +539,6 @@ export default {
     stats: { scourValue: '提炼基础值' },
     actions: {
       solve: '求解',
-      exportDecisionTree: '导出决策树',
-      exportingDecisionTree: '导出中',
-      exportedDecisionTree: '已导出',
       collect: '收藏品采集',
       scour: '提炼',
       meticulous: '慎重提炼',

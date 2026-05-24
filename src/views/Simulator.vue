@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'Simulator' });
 
-import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
@@ -13,11 +13,12 @@ import { useSimulator } from '../composables/useSimulator';
 import { useSettings } from '../composables/useSettings';
 import PendingFeature from '../components/PendingFeature.vue';
 import CollectableStrategyLab from '../components/CollectableStrategyLab.vue';
+import FloatingJsonExportButton from '../components/FloatingJsonExportButton.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
 import FoodAutoComplete from '../components/FoodAutoComplete.vue';
 import { getGatherableItemById, getItemName, getItemBaseIntegrity } from '../services/gameData';
-import { getRotationActionIcon, getRotationActionName, getRotationActionId } from '../services/actionIcons';
+import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
@@ -32,6 +33,11 @@ import {
   normalizeNodeBonuses,
   normalizePlayerStats
 } from '../config/inputLimits';
+import {
+  buildJsonExportFileName,
+  buildRegularExperimentJsonExport,
+  downloadJsonFile
+} from '../utils/tomeJsonExport';
 
 type RelicToolOption = {
   label: string;
@@ -70,11 +76,11 @@ const solverStats = simStats;
 const activeBlock = ref<'primary' | 'revisit'>('primary');
 const savedExperimentId = ref<string | null>(null);
 const isSaved = ref(false);
-const isReportCopied = ref(false);
+const isJsonExported = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
 const isGearProfilePickerOpen = ref(false);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
-let copyTimer: ReturnType<typeof window.setTimeout> | null = null;
+let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 const actionCategoryOrder = ['gather', 'success', 'boon', 'nextSuccess', 'nextYield', 'restore', 'wholeYield', 'boonYield'] as const;
 
 const actionOptions = computed(() => activeItem.value?.jobType ? getSimulatorActions(activeItem.value.jobType) : []);
@@ -158,6 +164,11 @@ onMounted(() => {
   fetchItemLevelData();
   syncFromSettings();
   loadExperimentFromRoute();
+});
+
+onBeforeUnmount(() => {
+  if (saveTimer) window.clearTimeout(saveTimer);
+  if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
 });
 
 onActivated(() => {
@@ -333,62 +344,40 @@ function confirmSaveExperiment(name: string) {
   }, 1600);
 }
 
-async function copyReport() {
+function handleExportRegularExperimentJson() {
   if (!activeItem.value || !analysis.value) return;
-  const mapRotation = (rotation: string[]) => rotation.map(action => {
-    if (action.startsWith('採集')) return { type: 'gather', actionName: actionLabel(action) };
-    const actionId = getRotationActionId(action);
-    return { type: 'action', actionId, actionName: actionLabel(action) };
+  const request = buildRequest();
+  if (!request) return;
+
+  const payload = buildRegularExperimentJsonExport({
+    meta: {},
+    item: activeItem.value,
+    request,
+    primaryRotation: [...primaryRotation.value],
+    revisitRotation: hideRevisitExperimentFeatures ? [] : [...revisitRotation.value],
+    includeRevisit: !hideRevisitExperimentFeatures,
+    analysis: analysis.value,
+    food: {
+      selection: { ...selectedFood.value },
+      baseStats: { ...solverStats.value }
+    }
   });
 
-  const cleanAnalysis = (analysisData: SimulationResponse) => {
-    const { primary, revisit, total, ...rest } = analysisData;
-    const cleanRotation = (obj: any) => {
-      const { rotation, ...cleaned } = obj;
-      return cleaned;
-    };
-    if (hideRevisitExperimentFeatures) {
-      const { revisitChance, ...singleRunRest } = rest;
-      return {
-        ...singleRunRest,
-        rotation: cleanRotation(primary),
-        total: cleanRotation(total)
-      };
-    }
-    return {
-      ...rest,
-      primary: cleanRotation(primary),
-      ...(revisit ? { revisit: cleanRotation(revisit) } : {}),
-      total: cleanRotation(total)
-    };
-  };
+  downloadJsonFile(payload, buildJsonExportFileName({
+    item: activeItem.value,
+    scenario: 'experiment.regular',
+    scenarioLabel: t('jsonExport.scenarios.experimentRegular')
+  }));
+  markJsonExported();
+}
 
-  const report = {
-    itemId: activeItem.value.itemId,
-    stats: { ...solverStats.value },
-    temporaryGp: temporaryGp.value,
-    food: { ...selectedFood.value },
-    nodeBonuses: { ...nodeBonuses.value },
-    ...(hideRevisitExperimentFeatures
-      ? { rotation: mapRotation(primaryRotation.value) }
-      : {
-          primaryRotation: mapRotation(primaryRotation.value),
-          revisitRotation: mapRotation(revisitRotation.value)
-        }),
-    analysis: cleanAnalysis(analysis.value)
-  };
-
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-    isReportCopied.value = true;
-    if (copyTimer) window.clearTimeout(copyTimer);
-    copyTimer = window.setTimeout(() => {
-      isReportCopied.value = false;
-      copyTimer = null;
-    }, 1600);
-  } catch (error) {
-    console.error('Failed to copy report:', error);
-  }
+function markJsonExported() {
+  isJsonExported.value = true;
+  if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
+  jsonExportTimer = window.setTimeout(() => {
+    isJsonExported.value = false;
+    jsonExportTimer = null;
+  }, 1600);
 }
 
 function loadExperimentFromRoute() {
@@ -805,17 +794,7 @@ function progressPercent(range: number[], maxValue: number) {
         </article>
           </div>
           
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            <Button
-              class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
-              :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isReportCopied }"
-              :aria-label="t('simulator.actions.copyReport')"
-              :disabled="!analysis || !analysis.total"
-              @click="copyReport"
-            >
-              <i :class="isReportCopied ? 'pi pi-check' : 'pi pi-file-edit'"></i>
-              <span>{{ isReportCopied ? t('simulator.actions.copied') : t('simulator.actions.copyReport') }}</span>
-            </Button>
+          <div class="grid grid-cols-1 gap-3 w-full">
             <Button
               class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
               :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isSaved }"
@@ -920,6 +899,13 @@ function progressPercent(range: number[], maxValue: number) {
       v-model="isGearProfilePickerOpen"
       :jobs="activeItemJobs"
       @apply="handleApplyGearProfile"
+    />
+    <FloatingJsonExportButton
+      v-if="activeItem?.itemId && !activeItem.isCollectable && analysis"
+      :label="t('common.exportJson')"
+      :exported-label="t('common.exportedJson')"
+      :exported="isJsonExported"
+      @click="handleExportRegularExperimentJson"
     />
   </div>
 </template>
