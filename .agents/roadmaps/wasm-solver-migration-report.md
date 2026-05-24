@@ -225,6 +225,17 @@ WASM 的優勢剛好符合前幾項：
 
 一般採集 solver 也可能適合 WASM，但建議不要直接照搬收藏品 core。先做以下檢查。
 
+### 2026-05-24 使用者決策
+
+後續評估與 POC 必須把下列決策視為正式限制，不是可選建議：
+
+- **Rotation 樣貌完全不變是硬門檻**：一般採集 WASM 路徑不只要 match `expectedYield`、`minYield`、`maxYield`、端點機率與 outcome distribution，也必須讓 `bestRotation` 與 `rotationPlans` 的 action 順序、Revisit plan 與使用者看到的 rotation 樣貌完全維持現有 TS solver 行為。若 WASM 只達到數值 parity 但 tie-break 產生不同 rotation，不可接入正式 worker。
+- **GP 4095 範圍必須被完整處理**：雖然 `GP 2000`、`GP 4000` 這類數值近年玩家幾乎不會在真實裝備中遇到，但目前網頁輸入限制允許到 `4095`，因此一般採集 WASM 架構必須能受控處理這個範圍。可以透過 memo capacity guard、受控錯誤、或使用者確認後升級記憶體重跑；不可讓頁面、worker 或瀏覽器直接 OOM。
+- **分階段推進並留下交接文件**：若完整遷移會超出單一 session 的 context window，應拆成 benchmark/golden corpus、WASM POC、parity audit、worker/UX integration 等階段。每一階段都要在本報告或專門 roadmap 留下可追蹤的輸入、輸出、未完成風險與下一步，讓其他 agent session 可以接續。
+- **記憶體行為沿用收藏品一致模式**：一般採集即使多數案例不需要收藏品那麼大的 memo table，也應採同一套可維護策略。手機與桌面使用相同的起始/支援容量判斷模式，並提供與收藏品一致的「使用者手動確認後升級記憶體重跑」功能。memo capacity exhaustion 應視為受控狀態，不應因容量不足自動 fallback 到更高壓的 JS 路徑硬算。
+
+本輪臨時 benchmark 也支持遷移必要性：在不改 source code 的 Node 臨時載入測試中，`獲得力 2000 / GP 2000 / 耐久 6` 的 TS solver 約 4.3 秒、`statesSolved` 約 930k；`獲得力 2000 / GP 4000 / 耐久 4` 約 17.3 秒、`statesSolved` 約 2.98M；`GP 4000 / 耐久 5 或 6` 會在約 4GB heap 附近 OOM。這不是正式瀏覽器 benchmark，但足以證明長跑案例打到 JS object / string-key memo 的弱點。
+
 ### 1. 找出一般採集 solver 的真實熱點
 
 先跑 profiling / benchmark，確認慢點是不是：
@@ -256,8 +267,19 @@ WASM 的優勢剛好符合前幾項：
 - `maxYieldChance`
 - outcome distribution
 - root action
-- 完整匯出 policy tree
+- `bestRotation` 與 `rotationPlans` 完整 action 序列
+- Revisit plan 的存在與順序
 - debug counters 是否合理
+
+因 2026-05-24 已決定 rotation 樣貌完全不變是硬門檻，golden scenario 必須保存完整 rotation 序列。若未來新增匯出 policy tree 或研究者 JSON，也應同步保存可 diff 的輸出。
+
+長跑 golden scenario 至少要納入：
+
+- 預設裝備附近的常規案例。
+- `獲得力 2000 / GP 2000`。
+- `獲得力 2000 / GP 4000`。
+- GP 接近目前輸入上限 `4095`。
+- 上述案例各自覆蓋耐久 4、5、6 或更高 node bonus 的差異。
 
 ### 3. 先抽出 shared oracle
 
@@ -291,6 +313,19 @@ WASM 的優勢剛好符合前幾項：
 
 這樣比較能保留既有網站行為，也降低後續 i18n / UI 變更成本。
 
+但與收藏品不同，一般採集第一版正式接線前必須證明 TS materialization 後的完整 rotation 序列與既有 TS solver 一致。若 WASM core 只提供分數而無法可靠還原相同 tie-break，必須讓 WASM 回傳足夠的 best-action / tie-break metadata，或暫停接入正式 UI。
+
+### 6. Memo capacity 與 UX 契約
+
+一般採集 WASM memo capacity 應沿用收藏品路徑的維護模式：
+
+- 依裝置能力與 heap 訊號選擇支援上限。
+- 小案例從較小 table 起跑，容量不足時用 fresh WASM instance 嘗試下一級。
+- 手機或低記憶體裝置不可無限制升級。
+- memo capacity / allocation failure 回傳受控錯誤。
+- 使用者可在明確警告與確認後手動升級記憶體重跑。
+- 若失敗原因是 memo capacity，不應自動 fallback 到 JS solver，因為 JS 路徑在長跑案例可能用更多 heap。
+
 ## 下一步建議
 
 收藏品 solver 繼續收斂：
@@ -303,11 +338,13 @@ WASM 的優勢剛好符合前幾項：
 
 一般採集 solver 評估：
 
-1. 先寫 benchmark，不直接搬。
-2. 對比目前 TS 在長案例的時間與 heap。
-3. 如果慢點同樣是 memo + object allocation，再建立 AssemblyScript core POC。
-4. 第一版 POC 只允許用來產生 score/action，不改正式 UI。
-5. 等完整 summary + policy tree parity 過關後再接 worker。
+1. 先寫正式 benchmark，不直接搬；把 `GP 2000`、`GP 4000`、接近 `4095` 與不同耐久案例納入。
+2. 建立 golden scenario corpus，保存完整 `bestRotation`、`rotationPlans`、summary、outcome distribution 與 debug counters。
+3. 把 TS solver 的 action ordering、equal-score tie-break、GP spending preference、skill habit preference 與 Revisit plan 規則整理成可測試契約。
+4. 若 benchmark 確認慢點同樣是 memo + object allocation，再建立 AssemblyScript core POC。
+5. 第一版 POC 只允許用來產生 score/action 與 memo stats，不改正式 UI。
+6. 接入 worker 前必須通過完整 rotation parity；數值一致但 rotation 不同時，不可接入正式路徑。
+7. 接線時沿用收藏品 memo capacity / 手動升級重跑 UX，並新增一般採集專用的受控 memo capacity error。
 
 ## 結論
 
