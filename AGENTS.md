@@ -60,7 +60,6 @@
 ### Roadmaps / Research
 
 - `.agents/roadmaps/shikhu-feedback-todo.md`：Shikhu 回饋收斂出的產品與技術待辦，不代表全部都要立即實作。
-- `.agents/roadmaps/wasm-solver-migration-report.md`：收藏品 WASM 求解器遷移現況、限制、測試與一般採集 solver 遷移建議。
 - `.agents/roadmaps/collectable-solver-research-history.md`：歷史研究與踩坑紀錄；用來避免重複錯誤，不是 active roadmap。
 
 ## 任務型補充資料
@@ -86,7 +85,7 @@
 若任務涉及收藏品求解器、WASM、policy tree、策略台、score / tier counts、debug export 或 OOM / memo capacity，另讀：
 
 - `.agents/skills/business/collectable_objective_scoring.md`
-- `.agents/roadmaps/wasm-solver-migration-report.md`
+- `.agents/skills/business/algorithm_verification.md`
 - `.agents/roadmaps/collectable-solver-research-history.md`
 
 若任務是在整理產品待辦、Shikhu 回饋、策略台 UI 或研究者分享 / 匯出方向，另讀：

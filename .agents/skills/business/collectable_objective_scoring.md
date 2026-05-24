@@ -279,7 +279,7 @@ UI 可顯示為：
 - 老主顧預設應偏向高標，但使用者仍應能改回票據總量或自訂權重。
 - 精選 reward model 不可直接沿用一般三檔票據模型；若用收藏價值評分，必須明確標示它是「推薦排序權重」而不是完整 reduction 期望。
 - 宇宙探索若缺 mission score / 銀星金星 reward 公式，也只能先用收藏價值偏好做參考推薦，不可宣稱完整支援。
-- WASM summary parity 不等於完整 policy tree parity。objective / tie-break / scoring 變更至少要驗證 TS 與 WASM 的 summary、distribution、reward/tier counts 與可達尾端；同分 root action 差異可視情況寬鬆驗收，但必須能解釋。
+- Objective / tie-break / scoring 變更至少要驗證 TS 與 WASM 的 summary、distribution、reward/tier counts 與可達尾端；同分 root action 差異可視情況寬鬆驗收，但必須能解釋。
 - 對外文案仍只能使用「推薦」、「依目前模型」、「評分偏好」等保守語氣，不可宣稱「最佳」或「唯一正解」。
 
 ## 最短落地路線

@@ -90,12 +90,15 @@ Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/util
 - `terminalStates`
 - `branchCount`
 
-收藏品 WASM 路徑另需注意：
+WASM 路徑另需注意：
 
 - `stateKeyEngine` 或等價欄位應能辨識 `wasm-packed`、`js-packed`、`string` 等 key 建立路徑。
 - memo capacity / allocation failure 必須回傳受控錯誤，不應讓頁面或 worker 直接 OOM。
 - 若手動提高 memo capacity，debug/export 應保留足夠線索讓第三方知道該結果使用的 engine 與容量。
-- WASM 與 TS fallback 的 summary parity 不代表完整 policy tree parity；測試與文件需分清楚兩者。
+- 一般採集 WASM 修改 `tie-break metadata`、capacity selector 或 worker fallback policy 時，必須重跑 worker parity test；不能只跑 wrapper test 或 summary test。
+- 一般採集的高 GP / 高耐久 / 低成功率 / Revisit 壓力案例應放在 `npm run bench:regular-wasm` 或 diagnostic，不應塞進預設 `npm run test:unit`。
+- 一般採集 WASM 效能診斷必須分開量測 core DP solve 與 wrapper materialization。2026-05-24 的重蠑木原木極端案例證明，`solvePlanObjective()` 可在 `2^23` 約 2 秒完成，但 TS wrapper 重建 `bestRotation` / `rotationPlans` / outcome distribution 可能因反覆展開同一 policy 子圖而長時間不回來；不可只用 memo capacity 或 `statesSolved` 判斷瓶頸。
+- 收藏品若新增剪枝策略，必須證明 summary、完整 distribution、reward/tier counts 與可達尾端不變，不能只看 expectedScore。
 
 代表性案例應設寬鬆上限，目標是防止搜尋空間意外爆炸，而不是限制合理的演算法調整。若重構後狀態數增加，Agent 必須判斷：
 
@@ -188,6 +191,7 @@ JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 change
 
 - 修改核心演算法時，至少跑 `npm run test:unit`。
 - 若修改普通採集或收藏品求解器，必須檢查公式表測試、invariant 測試、golden scenario 與 oracle 是否仍符合模型。
+- 若修改一般採集 WASM core、wrapper、worker fallback、memo capacity selector 或 rotation materialization，必須檢查 `src/utils/regularGatheringWasmSolver.test.ts`、`src/workers/solver.worker.test.ts` 與 `src/utils/regularGatheringRotationContract.test.ts`；高壓案例改用 `npm run bench:regular-wasm` 驗證。
 - 若修改收藏品 WASM core、wrapper、policy materialization、objective scoring 或剪枝策略，必須檢查 `src/utils/collectableWasmSolver.test.ts` 與 TS/WASM parity，並確認不會移除極低機率但可達的高分尾端。
 - 若新增支援技能或新 reward model，必須同步更新：
   - `.agents/skills/business/ffxiv_gathering_skills.md`

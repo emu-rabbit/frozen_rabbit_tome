@@ -13,12 +13,11 @@
 
 目前 active 參考優先順序：
 
-1. `.agents/roadmaps/wasm-solver-migration-report.md`
-2. `.agents/roadmaps/shikhu-feedback-todo.md`
-3. `.agents/skills/business/algorithm_verification.md`
-4. `.agents/skills/business/gathering_math_formulas.md`
-5. `.agents/skills/business/ffxiv_gathering_skills.md`
-6. `.agents/skills/mission/product_architecture.md`
+1. `.agents/skills/business/algorithm_verification.md`
+2. `.agents/skills/business/gathering_math_formulas.md`
+3. `.agents/skills/business/ffxiv_gathering_skills.md`
+4. `.agents/skills/mission/product_architecture.md`
+5. `.agents/roadmaps/shikhu-feedback-todo.md`
 
 ## 2026-05-19：收藏品策略樹分支爆炸研究
 
@@ -65,7 +64,7 @@
 - `src/utils/collectableStrategyTree.ts` 已有 `nodeCache`，不再是當時描述的純樹狀遞迴。
 - `src/utils/collectableWasmPolicy.ts` 已有 `visited` 與 `nodeLimit`，policy materialization 也不是完全沒有保護。
 
-所以本研究不應再被當成「目前求解台仍未處理 OOM」的證據。若要處理現況，應改讀 `wasm-solver-migration-report.md` 與現有 WASM tests。
+所以本研究不應再被當成「目前求解台仍未處理 OOM」的證據。若要處理現況，應改讀 `.agents/skills/business/algorithm_verification.md` 與現有 WASM tests。
 
 ### 仍然有效的踩坑規則
 
@@ -98,7 +97,7 @@
 
 ## 2026-05-23：WASM 遷移後的新判斷
 
-來源：`.agents/roadmaps/wasm-solver-migration-report.md`。
+來源：2026-05-23 WASM 遷移整理，有效維護規則已收斂到 `.agents/skills/business/algorithm_verification.md`。
 
 ### 已驗證改善
 
@@ -110,7 +109,6 @@
 
 WASM 只讓搜尋更能承受，不代表可以放寬正確性：
 
-- summary parity 不等於完整 policy tree parity。
 - 等價分數下，root action 或 policy shape 可能不同。
 - skill habit 只能作為最後 tie-break，不能排在 objective score、GP、action count、node count 之前。
 - 成功率補滿剪枝已撤回，因為它會移除極低機率但可達的高分尾端。
@@ -118,11 +116,92 @@ WASM 只讓搜尋更能承受，不代表可以放寬正確性：
 
 ### 後續應優先維護的驗證
 
-- 保留 TS/WASM summary parity 測試。
+- 保留 TS/WASM summary、distribution、reward / tier counts parity 測試。
 - 對等價 root action 差異採寬鬆驗收，但要保留 debug 線索。
 - 用黑鐵礦匯出案例做 regression fixture，確認 `304` / `342` primary 尾端與 `684` combined max 不會消失。
 - 在 debug/export 中標示 solver engine，例如 `wasm-core` / `ts-core`。
-- 若要追求完整 policy tree parity，需先接受 memo / 時間成本可能大幅上升。
+
+## 2026-05-24：一般採集高 GP WASM materialization 診斷
+
+來源：一般採集玩家路徑 WASM worker 接線後，使用者在手動提高 memo capacity 重跑時提供的極端案例截圖與本機 scratch 診斷。診斷只使用臨時 `scratch` / `src/__scratch__` 檔案，未修改正式 solver 邏輯。
+
+### 當時症狀
+
+一般採集案例：
+
+- 物品：重蠑木原木，園藝師，`Glv 700` / `Lv 100`。
+- 玩家：Lv 100，獲得力 `2060`，鑑別力 `4480`，開始 GP / 最大 GP `4058`。
+- 食物：醬炒飯 HQ。
+- 節點：基礎耐久 `6`，無額外採集次數、無獲得數增加、無額外率增加。
+- 公式中間值：基礎採集成功率 `52%`，基礎額外採集率 `23%`。
+
+`2^22` memo capacity 很快回報 capacity exhaustion；使用者手動提高到 `2^24` 後，worker 長時間沒有回來。初看容易誤判為 WASM core 本身仍在搜尋或進入死循環。
+
+### 已驗證事實
+
+精確案例在 `2^22` 下約 `1.47s` 撞 memo guard：
+
+- `statesSolved`: `3,565,197`
+- `memoHits`: `8,046,286`
+- `actionsEvaluated`: `4,767,397`
+- `terminalStates`: `1,096,638`
+- `branchCount`: `12,708,120`
+- WASM memory：約 `546MB`
+
+但同一案例直接呼叫 WASM core `solvePlanObjective()`，不做 wrapper materialization 時，`2^23` 約 `1.95s` 就完成：
+
+- `statesSolved`: `4,982,242`
+- `memoHits`: `11,371,516`
+- `actionsEvaluated`: `6,713,629`
+- `candidateComparisons`: `6,713,629`
+- `terminalStates`: `1,547,326`
+- `branchCount`: `17,901,083`
+- `expectedYield`: `89.47074218749998`
+- `minYield / maxYield`: `48 / 131`
+- `bestAction`: `successIII`
+- WASM memory：約 `1,090MB`
+
+所以這次 `2^23` / `2^24` 長時間不回來，主要不是 WASM DP core 解不完，而是 `src/utils/regularGatheringWasmSolver.ts` 在 core 完成後，用 TS wrapper 讀 memo 重建 `bestRotation` / `rotationPlans` / outcome distribution 時反覆展開同一批 policy state。
+
+臨時診斷 core 加上 memo probe counter 後確認：
+
+- state limit `4,950,000` 時仍可約 `2.05s` 回報。
+- probe limit `100,000,000` 時耗時約 `30.3s`，但 `statesSolved`、`memoHits`、`actionsEvaluated`、`branchCount` 都停在同一組數字。
+- 代表慢點發生在 materialization 查表 / 重建過程，不是新增搜尋 state 持續增加。
+
+幾個 ablation 結果：
+
+- GP `1000`：`82ms` 完成，`124,893` states。
+- GP `2000`：`378ms` 完成，`925,671` states。
+- GP `3000`：`2.17s` 完成，`2,506,791` states。
+- GP `3500`：`2^22` 已撞 capacity。
+- 同樣 GP `4058` / 耐久 `6`，拿掉 Lv90+ Wise proc（改成 Lv89）可在 `749ms` 完成。
+- 同樣 GP `4058` / 耐久 `6`，讓 boon chance 變成 0 可在 `285ms` 完成。
+
+結論：高 GP 給 `restore` / `wise` 很多展開空間；Lv90+ `restore` 的 Wise 50/50 分支、52% 成功率的失敗 / 成功分支、23% boon 分支會讓 policy graph 很大。WASM core 可以用 memo 解完，但 wrapper 若沒有 materialized-state memo 或 cycle/visited guard，重建完整分布時會重複走相同子圖。
+
+### 曾經誤判或撤回的方向
+
+- 不應把這次現象直接解讀成公式錯誤。截圖中的 `52%` / `23%` 與目前公式推導一致。
+- 不應只用 memo capacity escalation 解釋。提高到 `2^23` 後 core 已可完成，但 wrapper 後段仍可能長時間卡住；`2^24` 只會增加記憶體壓力，不保證縮短時間。
+- 不應在 memo capacity exhaustion 時 fallback 到 TS solver 長跑；這仍可能把高壓案例帶回更危險的 JS heap 路徑。
+- 不應為了讓此案例快回來而放寬 rotation shape parity、只回 summary、或丟棄 outcome distribution 尾端。
+
+### 仍然有效的踩坑規則
+
+- 一般採集 WASM 診斷必須拆開「core solve」與「wrapper materialization」計時；只看 worker 總耗時會誤判瓶頸。
+- 高 GP / Lv90+ Wise / 低成功率 / 非零 boon 的普通採集案例，可能不是 DP core 最慢，而是 rotation / distribution materialization 最慢。
+- 若修 materialization，方向應是對 materialized policy state 做 memo / visited / DAG 化，並維持完整 rotation shape parity 與 outcome distribution parity；不能用 summary-only 或 heuristic pruning 取代。
+- 手動提高 memo capacity 的 UX 可以保留 warning gate，但效能診斷不要把「更大 capacity」當成必然能完成的承諾。
+- Benchmark / diagnostic 可以保留此類高壓案例，但不要塞進預設 unit test。
+
+### 後續應改讀的 active 文件或測試
+
+- `.agents/skills/business/algorithm_verification.md`
+- `src/utils/regularGatheringWasmSolver.ts`
+- `src/utils/regularGatheringWasmSolver.test.ts`
+- `src/workers/solver.worker.test.ts`
+- `scripts/regular-gathering-wasm.bench.ts`
 
 ## 後續追加格式
 

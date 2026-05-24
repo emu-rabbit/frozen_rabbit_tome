@@ -41,6 +41,20 @@
 - 同一組底層公式與 action model 可以被兩邊共用，但 UI 心智模型必須分開。
 - 公式、資料與狀態模型應盡量共用，避免秘笈與實驗對同一技能算出不一致結果。
 
+## 一般採集秘笈現況
+
+一般採集秘笈目前是 WASM-first 架構，後續 Agent 應以既有玩家路徑為基礎維護，不要再把一般採集 WASM 視為 POC 或未接線功能。
+
+- 現有核心檔案：
+  - `assembly/regularGatheringSolverCore.ts`：一般採集 WASM core，負責 DP / memo / objective score / best action / search counters。
+  - `src/wasm/regular-gathering-solver-core.wasm`：由 AssemblyScript 產出的核心；修改 AssemblyScript 後必須同步重建並提交。
+  - `src/utils/regularGatheringWasmSolver.ts`：WASM wrapper、rotation materialization、outcome distribution 重建、Revisit combined summary 與 memo capacity 錯誤分類。
+  - `src/utils/rotationSolver.ts`：TS solver；目前作為 fallback、oracle 與 parity 參考。
+  - `src/workers/solver.worker.ts`：一般採集 worker；預設優先使用 WASM wrapper。只有非 memo / allocation 類 WASM 載入或執行失敗才 fallback 到 TS solver；memo capacity / allocation 問題必須回傳受控錯誤。
+  - `src/composables/useSolver.ts`、`src/views/Solver.vue`：一般採集秘笈 UI 與 memo capacity warning gate。
+- 使用者可見的 `bestRotation` 與 `rotationPlans` 必須維持既有 TS solver 的 rotation shape；數值一致但 action 順序不同時，不能視為可接受的正式行為。
+- 高 GP / 高耐久 / 低成功率 / Revisit 的壓力案例應放在 benchmark 或 diagnostic，不應塞進預設 unit test。
+
 ## 收藏品秘笈現況
 
 收藏品採集已不是「施工中」的空入口；後續 Agent 應以目前已存在的收藏品求解器為基礎維護，而不是重開大型規劃。
@@ -60,7 +74,7 @@
 - 收藏品結果是 **policy tree / 判斷表**，不是固定 linear rotation；藏書庫儲存的也應是 policy preview。
 - 收藏品秘笈不提供巨集。若使用者要照指定手法跑結果，應歸入實驗系統。
 - 目前可依 `expected`、`min`、`max` 等模式排序；對外仍只能稱「推薦」或「依目前模型推算」。
-- WASM summary parity 不等於完整 policy tree parity。若調整 WASM core、TS fallback、policy materialization 或剪枝策略，必須讀 `.agents/roadmaps/wasm-solver-migration-report.md` 與 `.agents/skills/business/algorithm_verification.md`，並確認 outcome distribution、reward/tier counts 與可達尾端沒有被破壞。
+- 若調整 WASM core、TS fallback、policy materialization 或剪枝策略，必須讀 `.agents/skills/business/algorithm_verification.md` 與 `.agents/roadmaps/collectable-solver-research-history.md`，並確認 outcome distribution、reward/tier counts 與可達尾端沒有被破壞。
 - Debug 必須保留限制提示：`Brazen / 大膽提煉`、`Collector's High Standard / 強化洞察` 與精選 reward model 仍不納入目前秘笈推薦。
 
 ## 與既有 Skill 的關係

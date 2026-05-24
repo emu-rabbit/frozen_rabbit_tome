@@ -776,7 +776,7 @@ describe('regular gathering WASM solver core POC', () => {
     expectSamePlanRotations(core, request);
   });
 
-  it('matches TS rotation plans and outcome distributions across the expanded parity corpus', async () => {
+  it('matches TS rotation plans and outcome distributions across the fast parity corpus', async () => {
     const core = await loadWasmCore();
     const cases: Array<{ name: string; request: SolverRequest; memoCapacityPower?: number }> = [
       {
@@ -829,55 +829,6 @@ describe('regular gathering WASM solver core POC', () => {
         memoCapacityPower: 20
       },
       {
-        name: 'GP 4095 / integrity 6 / high boon / no Revisit / expected',
-        request: baseRequest({
-          stats: {
-            level: 89,
-            gathering: 1200,
-            perception: 1500,
-            gp: 4095
-          },
-          baseValues: {
-            Gathering: 1000,
-            Perception: 1000
-          },
-          itemLevel: 89,
-          nodeBonuses: {
-            baseIntegrity: 6,
-            gatheringCount: 0,
-            yieldCount: 0,
-            extraRate: 0
-          },
-          temporaryGp: 4095,
-          objectiveMode: 'expected'
-        }),
-        memoCapacityPower: 21
-      },
-      {
-        name: 'GP 4000 / integrity 4 / low success / no Revisit / min',
-        request: baseRequest({
-          stats: {
-            level: 10,
-            gathering: 280,
-            perception: 1000,
-            gp: 4000
-          },
-          baseValues: {
-            Gathering: 1000,
-            Perception: 1000
-          },
-          itemLevel: 10,
-          nodeBonuses: {
-            baseIntegrity: 4,
-            gatheringCount: 0,
-            yieldCount: 0,
-            extraRate: 0
-          },
-          temporaryGp: 4000,
-          objectiveMode: 'min'
-        })
-      },
-      {
         name: 'GP 2000 / integrity 5 / node bonus / no Revisit / max',
         request: baseRequest({
           stats: {
@@ -901,31 +852,6 @@ describe('regular gathering WASM solver core POC', () => {
           objectiveMode: 'max',
           jobType: 'botanist'
         })
-      },
-      {
-        name: 'GP 4095 / integrity 6 / node bonus / Revisit / min',
-        request: baseRequest({
-          stats: {
-            level: 91,
-            gathering: 1000,
-            perception: 1100,
-            gp: 4095
-          },
-          baseValues: {
-            Gathering: 1000,
-            Perception: 1000
-          },
-          itemLevel: 91,
-          nodeBonuses: {
-            baseIntegrity: 5,
-            gatheringCount: 1,
-            yieldCount: 1,
-            extraRate: 10
-          },
-          temporaryGp: 2000,
-          objectiveMode: 'min'
-        }),
-        memoCapacityPower: 21
       }
     ];
 

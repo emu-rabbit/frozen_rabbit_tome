@@ -1,6 +1,6 @@
 # Shikhu 回饋收斂待辦
 
-本文件整理與 Shikhu 討論後收斂出的後續方向。此文件是給未來 Agent 接手時使用的產品與技術脈絡，不代表所有項目都應立即實作。執行前仍需依任務類型讀取 `.agents/skills/` 內的核心、業務與專業規範。
+本文件整理與 Shikhu 討論後收斂出的後續方向。此文件是給未來 Agent 接手時使用的產品與技術脈絡，不代表所有項目都應立即實作。執行前仍需依任務類型讀取 `.agents/skills/` 內的核心、業務與專業規範；若任務牽涉求解器 WASM、memo capacity 或 debug/export 驗證，另讀 `.agents/skills/business/algorithm_verification.md`。
 
 ## 超簡要檢視區
 
