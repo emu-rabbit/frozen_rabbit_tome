@@ -14,11 +14,7 @@
    - 讓使用者比較兩份分析報表，例如 spiritbond rotation vs normal rotation。
    - 優先考慮一般採集實驗區與收藏品實驗區的共用比較模型。
 
-3. **效能與 OOM 壓力測試**
-   - 特別關注低 Gathering/Perception、高 GP 的版本初期情境。
-   - 這是較偏後端 / 演算法品質的項目。
-
-4. **Frontier 實驗區**
+3. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
 
@@ -86,33 +82,7 @@ Shikhu 提到一般採集模擬器 / 分析器可用於研究，例如比較 spi
 - 跨系統比較容易語意混亂，應延後。
 - 報表比較依賴穩定的 export/report schema，因此可與第 1 項一起規劃。
 
-## 3. 效能與 OOM 壓力測試
-
-### 背景
-
-Shikhu 提醒版本拓荒期可能出現低 Gathering / Perception 但高 GP 的情境。這會讓更多補成功率、補價值、恢復耐久與 proc 分支變得有意義，搜尋空間可能膨脹。
-
-2026-05-23 後收藏品求解器已改為 WASM-first，部分舊 JS heap OOM case 已大幅緩解；現況請以 `.agents/roadmaps/wasm-solver-migration-report.md` 為主。不過極端輸入仍可能遇到 memo capacity / memory allocation guard，因此這裡的產品風險已從「整頁 OOM crash」收斂為「需要穩定完成、可控失敗、清楚告知使用者限制」。
-
-### User Story
-
-作為工具使用者，我希望即使輸入極端但合理的拓荒期數值，網站也不會 crash；若計算很久，至少要能穩定完成或給出可理解的限制提示。
-
-### 待辦方向
-
-- 建立低屬性高 GP 的壓力測試案例。
-- 觀察 `statesSolved`、`branchCount`、`memoHits`、`calculationTime`、`stateKeyEngine`、memo capacity 等 debug stats。
-- 確認 memo capacity / allocation failure 會回傳可理解提示，不會 fallback 到更危險的高壓 JS 路徑。
-- 檢查 Web Worker 與 WASM memory 使用。
-- 對代表性極端輸入建立回歸測試或效能門檻。
-
-### 取捨
-
-- 使用者可以接受「算很久」。
-- 不能接受 OOM crash、整頁崩潰，或沒有說明的 worker 失敗。
-- 不可為了效能偷刪合法分支；後續若新增剪枝，必須證明 outcome distribution、reward/tier counts 與可達高分尾端不變。
-
-## 4. Frontier 實驗區
+## 3. Frontier 實驗區
 
 ### 背景
 
@@ -173,4 +143,4 @@ Shikhu 提出一個想法：與其重複寫多條條件，例如收藏價值滿�
 
 ### 目前取捨
 
-這是長期維護議題，不應優先於目前 Shikhu 回饋中已明確阻礙使用的資料分享、報表比較、效能與 Frontier 實驗問題。
+這是長期維護議題，不應優先於目前 Shikhu 回饋中已明確阻礙使用的資料分享、報表比較與 Frontier 實驗問題。
