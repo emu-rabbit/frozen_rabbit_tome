@@ -7,7 +7,7 @@ import { getItemLevelData, getGatheringItemsData, getItemName, isGameDataLoading
 import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../services/foodData';
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
-import type { SolverRequest, SolverResponse } from '../types/game';
+import type { SolverRequest, SolverResponse, SolverWorkerErrorResponse, SolverWorkerErrorType, SolverWorkerResponse } from '../types/game';
 import {
   DEFAULT_NODE_BONUSES,
   clampIntegerInput,
@@ -57,7 +57,8 @@ const gatheringItemsData = ref<Record<string, any> | null>(null);
 // 求解器結果
 const rotationResult = ref<SolverResponse | null>(null);
 const isSolving = ref(false);
-const solverError = ref<'workerStale' | 'workerFailed' | null>(null);
+const solverError = ref<SolverWorkerErrorType | 'workerStale' | 'workerFailed' | null>(null);
+const solverErrorDetail = ref<SolverWorkerErrorResponse | null>(null);
 let activeWorker: Worker | null = null;
 let solveVersion = 0;
 let latestSolveInputSignature = '';
@@ -153,10 +154,13 @@ export function useSolver() {
     }
 
     rotationResult.value = null;
+    solverError.value = null;
+    solverErrorDetail.value = null;
   };
 
   const requestWorkerReload = () => {
     solverError.value = typeof window === 'undefined' ? 'workerFailed' : 'workerStale';
+    solverErrorDetail.value = null;
   };
 
   const reloadPage = () => {
@@ -377,9 +381,21 @@ export function useSolver() {
     displayName,
     // 求解功能
     solve: async () => {
+      await solveWithMemoCapacity();
+    },
+    solveWithMemoCapacity,
+    rotationResult,
+    isSolving,
+    solverError,
+    solverErrorDetail,
+    reloadPage
+  };
+
+  async function solveWithMemoCapacity(manualMemoCapacityPower?: number) {
       if (!activeItem.value || !baseValues.value || !isPerceptionMet.value) return;
       cancelActiveSolve();
       solverError.value = null;
+      solverErrorDetail.value = null;
       isSolving.value = true;
       const currentSolveVersion = solveVersion;
       
@@ -409,6 +425,9 @@ export function useSolver() {
         objectiveMode: solverSettings.value.objectiveMode,
         debugMode: debugSettings.value.solverDebugMode
       };
+      if (manualMemoCapacityPower !== undefined) {
+        request.manualMemoCapacityPower = manualMemoCapacityPower;
+      }
 
       try {
         worker.postMessage(request);
@@ -418,17 +437,29 @@ export function useSolver() {
         activeWorker = null;
         isSolving.value = false;
         solverError.value = 'workerFailed';
+        solverErrorDetail.value = null;
         return;
       }
       
-      worker.onmessage = (e: MessageEvent<SolverResponse>) => {
+      worker.onmessage = (e: MessageEvent<SolverWorkerResponse>) => {
         if (currentSolveVersion !== solveVersion || activeWorker !== worker) {
+          worker.terminate();
+          return;
+        }
+
+        if ('errorType' in e.data) {
+          rotationResult.value = null;
+          solverError.value = e.data.errorType;
+          solverErrorDetail.value = e.data;
+          isSolving.value = false;
+          activeWorker = null;
           worker.terminate();
           return;
         }
 
         rotationResult.value = e.data;
         solverError.value = null;
+        solverErrorDetail.value = null;
         isSolving.value = false;
         activeWorker = null;
         worker.terminate();
@@ -446,10 +477,5 @@ export function useSolver() {
         worker.terminate();
         requestWorkerReload();
       };
-    },
-    rotationResult,
-    isSolving,
-    solverError,
-    reloadPage
-  };
+    }
 }

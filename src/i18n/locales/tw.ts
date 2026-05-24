@@ -427,6 +427,16 @@ export default {
         workerFailed: {
           title: '求解器暫時無法啟動',
           desc: '請重新整理頁面後再試一次；若仍然發生，可能需要稍後再回來。'
+        },
+        memoCapacity: {
+          title: '記憶體不足，無法完成求解',
+          desc: '這組條件需要較大的採集決策記憶體，已達此裝置可用上限。請先縮小條件，或改用較簡單的情境。',
+          raiseBudget: '提高記憶體再試',
+          manualRisk: '提高記憶體後，瀏覽器可能短暫變慢或分頁停止回應；若裝置資源不足，系統可能會關閉分頁。'
+        },
+        memoAllocationFailed: {
+          title: '無法啟動更高記憶體求解',
+          desc: '瀏覽器無法配置這次採集求解需要的記憶體。請縮小條件或改用較簡單的情境。'
         }
       },
       gatherAction: '採集',

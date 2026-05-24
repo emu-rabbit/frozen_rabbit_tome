@@ -10,7 +10,9 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "wasm:collectable:build": "asc assembly/collectableSolverCore.ts -o src/wasm/collectable-solver-core.wasm -t scratch/collectable-solver-core.wat -O --noAssert",
-    "bench:collectable-wasm": "npm run wasm:collectable:build && vitest run --config vitest.bench.config.ts --reporter verbose"
+    "wasm:regular:build": "asc assembly/regularGatheringSolverCore.ts -o src/wasm/regular-gathering-solver-core.wasm -t scratch/regular-gathering-solver-core.wat -O --noAssert",
+    "bench:collectable-wasm": "npm run wasm:collectable:build && vitest run --config vitest.bench.config.ts --reporter verbose",
+    "bench:regular-wasm": "npm run wasm:regular:build && vitest run --config vitest.bench.config.ts scripts/regular-gathering-wasm.bench.ts --reporter verbose"
   },
   "dependencies": {
     "@primevue/themes": "^4.5.4",

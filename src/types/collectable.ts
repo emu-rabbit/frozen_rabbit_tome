@@ -250,6 +250,7 @@ export interface CollectableSolverDebugInfo {
   };
   limitations: string[];
   optimality: {
+    engine: 'wasm-core' | 'ts-core';
     method: 'dynamic-programming-policy-search';
     stateKeyFields: string[];
     stateKeyEngine?: 'wasm-packed' | 'js-packed' | 'string';

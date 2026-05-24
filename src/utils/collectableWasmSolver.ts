@@ -353,6 +353,7 @@ function solveCollectableRotationWithWasmCore(
         'reduction-reward-model-excluded'
       ],
       optimality: {
+        engine: 'wasm-core',
         method: 'dynamic-programming-policy-search',
         stateKeyFields: [...COLLECTABLE_STATE_KEY_FIELDS],
         stateKeyEngine: 'wasm-packed'

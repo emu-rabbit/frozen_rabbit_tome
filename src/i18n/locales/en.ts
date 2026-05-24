@@ -426,6 +426,16 @@ export default {
         workerFailed: {
           title: 'The solver could not start',
           desc: 'Please reload the page and try again. If it keeps happening, try again later.'
+        },
+        memoCapacity: {
+          title: 'Not enough memory to finish this solve',
+          desc: 'This setup needs a larger memory budget for gathering decisions than this device can currently use. Narrow the conditions or try a simpler scenario.',
+          raiseBudget: 'Try with more memory',
+          manualRisk: 'Using more memory may briefly slow the browser or make this tab stop responding; if the device is short on resources, the system may close the tab.'
+        },
+        memoAllocationFailed: {
+          title: 'Could not start the higher-memory solve',
+          desc: 'The browser could not allocate the memory needed for this gathering solve. Narrow the conditions or use a simpler scenario.'
         }
       },
       gatherAction: 'Gather',

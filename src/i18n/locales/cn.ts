@@ -426,6 +426,16 @@ export default {
         workerFailed: {
           title: '求解器暂时无法启动',
           desc: '请重新整理页面后再试一次；若仍然发生，可能需要稍后再回来。'
+        },
+        memoCapacity: {
+          title: '内存不足，无法完成求解',
+          desc: '这组条件需要较大的采集决策内存，已达到此设备可用上限。请先缩小条件，或改用较简单的情境。',
+          raiseBudget: '提高内存再试',
+          manualRisk: '提高内存后，浏览器可能短暂变慢或标签页停止响应；如果设备资源不足，系统可能会关闭该标签页。'
+        },
+        memoAllocationFailed: {
+          title: '无法启动更高内存求解',
+          desc: '浏览器无法分配这次采集求解需要的内存。请缩小条件或改用较简单的情境。'
         }
       },
       gatherAction: '采集',

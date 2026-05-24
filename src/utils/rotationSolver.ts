@@ -745,8 +745,10 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
           : `${Number(initial.expectedYield.toFixed(4))}`
       },
       optimality: {
+        engine: 'ts-core',
         method: 'dynamic-programming-exhaustive-search',
-        stateKeyFields: STATE_KEY_FIELDS
+        stateKeyFields: STATE_KEY_FIELDS,
+        stateKeyEngine: 'string'
       }
     };
   }

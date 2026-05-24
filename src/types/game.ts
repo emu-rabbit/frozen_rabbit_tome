@@ -164,6 +164,7 @@ export interface SolverRequest {
   isTimedNode?: boolean;
   objectiveMode?: SolverObjectiveMode;
   debugMode?: boolean;
+  manualMemoCapacityPower?: number;
 }
 
 export type SolverRotationPlanKind = 'primary' | 'revisit';
@@ -228,6 +229,9 @@ export interface SolverSearchDebugInfo {
   statesSolved: number;
   memoHits: number;
   memoHitRate?: number;
+  memoCapacityPower?: number;
+  memoCapacity?: number;
+  memoCapacityUsable?: number;
   actionsEvaluated: number;
   candidateComparisons: number;
   terminalStates: number;
@@ -253,8 +257,10 @@ export interface SolverDebugInfo {
     expression: string;
   };
   optimality: {
+    engine: 'wasm-core' | 'ts-core';
     method: 'dynamic-programming-exhaustive-search';
     stateKeyFields: string[];
+    stateKeyEngine?: 'wasm-packed' | 'js-packed' | 'string';
   };
 }
 
@@ -272,6 +278,16 @@ export interface SolverResponse {
   calculationTime: number;
   debug?: SolverDebugInfo;
 }
+
+export type SolverWorkerErrorType = 'memoCapacity' | 'memoAllocationFailed';
+
+export interface SolverWorkerErrorResponse {
+  errorType: SolverWorkerErrorType;
+  memoCapacityPower?: number;
+  nextMemoCapacityPower?: number;
+}
+
+export type SolverWorkerResponse = SolverResponse | SolverWorkerErrorResponse;
 
 export interface StoredTomeNodeBonuses {
   baseIntegrity?: number;

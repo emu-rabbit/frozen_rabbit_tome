@@ -326,12 +326,305 @@ WASM 的優勢剛好符合前幾項：
 - 使用者可在明確警告與確認後手動升級記憶體重跑。
 - 若失敗原因是 memo capacity，不應自動 fallback 到 JS solver，因為 JS 路徑在長跑案例可能用更多 heap。
 
+### 2026-05-24 第一階段 POC 交接
+
+文件門檻已先單獨提交：
+
+- Commit：`010f1f1 Docs: 記錄一般採集 WASM 遷移門檻`
+
+目前程式 POC 已開始，但截至本段交接文字寫入時仍是未提交狀態。相關檔案：
+
+- `assembly/regularGatheringSolverCore.ts`：一般採集 AssemblyScript core POC。第一版只處理 primary plan 的 DP / memo / objective score / root action / search counters。
+- `src/wasm/regular-gathering-solver-core.wasm`：由 `npm run wasm:regular:build` 產出的 WASM binary，若修改 `assembly/regularGatheringSolverCore.ts` 必須同步重建並提交。
+- `src/utils/regularGatheringWasmSolver.test.ts`：Node/Vitest 載入 WASM binary，對照現有 `solveGatheringRotation()` 的 primary plan summary。
+- `package.json`：新增 `wasm:regular:build` script。
+- `.gitignore`：忽略 `scratch/regular-gathering-solver-core.wat`。
+
+這一階段已完成的驗證：
+
+- `npm run wasm:regular:build`
+- `npm run test:unit -- src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts src/utils/regularGatheringWasmSolver.test.ts`
+- `npm run build`
+- `npm run test:unit`，當時結果為 `29 passed / 198 passed`
+
+目前 POC 驗收範圍：
+
+- no-skill golden case 的 primary plan summary 與 root action。
+- 下一次採集獲得量技能 case 的 primary plan summary 與 root action。
+- `expected` / `min` / `max` 三種 objective mode 的 primary `expectedYield`、`minYield`、`maxYield` 與 objective scalar。
+- GP 接近目前輸入上限 `4095` 的 packed-key 路徑，避免重走舊 10-bit GP 寬度問題。
+
+目前明確未完成、不可誤判為正式遷移完成：
+
+- 尚未新增正式 `src/utils/regularGatheringWasmSolver.ts` wrapper。
+- 尚未接入 `src/workers/solver.worker.ts`，也尚未改 UI；玩家路徑仍走既有 TS solver。
+- 尚未 materialize 完整 `bestRotation` / `rotationPlans`，測試目前只驗 primary summary 與 root action。
+- 尚未保存完整 outcome distribution parity。WASM POC 目前沒有輸出 distribution map，因此不能用它替代正式 solver。
+- 尚未把 TS solver 的 `rotationPreferenceScore()`、`wholeNodeBeforeNextOnlyScore()`、`comboPreferenceScore()`、`restoreIntegrityHabitScore()` 與 Revisit plan 規則抽成 shared contract。
+- 尚未建立正式 benchmark suite；目前只有前述臨時 benchmark 與 POC parity 測試。
+- 尚未實作一般採集 memo capacity error class、裝置容量選擇、手動高記憶體重跑 UX。
+
+下一位 agent 建議接續順序：
+
+1. 先檢查工作樹，確認上述 POC 檔案是否仍未提交；若要提交，請只提交程式 POC 範圍，不要混入無關變更。
+2. 第一批 TS tie-break 契約已補在下方；後續若再擴充一般採集 WASM POC，必須持續把新發現的 rotation shape 案例寫成 contract，而不是只比 summary。
+3. 讓 WASM core 暴露足夠的 per-state best-action metadata，或在 TS wrapper 中沿 WASM core selection 重建完整 `bestRotation` / `rotationPlans`。
+4. 補完整 rotation parity corpus：低 GP / 高 GP、Revisit / no Revisit、node bonus、低成功率、高 boon、GP 2000 / GP 4000 / GP 4095 與耐久 4/5/6。
+5. 只有在完整 rotation parity 通過後，才開始接 `solver.worker.ts`；接線時沿用收藏品 memo capacity / manual escalation UX，不要在 capacity exhaustion 時自動 fallback 到 JS 長跑。
+
+### 2026-05-24 TS rotation 契約測試
+
+已新增 `src/utils/regularGatheringRotationContract.test.ts`，把正式 worker 接線前不可改變的 TS rotation 樣貌先固定成 regression contract。這組測試刻意檢查完整可見手法，而不是只檢查 summary：
+
+- next-only action 前移：同分時 `高產II` 必須排在採集前段。
+- 全域 buff 優先與 combo habit：`沃土的饋贈II`、`沃土的饋贈I`、`諾菲卡福音` 必須在下一次採集技能前完成，且饋贈與福音相鄰。
+- `restore` / `wise` habit：90 級以上觸發 `石工之理` 後，`理智同興(若觸發)` 必須跟在後面，並保留理智觸發採集標記。
+- Revisit plan：GP 不滿時必須保留 primary 與 revisit 兩組 `rotationPlans` 的完整順序。
+- `min` / `max` 模式：同分時仍應偏好短 rotation，不為相同極值多塞成功率技能。
+
+驗證指令：
+
+- `npm run test:unit -- src/utils/regularGatheringRotationContract.test.ts src/utils/regularGatheringWasmSolver.test.ts src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts`
+
+下一步應先讓一般採集 WASM POC 能輸出或重建足夠資訊來通過這組完整 rotation contract，再擴大 GP 2000 / GP 4000 / GP 4095 與耐久 4/5/6 的 parity corpus。若 WASM summary 仍 match 但上述 rotation contract 有任何差異，仍不可接入 `src/workers/solver.worker.ts`。
+
+#### 交接快照
+
+截至 2026-05-24 本段寫入時，這輪工作只新增 contract 與文件交接，沒有接正式 worker，也沒有修改玩家路徑。下一位 agent 可直接從下列狀態接續：
+
+- 新增檔案：`src/utils/regularGatheringRotationContract.test.ts`。
+- 延續上一階段未提交 POC 檔案：`assembly/regularGatheringSolverCore.ts`、`src/utils/regularGatheringWasmSolver.test.ts`、`src/wasm/regular-gathering-solver-core.wasm`。
+- 延續上一階段設定變更：`package.json` 新增 `wasm:regular:build`、`.gitignore` 忽略 `scratch/regular-gathering-solver-core.wat`。
+- 文件更新：本報告已記錄第一階段 POC 交接、TS rotation contract，以及下一步必須先補完整 rotation parity 的限制。
+
+本輪已通過驗證：
+
+- `npm run test:unit -- src/utils/regularGatheringRotationContract.test.ts src/utils/regularGatheringWasmSolver.test.ts src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts`：`4 passed / 28 passed`。
+- `npm run test:unit`：`30 passed / 203 passed`。
+- `npm run build`：通過，僅保留既有 Vite chunk size warning。
+- `npm run wasm:regular:build`：通過，會產生被 `.gitignore` 忽略的 `scratch/regular-gathering-solver-core.wat`。
+
+建議下一步不要先接 `src/workers/solver.worker.ts`。應先做下列其一：
+
+1. 讓 WASM POC 暴露或記錄每個 state 的 best action，並在 TS 側嘗試 materialize 完整 `bestRotation` / `rotationPlans`。
+2. 把 `regularGatheringRotationContract.test.ts` 的案例加入 WASM parity 測試，先確認完整 rotation shape 能 match。
+3. 擴充 parity corpus 到 GP 2000 / GP 4000 / GP 4095、耐久 4/5/6、低成功率、高 boon 與 Revisit / no Revisit 案例。
+
+若遇到 summary match 但 rotation 不同，請先回到 TS tie-break 契約或 WASM best-action metadata，不要用寬鬆 root-action 驗收取代這裡的可見手法硬門檻。
+
+### 2026-05-24 WASM POC rotation materialization
+
+接續前段交接後，第一批一般採集 WASM POC 已往「完整可見手法 parity」推進一步，但仍未接正式 worker。
+
+本輪新增 / 調整：
+
+- `assembly/regularGatheringSolverCore.ts`：memo result 額外保存 `firstGatherIndex`，用來在同 objective score、同 habit score 時模擬 TS `rotationPreferenceScore()` 裡最重要的「延後第一個採集」偏好。這修正了 `石工之理` / `理智同興` contract 案例中 WASM summary match 但 rotation shape 不同的問題。
+- `assembly/regularGatheringSolverCore.ts`：新增 POC metadata export：
+  - `getExpectedYieldForState()`
+  - `getMinYieldForState()`
+  - `getMaxYieldForState()`
+  - 既有 `getBestActionForState()` 現在被測試實際用於沿 WASM memo 重建手法。
+- `src/utils/regularGatheringWasmSolver.test.ts`：新增測試側 materializer，沿 WASM `bestAction` 與共用 `regularGatheringMechanics` 重建 primary rotation，並把 `regularGatheringRotationContract.test.ts` 的案例納入 WASM parity。
+- Revisit 檢查已納入：當 TS solver 產生 primary + revisit 兩組 `rotationPlans` 時，測試會分別用 temporary GP 與 full GP 跑 WASM POC，確認兩組可見手法順序都 match。
+
+本輪已通過驗證：
+
+- `npm run wasm:regular:build`
+- `npm run test:unit -- src/utils/regularGatheringWasmSolver.test.ts`：`1 passed / 6 passed`
+- `npm run test:unit -- src/utils/regularGatheringRotationContract.test.ts src/utils/regularGatheringWasmSolver.test.ts src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts`：`4 passed / 30 passed`
+
+仍然不可誤判為正式遷移完成：
+
+- materializer 目前只存在於 Vitest POC，不是 production wrapper。
+- 還沒有正式 `src/utils/regularGatheringWasmSolver.ts`。
+- 還沒有接 `src/workers/solver.worker.ts` 或 UI。
+- WASM core 仍未輸出完整 outcome distribution map；目前 rotation materialization parity 不等於 distribution parity。
+- `firstGatherIndex` 只是第一批 TS rotation preference contract 的最小 metadata。若後續 GP 2000 / GP 4000 / GP 4095、耐久 4/5/6、低成功率、高 boon 或更複雜 combo 案例出現 rotation mismatch，必須繼續把 TS tie-break 規則補成可測試 contract，不可用現有 6 個 WASM POC 測試代表全覆蓋。
+
+#### Tie-break / habit parity 硬約束
+
+使用者已確認：一般採集 WASM 遷移中，**習慣規則解出一致手法是正式接線前的硬約束，必定要完成**。這不是 polish、建議或可延後的 UX 細節。
+
+具體限制：
+
+- 只讓 `expectedYield`、`minYield`、`maxYield`、root action 或 summary parity 通過不夠。
+- WASM 必須在同分、同資源或多條等價路徑時，依既有 TS solver 的 action ordering、equal-score tie-break、GP spending preference、skill habit preference、combo preference、Revisit plan materialization 規則，解出同一組使用者可見 `bestRotation` 與 `rotationPlans`。
+- 若 WASM 的 scalar score 與 TS 完全一致，但手法順序不同，仍視為未通過正式接線門檻。
+- 若現有 metadata 不足以重現 TS 習慣規則，必須補 WASM best-action / tie-break metadata，或先抽出 shared contract；不可用「分數相同所以可接受」替代。
+- 後續每新增一類 tie-break 修正，都必須補對應 contract / parity case；直到高 GP、低 GP、GP `2000 / 4000 / 4095`、耐久 `4 / 5 / 6`、低成功率、高 boon、node bonus、Revisit / no Revisit、`expected / min / max` 等代表性案例都能保持完整可見手法一致，才可討論 `src/workers/solver.worker.ts` 正式接線。
+
+目前進度結論：
+
+- 已完成：第一批 TS rotation contract 的 primary rotation parity。
+- 已完成：一個 primary + Revisit 代表案例的兩組 `rotationPlans` parity。
+- 尚未完成：所有 tie-break / habit 規則的完整覆蓋與正式 wrapper 化。
+- 下一步優先順序：擴大 WASM parity corpus，並把 `rotationPreferenceScore()`、`wholeNodeBeforeNextOnlyScore()`、`comboPreferenceScore()`、`restoreIntegrityHabitScore()` 與 Revisit materialization 規則逐步固化成可測試契約。
+
+### 2026-05-24 WASM parity corpus / distribution gate
+
+本輪完成一般採集 WASM POC 的前三個門檻，仍未接 `src/workers/solver.worker.ts`，也未新增 production wrapper。
+
+新增 / 調整：
+
+- `assembly/regularGatheringSolverCore.ts`：memo result 從只保存 `firstGatherIndex`，擴充為可重現 TS `rotationPreferenceScore()` 的 metadata：`firstNextOnlyIndex`、whole-node-before-next-only score、next-only score、gift / tidings combo metadata 與完整 rotation preference score。這修正了 `GP 4095 / 耐久 6` 案例中 WASM 分數一致但過早插入 `石工之理` 的 rotation mismatch。
+- `src/utils/regularGatheringWasmSolver.test.ts`：測試側 materializer 不只重建 rotation，現在會沿 WASM `bestAction` 與共用 `regularGatheringMechanics` 重建每個 plan 的 outcome distribution，並驗證：
+  - `bestRotation` / `rotationPlans` 的 action 順序完全等於 TS solver。
+  - plan-level `expectedYield`、`minYield`、`maxYield`、`minYieldChance`、`maxYieldChance` 等於 TS。
+  - plan-level distribution 的每個 yield bucket 與 probability 等於 TS debug output。
+  - distribution probability sum 約等於 1。
+  - Revisit combined distribution 的 expected / min / max 與端點機率等於 TS top-level summary。
+- `src/wasm/regular-gathering-solver-core.wasm`：已由 `npm run wasm:regular:build` 依新的 AssemblyScript core 重建。
+
+本輪 parity corpus 已覆蓋：
+
+- GP：`2000`、`4000`、`4095`。
+- 耐久：`4`、`5`、`6`。
+- 低成功率：`獲得力 520 / base 1000` 與 `獲得力 280 / base 1000` 案例。
+- 高 boon：`perception 1500 / base 1000`，以及 node `extraRate` 推高 boon 的案例。
+- node bonus：`gatheringCount`、`yieldCount`、`extraRate` 都有覆蓋。
+- Revisit / no Revisit：包含 Lv 91+ temporary GP 未滿的 primary + revisit 兩 plan，以及 Lv 89 / Lv 81 / Lv 10 的 no Revisit 案例。
+- objective mode：`expected`、`min`、`max` 都有覆蓋。
+
+本輪已通過驗證：
+
+- `npm run wasm:regular:build`
+- `npm run test:unit -- src/utils/regularGatheringWasmSolver.test.ts`：`1 passed / 7 passed`
+- `npm run test:unit -- src/utils/regularGatheringRotationContract.test.ts src/utils/regularGatheringWasmSolver.test.ts src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts`：`4 passed / 31 passed`
+- `npm run test:unit`：`30 passed / 206 passed`
+- `npm run build`：通過，僅保留既有 Vite chunk size warning。
+
+仍未覆蓋 / 仍有風險：
+
+- outcome distribution parity 目前是在 Vitest materializer 內沿 WASM best-action metadata 重建，不是 WASM core 直接匯出 distribution map；正式 wrapper 若要提供 debug/export，仍要把這段 materialization 正式化並維持同樣測試。
+- corpus 已覆蓋代表性門檻，但不是 GP / 耐久 / node bonus / objective 的完整笛卡兒積。特別是高 GP + 高耐久 + 低成功率 + Revisit 的極端長跑案例仍可能接近 TS heap 風險，應放 benchmark 或 capacity 測試，不宜全部塞進預設 unit test。
+- memo capacity guard 仍是 POC 型態，尚未有一般採集專用 error class、fresh instance 升級策略、裝置上限判斷或手動高記憶體重跑 UX。
+- `regularGatheringWasmSolver.test.ts` 中的 materializer 仍是測試 helper，不是 production `src/utils/regularGatheringWasmSolver.ts`。
+
+下一步：
+
+1. 把測試側 materializer 收斂成正式 `src/utils/regularGatheringWasmSolver.ts` wrapper，但仍先不要接 worker。
+2. 在 wrapper 層建立 memo capacity error / retry contract，沿用收藏品 memo capacity 的分類方式。
+3. 補正式 benchmark suite，把高 GP + 高耐久 + 低成功率 + Revisit 的長跑壓力案例移到 benchmark / diagnostic，而不是拖慢預設 unit test。
+4. wrapper 通過同一批 rotation + distribution parity 後，才討論 `src/workers/solver.worker.ts` 接線。
+
+### 2026-05-24 worker 接線前 audit 完成
+
+本輪完成一般採集 WASM 遷移的「worker 接線前 audit」，仍未接 `src/workers/solver.worker.ts`，也未修改 UI 玩家路徑。
+
+新增正式 wrapper：
+
+- `src/utils/regularGatheringWasmSolver.ts`
+  - 可由正式 app 路徑用 `fetch(...wasm?url)` 載入 `src/wasm/regular-gathering-solver-core.wasm`。
+  - 測試與未來 worker 可直接注入 `RegularGatheringWasmCore` instance，避免在 Vitest / worker / browser 間綁死載入方式。
+  - 呼叫 WASM `solvePlanObjective()` 後，沿 `getBestActionForState()` 與共用 `regularGatheringMechanics.ts` materialize `bestRotation` 與 primary / revisit `rotationPlans`。
+  - materialization 會重建每個 plan 的完整 outcome distribution，再由 distribution 算出 `expectedYield`、`minYield`、`maxYield`、`minYieldChance`、`maxYieldChance`。
+  - Revisit combined summary 使用與 TS solver 相同的公式：不觸發 Revisit 時使用 primary distribution；觸發時串接 primary + full GP revisit distribution，再依 Revisit 機率加權。
+  - `debug.plans[].outcomeDistribution` 由 wrapper 正式輸出，不再只存在於測試 helper。
+  - `debug.plans[].search` 會記錄 `memoCapacityPower`、`memoCapacity`、`memoCapacityUsable` 與 WASM counters。
+  - `debug.optimality.stateKeyEngine` 標示為 `wasm-packed`，方便後續匯出 / debug 分辨 TS string key 與 WASM packed key。
+
+Memo capacity / retry contract：
+
+- 新增一般採集專用錯誤：
+  - `RegularGatheringWasmMemoCapacityError`
+  - `RegularGatheringWasmMemoryAllocationError`
+- 若 WASM core 回報 `FAILURE_MEMO_CAPACITY`，wrapper 會丟出 `RegularGatheringWasmMemoCapacityError`。這是受控容量錯誤，不會自動 fallback 到 TS solver 長跑。
+- 若 WASM startup / allocation / `unreachable` / `out of bounds` 等失敗發生在非 memo-capacity 路徑，wrapper 會歸類為 `RegularGatheringWasmMemoryAllocationError`。
+- 本輪只建立 wrapper 層的容量分類與手動指定 `memoCapacityPower` / `supportedMemoCapacityPower` contract；尚未接 UI 的手動提高記憶體重跑，也尚未在 worker 裡做互動式 retry。
+- 下一步接 worker 時，必須沿用收藏品路徑的原則：capacity exhaustion 回傳 typed error / typed worker response；若要提高 memo capacity，需由明確警告後的使用者動作觸發，不可暗中改走 TS solver 或無限制重試。
+
+Benchmark / diagnostic 安排：
+
+- 新增 `scripts/regular-gathering-wasm.bench.ts` 與 `npm run bench:regular-wasm`。
+- 預設 unit parity corpus 保留代表性但可快速完成的案例：GP `2000 / 4000 / 4095`、耐久 `4 / 5 / 6`、低成功率、高 boon、node bonus、Revisit / no Revisit、`expected / min / max`。
+- 長跑壓力案例不放入預設 unit test，而放在 benchmark / diagnostic：
+  - `GP 4095 / 耐久 6 / 低成功率 / 高 boon / Revisit`
+  - 使用 `2^22` memo table。
+  - 本輪實測：primary `663,993` states / `1,951,070` branches，revisit `1,319,721` states / `3,883,278` branches，wrapper full diagnostic 約 `701ms`，WASM memory 約 `548MB`。
+- 這類壓力案例適合用來驗證容量 guard、search counters、wrapper materialization 成本與未來 worker retry UX；不適合塞進一般 `npm run test:unit`，避免日常測試被高記憶體案例綁住。
+
+Audit 結果：
+
+- `src/utils/regularGatheringWasmSolver.test.ts` 已改成使用正式 `solveGatheringRotationWithWasm()` 執行完整 parity，不再只依賴測試側 materializer。
+- audit 硬門檻已驗證：
+  - `bestRotation`
+  - `rotationPlans` action 順序
+  - plan-level `expectedYield` / `minYield` / `maxYield`
+  - `minYieldChance` / `maxYieldChance`
+  - 每個 plan 的 outcome distribution bucket 與 probability
+  - Revisit combined summary
+  - `debug.combined`
+- 若 WASM 分數一致但手法順序不同，測試仍會失敗；本輪沒有放寬 rotation shape 驗收。
+
+本輪已通過驗證：
+
+- `npm run wasm:regular:build`
+- `npm run test:unit -- src/utils/regularGatheringWasmSolver.test.ts`
+- `npm run test:unit -- src/utils/regularGatheringWasmSolver.test.ts src/utils/regularGatheringRotationContract.test.ts src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts`
+- `npm run bench:regular-wasm`
+
+尚未完成、因此仍不可接 worker 的條件：
+
+- `src/workers/solver.worker.ts` 尚未接線，下一步才可評估 worker message / typed error / manual memo escalation UX。
+- UI 玩家路徑尚未改走 WASM，一般採集秘笈仍維持既有 TS solver。
+- wrapper 已具備 capacity contract，但 worker / UI 尚未實作一般採集專用 typed error 顯示與使用者確認後提高記憶體重跑。
+- 接 worker 前仍需再跑完整 `npm run test:unit` 與 `npm run build`，並確認 worker 接線不改變現有玩家路徑顯示與錯誤處理。
+
+### 2026-05-24 第 2 階段：玩家路徑與錯誤 UX
+
+本輪完成一般採集 WASM 遷移的「玩家路徑與錯誤 UX」接線。`src/workers/solver.worker.ts` 現在預設優先呼叫正式 `solveGatheringRotationWithWasm()` wrapper；只有非 memo / allocation 類的 WASM 載入或執行失敗才 fallback 到原本 `solveGatheringRotation()` TS solver。這保留一般採集玩家路徑可用性，但明確禁止把 memo capacity exhaustion 轉回 TS 長跑。
+
+Worker typed error contract：
+
+- `RegularGatheringWasmMemoCapacityError` 會被 worker 轉成 `{ errorType: 'memoCapacity', memoCapacityPower, nextMemoCapacityPower }`。
+- `RegularGatheringWasmMemoryAllocationError` 會被 worker 轉成 `{ errorType: 'memoAllocationFailed', memoCapacityPower }`。
+- 若使用者已經透過 warning gate 指定 `manualMemoCapacityPower`，但高記憶體路徑在完成前失敗，worker 會回 `memoAllocationFailed`，不再 fallback。
+- `src/types/game.ts` 已新增 `SolverWorkerErrorType`、`SolverWorkerErrorResponse`、`SolverWorkerResponse`，並讓 `SolverRequest` 可攜帶 `manualMemoCapacityPower`。
+
+UI / i18n error UX：
+
+- `src/composables/useSolver.ts` 現在保留 `solverErrorDetail`，可區分 `memoCapacity`、`memoAllocationFailed`、`workerStale`、`workerFailed`。
+- `src/views/Solver.vue` 的一般採集錯誤提示已沿用收藏品 memo capacity UX 的資訊架構：高層提示、縮小條件建議、明確風險提示、使用者點擊後才提高記憶體重跑。
+- `tw / cn / en / ja` 四語系已同步新增一般採集專用 memory / capacity 文案，語氣與 `CollectableSolverPanel.vue` 的收藏品錯誤提示保持一致。
+- 一般採集與收藏品使用相同的 warning gate 原則：memo capacity 可提供手動提高記憶體重跑；allocation failure 只顯示受控失敗，不提供默默升級或無限制重試。
+
+Worker / UI parity audit：
+
+- 新增 `src/workers/solver.worker.test.ts`，用正式 WASM wrapper 經 worker response path 驗證：
+  - `bestRotation`
+  - `rotationPlans` action 順序
+  - plan-level `expectedYield` / `minYield` / `maxYield`
+  - `minYieldChance` / `maxYieldChance`
+  - 每個 plan 的 outcome distribution bucket 與 probability
+  - Revisit combined summary
+- `src/composables/useSolver.test.ts` 新增 UI/composable 層 memo capacity 測試，確認 `memoCapacity` 會成為受控錯誤，且只有使用者確認後才在下一次 request 帶 `manualMemoCapacityPower`。
+- 若 WASM 分數一致但手法順序不同，worker test 仍會失敗；本輪沒有放寬 rotation shape parity。
+
+本輪已通過驗證：
+
+- `npm run wasm:regular:build`
+- `npm run test:unit -- src/workers/solver.worker.test.ts src/composables/useSolver.test.ts`
+- `npm run test:unit -- src/utils/regularGatheringWasmSolver.test.ts src/utils/regularGatheringRotationContract.test.ts src/utils/rotationSolver.test.ts src/utils/algorithmGoldenScenarios.test.ts src/workers/solver.worker.test.ts src/composables/useSolver.test.ts`
+- `npm run test:unit`：`31 passed / 213 passed`
+- `npm run build`：通過，僅保留既有 Vite chunk size warning。
+
+Benchmark / diagnostic 觀察：
+
+- 本輪未新增 benchmark 觀察；`scripts/regular-gathering-wasm.bench.ts` 與 `npm run bench:regular-wasm` 維持前一階段用途，仍建議把高 GP + 高耐久 + 低成功率 + Revisit 的壓力案例留在 benchmark / diagnostic，不放進預設 unit suite。
+
+下一階段剩餘條件：
+
+1. 2026-05-24 使用者已實際頁面確認一般採集成功求解、`memoCapacity` warning gate、`memoAllocationFailed` 受控顯示與收藏品錯誤 UX 視覺一致；此項不再視為 blocker。
+2. 研究者匯出 / debug metadata 已補上 solver engine 線索：一般採集與收藏品 debug optimality 會標示 `engine: 'wasm-core' | 'ts-core'`，既有 `stateKeyEngine: 'wasm-packed'`、memo capacity 與 plan distribution 仍會透過 JSON 匯出保留，避免第三方驗證失去線索。
+3. 使用者已有一組可踩 `memoCapacity` 上限的實際數值，暫時不需要另做專門 diagnostic hook；若未來補 diagnostic，也不要把高記憶體壓力案例塞進預設 unit test。
+4. 若之後調整 WASM tie-break metadata、capacity selector 或 worker fallback policy，必須重跑 worker parity test；不能只跑 wrapper test 或 summary test。這項需繼續保留在待辦內供未來 agent 參考。
+
 ## 下一步建議
 
 收藏品 solver 繼續收斂：
 
-1. 用使用者提供的黑鐵礦兩份匯出作為 regression fixture，重點驗證 summary、完整 distribution、reward/tier counts 與高分尾端可達性。
-2. 若未來改變剪枝策略，重新跑黑鐵礦案例確認 `304` / `342` primary 尾端與 `684` combined max 沒有消失，再討論 memo 容量成本。
+1. 黑鐵礦高分尾端消失問題已定位為先前不合理的成功率補滿剪枝造成，正式路徑已撤回該剪枝；目前不應再把它視為尚未修復的功能缺口。
+2. 若未來重新改變剪枝策略，仍需用黑鐵礦案例確認 `304` / `342` primary 尾端與 `684` combined max 沒有消失，再討論 memo 容量成本。
 3. 保留 TS/WASM summary parity 測試；對等價 root action 差異採寬鬆驗收。
 4. 在 debug/export 中標示 solver engine，例如 `wasm-core` / `ts-core`，方便未來追查。
 5. 若要重新追求完整 policy tree parity，必須先接受 memo/時間成本可能大幅上升。

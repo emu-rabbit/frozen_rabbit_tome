@@ -937,6 +937,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         'reduction-reward-model-excluded'
       ],
       optimality: {
+        engine: 'ts-core',
         method: 'dynamic-programming-policy-search',
         stateKeyFields: STATE_KEY_FIELDS,
         stateKeyEngine: keyFactory.engine

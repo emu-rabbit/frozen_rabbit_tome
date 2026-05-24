@@ -2,7 +2,7 @@
 
 import { nextTick, ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GatherableItem, PlayerStats } from '../types/game';
+import type { GatherableItem, PlayerStats, SolverWorkerResponse } from '../types/game';
 
 const minerItem: GatherableItem = {
   itemId: 1,
@@ -21,8 +21,18 @@ async function createSolverContext() {
 
   vi.doMock('../services/gameData', () => ({
     currentLanguage: ref('tw'),
-    getItemLevelData: () => ({}),
-    getGatheringItemsData: () => ({}),
+    getItemLevelData: () => ({
+      100: {
+        Gathering: 1000,
+        Perception: 1000
+      }
+    }),
+    getGatheringItemsData: () => ({
+      10: {
+        itemId: 1,
+        level: 100
+      }
+    }),
     getItemName: () => '測試礦石',
     isGameDataLoading: ref(false),
     getItemBaseIntegrity: () => 4,
@@ -40,6 +50,31 @@ async function createSolverContext() {
   };
 }
 
+class MockSolverWorker {
+  static instances: MockSolverWorker[] = [];
+
+  onmessage: ((event: MessageEvent<SolverWorkerResponse>) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
+  postedMessage: unknown = null;
+  terminated = false;
+
+  constructor() {
+    MockSolverWorker.instances.push(this);
+  }
+
+  postMessage(message: unknown) {
+    this.postedMessage = message;
+  }
+
+  terminate() {
+    this.terminated = true;
+  }
+
+  resolve(data: SolverWorkerResponse) {
+    this.onmessage?.({ data } as MessageEvent<SolverWorkerResponse>);
+  }
+}
+
 function updateMinerProfile(gearProfiles: { updateProfile: (id: string, patch: Record<string, unknown>) => void }, stats: PlayerStats) {
   gearProfiles.updateProfile('default-miner', {
     level: stats.level,
@@ -53,6 +88,8 @@ function updateMinerProfile(gearProfiles: { updateProfile: (id: string, patch: R
 describe('useSolver 同步機制', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    MockSolverWorker.instances = [];
   });
 
   it('切換頁面回來重新同步時，保留使用者手填的不滿 GP', async () => {
@@ -129,5 +166,44 @@ describe('useSolver 同步機制', () => {
 
     expect(solver.solverStats.value.gp).toBe(850);
     expect(solver.temporaryGp.value).toBe(850);
+  });
+
+  it('一般採集 worker memo capacity 會成為受控錯誤，並只在使用者確認後送出提高記憶體重跑', async () => {
+    vi.stubGlobal('Worker', MockSolverWorker);
+    const { solver } = await createSolverContext();
+
+    solver.activeItem.value = minerItem;
+    solver.solverStats.value = {
+      level: 100,
+      gathering: 1100,
+      perception: 1100,
+      gp: 930
+    };
+    solver.temporaryGp.value = 930;
+    await nextTick();
+
+    await solver.solve();
+    const firstWorker = MockSolverWorker.instances[0];
+    expect(firstWorker.postedMessage).toMatchObject({
+      temporaryGp: 930
+    });
+    expect((firstWorker.postedMessage as { manualMemoCapacityPower?: number }).manualMemoCapacityPower).toBeUndefined();
+
+    firstWorker.resolve({
+      errorType: 'memoCapacity',
+      memoCapacityPower: 20,
+      nextMemoCapacityPower: 21
+    });
+
+    expect(solver.solverError.value).toBe('memoCapacity');
+    expect(solver.solverErrorDetail.value?.nextMemoCapacityPower).toBe(21);
+    expect(solver.rotationResult.value).toBeNull();
+    expect(solver.isSolving.value).toBe(false);
+
+    await solver.solveWithMemoCapacity(21);
+    const retryWorker = MockSolverWorker.instances[1];
+    expect(retryWorker.postedMessage).toMatchObject({
+      manualMemoCapacityPower: 21
+    });
   });
 });

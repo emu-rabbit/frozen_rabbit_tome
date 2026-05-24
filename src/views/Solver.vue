@@ -54,9 +54,11 @@ const {
   nodeBonuses,
   gatheringCountMax,
   solve,
+  solveWithMemoCapacity,
   rotationResult,
   isSolving,
   solverError,
+  solverErrorDetail,
   reloadPage
 } = useSolver();
 
@@ -148,6 +150,14 @@ const collectableScourProgress = computed(() => {
   if (collectableScourValue.value === null) return 0;
   return Math.min(100, Math.max(0, (collectableScourValue.value / 200) * 100));
 });
+const isSolverWorkerError = computed(() => solverError.value === 'workerStale' || solverError.value === 'workerFailed');
+const nextSolverMemoCapacityPower = computed(() => solverErrorDetail.value?.nextMemoCapacityPower ?? null);
+const canRaiseSolverMemoBudget = computed(() => solverError.value === 'memoCapacity' && nextSolverMemoCapacityPower.value !== null);
+
+async function handleRaiseSolverMemoBudget() {
+  if (nextSolverMemoCapacityPower.value === null) return;
+  await solveWithMemoCapacity(nextSolverMemoCapacityPower.value);
+}
 
 function activeItemJobs() {
   return gatherableItemJobs(activeItem.value);
@@ -937,19 +947,36 @@ function strategyActionLabelLines(key: StrategyActionKey) {
         <div
           v-if="solverError"
           class="solver-error-alert"
+          :class="{ 'solver-error-alert-with-actions': isSolverWorkerError || canRaiseSolverMemoBudget }"
           role="alert"
         >
-          <i class="pi pi-refresh"></i>
-          <div>
+          <span class="solver-error-alert-icon" aria-hidden="true">
+            <i class="pi pi-exclamation-circle"></i>
+          </span>
+          <div class="solver-error-alert-body">
             <p>{{ t(`solver.strategy.workerErrors.${solverError}.title`) }}</p>
             <span>{{ t(`solver.strategy.workerErrors.${solverError}.desc`) }}</span>
           </div>
-          <Button
-            class="p-button-sm p-button-warning solver-error-reload-button"
-            :label="t('solver.strategy.workerErrors.reload')"
-            icon="pi pi-refresh"
-            @click="reloadPage"
-          />
+          <div v-if="isSolverWorkerError || canRaiseSolverMemoBudget" class="solver-error-alert-actions">
+            <span v-if="canRaiseSolverMemoBudget" class="solver-error-alert-risk">
+              {{ t('solver.strategy.workerErrors.memoCapacity.manualRisk') }}
+            </span>
+            <Button
+              v-if="canRaiseSolverMemoBudget"
+              class="p-button-sm solver-error-action-button"
+              :label="t('solver.strategy.workerErrors.memoCapacity.raiseBudget')"
+              icon="pi pi-refresh"
+              :loading="isSolving"
+              @click="handleRaiseSolverMemoBudget"
+            />
+            <Button
+              v-if="isSolverWorkerError"
+              class="p-button-sm p-button-warning solver-error-action-button"
+              :label="t('solver.strategy.workerErrors.reload')"
+              icon="pi pi-refresh"
+              @click="reloadPage"
+            />
+          </div>
         </div>
 
         <!-- 演算結果 -->
@@ -1513,23 +1540,32 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   line-height: 1.35;
 }
 .solver-error-alert {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.75rem 0.85rem;
   margin-bottom: 1rem;
-  padding: 0.85rem 1rem;
   border: 1px solid rgb(253 186 116 / 0.8);
   border-radius: 0.875rem;
   background: rgb(255 247 237 / 0.95);
+  padding: 0.95rem 1rem;
   color: #9a3412;
 }
-.solver-error-alert > div {
-  flex: 1;
+.solver-error-alert-with-actions {
+  grid-template-columns: 1.5rem minmax(0, 1fr) minmax(17rem, 0.78fr);
+}
+.solver-error-alert-body {
   min-width: 0;
 }
-.solver-error-alert i {
-  margin-top: 0.15rem;
-  color: #f97316;
+.solver-error-alert-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.05rem;
+  border-radius: 0.55rem;
+  background: rgb(249 115 22 / 0.1);
+  color: #ea580c;
 }
 .solver-error-alert p {
   margin: 0;
@@ -1544,11 +1580,43 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   font-weight: 700;
   line-height: 1.45;
 }
-:deep(.solver-error-reload-button) {
-  flex-shrink: 0;
-  align-self: center;
+.solver-error-alert-actions {
+  grid-column: 3;
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 1px solid rgb(251 146 60 / 0.28);
+}
+.solver-error-alert-risk {
+  width: 100%;
+  max-width: 24rem;
+  border: 1px solid rgb(251 146 60 / 0.28);
   border-radius: 0.75rem;
+  background: rgb(255 237 213 / 0.58);
+  padding: 0.6rem 0.7rem;
+  color: #9a3412;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+:deep(.solver-error-action-button) {
+  border-radius: 0.75rem;
+  border-color: #ea580c;
+  background: #ea580c;
+  color: white;
   font-weight: 800;
+  box-shadow: 0 8px 18px rgb(234 88 12 / 0.16);
+}
+:deep(.solver-error-action-button:hover),
+:deep(.solver-error-action-button:enabled:hover),
+:deep(.solver-error-action-button:active),
+:deep(.solver-error-action-button:enabled:active) {
+  border-color: #c2410c;
+  background: #c2410c;
+  color: white;
 }
 .rotation-plan-stats {
   display: grid;
@@ -1615,8 +1683,31 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   background: rgb(154 52 18 / 0.16);
   color: #fed7aa;
 }
-:global(html.dark .solver-error-alert i) {
+:global(html.dark .solver-error-alert-icon) {
+  background: rgb(251 146 60 / 0.14);
   color: #fdba74;
+}
+:global(html.dark .solver-error-alert-actions) {
+  border-left-color: rgb(251 146 60 / 0.22);
+}
+:global(html.dark .solver-error-alert-risk) {
+  border-color: rgb(251 146 60 / 0.24);
+  background: rgb(124 45 18 / 0.24);
+  color: #fed7aa;
+}
+:global(html.dark) :deep(.solver-error-action-button) {
+  border-color: rgb(251 146 60 / 0.72);
+  background: rgb(194 65 12 / 0.9);
+  color: #fff7ed;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.22);
+}
+:global(html.dark) :deep(.solver-error-action-button:hover),
+:global(html.dark) :deep(.solver-error-action-button:enabled:hover),
+:global(html.dark) :deep(.solver-error-action-button:active),
+:global(html.dark) :deep(.solver-error-action-button:enabled:active) {
+  border-color: rgb(253 186 116 / 0.82);
+  background: rgb(154 52 18 / 0.95);
+  color: #fff7ed;
 }
 :global(html.dark .rotation-plan-stats div) {
   border-color: rgb(51 65 85);
@@ -1657,10 +1748,26 @@ function strategyActionLabelLines(key: StrategyActionKey) {
     grid-template-columns: 1fr;
   }
   .solver-error-alert {
-    flex-direction: column;
+    grid-template-columns: 1.5rem minmax(0, 1fr);
   }
-  :deep(.solver-error-reload-button) {
+  .solver-error-alert-actions {
+    grid-column: 1 / -1;
+    justify-items: stretch;
+    padding-left: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgb(251 146 60 / 0.28);
+    border-left: 0;
+  }
+  :global(html.dark .solver-error-alert-actions) {
+    border-top-color: rgb(251 146 60 / 0.22);
+    border-left: 0;
+  }
+  .solver-error-alert-risk {
+    max-width: none;
+  }
+  :deep(.solver-error-action-button) {
     width: 100%;
+    justify-content: center;
   }
 }
 @media (min-width: 1024px) {
