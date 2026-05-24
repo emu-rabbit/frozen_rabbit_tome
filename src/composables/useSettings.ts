@@ -23,8 +23,11 @@ if (typeof solverSettings.value.collectableRelicToolBonus !== 'boolean') {
 }
 
 const debugSettings = useLocalStorage<DebugSettings>('frozen-rabbit-tome-debug-settings', {
-  solverDebugMode: false
+  solverDebugMode: true
 });
+if (debugSettings.value.solverDebugMode !== true) {
+  debugSettings.value.solverDebugMode = true;
+}
 
 export function useSettings() {
   const { defaultProfileForJob, updateProfile } = useGearProfiles();
