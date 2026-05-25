@@ -142,7 +142,10 @@ let wasmPromise: Promise<RegularGatheringWasmCore> | null = null;
 
 export async function loadRegularGatheringWasmCore(): Promise<RegularGatheringWasmCore> {
   if (!wasmPromise) {
-    wasmPromise = instantiateRegularGatheringWasmCore();
+    wasmPromise = instantiateRegularGatheringWasmCore().catch((error) => {
+      wasmPromise = null;
+      throw error;
+    });
   }
 
   return wasmPromise;

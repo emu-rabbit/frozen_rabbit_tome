@@ -150,7 +150,10 @@ export function canUseCollectableWasmSolver(request: CollectableSolverRequest): 
 
 export async function loadCollectableWasmCore(): Promise<CollectableWasmExports> {
   if (!wasmPromise) {
-    wasmPromise = instantiateCollectableWasmCore();
+    wasmPromise = instantiateCollectableWasmCore().catch((error) => {
+      wasmPromise = null;
+      throw error;
+    });
   }
 
   return wasmPromise;

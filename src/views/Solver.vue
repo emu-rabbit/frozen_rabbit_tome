@@ -26,6 +26,7 @@ import { isCustomTierObjective, isTierCountObjective } from '../utils/collectabl
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { buildFoodOption, type FoodOption } from '../services/foodOptions';
 import { NODE_BONUS_INPUT_LIMITS, PLAYER_INPUT_LIMITS } from '../config/inputLimits';
+import { scheduleSolverWasmPrewarm } from '../utils/solverWasmPrewarm';
 import {
   buildJsonExportFileName,
   buildRegularSolverJsonExport,
@@ -163,14 +164,28 @@ function activeItemJobs() {
   return gatherableItemJobs(activeItem.value);
 }
 
+function prewarmActiveSolverWasm() {
+  if (!activeItem.value?.itemId || activeItem.value.isCrystalGathering) return;
+
+  scheduleSolverWasmPrewarm(activeItem.value.isCollectable ? 'collectable' : 'regular');
+}
+
 onMounted(() => {
   fetchItemLevelData();
+  prewarmActiveSolverWasm();
 });
 
 // 當使用者從設定頁切換回來時，觸發同步以獲取最新數值
 onActivated(() => {
   syncFromSettings();
+  prewarmActiveSolverWasm();
 });
+
+watch(() => [
+  activeItem.value?.itemId,
+  activeItem.value?.isCollectable,
+  activeItem.value?.isCrystalGathering
+], prewarmActiveSolverWasm, { immediate: true });
 
 function handleApplyGearProfile(profile: GearStatProfile) {
   applyGearProfile(profile);
