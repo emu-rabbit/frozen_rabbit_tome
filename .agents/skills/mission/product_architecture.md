@@ -41,6 +41,37 @@
 - 同一組底層公式與 action model 可以被兩邊共用，但 UI 心智模型必須分開。
 - 公式、資料與狀態模型應盡量共用，避免秘笈與實驗對同一技能算出不一致結果。
 
+## 持久儲存、匯出與版本語意
+
+後續 Agent 設計 Tome Library、Experiment Database、JSON 匯出 / 匯入、比較器或跨裝置分享時，請先區分「本地持久儲存」與「完整交換檔」的產品意義。
+
+### 本地持久儲存
+
+- 藏書庫與實驗資料庫是管理用的輕量索引，不是完整證據包倉庫。
+- 秘笈藏書庫的 canonical data 應是「可重現求解條件」：物品、玩家數值、GP、食物、節點加成、objective / scoring preference、reward table 或 reward source、限時點、relic bonus 等。
+- 秘笈求解結果若被保存，只能視為 `lastSolvedSnapshot`：可供卡片預覽、上次推薦摘要或離線參考，但不能當成永遠正確的答案。開啟或重新求解時，應以目前版本模型重新計算，並在版本不同或結果不同時清楚標示「保存時快照」與「目前推薦」。
+- 收藏品秘笈若保存完整推薦策略，應保存無損 `strategyCodec` / 策略表，而不是巢狀 `policy tree` 或完整 debug blob。`strategyCodec` 仍屬於輸出快照，應帶版本與來源資訊。
+- 實驗資料庫則可以、也應該保存使用者指定的手法或策略；實驗的核心需求就是重放與分析使用者輸入，不同於秘笈的「依目前模型推薦」。
+- 匯入 JSON 後若要存進藏書庫或實驗資料庫，應由使用者確認，並把完整 JSON 依目標頁面剪枝 / 投影成卡片資料，不應原封不動塞進 localStorage。
+
+### 下載 JSON / 分享檔
+
+- 下載 JSON 是完整交換格式，可比本地儲存更完盡。使用者按下載時不需要在「簡易版 / 完整版」間選擇；預設應輸出可攜、可驗證、可匯入、可比較的完整資料包。
+- 完整 JSON 可包含 input、solver / simulator / analyzer output、strategyCodec、debug summary、搜尋統計、公式中間值、版本資訊、已知限制與 reward table。
+- 下載檔案不吃 localStorage 配額，因此可以保留研究、比較器、第三方驗證與 bug report 所需的較完整資料。
+- 匯入功能應依 `manifest.scenario` 判斷用途：匯入到藏書庫時重建條件與小型摘要；匯入到實驗台時重建使用者手法 / strategy rules；匯入到比較器或驗證工具時可直接使用完整 JSON。
+
+### 版本管理原則
+
+- `package.json` 的 app version 代表產品發行版，不應單獨用來判斷求解、模擬或分析結果是否相容。
+- 未來應新增 scenario-aware 的 `modelVersions`。版本更新單位應以「使用者可觀察結果是否可能改變」為準，而不是把所有內部公式、action model、資料來源拆成第一層必填版本。
+- 第一版建議依情境只輸出相關欄位，例如：
+  - `tome.regular`：`exportSchema`、`app`、`regularSolver`。
+  - `tome.collectable`：`exportSchema`、`app`、`collectableSolver`、`collectableStrategyCodec`。
+  - `experiment.regular`：`exportSchema`、`app`、`regularSimulator`、`regularAnalyzer`。
+  - `experiment.collectable`：`exportSchema`、`app`、`collectableSimulator`、`collectableAnalyzer`。
+- `formulaVersion`、`actionModelVersion`、`gameDataVersion` 可作為內部 release note、debug 或長期擴充欄位，但第一版不應要求所有 JSON 都獨立維護這三個板號。若公式、技能模型或資料來源改動會影響結果，應 bump 對應的 solver / simulator / analyzer model version。
+
 ## 一般採集秘笈現況
 
 一般採集秘笈目前是 WASM-first 架構，後續 Agent 應以既有玩家路徑為基礎維護，不要再把一般採集 WASM 視為 POC 或未接線功能。

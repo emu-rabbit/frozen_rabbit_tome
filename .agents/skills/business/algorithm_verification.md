@@ -7,7 +7,7 @@
 核心原則：
 
 - 演算法結果必須可重現、可追蹤、可定位。
-- 對外可驗證的內容必須明確標示資料來源、公式版本、輸入、輸出與已知限制。
+- 對外可驗證的內容必須明確標示使用的模型版本、輸入、輸出、已知限制，以及必要時的資料來源 / 公式 / action model 線索。
 - 不可把尚未驗證的遊戲機制包裝成已確認事實。
 - 測試不只驗證單一答案，也要驗證公式邊界、機率分布、搜尋狀態與可接受的效能範圍。
 
@@ -113,10 +113,13 @@ WASM 路徑另需注意：
 
 ### 目前應可提供給第三方驗證的內容
 
-- 演算法版本資訊
+- 模型與匯出版本資訊
   - git commit 或 release tag。
   - `package.json` version。
-  - 使用的資料來源版本或檔案來源。
+  - JSON `schemaVersion`。
+  - scenario-aware 的 solver / simulator / analyzer model version。
+  - strategy codec version，例如收藏品 `collectable-policy-strategy-rules-v1`。
+  - 使用的資料來源、檔案來源或 game data 線索；若尚未建立正式資料版本，應明確標示為來源線索而不是完整版本管理。
   - 已知排除項目。
 - 輸入資料
   - 玩家 `level/gathering/perception/gp`。
@@ -159,17 +162,31 @@ WASM 路徑另需注意：
 
 ## 建議輸出格式
 
-未來若新增研究者匯出功能，建議輸出單一 JSON 檔，結構如下：
+下載 JSON 應作為完整交換檔，支援分享、匯入、比較器、第三方驗證與 bug report。使用者不需要選簡易版 / 完整版；預設下載就應包含完整輸入、輸出摘要、策略 / 手法、debug summary、搜尋線索、版本資訊與已知限制。若匯入後要保存到藏書庫或實驗資料庫，才依目標頁面剪枝 / 投影成輕量卡片資料。
+
+未來若新增或整理研究者匯出功能，建議輸出單一 JSON 檔，結構如下：
 
 ```json
 {
   "manifest": {
     "app": "frozen_rabbit_tome",
+    "schemaVersion": 1,
     "version": "0.1.0",
     "commit": "<git commit>",
-    "algorithm": "regular-gathering | collectable",
+    "scenario": "tome.regular | tome.collectable | experiment.regular | experiment.collectable",
     "generatedAt": "<ISO timestamp>",
     "limitations": []
+  },
+  "modelVersions": {
+    "exportSchema": 1,
+    "app": "0.1.0",
+    "regularSolver": "regular-solver-v1",
+    "collectableSolver": "collectable-solver-v1",
+    "regularSimulator": "regular-simulator-v1",
+    "collectableSimulator": "collectable-simulator-v1",
+    "regularAnalyzer": "regular-analyzer-v1",
+    "collectableAnalyzer": "collectable-analyzer-v1",
+    "collectableStrategyCodec": "collectable-policy-strategy-rules-v1"
   },
   "input": {},
   "formulaDebug": {},
@@ -185,7 +202,21 @@ WASM 路徑另需注意：
 }
 ```
 
+實作時 `modelVersions` 不必每個 scenario 都塞滿所有欄位；應只輸出該 JSON 會用到的版本。例如 `tome.collectable` 需要 collectable solver 與 collectable strategy codec，`experiment.regular` 則需要 regular simulator / analyzer。
+
+版本粒度以「同一份輸入在新版模型下，使用者可觀察輸出是否可能不同」為判準。第一版不建議把 `formulaVersion`、`actionModelVersion`、`gameDataVersion` 做成所有 JSON 的第一層必填欄位；若公式、技能模型或資料來源變更會影響結果，應 bump 對應的 solver / simulator / analyzer model version。內部公式、action model、資料來源與 server region 可作為 debug / release note / future extension 欄位。
+
 JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 changelog 說明。
+
+## 本地持久儲存與匯入投影
+
+本地藏書庫與實驗資料庫不是完整 JSON 的替代品。後續 Agent 設計 import / save flow 時應遵守：
+
+- 藏書庫保存秘笈問題本身，也就是可重現求解的輸入條件；秘笈輸出若保存，只能是保存時快照或卡片預覽。
+- 實驗資料庫保存使用者指定的 rotation / strategy rules，因為這是模擬與分析的核心使用情境。
+- 收藏品秘笈若保存完整推薦策略，只保存無損 `strategyCodec`，不可保存巢狀 `policy.next` 樹或完整 debug blob 到 localStorage。
+- 完整 JSON 匯入後若使用者選擇保存，應依 `manifest.scenario` 投影成藏書卡或實驗卡；比較器與第三方驗證工具則可直接使用完整 JSON。
+- 匯入舊版 JSON 或舊求解快照時，應能區分「保存時結果」與「目前版本重新求解 / 重新分析結果」。
 
 ## Agent 維護規則
 
