@@ -1018,6 +1018,7 @@ function continueGuidedBranch() {
   color: #0f766e;
   font-size: 0.88rem;
   font-weight: 900;
+  overflow-wrap: anywhere;
   transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
@@ -1262,7 +1263,7 @@ function continueGuidedBranch() {
   }
 
   .option-grid.two-options {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

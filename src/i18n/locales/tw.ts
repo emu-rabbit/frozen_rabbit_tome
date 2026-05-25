@@ -615,16 +615,16 @@ export default {
         failed: '採集失敗'
       },
       standardOptions: {
-        proc: '有觸發洞察',
-        noProc: '沒有觸發洞察'
+        proc: '有觸發',
+        noProc: '沒有觸發'
       },
       wiseOptions: {
-        proc: '有觸發理智同興',
-        noProc: '沒有觸發理智同興'
+        proc: '有觸發',
+        noProc: '沒有觸發'
       },
       revisitOptions: {
-        proc: '有觸發再起',
-        noProc: '沒有觸發再起'
+        proc: '有觸發',
+        noProc: '沒有觸發'
       },
       matchedOutcome: '已對應到',
       confluentOutcome: '結果匯流',

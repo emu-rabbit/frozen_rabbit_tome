@@ -612,16 +612,16 @@ export default {
         failed: '採集失敗'
       },
       standardOptions: {
-        proc: '発動した',
-        noProc: '発動していない'
+        proc: '発動あり',
+        noProc: '発動なし'
       },
       wiseOptions: {
-        proc: '発動した',
-        noProc: '発動していない'
+        proc: '発動あり',
+        noProc: '発動なし'
       },
       revisitOptions: {
-        proc: '再発見あり',
-        noProc: '再発見なし'
+        proc: '発動あり',
+        noProc: '発動なし'
       },
       matchedOutcome: '対応した結果',
       confluentOutcome: '結果が合流',

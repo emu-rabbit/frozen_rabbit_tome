@@ -614,16 +614,16 @@ export default {
         failed: 'Collect failed'
       },
       standardOptions: {
-        proc: 'Standard proc',
-        noProc: 'No Standard proc'
+        proc: 'Triggered',
+        noProc: 'Not triggered'
       },
       wiseOptions: {
-        proc: 'Wise proc',
-        noProc: 'No Wise proc'
+        proc: 'Triggered',
+        noProc: 'Not triggered'
       },
       revisitOptions: {
-        proc: 'Revisit triggered',
-        noProc: 'No Revisit'
+        proc: 'Triggered',
+        noProc: 'Not triggered'
       },
       matchedOutcome: 'Matched Outcome',
       confluentOutcome: 'Converged Outcome',

@@ -612,16 +612,16 @@ export default {
         failed: '采集失败'
       },
       standardOptions: {
-        proc: '有触发洞察',
-        noProc: '没有触发洞察'
+        proc: '有触发',
+        noProc: '没有触发'
       },
       wiseOptions: {
-        proc: '有触发理智同兴',
-        noProc: '没有触发理智同兴'
+        proc: '有触发',
+        noProc: '没有触发'
       },
       revisitOptions: {
-        proc: '有触发再起',
-        noProc: '没有触发再起'
+        proc: '有触发',
+        noProc: '没有触发'
       },
       matchedOutcome: '已对应到',
       confluentOutcome: '结果汇流',
