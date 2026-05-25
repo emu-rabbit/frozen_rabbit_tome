@@ -800,6 +800,7 @@ export default {
     pendingOverview: {
       total: '共 {count} 个待决节点',
       uniqueValues: '{count} 种数值',
+      buffCount: '{count} 种状态',
       nodeCount: '{count} 节点',
       gp: 'GP',
       integrity: '耐久',

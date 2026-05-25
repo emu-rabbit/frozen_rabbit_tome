@@ -155,7 +155,8 @@ function buildStrategyTreeRequest(strategyRules: CollectableStrategyRule[]): Col
 }
 const summary = computed(() => treeResult.value?.summary);
 const uncoveredNodes = computed(() => treeResult.value?.uncoveredNodes ?? []);
-const uncoveredStateGroups = computed(() => buildUncoveredStateGroups(uncoveredNodes.value));
+const uncoveredStateGroups = computed(() => buildUncoveredStateGroups(uncoveredNodes.value, collectableMechanicsContext.value));
+const uncoveredBuffChips = computed(() => buildManagedBuffChips(uncoveredNodes.value));
 const editingRule = computed(() => editingRuleDraft.value);
 const activeGpMax = computed(() => Math.max(1, props.effectiveStats.gp));
 const activeIntegrityMax = computed(() => Math.max(1, props.nodeBonuses.baseIntegrity + props.nodeBonuses.gatheringCount));
@@ -891,43 +892,14 @@ function actionSummary(rule: CollectableStrategyRule) {
   return rule.actions.map(actionName).join(' -> ');
 }
 
-function buildUncoveredStateGroups(nodes: CollectableStrategyNode[]) {
-  const total = nodes.length;
-  const metrics: Array<{ key: CollectableStrategyNumericField; label: string }> = [
-    { key: 'gp', label: t('collectableStrategyLab.pendingOverview.gp') },
-    { key: 'integrity', label: t('collectableStrategyLab.pendingOverview.integrity') },
-    { key: 'collectability', label: t('collectableStrategyLab.pendingOverview.collectability') }
-  ];
-
-  return metrics.map((metric) => {
-    const counts = new Map<number, number>();
-    nodes.forEach((node) => {
-      const value = node.state[metric.key];
-      counts.set(value, (counts.get(value) ?? 0) + 1);
-    });
-
-    const entries = [...counts.entries()]
-      .map(([value, count]) => ({
-        value,
-        count,
-        percentage: total > 0 ? (count / total) * 100 : 0
-      }))
-      .sort((a, b) => b.value - a.value);
-
-    return {
-      ...metric,
-      entries
-    };
-  });
-}
-
-function buildManagedNodeOverview(nodes: ManagedOverviewSource[], mechanics: CollectableMechanicsContext | null) {
+function createManagedOverviewMetrics(mechanics: CollectableMechanicsContext | null) {
   const metrics: Array<{
     key: ManagedOverviewMetricKey;
     label: string;
     icon: string;
     getValue: (node: ManagedOverviewSource) => number;
     formatRange?: (min: number, max: number) => string;
+    formatValue?: (value: number) => string;
   }> = [
     {
       key: 'gp',
@@ -954,7 +926,8 @@ function buildManagedNodeOverview(nodes: ManagedOverviewSource[], mechanics: Col
       getValue: (node) => mechanics
         ? clampPercent(mechanics.baseSuccessRate + node.state.successBonus + node.state.nextCollectSuccessBonus)
         : 0,
-      formatRange: formatPercentRange
+      formatRange: formatPercentRange,
+      formatValue: formatPercentValue
     },
     {
       key: 'valueIncreaseRate',
@@ -963,7 +936,8 @@ function buildManagedNodeOverview(nodes: ManagedOverviewSource[], mechanics: Col
       getValue: (node) => mechanics
         ? (node.state.collectorsFocusActive ? mechanics.focusedValueIncreaseRate : mechanics.valueIncreaseRate)
         : 0,
-      formatRange: formatPercentRange
+      formatRange: formatPercentRange,
+      formatValue: formatPercentValue
     },
     {
       key: 'meticulousSaveRate',
@@ -972,9 +946,44 @@ function buildManagedNodeOverview(nodes: ManagedOverviewSource[], mechanics: Col
       getValue: (node) => mechanics
         ? (node.state.primingTouchActive ? mechanics.primedMeticulousRate : mechanics.meticulousRate)
         : 0,
-      formatRange: formatPercentRange
+      formatRange: formatPercentRange,
+      formatValue: formatPercentValue
     }
   ];
+
+  return metrics;
+}
+
+function buildUncoveredStateGroups(nodes: CollectableStrategyNode[], mechanics: CollectableMechanicsContext | null) {
+  const total = nodes.length;
+  const metrics = createManagedOverviewMetrics(mechanics);
+
+  return metrics.map((metric) => {
+    const counts = new Map<number, number>();
+    nodes.forEach((node) => {
+      const value = metric.getValue(node);
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    });
+
+    const entries = [...counts.entries()]
+      .map(([value, count]) => ({
+        key: `${value}`,
+        value: metric.formatValue ? metric.formatValue(value) : `${value}`,
+        sortValue: value,
+        count,
+        percentage: total > 0 ? (count / total) * 100 : 0
+      }))
+      .sort((a, b) => b.sortValue - a.sortValue);
+
+    return {
+      ...metric,
+      entries
+    };
+  });
+}
+
+function buildManagedNodeOverview(nodes: ManagedOverviewSource[], mechanics: CollectableMechanicsContext | null) {
+  const metrics = createManagedOverviewMetrics(mechanics);
 
   return {
     ranges: metrics.map((metric) => {
@@ -1367,7 +1376,7 @@ function makeId() {
                 </div>
 
                 <div class="pending-overview-values">
-                  <div v-for="entry in group.entries" :key="`${group.key}-${entry.value}`" class="pending-overview-value">
+                  <div v-for="entry in group.entries" :key="`${group.key}-${entry.key}`" class="pending-overview-value">
                     <div class="pending-overview-value-main">
                       <span>{{ entry.value }}</span>
                       <strong>{{ formatDistributionPercent(entry.percentage) }}</strong>
@@ -1377,6 +1386,16 @@ function makeId() {
                     </div>
                     <small>{{ t('collectableStrategyLab.pendingOverview.nodeCount', { count: entry.count }) }}</small>
                   </div>
+                </div>
+              </article>
+
+              <article class="pending-buff-overview" :aria-label="t('collectableStrategyLab.managedOverview.buffTitle')">
+                <div class="pending-overview-group-header">
+                  <strong>{{ t('collectableStrategyLab.managedOverview.buffTitle') }}</strong>
+                  <small>{{ t('collectableStrategyLab.pendingOverview.buffCount', { count: uncoveredBuffChips.length }) }}</small>
+                </div>
+                <div class="pending-buff-list">
+                  <span v-for="chip in uncoveredBuffChips" :key="`pending-${chip.key}`">{{ chip.label }}</span>
                 </div>
               </article>
             </div>
@@ -3867,6 +3886,46 @@ function makeId() {
 
 :global(html.dark .pending-overview-bar span) {
   background: #475569;
+}
+
+.pending-buff-overview {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+  padding: 0.78rem 0.85rem;
+}
+
+:global(html.dark .pending-buff-overview) {
+  border-color: #334155;
+  background: rgb(30 41 59 / 0.38);
+}
+
+.pending-buff-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pending-buff-list span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(148 163 184 / 0.34);
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.24rem 0.58rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+:global(html.dark .pending-buff-list span) {
+  border-color: rgb(100 116 139 / 0.54);
+  background: rgb(15 23 42 / 0.42);
+  color: #cbd5e1;
 }
 
 .managed-summary-overview {

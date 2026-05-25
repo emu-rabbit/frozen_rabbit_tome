@@ -822,6 +822,7 @@ export default {
     pendingOverview: {
       total: '{count} undecided state(s)',
       uniqueValues: '{count} value(s)',
+      buffCount: '{count} state(s)',
       nodeCount: '{count} node(s)',
       gp: 'GP',
       integrity: 'Integrity',

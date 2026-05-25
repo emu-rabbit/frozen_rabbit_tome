@@ -800,6 +800,7 @@ export default {
     pendingOverview: {
       total: '未決定ノード {count} 件',
       uniqueValues: '{count} 種類の値',
+      buffCount: '{count} 種類の状態',
       nodeCount: '{count} ノード',
       gp: 'GP',
       integrity: '耐久',

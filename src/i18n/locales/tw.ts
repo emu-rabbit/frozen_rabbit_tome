@@ -823,6 +823,7 @@ export default {
     pendingOverview: {
       total: '共 {count} 個待決節點',
       uniqueValues: '{count} 種數值',
+      buffCount: '{count} 種狀態',
       nodeCount: '{count} 節點',
       gp: 'GP',
       integrity: '耐久',
