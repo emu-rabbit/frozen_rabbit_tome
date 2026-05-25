@@ -27,8 +27,9 @@ import type {
   CollectableStateSummary,
   CollectableTierCounts
 } from '../types/collectable';
+import { COLLECTABLE_POLICY_STRATEGY_CODEC_VERSION } from '../config/modelVersions';
 
-const CODEC_VERSION = 'collectable-policy-strategy-rules-v1' as const;
+const CODEC_VERSION = COLLECTABLE_POLICY_STRATEGY_CODEC_VERSION;
 export const COLLECTABLE_POLICY_STRATEGY_CODEC_ENCODING = CODEC_VERSION;
 const COLLECT_SUCCESS_LABEL = 'collectableSolver.branches.collectSuccess';
 const REVISIT_ACTION: CollectableActionKind = 'revisitCheck';

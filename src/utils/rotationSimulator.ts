@@ -1,4 +1,5 @@
 import type { NodeBonuses, PlayerStats, SimulationResponse, SimulationRotationAnalysis, SolverRequest } from '../types/game';
+import { buildModelVersionsForScenario } from '../config/modelVersions';
 import {
   applyRegularGatheringAction,
   canUseRegularGatheringAction,
@@ -80,6 +81,7 @@ export function simulateGatheringRotation(request: SimulationRequest): Simulatio
     : primaryStates;
 
   return {
+    modelVersions: buildModelVersionsForScenario('experiment.regular'),
     primary,
     revisit,
     total: summarizeRun('total', [], totalOutcomes),

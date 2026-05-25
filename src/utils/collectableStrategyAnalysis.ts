@@ -5,6 +5,7 @@ import {
   scoreCollectability
 } from './collectableMath';
 import { isTierCountObjective } from './collectableObjectivePresets';
+import { buildModelVersionsForScenario, type TomeModelVersions } from '../config/modelVersions';
 import { createCooperativeScheduler, type CooperativeSchedulerOptions } from './cooperativeScheduler';
 import type { CollectableObjective, CollectableRewardTable, CollectableTierCounts } from '../types/collectable';
 import type { CollectableStrategyNode } from './collectableStrategyTree';
@@ -16,6 +17,7 @@ export interface CollectableStrategyScoreDistributionEntry {
 }
 
 export interface CollectableStrategyAnalysis {
+  modelVersions: TomeModelVersions;
   expectedScore: number;
   minScore: number;
   maxScore: number;
@@ -41,6 +43,7 @@ export function analyzeCollectableStrategyTree(
   const maxScore = scores[scores.length - 1] ?? 0;
 
   return {
+    modelVersions: buildModelVersionsForScenario('experiment.collectable'),
     expectedScore: roundScore(expectedValue(outcomes)),
     minScore,
     maxScore,
@@ -70,6 +73,7 @@ export async function analyzeCollectableStrategyTreeAsync(
   await scheduler.step();
 
   return {
+    modelVersions: buildModelVersionsForScenario('experiment.collectable'),
     expectedScore: roundScore(expectedValue(outcomes)),
     minScore,
     maxScore,

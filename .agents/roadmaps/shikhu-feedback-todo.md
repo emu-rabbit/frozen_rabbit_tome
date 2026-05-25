@@ -138,21 +138,23 @@ Shikhu 提出一個想法：與其重複寫多條條件，例如收藏價值滿�
 
 目前繁中服與國際服都在 7.x，採集技能相容性高。但 Evercold 後可能產生版本差距，使技能效果、公式或資料來源需要版本化。
 
-### 未來可能方向
+### 已落地第一版（2026-05-25）
 
-- 在匯出 JSON `manifest` 或相鄰區塊加入 scenario-aware 的 `modelVersions`。
-- `tome.regular` 應記錄 regular solver model version。
-- `tome.collectable` 應記錄 collectable solver model version 與 collectable strategy codec version。
-- `experiment.regular` 應記錄 regular simulator / regular analyzer model version。
-- `experiment.collectable` 應記錄 collectable simulator / collectable analyzer model version。
+- `src/config/modelVersions.ts` 是目前 scenario-aware model version 的唯一來源。
+- JSON 匯出已在 `manifest` 相鄰區塊輸出 `modelVersions`。
+- 求解器、模擬器、分析器結果與本地保存快照會保留對應 `modelVersions` 供內部辨識。
+- `AGENTS.md`、`.agents/workflows/add-commit-all.md`、產品架構與演算法驗證文件已加入提交硬約束：涉及模型內容或模型相關重構但未 bump 對應 model version 時，Agent 不得 commit，除非使用者明確要求不更新版本也提交。
+
+### 後續可能方向
+
 - UI 讓使用者知道目前採用哪個遊戲版本模型，且在匯入舊 JSON 或舊快照時能說明「保存時結果」與「目前版本重新計算結果」的差異。
 
 ### 版本粒度取捨
 
 - 不建議第一版把 `formulaVersion`、`actionModelVersion`、`gameDataVersion` 都做成第一層必填欄位。這些內部板號維護成本高，而且只要它們影響使用者可觀察結果，就應反映到對應的 solver / simulator / analyzer model version。
 - 公式、技能模型、資料來源或 server region 可先放在 release note、debug manifest 或未來擴充欄位；不要建立看似精細但沒有同步流程的假版本資訊。
-- 版本更新單位應以「同一份輸入在新版模型下輸出是否可能不同」為主要判準。
+- 版本更新單位應以「同一份輸入在新版模型下輸出是否可能不同」或「模型相關實作是否被修改 / 重構」為主要判準；模型重構不可用「預期不改行為」免除 bump。
 
 ### 目前取捨
 
-這是長期維護議題，不應優先於目前 Shikhu 回饋中仍屬主要待辦的 JSON 匯入閉環與 Frontier 實驗問題。
+第一版版本識別已完成；剩餘重點是不把它膨脹成假精細版本系統，並在 JSON 匯入閉環與舊快照比較 UI 實作時使用這些 `modelVersions`。

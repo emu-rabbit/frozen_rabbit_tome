@@ -1,4 +1,5 @@
 import type { NodeBonuses, PlayerStats, SolverObjectiveMode } from './game';
+import type { TomeModelVersions } from '../config/modelVersions';
 
 export type CollectableObjectiveKind = 'scrip' | 'exp' | 'gil' | 'custom' | 'tierScore';
 
@@ -234,6 +235,7 @@ export interface CollectableSearchDebugInfo {
 }
 
 export interface CollectableSolverDebugInfo {
+  modelVersions: TomeModelVersions;
   formulas: CollectableFormulaDebugInfo;
   objective: CollectableObjective;
   plans: Array<{
@@ -258,6 +260,7 @@ export interface CollectableSolverDebugInfo {
 }
 
 export interface CollectableSolverResult {
+  modelVersions: TomeModelVersions;
   expectedScore: number;
   minScore: number;
   maxScore: number;

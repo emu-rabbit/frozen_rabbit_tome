@@ -1,4 +1,3 @@
-import packageInfo from '../../package.json';
 import {
   COLLECTABLE_POLICY_STRATEGY_CODEC_ENCODING,
   compressCollectablePolicyToExactStrategy,
@@ -9,6 +8,12 @@ import {
   type CollectableExactStrategyPlan,
   type CollectablePolicyStrategyRule
 } from './collectablePolicyStrategyCodec';
+import {
+  TOME_EXPORT_SCHEMA_VERSION,
+  TOME_MODEL_VERSION_CATALOG,
+  buildModelVersionsForScenario,
+  type TomeModelScenario
+} from '../config/modelVersions';
 import type {
   CollectableRewardTable,
   CollectableRewardTableSummary,
@@ -33,11 +38,7 @@ import { getSimulatorActions } from './rotationSimulator';
 import type { RegularGatheringActionKind } from './regularGatheringMechanics';
 import { getRotationActionId } from '../services/actionIcons';
 
-export type TomeJsonExportScenario =
-  | 'tome.regular'
-  | 'tome.collectable'
-  | 'experiment.regular'
-  | 'experiment.collectable';
+export type TomeJsonExportScenario = TomeModelScenario;
 
 export interface TomeJsonExportMeta {
   scenario: TomeJsonExportScenario;
@@ -121,6 +122,7 @@ export interface CollectableExperimentJsonExportInput {
 export function buildRegularSolverJsonExport(input: RegularSolverJsonExportInput) {
   return compactJson({
     manifest: buildManifest({ ...input.meta, scenario: 'tome.regular' }),
+    modelVersions: input.result.modelVersions,
     subject: buildSubject('solver', 'regular', input.item),
     input: buildGatheringInput(input.request, input.food),
     solver: {
@@ -148,6 +150,7 @@ export function buildRegularSolverJsonExport(input: RegularSolverJsonExportInput
 export function buildRegularExperimentJsonExport(input: RegularExperimentJsonExportInput) {
   return compactJson({
     manifest: buildManifest({ ...input.meta, scenario: 'experiment.regular' }),
+    modelVersions: input.analysis.modelVersions,
     subject: buildSubject('experiment', 'regular', input.item),
     input: buildGatheringInput(input.request, input.food),
     strategy: {
@@ -216,6 +219,7 @@ function buildCollectableSolverPayload(
         'reduction-reward-model-excluded'
       ]
     }),
+    modelVersions: input.result.modelVersions,
     subject: buildSubject('solver', 'collectable', input.item),
     input: {
       ...buildGatheringInput(input.request, input.food),
@@ -260,6 +264,7 @@ function buildCollectableSolverPayload(
 export function buildCollectableExperimentJsonExport(input: CollectableExperimentJsonExportInput) {
   return compactJson({
     manifest: buildManifest({ ...input.meta, scenario: 'experiment.collectable' }),
+    modelVersions: input.analysis.modelVersions,
     subject: buildSubject('experiment', 'collectable', input.item),
     input: {
       ...buildGatheringInput(input.request, input.food),
@@ -314,8 +319,8 @@ export function sanitizeJsonFileName(fileName: string) {
 function buildManifest(input: TomeJsonExportMeta & { limitations?: string[] }) {
   return {
     app: 'frozen_rabbit_tome',
-    schemaVersion: 1,
-    version: packageInfo.version,
+    schemaVersion: TOME_EXPORT_SCHEMA_VERSION,
+    version: TOME_MODEL_VERSION_CATALOG.app.version,
     commit: input.commit ?? import.meta.env.VITE_APP_COMMIT ?? null,
     scenario: input.scenario,
     generatedAt: input.generatedAt ?? new Date().toISOString(),

@@ -1,4 +1,5 @@
 import wasmUrl from '../wasm/collectable-solver-core.wasm?url';
+import { buildModelVersionsForScenario } from '../config/modelVersions';
 import {
   addCollectableRewards,
   addCollectableTierCounts,
@@ -300,6 +301,7 @@ function solveCollectableRotationWithWasmCore(
       ];
 
   const result: CollectableSolverResult = {
+    modelVersions: buildModelVersionsForScenario('tome.collectable'),
     expectedScore: Number(expectedScore.toFixed(6)),
     minScore: combinedSummary.minScore,
     maxScore: combinedSummary.maxScore,
@@ -324,6 +326,7 @@ function solveCollectableRotationWithWasmCore(
 
   if (request.debugMode) {
     result.debug = {
+      modelVersions: buildModelVersionsForScenario('tome.collectable'),
       formulas: buildFormulaDebug(request),
       objective: {
         ...request.objective,

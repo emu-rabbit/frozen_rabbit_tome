@@ -8,6 +8,7 @@ import type {
   CollectableRewardVector,
   StoredCollectablePolicy
 } from './collectable';
+import type { TomeModelVersions } from '../config/modelVersions';
 
 export type GatheringJob = 'miner' | 'botanist';
 
@@ -249,6 +250,7 @@ export interface SolverPlanDebugInfo {
 }
 
 export interface SolverDebugInfo {
+  modelVersions: TomeModelVersions;
   formulas: SolverFormulaDebugInfo;
   plans: SolverPlanDebugInfo[];
   combined: {
@@ -266,6 +268,7 @@ export interface SolverDebugInfo {
 
 /** 求解器回應 */
 export interface SolverResponse {
+  modelVersions: TomeModelVersions;
   bestRotation: string[];
   rotationPlans: SolverRotationPlan[];
   revisit: SolverRevisitInfo;
@@ -307,6 +310,7 @@ export interface StoredTomeRotationPlan {
 
 export interface StoredTome {
   kind?: 'regular' | 'collectable';
+  modelVersions?: TomeModelVersions;
   id: string;
   name?: string;
   itemId: number;
@@ -345,6 +349,7 @@ export interface SimulationRotationAnalysis {
 }
 
 export interface SimulationResponse {
+  modelVersions: TomeModelVersions;
   primary: SimulationRotationAnalysis;
   revisit?: SimulationRotationAnalysis;
   total: SimulationRotationAnalysis;
@@ -353,6 +358,7 @@ export interface SimulationResponse {
 
 export interface StoredExperiment {
   kind?: 'regular' | 'collectable';
+  modelVersions?: TomeModelVersions;
   id: string;
   name?: string;
   itemId: number;
@@ -395,6 +401,7 @@ export interface StoredCollectableScoreDistributionEntry {
 }
 
 export interface StoredCollectableExperimentAnalysis {
+  modelVersions?: TomeModelVersions;
   expectedScore: number;
   minScore: number;
   maxScore: number;

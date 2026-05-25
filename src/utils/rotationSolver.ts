@@ -1,4 +1,5 @@
 import { calculateBoonChance } from './gatheringMath';
+import { buildModelVersionsForScenario } from '../config/modelVersions';
 import type { SolverDebugInfo, SolverObjectiveMode, SolverRequest, SolverResponse, SolverSearchDebugInfo } from '../types/game';
 import {
   REGULAR_GATHERING_STATE_KEY_FIELDS,
@@ -677,6 +678,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       ];
 
   const response: SolverResponse = {
+    modelVersions: buildModelVersionsForScenario('tome.regular'),
     bestRotation: initial.rotation,
     rotationPlans,
     revisit: {
@@ -712,6 +714,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     });
 
     response.debug = {
+      modelVersions: buildModelVersionsForScenario('tome.regular'),
       formulas: {
         success: calculateSuccessFormulaDebug(
           stats.gathering,

@@ -64,13 +64,14 @@
 ### 版本管理原則
 
 - `package.json` 的 app version 代表產品發行版，不應單獨用來判斷求解、模擬或分析結果是否相容。
-- 未來應新增 scenario-aware 的 `modelVersions`。版本更新單位應以「使用者可觀察結果是否可能改變」為準，而不是把所有內部公式、action model、資料來源拆成第一層必填版本。
+- 現行模型版本來源為 `src/config/modelVersions.ts`，並已輸出 scenario-aware 的 `modelVersions`。版本更新單位應以「使用者可觀察結果是否可能改變」或「模型相關實作是否被修改 / 重構」為準，而不是把所有內部公式、action model、資料來源拆成第一層必填版本。
 - 第一版建議依情境只輸出相關欄位，例如：
   - `tome.regular`：`exportSchema`、`app`、`regularSolver`。
   - `tome.collectable`：`exportSchema`、`app`、`collectableSolver`、`collectableStrategyCodec`。
   - `experiment.regular`：`exportSchema`、`app`、`regularSimulator`、`regularAnalyzer`。
   - `experiment.collectable`：`exportSchema`、`app`、`collectableSimulator`、`collectableAnalyzer`。
 - `formulaVersion`、`actionModelVersion`、`gameDataVersion` 可作為內部 release note、debug 或長期擴充欄位，但第一版不應要求所有 JSON 都獨立維護這三個板號。若公式、技能模型或資料來源改動會影響結果，應 bump 對應的 solver / simulator / analyzer model version。
+- 提交硬約束：涉及求解、模擬、分析、策略 codec、公式、action model 或模型相關重構的變更，若尚未同步 bump `src/config/modelVersions.ts` 對應模型版本，Agent 不得執行 `git commit`。即使重構宣稱不改行為，也應 bump；除非使用者明確要求不更新模型版本也提交，否則 Agent 在 commit 前必須停下詢問。
 
 ## 一般採集秘笈現況
 

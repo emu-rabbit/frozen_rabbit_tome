@@ -62,6 +62,7 @@ export async function solveGatheringWorkerRequest(
   });
 
   return {
+    modelVersions: result.modelVersions,
     bestRotation: result.bestRotation,
     rotationPlans: result.rotationPlans,
     revisit: result.revisit,

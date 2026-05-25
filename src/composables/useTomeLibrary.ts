@@ -46,6 +46,7 @@ export function useTomeLibrary() {
     if (payload.collectableResult) {
       const tome: StoredTome = {
         kind: 'collectable',
+        modelVersions: payload.collectableResult.modelVersions,
         id: createTomeId(),
         name: payload.name?.trim() || undefined,
         itemId: payload.itemId,
@@ -106,6 +107,7 @@ export function useTomeLibrary() {
     const tome: StoredTome = {
       id: createTomeId(),
       kind: 'regular',
+      modelVersions: payload.rotationResult.modelVersions,
       name: payload.name?.trim() || undefined,
       itemId: payload.itemId,
       stats: { ...payload.stats },

@@ -5,6 +5,7 @@ import {
   buildRegularSolverJsonExport
 } from './tomeJsonExport';
 import { solveCollectableRotation } from './collectableSolver';
+import { TOME_MODEL_VERSION_CATALOG, buildModelVersionsForScenario } from '../config/modelVersions';
 import type { CollectableSolverRequest } from '../types/collectable';
 import type { GatherableItem, SolverRequest, SolverResponse } from '../types/game';
 
@@ -56,7 +57,13 @@ describe('tomeJsonExport', () => {
   });
 
   it('exports regular rotations as stable action codes instead of localized names', () => {
+    const resultModelVersions = {
+      exportSchema: 1,
+      app: '0.9.0-test',
+      regularSolver: 'regular-solver-v0-test'
+    };
     const result: SolverResponse = {
+      modelVersions: resultModelVersions,
       bestRotation: ['採集', '理智同興(若觸發)', '採集(理智觸發)'],
       rotationPlans: [{
         kind: 'primary',
@@ -80,6 +87,7 @@ describe('tomeJsonExport', () => {
       objectiveMode: 'expected',
       calculationTime: 1,
       debug: {
+        modelVersions: buildModelVersionsForScenario('tome.regular'),
         formulas: {
           success: {
             gathering: 5345,
@@ -173,6 +181,11 @@ describe('tomeJsonExport', () => {
       Gathering: 5085,
       Perception: 5085
     });
+    expect(payload.modelVersions).toEqual({
+      exportSchema: 1,
+      app: '0.9.0-test',
+      regularSolver: 'regular-solver-v0-test'
+    });
     expect(payload.solver.search).toMatchObject({
       engine: 'wasm-core',
       stateKeyEngine: 'wasm-packed'
@@ -220,6 +233,7 @@ describe('tomeJsonExport', () => {
       objectiveMode: 'expected',
       debugMode: true
     };
+    const result = solveCollectableRotation(collectableRequest);
     const payload = buildCollectableSolverJsonExport({
       meta: {},
       item: {
@@ -231,13 +245,19 @@ describe('tomeJsonExport', () => {
         isCollectable: true
       },
       request: collectableRequest,
-      result: solveCollectableRotation(collectableRequest),
+      result,
       food: {
         selection: { foodId: null, quality: 'nq' }
       }
     }) as any;
 
     expect(payload.strategyCodec.encoding).toBe('collectable-policy-strategy-rules-v1');
+    expect(payload.modelVersions).toMatchObject({
+      exportSchema: 1,
+      app: TOME_MODEL_VERSION_CATALOG.app.version,
+      collectableSolver: 'collectable-solver-v1',
+      collectableStrategyCodec: 'collectable-policy-strategy-rules-v1'
+    });
     expect('entries' in payload.strategyCodec.plans[0]).toBe(false);
   });
 });

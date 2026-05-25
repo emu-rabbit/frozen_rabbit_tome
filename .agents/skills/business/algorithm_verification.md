@@ -204,7 +204,7 @@ WASM 路徑另需注意：
 
 實作時 `modelVersions` 不必每個 scenario 都塞滿所有欄位；應只輸出該 JSON 會用到的版本。例如 `tome.collectable` 需要 collectable solver 與 collectable strategy codec，`experiment.regular` 則需要 regular simulator / analyzer。
 
-版本粒度以「同一份輸入在新版模型下，使用者可觀察輸出是否可能不同」為判準。第一版不建議把 `formulaVersion`、`actionModelVersion`、`gameDataVersion` 做成所有 JSON 的第一層必填欄位；若公式、技能模型或資料來源變更會影響結果，應 bump 對應的 solver / simulator / analyzer model version。內部公式、action model、資料來源與 server region 可作為 debug / release note / future extension 欄位。
+版本粒度以「同一份輸入在新版模型下，使用者可觀察輸出是否可能不同」或「模型相關實作是否被修改 / 重構」為判準。第一版不建議把 `formulaVersion`、`actionModelVersion`、`gameDataVersion` 做成所有 JSON 的第一層必填欄位；若公式、技能模型、資料來源或模型重構可能影響結果，應 bump 對應的 solver / simulator / analyzer model version。內部公式、action model、資料來源與 server region 可作為 debug / release note / future extension 欄位。
 
 JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 changelog 說明。
 
@@ -220,6 +220,7 @@ JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 change
 
 ## Agent 維護規則
 
+- 模型版本硬約束：修改或重構核心演算法、WASM core / wrapper、worker fallback、模擬器、分析器、策略 codec、公式、action model、objective scoring、reward / tier 判定或其他模型內容時，必須同步更新 `src/config/modelVersions.ts` 對應的 scenario-aware model version。模型重構即使目標是不改行為，也必須 bump，因為無法保證重構沒有改壞輸出。若尚未更新，Agent 不得 commit；除非使用者明確要求未更新模型版本也提交，否則必須在 commit 前停下詢問。
 - 修改核心演算法時，至少跑 `npm run test:unit`。
 - 若修改普通採集或收藏品求解器，必須檢查公式表測試、invariant 測試、golden scenario 與 oracle 是否仍符合模型。
 - 若修改一般採集 WASM core、wrapper、worker fallback、memo capacity selector 或 rotation materialization，必須檢查 `src/utils/regularGatheringWasmSolver.test.ts`、`src/workers/solver.worker.test.ts` 與 `src/utils/regularGatheringRotationContract.test.ts`；高壓案例改用 `npm run bench:regular-wasm` 驗證。

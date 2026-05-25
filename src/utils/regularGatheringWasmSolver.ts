@@ -1,4 +1,5 @@
 import wasmUrl from '../wasm/regular-gathering-solver-core.wasm?url';
+import { buildModelVersionsForScenario } from '../config/modelVersions';
 import { calculateBoonChance, calculateBountifulYield, calculateSuccessRate } from './gatheringMath';
 import {
   REGULAR_GATHERING_STATE_KEY_FIELDS,
@@ -238,6 +239,7 @@ function solveGatheringRotationWithWasmCore(
       ];
 
   const response: SolverResponse = {
+    modelVersions: buildModelVersionsForScenario('tome.regular'),
     bestRotation: initial.plan.rotation,
     rotationPlans,
     revisit: {
@@ -374,6 +376,7 @@ function buildDebugInfo(
   const plusThreeThreshold = Math.floor(request.baseValues.Gathering * 1.1);
 
   return {
+    modelVersions: buildModelVersionsForScenario('tome.regular'),
     formulas: {
       success: calculateSuccessFormulaDebug(
         request.stats.gathering,

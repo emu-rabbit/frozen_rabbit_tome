@@ -1,4 +1,5 @@
 import { calculateSuccessRate } from './gatheringMath';
+import { buildModelVersionsForScenario } from '../config/modelVersions';
 import {
   COLLECTABILITY_CAP,
   addCollectableRewards,
@@ -856,6 +857,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
         }
       ];
   const response: CollectableSolverResult = {
+    modelVersions: buildModelVersionsForScenario('tome.collectable'),
     expectedScore: Number(expectedScore.toFixed(6)),
     minScore: combinedSummary.minScore,
     maxScore: combinedSummary.maxScore,
@@ -886,6 +888,7 @@ export function solveCollectableRotation(request: CollectableSolverRequest): Col
 
   function buildDebugInfo(): CollectableSolverDebugInfo {
     return {
+      modelVersions: buildModelVersionsForScenario('tome.collectable'),
       formulas: {
         success: calculateSuccessFormulaDebug(stats.gathering, baseValues.Gathering, stats.level, itemLevel),
         collectable: {

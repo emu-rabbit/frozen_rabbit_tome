@@ -103,8 +103,21 @@
 - 漁師機制與採掘師、園藝師差異較大，目前不要把漁師納入核心演算。
 - 採集演算必須遵循 `.agents/skills/business/gathering_math_formulas.md` 中的分段函數與數值規範，不可用簡單線性假設替代。
 - 收藏品求解器目前是 WASM-first 架構；涉及收藏品核心、policy、debug/export 或效能時，必須同時理解 WASM core、TS wrapper / fallback 與 parity 測試。
+- 模型版本來源為 `src/config/modelVersions.ts`。`package.json` 只代表 app 發行版；會改變或重構求解、模擬、分析、策略 codec、公式或 action model 的變更，必須同步更新對應的 scenario-aware model version。
 - 品牌為 Frozen Rabbit，語氣應像友善且專業的朋友：親切、可靠、方便上手。
 - UI 與視覺風格應參考姊妹專案 `frozen_rabbit_workshop`，但不能為一致性犧牲本專案的策略演算與工具便利性。
+
+## 模型版本與提交硬約束
+
+後續 Agent 只要修改「模型內容」，在準備 `git commit` 前必須確認 `src/config/modelVersions.ts` 已更新對應模型版本。若尚未標新版本，一律不可 commit；除非使用者非常明確表示「即使未更新模型版本也提交」或等價指令。若使用者只是說 `commit`、`add and commit all`、`提交`，Agent 必須主動停下來詢問是否要先 bump model version。
+
+模型內容包含但不限於：
+
+- 一般採集或收藏品求解器：`assembly/*SolverCore.ts`、`src/wasm/*.wasm`、`src/utils/rotationSolver.ts`、`src/utils/regularGatheringWasmSolver.ts`、`src/utils/collectableSolver.ts`、`src/utils/collectableWasmSolver.ts`、`src/utils/collectableWasmPolicy.ts`、`src/workers/*solver*.ts`。
+- 模擬、分析與策略模型：`src/utils/rotationSimulator.ts`、`src/utils/collectableStrategyAnalysis.ts`、`src/utils/collectableStrategyTree.ts`、`src/utils/collectablePolicyStrategyCodec.ts`。
+- 公式、機制、action model、objective scoring、reward / tier 判定、輸入正規化中會影響結果的部分：`src/utils/*Math.ts`、`src/utils/*Mechanics.ts`、`src/utils/collectableObjectivePresets.ts`、`src/config/inputLimits.ts`、相關 business `.agents` 文件。
+
+版本 bump 底線是「同一份輸入在新版模型下，使用者可觀察結果是否可能不同」或「修改 / 重構了模型相關實作」。即使重構目標是保持行為不變，也不能假設沒有改壞；模型相關重構必須 bump 對應版本。只改 UI 排版、純 i18n 文案、README、測試描述或完全不碰模型路徑的重構，通常不需要 bump，但 commit 前仍應說明判斷。
 
 ## 固定行為規範
 
