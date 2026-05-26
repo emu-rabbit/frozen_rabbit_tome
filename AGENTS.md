@@ -119,6 +119,12 @@
 
 版本 bump 底線是「同一份輸入在新版模型下，使用者可觀察結果是否可能不同」或「修改 / 重構了模型相關實作」。即使重構目標是保持行為不變，也不能假設沒有改壞；模型相關重構必須 bump 對應版本。只改 UI 排版、純 i18n 文案、README、測試描述或完全不碰模型路徑的重構，通常不需要 bump，但 commit 前仍應說明判斷。
 
+## Unit Test 壓力案例硬約束
+
+一般採集與收藏品 WASM / worker 的長跑高壓案例不得放進預設 `npm run test:unit`。若案例需要自訂 30 秒以上 timeout 才能穩定通過，或同時疊高 GP（尤其 `gp` / `temporaryGp` 接近數千或 4095）、高耐久、低成功率、高 boon / 多 proc 分支、`Revisit`、`objectiveMode: 'min' | 'max'`、大 memo capacity（例如 `2^25`）、或長 Glv / 低屬性壓力輸入，就必須放到 `npm run bench:regular-wasm`、`npm run bench:collectable-wasm`、diagnostic script，或改成明確標示的非預設壓力測試。保留在 unit suite 的代表性 parity case 必須能在預設 Vitest timeout 內快速完成，不得靠加 timeout 掩護。
+
+`src/workers/solver.worker.test.ts` 只應驗證 worker contract、錯誤回傳與代表性快速 parity；`src/utils/*WasmSolver.test.ts` 只應守住公式摘要、policy / rotation shape、distribution 與 typed error 等正確性。不得用 unit test 承載 wrapper materialization 或高壓搜尋效能驗證。若需要保留高壓回歸樣本，請新增 / 更新 `scripts/regular-gathering-wasm.bench.ts` 或 `scripts/collectable-wasm.bench.ts`，並在測試名稱或註解說明為什麼不屬於 unit suite。
+
 ## 固定行為規範
 
 - 回覆使用者、撰寫文件、撰寫任務說明時，預設使用繁體中文。

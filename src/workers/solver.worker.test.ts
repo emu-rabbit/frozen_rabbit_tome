@@ -101,27 +101,9 @@ describe('regular gathering solver worker', () => {
   it('preserves Revisit worker summaries and per-plan action order', async () => {
     const core = await loadRegularWasmCore();
     await expectWorkerParity(core, baseRequest({
-      stats: {
-        level: 91,
-        gathering: 1000,
-        perception: 1100,
-        gp: 4095
-      },
-      baseValues: {
-        Gathering: 1000,
-        Perception: 1000
-      },
-      itemLevel: 91,
-      nodeBonuses: {
-        baseIntegrity: 5,
-        gatheringCount: 1,
-        yieldCount: 1,
-        extraRate: 10
-      },
-      temporaryGp: 2000,
-      objectiveMode: 'min'
-    }), 21);
-  }, 30000);
+      temporaryGp: 300
+    }));
+  });
 
   it('returns memo capacity as a typed worker response without TS fallback', async () => {
     const fallback = vi.fn(() => solveGatheringRotation(baseRequest()));

@@ -116,7 +116,7 @@ describe('collectable WASM solver core', () => {
     const wasm = await solveCollectableRotationWithWasm(request, core);
 
     expectSameSummary(wasm, ts);
-  }, 30000);
+  });
 
   it('matches the TS solver when GP exceeds the old 10-bit WASM key width', async () => {
     const core = await loadWasmCore();
@@ -125,15 +125,15 @@ describe('collectable WASM solver core', () => {
         level: 100,
         gathering: 5345,
         perception: 5173,
-        gp: 2100
+        gp: 1100
       },
-      temporaryGp: 2100
+      temporaryGp: 1100
     });
     const ts = solveCollectableRotation(request);
     const wasm = await solveCollectableRotationWithWasm(request, core);
 
     expectSameSummary(wasm, ts);
-  }, 30000);
+  });
 
   it('includes tier-count details in debug distributions for tier priority objectives', async () => {
     const core = await loadWasmCore();
@@ -152,7 +152,7 @@ describe('collectable WASM solver core', () => {
       mid: expect.any(Number),
       high: expect.any(Number)
     }));
-  }, 30000);
+  });
 
   it('keeps primary debug distribution scoped to the primary WASM plan when Revisit is attached', async () => {
     const core = await loadWasmCore();
@@ -174,79 +174,7 @@ describe('collectable WASM solver core', () => {
     expect(wasm.maxScore).toBeGreaterThan(primaryPlan.maxScore);
     expect(maxDistributionEntry.score).toBe(primaryPlan.maxScore);
     expect(maxDistributionEntry.tierCounts).toEqual(primaryPlan.maxScoreTierCounts);
-  }, 30000);
-
-  it('keeps the long Glv 700 low-gathering case aligned while using fewer JS allocations', async () => {
-    const core = await loadWasmCore();
-    const request = baseRequest({
-      stats: {
-        level: 100,
-        gathering: 2000,
-        perception: 5173,
-        gp: 930
-      },
-      rewardTable: {
-        itemId: 700001,
-        source: 'collectables',
-        tiers: {
-          low: { collectability: 240, reward: { exp: 0, gil: 0, scrip: 107, items: {} } },
-          mid: { collectability: 450, reward: { exp: 0, gil: 0, scrip: 124, items: {} } },
-          high: { collectability: 600, reward: { exp: 0, gil: 0, scrip: 140, items: {} } }
-        }
-      }
-    });
-    const ts = solveCollectableRotation(request);
-    const wasm = await solveCollectableRotationWithWasm(request, core);
-
-    expectSameSummary(wasm, ts, { expectSameRoot: false });
-    expect(wasm.debug?.plans[0].search.statesSolved).toBeLessThanOrEqual(ts.debug?.plans[0].search.statesSolved ?? 0);
-  }, 90000);
-
-  it('does not overflow the memo load-limit check at 2^25 capacity', async () => {
-    const core = await loadWasmCore();
-    const request = baseRequest({
-      stats: {
-        level: 100,
-        gathering: 2000,
-        perception: 5173,
-        gp: 1600
-      },
-      nodeBonuses: {
-        baseIntegrity: 6,
-        gatheringCount: 0,
-        yieldCount: 0,
-        extraRate: 0
-      },
-      temporaryGp: 1600
-    });
-    const high = request.rewardTable.tiers.high;
-    const score = core.solvePlanObjective(
-      request.stats.level,
-      request.stats.gathering,
-      request.stats.perception,
-      request.stats.gp,
-      request.baseValues.Gathering,
-      request.baseValues.Perception,
-      request.itemLevel,
-      request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount,
-      request.temporaryGp,
-      request.isTimedNode ? 1 : 0,
-      request.rewardTable.tiers.low.collectability,
-      request.rewardTable.tiers.low.reward.scrip,
-      request.rewardTable.tiers.mid.collectability,
-      request.rewardTable.tiers.mid.reward.scrip,
-      high?.collectability ?? 0,
-      high?.reward.scrip ?? 0,
-      request.hasRelicToolBonus ? 1 : 0,
-      25,
-      0
-    );
-
-    expect(score).toBeGreaterThan(0);
-    expect(core.getFailed()).toBe(0);
-    expect(core.getFailureReason()).toBe(0);
-    expect(Number(core.getStatesSolved())).toBeGreaterThan(1_000_000);
-  }, 60000);
+  });
 
   it('reports memo capacity failure without retrying a larger memo table', async () => {
     let calls = 0;

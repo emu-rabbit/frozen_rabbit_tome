@@ -96,7 +96,7 @@ WASM 路徑另需注意：
 - memo capacity / allocation failure 必須回傳受控錯誤，不應讓頁面或 worker 直接 OOM。
 - 若手動提高 memo capacity，debug/export 應保留足夠線索讓第三方知道該結果使用的 engine 與容量。
 - 一般採集 WASM 修改 `tie-break metadata`、capacity selector 或 worker fallback policy 時，必須重跑 worker parity test；不能只跑 wrapper test 或 summary test。
-- 一般採集的高 GP / 高耐久 / 低成功率 / Revisit 壓力案例應放在 `npm run bench:regular-wasm` 或 diagnostic，不應塞進預設 `npm run test:unit`。
+- 一般採集與收藏品的高 GP / 高耐久 / 低成功率 / Revisit / 高分支壓力案例應放在 `npm run bench:regular-wasm`、`npm run bench:collectable-wasm` 或 diagnostic，不應塞進預設 `npm run test:unit`。若案例需要自訂 30 秒以上 timeout 才能穩定通過，或同時疊高 GP（尤其 `gp` / `temporaryGp` 接近數千或 4095）、高耐久、低成功率、高 boon / 多 proc 分支、`Revisit`、`objectiveMode: 'min' | 'max'`、大 memo capacity（例如 `2^25`）、或長 Glv / 低屬性壓力輸入，一律視為壓力案例；不得放進 `src/workers/solver.worker.test.ts`、`src/utils/regularGatheringWasmSolver.test.ts`、`src/utils/collectableWasmSolver.test.ts` 或其他預設 unit suite。保留在 unit suite 的代表性 parity case 必須能在預設 Vitest timeout 內快速完成，不得靠加 timeout 掩護。
 - 一般採集 WASM 效能診斷必須分開量測 core DP solve 與 wrapper materialization。2026-05-24 的重蠑木原木極端案例證明，`solvePlanObjective()` 可在 `2^23` 約 2 秒完成，但 TS wrapper 重建 `bestRotation` / `rotationPlans` / outcome distribution 可能因反覆展開同一 policy 子圖而長時間不回來；不可只用 memo capacity 或 `statesSolved` 判斷瓶頸。
 - 收藏品若新增剪枝策略，必須證明 summary、完整 distribution、reward/tier counts 與可達尾端不變，不能只看 expectedScore。
 

@@ -862,7 +862,7 @@ describe('regular gathering WASM solver core POC', () => {
         throw new Error(`Expanded parity corpus failed for ${parityCase.name}: ${(error as Error).message}`);
       }
     }
-  }, 30000);
+  });
 
   it('reports memo capacity exhaustion as a controlled regular-gathering error without TS fallback', async () => {
     let calls = 0;

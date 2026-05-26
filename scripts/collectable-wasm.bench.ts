@@ -29,6 +29,27 @@ type WasmExports = {
     hasRelicToolBonus: number,
     memoCapacityPower: number
   ) => number;
+  solvePlanObjective: (
+    playerLevel: number,
+    gathering: number,
+    perception: number,
+    playerGp: number,
+    baseGathering: number,
+    basePerception: number,
+    itemLevel: number,
+    integrity: number,
+    temporaryGp: number,
+    isTimedNode: number,
+    lowThreshold: number,
+    lowRewardScore: number,
+    midThreshold: number,
+    midRewardScore: number,
+    highThreshold: number,
+    highRewardScore: number,
+    hasRelicToolBonus: number,
+    memoCapacityPower: number,
+    objectiveMode: number
+  ) => number;
   getStatesSolved: () => bigint;
   getMemoHits: () => bigint;
   getActionsEvaluated: () => bigint;
@@ -100,6 +121,36 @@ const fastCaseRequest: CollectableSolverRequest = {
     perception: 5173,
     gp: 930
   }
+};
+
+const glv700LowGatheringRequest: CollectableSolverRequest = {
+  ...slowCaseRequest,
+  rewardTable: {
+    itemId: 700001,
+    source: 'collectables',
+    tiers: {
+      low: { collectability: 240, reward: { exp: 0, gil: 0, scrip: 107, items: {} } },
+      mid: { collectability: 450, reward: { exp: 0, gil: 0, scrip: 124, items: {} } },
+      high: { collectability: 600, reward: { exp: 0, gil: 0, scrip: 140, items: {} } }
+    }
+  }
+};
+
+const memoLoadLimitRequest: CollectableSolverRequest = {
+  ...slowCaseRequest,
+  stats: {
+    level: 100,
+    gathering: 2000,
+    perception: 5173,
+    gp: 1600
+  },
+  nodeBonuses: {
+    baseIntegrity: 6,
+    gatheringCount: 0,
+    yieldCount: 0,
+    extraRate: 0
+  },
+  temporaryGp: 1600
 };
 
 function mb(bytes: number): number {
@@ -192,6 +243,52 @@ function runWasm(exports: WasmExports, request: CollectableSolverRequest) {
   };
 }
 
+function runPlanObjective(
+  exports: WasmExports,
+  request: CollectableSolverRequest,
+  memoCapacityPower: number,
+  objectiveMode = 0
+) {
+  const high = request.rewardTable.tiers.high;
+  const objectiveScore = exports.solvePlanObjective(
+    request.stats.level,
+    request.stats.gathering,
+    request.stats.perception,
+    request.stats.gp,
+    request.baseValues.Gathering,
+    request.baseValues.Perception,
+    request.itemLevel,
+    request.nodeBonuses.baseIntegrity + request.nodeBonuses.gatheringCount,
+    request.temporaryGp,
+    request.isTimedNode ? 1 : 0,
+    request.rewardTable.tiers.low.collectability,
+    request.rewardTable.tiers.low.reward.scrip,
+    request.rewardTable.tiers.mid.collectability,
+    request.rewardTable.tiers.mid.reward.scrip,
+    high?.collectability ?? 0,
+    high?.reward.scrip ?? 0,
+    request.hasRelicToolBonus ? 1 : 0,
+    memoCapacityPower,
+    objectiveMode
+  );
+
+  return {
+    objectiveScore,
+    counters: {
+      statesSolved: toNumber(exports.getStatesSolved()),
+      memoHits: toNumber(exports.getMemoHits()),
+      actionsEvaluated: toNumber(exports.getActionsEvaluated()),
+      candidateComparisons: toNumber(exports.getCandidateComparisons()),
+      terminalStates: toNumber(exports.getTerminalStates()),
+      branchCount: toNumber(exports.getBranchCount())
+    },
+    failure: {
+      failed: exports.getFailed(),
+      reason: exports.getFailureReason()
+    }
+  };
+}
+
 function summarizeJs(request: CollectableSolverRequest) {
   const result = solveCollectableRotation(request);
   return {
@@ -219,6 +316,9 @@ describe('collectable WASM benchmark', () => {
     const slowWasm = elapsed(() => runWasm(wasm, slowCaseRequest));
     const slowPolicy = elapsed(() => buildCollectablePolicyFromWasmCore(slowCaseRequest, wasm, { nodeLimit: 500000 }));
     const slowFullWasm = await elapsedAsync(() => solveCollectableRotationWithWasm(slowCaseRequest, wasm));
+    const glv700Js = elapsed(() => solveCollectableRotation(glv700LowGatheringRequest));
+    const glv700FullWasm = await elapsedAsync(() => solveCollectableRotationWithWasm(glv700LowGatheringRequest, wasm));
+    const memoLoadLimit = elapsed(() => runPlanObjective(wasm, memoLoadLimitRequest, 25));
 
     console.log(JSON.stringify({
       wasmMemoryMb: mb(wasm.memory.buffer.byteLength),
@@ -257,6 +357,29 @@ describe('collectable WASM benchmark', () => {
           rootAction: slowFullWasm.value.policy.recommendedAction.kind
         },
         scoreDelta: Number((slowWasm.value.expectedScore - slowJs.value.expectedScore).toFixed(6))
+      },
+      pressure: {
+        glv700LowGathering: {
+          js: {
+            elapsedMs: glv700Js.elapsedMs,
+            heapDeltaMb: glv700Js.heapDeltaMb,
+            expectedScore: glv700Js.value.expectedScore,
+            rootAction: glv700Js.value.policy.recommendedAction.kind,
+            statesSolved: glv700Js.value.debug?.plans[0].search.statesSolved
+          },
+          wasmFull: {
+            elapsedMs: glv700FullWasm.elapsedMs,
+            heapDeltaMb: glv700FullWasm.heapDeltaMb,
+            expectedScore: glv700FullWasm.value.expectedScore,
+            rootAction: glv700FullWasm.value.policy.recommendedAction.kind,
+            statesSolved: glv700FullWasm.value.debug?.plans[0].search.statesSolved
+          }
+        },
+        memoLoadLimit2Power25: {
+          elapsedMs: memoLoadLimit.elapsedMs,
+          heapDeltaMb: memoLoadLimit.heapDeltaMb,
+          result: memoLoadLimit.value
+        }
       }
     }, null, 2));
 
@@ -266,5 +389,12 @@ describe('collectable WASM benchmark', () => {
     expect(slowWasm.value.expectedScore).toBeCloseTo(slowJs.value.expectedScore, 5);
     expect(slowPolicy.value.expectedScore).toBeCloseTo(slowJs.value.primaryExpectedScore, 5);
     expect(slowFullWasm.value.expectedScore).toBeCloseTo(slowJs.value.expectedScore, 5);
+    expect(glv700FullWasm.value.expectedScore).toBeCloseTo(glv700Js.value.expectedScore, 5);
+    expect(glv700FullWasm.value.debug?.plans[0].search.statesSolved).toBeLessThanOrEqual(
+      glv700Js.value.debug?.plans[0].search.statesSolved ?? 0
+    );
+    expect(memoLoadLimit.value.objectiveScore).toBeGreaterThan(0);
+    expect(memoLoadLimit.value.failure).toEqual({ failed: 0, reason: 0 });
+    expect(memoLoadLimit.value.counters.statesSolved).toBeGreaterThan(1_000_000);
   }, 180000);
 });
