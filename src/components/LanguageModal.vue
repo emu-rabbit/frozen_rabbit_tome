@@ -1,97 +1,85 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useSettings } from '../composables/useSettings';
 
 const { t } = useI18n();
-const { language, initialized } = useSettings();
+
+defineProps<{
+  visible: boolean;
+}>();
+
+const emit = defineEmits<{
+  'update:visible': [val: boolean];
+  'preview-language': [lang: string];
+  'select': [lang: string];
+}>();
 
 const languages = [
-  { code: 'tw', name: '繁體中文', label: 'Traditional Chinese', icon: '🇹🇼' },
-  { code: 'cn', name: '简体中文', label: 'Simplified Chinese', icon: '🇨🇳' },
-  { code: 'en', name: 'English', label: 'English', icon: '🇺🇸' },
-  { code: 'ja', name: '日本語', label: 'Japanese', icon: '🇯🇵' }
+  { code: 'tw', name: '繁體中文', label: 'Traditional Chinese', badge: 'TW' },
+  { code: 'cn', name: '简体中文', label: 'Simplified Chinese', badge: 'CN' },
+  { code: 'en', name: 'English', label: 'English', badge: 'EN' },
+  { code: 'ja', name: '日本語', label: 'Japanese', badge: 'JP' }
 ];
 
 const selectedLang = ref<string | null>(null);
 
 const handleSelect = (code: string) => {
   selectedLang.value = code;
-  language.value = code as any;
+  emit('preview-language', code);
 };
 
 const confirmSelection = () => {
   if (selectedLang.value) {
-    initialized.value = true;
+    emit('select', selectedLang.value);
   }
 };
 </script>
 
 <template>
   <Transition name="modal">
-    <div v-if="!initialized" class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
-      <!-- Backdrop -->
+    <div v-if="visible" class="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-3 sm:p-6">
+      <!-- Backdrop (No close on click for forced initial setup) -->
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity"></div>
 
       <!-- Modal Container -->
-      <div class="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-y-auto transform transition-all border border-soft-green-100 dark:border-slate-800 flex flex-col md:flex-row" style="max-height: calc(100dvh - 1.5rem)">
-        
-        <!-- Decoration / Brand Side -->
-        <div class="md:w-5/12 bg-soft-green-50 dark:bg-slate-950 p-5 sm:p-8 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-soft-green-100 dark:border-slate-800 relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-32 h-32 bg-lime-green-100 dark:bg-lime-green-900/20 rounded-full -translate-x-12 -translate-y-12 opacity-50 blur-2xl"></div>
-          <div class="absolute bottom-0 right-0 w-32 h-32 bg-soft-green-200 dark:bg-soft-green-900/20 rounded-full translate-x-12 translate-y-12 opacity-50 blur-2xl"></div>
-          
-          <picture>
-            <source srcset="/assets/logo.webp" type="image/webp" />
-            <img src="/assets/logo.png" class="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg mb-4 sm:mb-8 relative z-10 transform hover:rotate-6 transition-transform duration-500" alt="Logo" />
-          </picture>
-          
-          <h2 class="text-2xl sm:text-3xl font-black text-soft-green-900 dark:text-soft-green-400 mb-2 relative z-10">
-            {{ t('welcomeModal.title') }}
-          </h2>
-          <p class="text-soft-green-600 dark:text-soft-green-500 font-medium relative z-10 opacity-80 text-sm sm:text-base">
-            {{ t('welcomeModal.subtitle') }}
-          </p>
-          
-          <div class="mt-6 hidden md:block">
-             <div class="flex -space-x-2">
-                <div v-for="l in languages" :key="l.code" class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-soft-green-100 dark:border-slate-700 flex items-center justify-center text-lg shadow-sm">
-                  {{ l.icon }}
-                </div>
-             </div>
+      <div class="relative w-full min-w-0 max-w-md max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-2xl border border-soft-green-100 bg-white shadow-2xl transition-all transform dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl">
+        <div class="p-5 sm:p-6">
+          <div class="flex min-w-0 items-center gap-4">
+            <img src="/logo.png" class="h-12 w-12 shrink-0 rounded-2xl shadow-md" alt="Logo" />
+            <div class="min-w-0">
+              <h2 class="max-w-full break-words text-[1.35rem] font-black leading-tight text-soft-green-900 dark:text-soft-green-400 sm:text-2xl">
+                {{ t('welcomeModal.title') }}
+              </h2>
+              <p class="mt-1 max-w-full break-words text-sm font-medium leading-snug text-soft-green-600 dark:text-soft-green-500">
+                {{ t('welcomeModal.subtitle') }}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <!-- Selection Side -->
-        <div class="md:w-7/12 p-5 sm:p-8 md:p-10 flex flex-col">
-          <p class="text-slate-500 dark:text-slate-400 text-sm mb-4 sm:mb-6 leading-relaxed">
-            {{ t('welcomeModal.description') }}
-          </p>
-
-          <div class="grid grid-cols-1 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div class="mt-4 grid grid-cols-1 gap-2.5">
             <button 
               v-for="lang in languages" 
               :key="lang.code"
               @click="handleSelect(lang.code)"
-              class="group relative flex items-center gap-3 p-3 sm:p-4 rounded-2xl border-2 transition-all duration-300"
+              class="group relative flex min-w-0 items-center gap-3 rounded-xl border-2 p-2.5 text-left transition-all duration-200"
               :class="selectedLang === lang.code 
-                ? 'border-soft-green-400 dark:border-soft-green-600 bg-soft-green-50 dark:bg-soft-green-900/20 ring-4 ring-soft-green-400/10' 
+                ? 'border-soft-green-400 dark:border-soft-green-600 bg-soft-green-50 dark:bg-soft-green-900/20' 
                 : 'border-slate-100 dark:border-slate-800 hover:border-soft-green-200 dark:hover:border-soft-green-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
             >
-              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-xl sm:text-2xl shadow-sm transform group-hover:scale-110 transition-transform">
-                {{ lang.icon }}
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-black text-slate-600 shadow-sm ring-1 ring-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                {{ lang.badge }}
               </div>
-              <div class="text-left">
-                <div class="font-bold text-slate-800 dark:text-slate-200" :class="selectedLang === lang.code ? 'text-soft-green-900 dark:text-soft-green-300' : ''">
+              <div class="min-w-0 flex-1">
+                <div class="truncate font-bold text-slate-800 dark:text-slate-200" :class="selectedLang === lang.code ? 'text-soft-green-900 dark:text-soft-green-300' : ''">
                   {{ lang.name }}
                 </div>
-                <div class="text-[10px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">
+                <div class="truncate text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   {{ lang.label }}
                 </div>
               </div>
               <div 
                 v-if="selectedLang === lang.code"
-                class="ml-auto w-6 h-6 rounded-full bg-soft-green-500 text-white flex items-center justify-center"
+                class="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-soft-green-500 text-white"
               >
                 <i class="pi pi-check text-[10px]"></i>
               </div>
@@ -101,9 +89,9 @@ const confirmSelection = () => {
           <button 
             @click="confirmSelection"
             :disabled="!selectedLang"
-            class="w-full py-3 sm:py-4 rounded-2xl font-black text-base sm:text-lg shadow-xl shadow-soft-green-200/50 dark:shadow-none transition-all duration-300 transform active:scale-[0.98]"
+            class="mt-4 w-full min-w-0 rounded-xl px-4 py-3 text-base font-black shadow-lg shadow-soft-green-200/40 transition-all duration-200 active:scale-[0.98] dark:shadow-none"
             :class="selectedLang 
-              ? 'bg-soft-green-500 dark:bg-soft-green-600 text-white hover:bg-soft-green-600 dark:hover:bg-soft-green-700 hover:-translate-y-0.5' 
+              ? 'bg-soft-green-500 dark:bg-soft-green-600 text-white hover:bg-soft-green-600 dark:hover:bg-soft-green-700' 
               : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'"
           >
             {{ t('welcomeModal.confirm') }}

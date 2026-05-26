@@ -15,6 +15,7 @@ const route = useRoute();
 const isMobileMenuOpen = ref(false);
 const isSponsorModalOpen = ref(false);
 const { isDarkMode, language, initialized } = useSettings();
+const isLanguageModalOpen = ref(!initialized.value);
 
 // 同步語系
 watch(language, (newLang) => {
@@ -52,10 +53,19 @@ watch(() => route.fullPath, (_newPath, oldPath) => {
     trackRouteChange(String(route.name || route.path));
   });
 });
+
+const handleLanguageUpdate = (val: string) => {
+  if (val) language.value = val as any;
+};
+
+const handleLanguageSelect = (lang: string) => {
+  language.value = lang as any;
+  initialized.value = true;
+  isLanguageModalOpen.value = false;
+};
 </script>
 
 <template>
-  <LanguageModal />
   <div class="flex h-screen w-screen bg-soft-green-50 dark:bg-slate-950 overflow-hidden text-slate-800 dark:text-slate-100 font-sans relative">
 
     <!-- Mobile Header -->
@@ -110,7 +120,12 @@ watch(() => route.fullPath, (_newPath, oldPath) => {
 
     <!-- Global Modals -->
     <SponsorModal v-model:visible="isSponsorModalOpen" />
-    <AnalyticsConsentBanner :paused="!initialized" />
+    <LanguageModal
+      v-model:visible="isLanguageModalOpen"
+      @preview-language="handleLanguageUpdate"
+      @select="handleLanguageSelect"
+    />
+    <AnalyticsConsentBanner :paused="isLanguageModalOpen" />
   </div>
 </template>
 
