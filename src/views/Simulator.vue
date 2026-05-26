@@ -395,36 +395,36 @@ function loadExperimentFromRoute() {
   setSelectedItem(item);
   
   // 2. 設置數值 (需要確保 setSelectedItem 觸發的 syncFromSettings 不會蓋掉這些)
-  solverStats.value = normalizePlayerStats(experiment.stats);
-  selectedFood.value = { ...experiment.food };
+  solverStats.value = normalizePlayerStats(experiment.input.stats);
+  selectedFood.value = { ...experiment.input.food };
   nodeBonuses.value = normalizeNodeBonuses({
-    baseIntegrity: experiment.nodeBonuses.baseIntegrity ?? (item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4),
-    gatheringCount: experiment.nodeBonuses.gatheringCount,
-    yieldCount: experiment.nodeBonuses.yieldCount,
-    extraRate: experiment.nodeBonuses.extraRate
+    baseIntegrity: experiment.input.nodeBonuses.baseIntegrity ?? (item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4),
+    gatheringCount: experiment.input.nodeBonuses.gatheringCount,
+    yieldCount: experiment.input.nodeBonuses.yieldCount,
+    extraRate: experiment.input.nodeBonuses.extraRate
   });
-  temporaryGp.value = clampIntegerInput(experiment.temporaryGp, PLAYER_INPUT_LIMITS.gp.min, effectiveStats.value.gp, effectiveStats.value.gp);
+  temporaryGp.value = clampIntegerInput(experiment.input.temporaryGp, PLAYER_INPUT_LIMITS.gp.min, effectiveStats.value.gp, effectiveStats.value.gp);
   
   // 3. 設置手法
   if (experiment.kind === 'collectable') {
     primaryRotation.value = [];
     revisitRotation.value = [];
     analysis.value = null;
-    solverSettings.value.collectableRelicToolBonus = !!experiment.collectableHasRelicToolBonus;
+    solverSettings.value.collectableRelicToolBonus = !!experiment.input.hasRelicToolBonus;
     savedExperimentId.value = id;
     return;
   }
 
-  primaryRotation.value = (experiment.primaryRotation ?? []).map(fromStoredRotationStep).filter(Boolean);
-  revisitRotation.value = hideRevisitExperimentFeatures ? [] : (experiment.revisitRotation ?? []).map(fromStoredRotationStep).filter(Boolean);
+  primaryRotation.value = experiment.strategy.kind === 'regular'
+    ? experiment.strategy.primaryRotation.map(fromStoredRotationStep).filter(Boolean)
+    : [];
+  revisitRotation.value = !hideRevisitExperimentFeatures && experiment.strategy.kind === 'regular'
+    ? experiment.strategy.revisitRotation.map(fromStoredRotationStep).filter(Boolean)
+    : [];
   activeBlock.value = 'primary';
   
-  // 4. 設置分析結果
-  if (experiment.analysis && experiment.analysis.total && !(hideRevisitExperimentFeatures && experiment.analysis.revisit)) {
-    analysis.value = experiment.analysis;
-  } else {
-    analysis.value = null;
-  }
+  // 4. 新版資料庫只保存輕量 snapshot，載入後由使用者重新分析。
+  analysis.value = null;
   savedExperimentId.value = id;
 }
 

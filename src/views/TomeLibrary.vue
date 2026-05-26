@@ -18,9 +18,12 @@ import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, 
 import { getRotationActionIconById } from '../services/actionIcons';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
-import type { SolverObjectiveMode, SolverRotationPlanKind, StoredTome, StoredTomeRotationStep } from '../types/game';
+import type { CollectableTierCounts } from '../types/collectable';
+import type { SolverObjectiveMode, SolverRotationPlanKind, StoredCollectableTomeSnapshot, StoredTome, StoredTomeRotationStep } from '../types/game';
 import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
+import { isModelVersionSnapshotStale } from '../utils/modelVersionStatus';
+import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -32,10 +35,19 @@ const isMacroPreviewOpen = ref(false);
 const pendingEditTome = ref<StoredTome | null>(null);
 const macroPreview = ref<MacroBuildResult | null>(null);
 const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-library-display-mode', 'detailed');
+const tierCountVisibilityEpsilon = 0.000001;
 const displayModeOptions = computed(() => [
   { label: t('common.displayModes.compact'), value: 'compact' },
   { label: t('common.displayModes.detailed'), value: 'detailed' }
 ]);
+
+type SnapshotMetricRow = {
+  label: string;
+  value: string;
+  unit?: string;
+  chance?: number;
+  primary?: boolean;
+};
 
 const filteredTomes = computed(() => {
   currentLanguage.value;
@@ -67,28 +79,30 @@ function shouldShowItemSubtitle(tome: StoredTome) {
 }
 
 function formatStats(tome: StoredTome) {
-  return `${tome.stats.level}/${tome.stats.gathering}/${tome.stats.perception}`;
+  return `${tome.input.stats.level}/${tome.input.stats.gathering}/${tome.input.stats.perception}`;
 }
 
 function formatGp(tome: StoredTome) {
-  return `${tome.temporaryGp}/${tome.stats.gp}`;
+  return `${tome.input.temporaryGp}/${tome.input.stats.gp}`;
 }
 
 function formatFood(tome: StoredTome) {
-  if (!tome.food.foodId) return t('tomeLibrary.noFood');
-  return `${getItemName(tome.food.foodId)} ${t(`solver.food.${tome.food.quality}`)}`;
+  if (!tome.input.food.foodId) return t('tomeLibrary.noFood');
+  return `${getItemName(tome.input.food.foodId)} ${t(`solver.food.${tome.input.food.quality}`)}`;
 }
 
-function formatNodeBonuses(tome: StoredTome) {
-  if (isCollectableTome(tome)) {
-    return null;
-  }
-
-  return `${tome.nodeBonuses.gatheringCount}/${tome.nodeBonuses.yieldCount}/${tome.nodeBonuses.extraRate}`;
+function formatNodeState(tome: StoredTome) {
+  return isCollectableTome(tome)
+    ? t('tomeLibrary.nodeState.collectable', { gathering: tome.input.nodeBonuses.gatheringCount })
+    : t('tomeLibrary.nodeState.regular', {
+        gathering: tome.input.nodeBonuses.gatheringCount,
+        yield: tome.input.nodeBonuses.yieldCount,
+        extra: tome.input.nodeBonuses.extraRate
+      });
 }
 
 function tomeObjectiveMode(tome: StoredTome): SolverObjectiveMode {
-  return tome.objectiveMode ?? 'expected';
+  return tome.lastSolvedSnapshot?.objectiveMode ?? 'expected';
 }
 
 function formatObjectiveMode(tome: StoredTome) {
@@ -121,9 +135,13 @@ function rotationIcon(tome: StoredTome, step: StoredTomeRotationStep) {
 }
 
 function tomeRotationPlans(tome: StoredTome) {
-  return tome.rotationPlans?.length
-    ? tome.rotationPlans
-    : [{ kind: 'primary' as const, rotation: tome.rotation }];
+  const snapshot = tome.lastSolvedSnapshot;
+  if (!snapshot || snapshot.kind !== 'regular') return [];
+  return snapshot.rotationPlans?.length
+    ? snapshot.rotationPlans
+    : snapshot.rotation.length
+      ? [{ kind: 'primary' as const, rotation: snapshot.rotation }]
+      : [];
 }
 
 function rotationPlanTitle(kind: SolverRotationPlanKind) {
@@ -133,7 +151,8 @@ function rotationPlanTitle(kind: SolverRotationPlanKind) {
 }
 
 function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
-  if (kind === 'primary' && tome.revisit?.enabled && tome.revisit.isFullGp && tomeRotationPlans(tome).length === 1) {
+  const revisit = tome.lastSolvedSnapshot?.kind === 'regular' ? tome.lastSolvedSnapshot.revisit : undefined;
+  if (kind === 'primary' && revisit?.enabled && revisit.isFullGp && tomeRotationPlans(tome).length === 1) {
     return t('solver.strategy.rotationTitles.primaryWithRevisit');
   }
 
@@ -143,7 +162,7 @@ function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
 }
 
 function handleEdit(tome: StoredTome) {
-  if (tomeObjectiveMode(tome) !== solverSettings.value.objectiveMode) {
+  if (shouldConfirmBeforeEdit(tome)) {
     pendingEditTome.value = tome;
     return;
   }
@@ -179,13 +198,15 @@ function handlePreviewMacro(tome: StoredTome) {
     formatGatherPrompt: formatMacroGatherPrompt
   };
   const plans = tomeRotationPlans(tome);
+  const primaryRotation = plans[0]?.rotation ?? [];
+  if (!primaryRotation.length) return;
   macroPreview.value = plans.length > 1
     ? buildGatheringMacroGroupsFromStoredRotations(plans.map((plan) => ({
         key: plan.kind,
         title: rotationPlanTitle(plan.kind),
         rotation: plan.rotation
       })), macroSettings.value, options)
-    : buildGatheringMacroFromStoredRotation(tome.rotation, macroSettings.value, options);
+    : buildGatheringMacroFromStoredRotation(primaryRotation, macroSettings.value, options);
   isMacroPreviewOpen.value = true;
 }
 
@@ -218,40 +239,65 @@ function copyMacroIcon() {
 }
 
 function collectableRootActionName(tome: StoredTome) {
-  if (!tome.collectablePolicy?.rootAction) return '-';
-  return getCollectableActionName(tome.collectablePolicy.rootAction.kind, itemMeta(tome)?.jobType || 'miner');
+  const rootAction = tome.lastSolvedSnapshot?.kind === 'collectable'
+    ? tome.lastSolvedSnapshot.rootAction
+    : undefined;
+  if (!rootAction) return '-';
+  return getCollectableActionName(rootAction.kind, itemMeta(tome)?.jobType || 'miner');
 }
 
 function collectableRootActionIcon(tome: StoredTome) {
-  if (!tome.collectablePolicy?.rootAction) return '';
-  return getCollectableActionIcon(tome.collectablePolicy.rootAction.kind, itemMeta(tome)?.jobType || 'miner');
+  const rootAction = collectableSnapshot(tome)?.rootAction;
+  if (!rootAction) return '';
+  return getCollectableActionIcon(rootAction.kind, itemMeta(tome)?.jobType || 'miner');
+}
+
+function collectableSnapshot(tome: StoredTome): StoredCollectableTomeSnapshot | null {
+  return tome.lastSolvedSnapshot?.kind === 'collectable' ? tome.lastSolvedSnapshot : null;
 }
 
 function collectableScoreLabel(tome: StoredTome) {
-  return t(`collectableSolver.results.${collectableScoreKey(tome)}Score`, { unit: collectableScripUnit(tome) });
+  const scoreKey = collectableScoreKey(tome);
+  if (collectableUsesTierCountUnit(tome)) {
+    return collectableTierCountLabel(scoreKey);
+  }
+
+  if (collectableUsesCustomScoreUnit(tome)) {
+    return t(`collectableSolver.results.${scoreKey}Score`, { unit: t('collectableSolver.results.pointUnit') });
+  }
+
+  return t(`collectableSolver.results.${scoreKey}Score`, { unit: collectableScripUnit(tome) });
 }
 
 function collectableScoreKey(tome: StoredTome) {
+  const snapshot = collectableSnapshot(tome);
   const mode = tomeObjectiveMode(tome);
-  if (mode === 'max' && typeof tome.collectableMaxScore === 'number') return 'max';
-  if (mode === 'min' && typeof tome.collectableMinScore === 'number') return 'min';
+  if (mode === 'max' && typeof snapshot?.maxScore === 'number') return 'max';
+  if (mode === 'min' && typeof snapshot?.minScore === 'number') return 'min';
   return 'expected';
 }
 
 function collectableScore(tome: StoredTome) {
+  const snapshot = collectableSnapshot(tome);
   const mode = tomeObjectiveMode(tome);
+  if (collectableUsesTierCountUnit(tome)) {
+    return formatTierCounts(collectableTierCountsForMode(snapshot, mode));
+  }
+
+  const fallbackRewardScore = collectableUsesScripUnit(tome) ? snapshot?.expectedReward?.scrip : undefined;
   const score = mode === 'max'
-    ? tome.collectableMaxScore ?? tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip
+    ? snapshot?.maxScore ?? snapshot?.expectedScore ?? fallbackRewardScore
     : mode === 'min'
-      ? tome.collectableMinScore ?? tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip
-      : tome.collectableExpectedScore ?? tome.collectableExpectedReward?.scrip;
+      ? snapshot?.minScore ?? snapshot?.expectedScore ?? fallbackRewardScore
+      : snapshot?.expectedScore ?? fallbackRewardScore;
   return typeof score === 'number' ? Number(score.toFixed(2)) : '-';
 }
 
 function collectableScoreChance(tome: StoredTome) {
+  const snapshot = collectableSnapshot(tome);
   const mode = tomeObjectiveMode(tome);
-  if (mode === 'max') return tome.collectableMaxScoreChance;
-  if (mode === 'min') return tome.collectableMinScoreChance;
+  if (mode === 'max') return snapshot?.maxScoreChance;
+  if (mode === 'min') return snapshot?.minScoreChance;
   return undefined;
 }
 
@@ -260,12 +306,137 @@ function formatChance(chance: number) {
   return `${chance.toFixed(2)}%`;
 }
 
+function formatChanceValue(chance: number) {
+  if (chance < 0.01) return '<0.01';
+  return Number(chance.toFixed(2)).toString();
+}
+
 function collectableScripMeta(tome: StoredTome) {
-  return getCollectableScripRewardMeta(tome.collectableRewardItemId ?? tome.collectableRewardTableSummary?.rewardItemId);
+  const snapshot = collectableSnapshot(tome);
+  return getCollectableScripRewardMeta(snapshot?.rewardItemId ?? snapshot?.rewardTableSummary?.rewardItemId);
 }
 
 function collectableScripUnit(tome: StoredTome) {
   return t(collectableScripMeta(tome).labelKey);
+}
+
+function collectableUsesScripUnit(tome: StoredTome) {
+  return collectableSnapshot(tome)?.objective?.kind === 'scrip';
+}
+
+function collectableUsesTierCountUnit(tome: StoredTome) {
+  return isTierCountObjective(collectableSnapshot(tome)?.objective);
+}
+
+function collectableUsesCustomScoreUnit(tome: StoredTome) {
+  return isCustomTierObjective(collectableSnapshot(tome)?.objective);
+}
+
+function collectableScoreTitle(tome: StoredTome) {
+  return collectableUsesScripUnit(tome)
+    ? t(collectableScripMeta(tome).labelKey)
+    : collectableScoreLabel(tome);
+}
+
+function collectableTierCountLabel(scoreKey: SolverObjectiveMode) {
+  if (scoreKey === 'max') return t('collectableSolver.results.maxTierCounts');
+  if (scoreKey === 'min') return t('collectableSolver.results.minTierCounts');
+  return t('collectableSolver.results.expectedTierCounts');
+}
+
+function collectableTierCountsForMode(snapshot: StoredCollectableTomeSnapshot | null, mode: SolverObjectiveMode) {
+  if (mode === 'max') return snapshot?.maxScoreTierCounts;
+  if (mode === 'min') return snapshot?.minScoreTierCounts;
+  return snapshot?.expectedTierCounts;
+}
+
+function tierMetricEntries(counts?: CollectableTierCounts) {
+  const safeCounts = counts ?? { none: 0, low: 0, mid: 0, high: 0 };
+  return [
+    { key: 'high', label: t('collectableObjective.tiers.high'), value: safeCounts.high },
+    { key: 'mid', label: t('collectableObjective.tiers.mid'), value: safeCounts.mid },
+    { key: 'low', label: t('collectableObjective.tiers.low'), value: safeCounts.low }
+  ];
+}
+
+function visibleTierMetricEntries(counts?: CollectableTierCounts) {
+  const entries = tierMetricEntries(counts).filter((entry) => Math.abs(entry.value) > tierCountVisibilityEpsilon);
+  return entries.length ? entries : [{ key: 'none', label: '', value: 0 }];
+}
+
+function formatTierCountValue(value: number) {
+  return Number(value.toFixed(2)).toString();
+}
+
+function formatTierCounts(counts?: CollectableTierCounts) {
+  return visibleTierMetricEntries(counts)
+    .map((entry) => entry.label ? `${formatTierCountValue(entry.value)} ${entry.label}` : formatTierCountValue(entry.value))
+    .join(' / ');
+}
+
+function relicBonusLabel(tome: StoredTome) {
+  return tome.input.hasRelicToolBonus
+    ? t('tomeLibrary.relicBonus.enabled')
+    : t('tomeLibrary.relicBonus.disabled');
+}
+
+function shouldConfirmBeforeEdit(tome: StoredTome) {
+  return hasObjectiveModeConflict(tome) || isTomeSnapshotStale(tome);
+}
+
+function hasObjectiveModeConflict(tome: StoredTome) {
+  return tomeObjectiveMode(tome) !== solverSettings.value.objectiveMode;
+}
+
+function tomeScenario(tome: StoredTome) {
+  return tome.kind === 'collectable' ? 'tome.collectable' as const : 'tome.regular' as const;
+}
+
+function isTomeSnapshotStale(tome: StoredTome) {
+  return isModelVersionSnapshotStale(tomeScenario(tome), tome.lastSolvedSnapshot?.modelVersions);
+}
+
+function pendingEditHasModeConflict() {
+  return pendingEditTome.value ? hasObjectiveModeConflict(pendingEditTome.value) : false;
+}
+
+function pendingEditHasStaleSnapshot() {
+  return pendingEditTome.value ? isTomeSnapshotStale(pendingEditTome.value) : false;
+}
+
+function snapshotMetricRows(tome: StoredTome): SnapshotMetricRow[] {
+  const snapshot = tome.lastSolvedSnapshot;
+  if (!snapshot) return [];
+
+  if (snapshot.kind === 'collectable') {
+    if (isTierCountObjective(snapshot.objective)) {
+      return [
+        { label: t('collectableSolver.results.expectedTierCounts'), value: formatTierCounts(snapshot.expectedTierCounts), primary: true },
+        { label: t('collectableSolver.results.maxTierCounts'), value: formatTierCounts(snapshot.maxScoreTierCounts), chance: snapshot.maxScoreChance },
+        { label: t('collectableSolver.results.minTierCounts'), value: formatTierCounts(snapshot.minScoreTierCounts), chance: snapshot.minScoreChance }
+      ];
+    }
+
+    const unit = isCustomTierObjective(snapshot.objective)
+      ? t('collectableSolver.results.pointUnit')
+      : collectableScripUnit(tome);
+
+    return [
+      { label: t('collectableSolver.results.expectedScore', { unit }), value: formatNumber(snapshot.expectedScore), primary: true },
+      { label: t('collectableSolver.results.maxScore', { unit }), value: formatNumber(snapshot.maxScore), chance: snapshot.maxScoreChance },
+      { label: t('collectableSolver.results.minScore', { unit }), value: formatNumber(snapshot.minScore), chance: snapshot.minScoreChance }
+    ];
+  }
+
+  return [
+    { label: t('tomeLibrary.snapshot.expectedYield'), value: formatNumber(snapshot.expectedYield), unit: t('game.units.count'), primary: true },
+    { label: t('tomeLibrary.snapshot.maxYield'), value: formatNumber(snapshot.maxYield), unit: t('game.units.count'), chance: snapshot.maxYieldChance },
+    { label: t('tomeLibrary.snapshot.minYield'), value: formatNumber(snapshot.minYield), unit: t('game.units.count'), chance: snapshot.minYieldChance }
+  ];
+}
+
+function formatNumber(value?: number) {
+  return typeof value === 'number' ? Number(value.toFixed(2)).toString() : '-';
 }
 </script>
 
@@ -355,6 +526,10 @@ function collectableScripUnit(tome: StoredTome) {
                 <i class="pi pi-compass"></i>
                 {{ t('createGuide.regularSystem') }}
               </span>
+              <span v-if="isTomeSnapshotStale(tome)" class="snapshot-stale-badge">
+                <i class="pi pi-history"></i>
+                {{ t('tomeLibrary.snapshot.staleBadge') }}
+              </span>
             </div>
           </div>
         </div>
@@ -394,13 +569,35 @@ function collectableScripUnit(tome: StoredTome) {
             <span>{{ t('tomeLibrary.rows.food') }}</span>
             <strong>{{ formatFood(tome) }}</strong>
           </div>
-          <div v-if="formatNodeBonuses(tome)" class="summary-row">
+          <div class="summary-row">
             <span>{{ t('tomeLibrary.rows.nodeBonuses') }}</span>
-            <strong>{{ formatNodeBonuses(tome) }}</strong>
+            <strong>{{ formatNodeState(tome) }}</strong>
           </div>
-          <div class="summary-row summary-row-wide">
+          <div class="summary-row" :class="{ 'summary-row-wide': !isCollectableTome(tome) }">
             <span>{{ t('tomeLibrary.rows.objectiveMode') }}</span>
             <strong>{{ formatObjectiveMode(tome) }}</strong>
+          </div>
+          <div v-if="isCollectableTome(tome)" class="summary-row">
+            <span>{{ t('tomeLibrary.rows.relicBonus') }}</span>
+            <strong>{{ relicBonusLabel(tome) }}</strong>
+          </div>
+        </div>
+
+        <div v-if="displayMode === 'detailed' && snapshotMetricRows(tome).length" class="snapshot-metric-grid">
+          <div
+            v-for="metric in snapshotMetricRows(tome)"
+            :key="metric.label"
+            class="snapshot-metric"
+            :class="{ 'is-primary-metric': metric.primary }"
+          >
+            <span>{{ metric.label }}</span>
+            <strong>
+              {{ metric.value }}
+              <small v-if="metric.unit">{{ metric.unit }}</small>
+            </strong>
+            <small v-if="metric.chance !== undefined">
+              {{ t('solver.strategy.yieldChance', { chance: formatChanceValue(metric.chance) }) }}
+            </small>
           </div>
         </div>
 
@@ -417,21 +614,31 @@ function collectableScripUnit(tome: StoredTome) {
               </div>
             </div>
 
-            <div class="collectable-score" :title="t(collectableScripMeta(tome).labelKey)">
+            <div
+              class="collectable-score"
+              :class="{
+                'is-tier-count': collectableUsesTierCountUnit(tome),
+                'has-reward-icon': collectableUsesScripUnit(tome)
+              }"
+              :title="collectableScoreTitle(tome)"
+            >
               <span>{{ collectableScoreLabel(tome) }}</span>
-              <strong>{{ collectableScore(tome) }}</strong>
-              <span
-                class="collectable-scrip-icon"
-                :class="`is-${collectableScripMeta(tome).kind}`"
-                :aria-label="t(collectableScripMeta(tome).labelKey)"
-              >
-                <img
-                  v-if="collectableScripMeta(tome).iconUrl"
-                  :src="collectableScripMeta(tome).iconUrl"
-                  :alt="t(collectableScripMeta(tome).labelKey)"
-                />
-                <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
-              </span>
+              <div class="collectable-score-value">
+                <strong>{{ collectableScore(tome) }}</strong>
+                <span
+                  v-if="collectableUsesScripUnit(tome)"
+                  class="collectable-scrip-icon"
+                  :class="`is-${collectableScripMeta(tome).kind}`"
+                  :aria-label="t(collectableScripMeta(tome).labelKey)"
+                >
+                  <img
+                    v-if="collectableScripMeta(tome).iconUrl"
+                    :src="collectableScripMeta(tome).iconUrl"
+                    :alt="t(collectableScripMeta(tome).labelKey)"
+                  />
+                  <i v-else class="pi pi-question-circle" aria-hidden="true"></i>
+                </span>
+              </div>
               <small v-if="collectableScoreChance(tome) !== undefined" class="collectable-score-chance">
                 {{ t('collectableSolver.results.scoreChance', { chance: formatChance(collectableScoreChance(tome) as number) }) }}
               </small>
@@ -502,9 +709,16 @@ function collectableScripUnit(tome: StoredTome) {
               <i class="pi pi-compass"></i>
             </div>
             <div class="mode-choice-content">
-              <p class="mode-choice-kicker">{{ t('tomeLibrary.editModeConflict.kicker') }}</p>
-              <h3>{{ t('tomeLibrary.editModeConflict.title') }}</h3>
-              <p>
+              <p class="mode-choice-kicker">
+                {{ pendingEditHasStaleSnapshot() ? t('tomeLibrary.snapshot.staleKicker') : t('tomeLibrary.editModeConflict.kicker') }}
+              </p>
+              <h3>
+                {{ pendingEditHasStaleSnapshot() ? t('tomeLibrary.snapshot.staleTitle') : t('tomeLibrary.editModeConflict.title') }}
+              </h3>
+              <p v-if="pendingEditHasStaleSnapshot()">
+                {{ t('tomeLibrary.snapshot.staleDesc') }}
+              </p>
+              <p v-if="pendingEditHasModeConflict()">
                 {{ t('tomeLibrary.editModeConflict.desc', {
                   tomeMode: formatObjectiveMode(pendingEditTome),
                   currentMode: t(`settings.solverModes.${solverSettings.objectiveMode}`)
@@ -514,11 +728,12 @@ function collectableScripUnit(tome: StoredTome) {
             <div class="mode-choice-actions">
               <Button
                 icon="pi pi-refresh"
-                :label="t('tomeLibrary.editModeConflict.useTomeMode')"
+                :label="pendingEditHasModeConflict() ? t('tomeLibrary.editModeConflict.useTomeMode') : t('tomeLibrary.snapshot.loadAnyway')"
                 class="p-button-sm p-button-primary mode-choice-action"
                 @click="handleEditWithTomeMode"
               />
               <Button
+                v-if="pendingEditHasModeConflict()"
                 icon="pi pi-arrow-right"
                 :label="t('tomeLibrary.editModeConflict.useCurrentMode')"
                 class="p-button-sm p-button-outlined mode-choice-action"
@@ -746,7 +961,8 @@ function collectableScripUnit(tome: StoredTome) {
 .item-job-badge,
 .item-regular-badge,
 .item-collectable-badge,
-.item-crystal-badge {
+.item-crystal-badge,
+.snapshot-stale-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -772,6 +988,9 @@ function collectableScripUnit(tome: StoredTome) {
 }
 .item-crystal-badge {
   background: linear-gradient(135deg, #06b6d4, #0284c7);
+}
+.snapshot-stale-badge {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
 .summary-grid {
@@ -904,6 +1123,80 @@ function collectableScripUnit(tome: StoredTome) {
   image-rendering: pixelated;
 }
 
+.snapshot-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.snapshot-metric {
+  min-width: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 0.65rem 0.75rem;
+}
+
+.snapshot-metric.is-primary-metric {
+  border-color: rgb(82 168 144 / 0.55);
+  background: rgb(240 253 244 / 0.86);
+}
+
+:global(html.dark .snapshot-metric) {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:global(html.dark .snapshot-metric.is-primary-metric) {
+  background: rgb(20 83 45 / 0.22);
+}
+
+.snapshot-metric span,
+.snapshot-metric strong,
+.snapshot-metric small {
+  display: block;
+}
+
+.snapshot-metric span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.snapshot-metric strong {
+  margin-top: 0.15rem;
+  color: #0f172a;
+  font-size: 1.12rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.snapshot-metric strong small {
+  display: inline;
+  margin-left: 0.15rem;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.snapshot-metric > small {
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+:global(html.dark .snapshot-metric span),
+:global(html.dark .snapshot-metric > small),
+:global(html.dark .snapshot-metric strong small) {
+  color: #94a3b8;
+}
+
+:global(html.dark .snapshot-metric strong) {
+  color: #f8fafc;
+}
+
 .is-compact .item-section {
   align-items: center;
   gap: 0.85rem;
@@ -924,7 +1217,8 @@ function collectableScripUnit(tome: StoredTome) {
 .is-compact .item-job-badge,
 .is-compact .item-regular-badge,
 .is-compact .item-collectable-badge,
-.is-compact .item-crystal-badge {
+.is-compact .item-crystal-badge,
+.is-compact .snapshot-stale-badge {
   padding: 2px 8px;
   font-size: 0.68rem;
   line-height: 1.35;
@@ -937,7 +1231,7 @@ function collectableScripUnit(tome: StoredTome) {
 .collectable-tome-summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   gap: 0.9rem;
   padding: 0.85rem;
   border: 1px solid #dbeafe;
@@ -1018,16 +1312,22 @@ function collectableScripUnit(tome: StoredTome) {
 
 .collectable-score {
   min-width: 8rem;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  justify-content: end;
-  gap: 0.15rem 0.45rem;
+  max-width: min(18rem, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-self: end;
+  gap: 0.15rem;
   text-align: right;
 }
 
-.collectable-score span:first-child {
-  grid-column: 1 / -1;
+.collectable-score-value {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.18rem;
 }
 
 .collectable-score strong {
@@ -1035,10 +1335,14 @@ function collectableScripUnit(tome: StoredTome) {
   font-size: 1.18rem;
   font-weight: 950;
   line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.collectable-score.is-tier-count {
+  max-width: 18rem;
 }
 
 .collectable-score-chance {
-  grid-column: 1 / -1;
   color: #64748b;
   font-size: 0.68rem;
   font-weight: 800;
@@ -1109,11 +1413,19 @@ function collectableScripUnit(tome: StoredTome) {
 
   .collectable-score {
     min-width: 0;
-    grid-template-columns: auto auto;
-    justify-content: start;
+    justify-self: start;
+    align-items: flex-start;
     text-align: left;
     padding-top: 0.7rem;
     border-top: 1px solid rgb(209 250 229 / 0.72);
+  }
+
+  .collectable-score-value {
+    justify-content: flex-start;
+  }
+
+  .snapshot-metric-grid {
+    grid-template-columns: 1fr;
   }
 
   :global(html.dark .collectable-score) {

@@ -209,6 +209,7 @@ function confirmSaveTome(name: string) {
       temporaryGp: temporaryGp.value,
       food: { ...selectedFood.value },
       nodeBonuses: { ...nodeBonuses.value },
+      hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus,
       collectableResult: pendingCollectableSaveResult.value
     });
     pendingCollectableSaveResult.value = null;

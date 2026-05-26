@@ -255,9 +255,11 @@ export default {
     rows: {
       playerStats: '玩家數值',
       gpState: 'GP 狀態',
-      nodeBonuses: '節點獎勵',
+      nodeBonuses: '採集點獎勵',
       totalExpected: '總期望',
       expectedScore: '期望分數',
+      maxScore: '最大分數',
+      minScore: '最小分數',
       maxMin: '最大 / 最小'
     },
     rotations: {
@@ -266,6 +268,14 @@ export default {
       noStrategyPreview: '尚無可預覽策略',
       primary: '一般採集',
       revisit: '再起後採集'
+    },
+    snapshot: {
+      staleBadge: '快照可能過期',
+      staleKicker: '保存時快照',
+      staleTitle: '這份分析快照可能已不是目前模型的結果',
+      staleDesc: '載入後會保留你的輸入與手法，但卡片上的摘要是保存當下的快照。建議回到實驗台後重新分析一次。',
+      loadAnyway: '載入實驗',
+      cancel: '取消'
     },
     actions: {
       edit: '編輯',
@@ -1014,8 +1024,30 @@ export default {
       playerStats: '玩家數值',
       gpState: 'GP 狀態',
       food: '食物',
-      nodeBonuses: '礦脈獎勵',
-      objectiveMode: '求解模式'
+      nodeBonuses: '採集點獎勵',
+      objectiveMode: '求解模式',
+      relicBonus: '遺物加成'
+    },
+    nodeState: {
+      regular: '次數 +{gathering} / 獲得 +{yield} / 額外率 +{extra}',
+      collectable: '次數 +{gathering}'
+    },
+    relicBonus: {
+      enabled: '已納入',
+      disabled: '未納入'
+    },
+    snapshot: {
+      expectedYield: '期望獲得量',
+      maxYield: '最大獲得量',
+      minYield: '最小獲得量',
+      expectedScore: '期望分數',
+      maxScore: '最大分數',
+      minScore: '最小分數',
+      staleBadge: '快照可能過期',
+      staleKicker: '保存時快照',
+      staleTitle: '這張秘笈快照可能已不是目前模型的結果',
+      staleDesc: '載入後會保留你的輸入條件，但卡片上的推薦摘要是保存當下的快照。建議回到秘笈後重新求解一次。',
+      loadAnyway: '載入秘笈'
     },
     actions: {
       edit: '編輯',

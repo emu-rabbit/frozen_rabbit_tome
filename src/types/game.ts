@@ -308,17 +308,77 @@ export interface StoredTomeRotationPlan {
   rotation: StoredTomeRotationStep[];
 }
 
-export interface StoredTome {
-  kind?: 'regular' | 'collectable';
-  modelVersions?: TomeModelVersions;
-  id: string;
-  name?: string;
+export type StoredLibrarySchemaVersion = 2;
+
+export interface StoredGatheringInput {
   itemId: number;
   stats: PlayerStats;
   temporaryGp: number;
   food: FoodSelection;
   nodeBonuses: StoredTomeNodeBonuses;
+  hasRelicToolBonus?: boolean;
+}
+
+export interface StoredRegularTomeSnapshot {
+  kind: 'regular';
+  modelVersions?: TomeModelVersions;
+  objectiveMode?: SolverObjectiveMode;
   rotation: StoredTomeRotationStep[];
+  rotationPlans?: StoredTomeRotationPlan[];
+  revisit?: SolverRevisitInfo;
+  expectedYield?: number;
+  minYield?: number;
+  maxYield?: number;
+  minYieldChance?: number;
+  maxYieldChance?: number;
+}
+
+export interface StoredCollectableTomeSnapshot {
+  kind: 'collectable';
+  modelVersions?: TomeModelVersions;
+  objectiveMode?: SolverObjectiveMode;
+  rootAction?: StoredCollectablePolicy['rootAction'];
+  previewBranches?: StoredCollectablePolicy['previewBranches'];
+  rewardItemId?: number;
+  rewardTableSummary?: CollectableRewardTableSummary;
+  objective?: CollectableObjective;
+  expectedScore?: number;
+  minScore?: number;
+  maxScore?: number;
+  minScoreChance?: number;
+  maxScoreChance?: number;
+  expectedReward?: CollectableRewardVector;
+  expectedTierCounts?: CollectableTierCounts;
+  minScoreTierCounts?: CollectableTierCounts;
+  maxScoreTierCounts?: CollectableTierCounts;
+}
+
+export type StoredTomeSnapshot = StoredRegularTomeSnapshot | StoredCollectableTomeSnapshot;
+
+export interface StoredTome {
+  schemaVersion: StoredLibrarySchemaVersion;
+  kind: 'regular' | 'collectable';
+  id: string;
+  name?: string;
+  itemId: number;
+  input: StoredGatheringInput;
+  lastSolvedSnapshot?: StoredTomeSnapshot;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LegacyStoredTome {
+  schemaVersion?: number;
+  kind?: 'regular' | 'collectable';
+  modelVersions?: TomeModelVersions;
+  id: string;
+  name?: string;
+  itemId: number;
+  stats?: PlayerStats;
+  temporaryGp?: number;
+  food?: FoodSelection;
+  nodeBonuses?: StoredTomeNodeBonuses;
+  rotation?: StoredTomeRotationStep[];
   rotationPlans?: StoredTomeRotationPlan[];
   revisit?: SolverRevisitInfo;
   objectiveMode?: SolverObjectiveMode;
@@ -332,7 +392,9 @@ export interface StoredTome {
   collectableMinScoreChance?: number;
   collectableMaxScoreChance?: number;
   collectableExpectedReward?: CollectableRewardVector;
+  collectableHasRelicToolBonus?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface SimulationRotationAnalysis {
@@ -357,15 +419,75 @@ export interface SimulationResponse {
 }
 
 export interface StoredExperiment {
+  schemaVersion: StoredLibrarySchemaVersion;
+  kind: 'regular' | 'collectable';
+  id: string;
+  name?: string;
+  itemId: number;
+  input: StoredGatheringInput;
+  strategy: StoredExperimentStrategy;
+  lastAnalysisSnapshot?: StoredExperimentAnalysisSnapshot;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StoredExperimentStrategy = StoredRegularExperimentStrategy | StoredCollectableExperimentStrategy;
+
+export interface StoredRegularExperimentStrategy {
+  kind: 'regular';
+  primaryRotation: StoredTomeRotationStep[];
+  revisitRotation: StoredTomeRotationStep[];
+}
+
+export interface StoredCollectableExperimentStrategy {
+  kind: 'collectable';
+  rules: StoredCollectableStrategyRule[];
+  objective?: CollectableObjective;
+  rewardTableSummary?: CollectableRewardTableSummary;
+  hasRelicToolBonus: boolean;
+}
+
+export type StoredExperimentAnalysisSnapshot = StoredRegularExperimentAnalysisSnapshot | StoredCollectableExperimentAnalysisSnapshotV2;
+
+export interface StoredRegularExperimentAnalysisSnapshot {
+  kind: 'regular';
+  modelVersions?: TomeModelVersions;
+  expectedYield?: number;
+  minYield?: number;
+  maxYield?: number;
+  minYieldChance?: number;
+  maxYieldChance?: number;
+  revisitChance?: number;
+  primary?: Pick<SimulationRotationAnalysis, 'expectedYield' | 'minYield' | 'maxYield'>;
+  revisit?: Pick<SimulationRotationAnalysis, 'expectedYield' | 'minYield' | 'maxYield'>;
+}
+
+export interface StoredCollectableExperimentAnalysisSnapshotV2 {
+  kind: 'collectable';
+  modelVersions?: TomeModelVersions;
+  expectedScore?: number;
+  minScore?: number;
+  maxScore?: number;
+  minScoreChance?: number;
+  maxScoreChance?: number;
+  expectedTierCounts?: CollectableTierCounts;
+  minScoreTierCounts?: CollectableTierCounts;
+  maxScoreTierCounts?: CollectableTierCounts;
+  enabledRuleCount: number;
+  ruleCount: number;
+}
+
+export interface LegacyStoredExperiment {
+  schemaVersion?: number;
   kind?: 'regular' | 'collectable';
   modelVersions?: TomeModelVersions;
   id: string;
   name?: string;
   itemId: number;
-  stats: PlayerStats;
-  temporaryGp: number;
-  food: FoodSelection;
-  nodeBonuses: StoredTomeNodeBonuses;
+  stats?: PlayerStats;
+  temporaryGp?: number;
+  food?: FoodSelection;
+  nodeBonuses?: StoredTomeNodeBonuses;
   primaryRotation?: StoredTomeRotationStep[];
   revisitRotation?: StoredTomeRotationStep[];
   analysis?: SimulationResponse;
@@ -375,7 +497,7 @@ export interface StoredExperiment {
   collectableAnalysis?: StoredCollectableExperimentAnalysis;
   collectableHasRelicToolBonus?: boolean;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface StoredCollectableStrategyCondition {

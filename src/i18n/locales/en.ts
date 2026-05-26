@@ -257,6 +257,8 @@ export default {
       nodeBonuses: 'Node Bonuses',
       totalExpected: 'Total Expected',
       expectedScore: 'Expected Score',
+      maxScore: 'Max Score',
+      minScore: 'Min Score',
       maxMin: 'Max / Min'
     },
     rotations: {
@@ -265,6 +267,14 @@ export default {
       noStrategyPreview: 'No strategy preview yet',
       primary: 'Primary Gathering',
       revisit: 'After Revisit'
+    },
+    snapshot: {
+      staleBadge: 'Snapshot may be stale',
+      staleKicker: 'Saved snapshot',
+      staleTitle: 'This analysis snapshot may no longer match the current model',
+      staleDesc: 'Loading keeps your inputs and rotation or strategy, but the card summary was saved with an older model. Re-analyze it in the experiment workspace for current results.',
+      loadAnyway: 'Load Experiment',
+      cancel: 'Cancel'
     },
     actions: {
       edit: 'Edit',
@@ -1014,7 +1024,29 @@ export default {
       gpState: 'GP State',
       food: 'Food',
       nodeBonuses: 'Node Bonuses',
-      objectiveMode: 'Solver Mode'
+      objectiveMode: 'Solver Mode',
+      relicBonus: 'Relic Bonus'
+    },
+    nodeState: {
+      regular: 'Attempts +{gathering} / Yield +{yield} / Bonus rate +{extra}',
+      collectable: 'Attempts +{gathering}'
+    },
+    relicBonus: {
+      enabled: 'Included',
+      disabled: 'Not included'
+    },
+    snapshot: {
+      expectedYield: 'Expected Yield',
+      maxYield: 'Max Yield',
+      minYield: 'Min Yield',
+      expectedScore: 'Expected Score',
+      maxScore: 'Max Score',
+      minScore: 'Min Score',
+      staleBadge: 'Snapshot may be stale',
+      staleKicker: 'Saved snapshot',
+      staleTitle: 'This tome snapshot may no longer match the current model',
+      staleDesc: 'Loading keeps your input conditions, but the recommendation summary on this card was saved with an older model. Re-solve it in the tome workspace for current results.',
+      loadAnyway: 'Load Tome'
     },
     actions: {
       edit: 'Edit',

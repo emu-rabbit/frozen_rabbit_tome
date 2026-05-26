@@ -558,11 +558,11 @@ function loadCollectableExperimentFromRoute() {
   const experiment = routeCollectableExperiment();
   if (!experiment || experiment.kind !== 'collectable' || experiment.itemId !== props.activeItem.itemId) return;
 
-  if (experiment.collectableRules?.length) {
-    rules.value = clonePlain(experiment.collectableRules) as CollectableStrategyRule[];
+  if (experiment.strategy.kind === 'collectable' && experiment.strategy.rules.length) {
+    rules.value = clonePlain(experiment.strategy.rules) as CollectableStrategyRule[];
   }
-  if (experiment.collectableObjective) {
-    collectableObjective.value = normalizeCollectableObjective(clonePlain(experiment.collectableObjective));
+  if (experiment.strategy.kind === 'collectable' && experiment.strategy.objective) {
+    collectableObjective.value = normalizeCollectableObjective(clonePlain(experiment.strategy.objective));
   }
   analysis.value = null;
 }

@@ -257,6 +257,8 @@ export default {
       nodeBonuses: '採集ポイントボーナス',
       totalExpected: '合計期待値',
       expectedScore: '期待スコア',
+      maxScore: '最大スコア',
+      minScore: '最小スコア',
       maxMin: '最大 / 最小'
     },
     rotations: {
@@ -265,6 +267,14 @@ export default {
       noStrategyPreview: 'プレビューできる戦略はまだありません',
       primary: '通常採集',
       revisit: '再発見後の採集'
+    },
+    snapshot: {
+      staleBadge: 'スナップショットが古い可能性',
+      staleKicker: '保存時のスナップショット',
+      staleTitle: 'この分析スナップショットは現在のモデル結果と異なる可能性があります',
+      staleDesc: '読み込むと入力と手順 / 戦略は保持されますが、カードの概要は保存時点のものです。実験台で再分析することをおすすめします。',
+      loadAnyway: '実験を読み込む',
+      cancel: 'キャンセル'
     },
     actions: {
       edit: '編集',
@@ -992,7 +1002,29 @@ export default {
       gpState: 'GP 状態',
       food: '食事',
       nodeBonuses: '採集ポイントボーナス',
-      objectiveMode: 'ソルバーモード'
+      objectiveMode: 'ソルバーモード',
+      relicBonus: 'レリック補正'
+    },
+    nodeState: {
+      regular: '回数 +{gathering} / 獲得 +{yield} / 追加率 +{extra}',
+      collectable: '採集回数 +{gathering}'
+    },
+    relicBonus: {
+      enabled: '含める',
+      disabled: '含めない'
+    },
+    snapshot: {
+      expectedYield: '期待獲得量',
+      maxYield: '最大獲得量',
+      minYield: '最小獲得量',
+      expectedScore: '期待スコア',
+      maxScore: '最大スコア',
+      minScore: '最小スコア',
+      staleBadge: 'スナップショットが古い可能性',
+      staleKicker: '保存時のスナップショット',
+      staleTitle: 'この秘伝書スナップショットは現在のモデル結果と異なる可能性があります',
+      staleDesc: '読み込むと入力条件は保持されますが、カードの推奨概要は保存時点のものです。秘伝書で再計算することをおすすめします。',
+      loadAnyway: '秘伝書を読み込む'
     },
     actions: {
       edit: '編集',

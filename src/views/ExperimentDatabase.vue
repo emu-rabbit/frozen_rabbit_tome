@@ -19,12 +19,14 @@ import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { StoredCollectableStrategyRule, StoredExperiment, StoredTomeRotationStep } from '../types/game';
 import type { CollectableActionKind } from '../types/collectable';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
+import { isModelVersionSnapshotStale } from '../utils/modelVersionStatus';
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const { visibleExperiments, deleteExperiment, searchQuery } = useExperimentLibrary();
 
 const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-experiment-database-display-mode', 'detailed');
+const pendingEditExperiment = ref<StoredExperiment | null>(null);
 const displayModeOptions = computed(() => [
   { label: t('common.displayModes.compact'), value: 'compact' },
   { label: t('common.displayModes.detailed'), value: 'detailed' }
@@ -72,18 +74,24 @@ function formatCreatedAt(value: string) {
 }
 
 function formatStats(experiment: StoredExperiment) {
-  return `${experiment.stats.level}/${experiment.stats.gathering}/${experiment.stats.perception}`;
+  return `${experiment.input.stats.level}/${experiment.input.stats.gathering}/${experiment.input.stats.perception}`;
 }
 
 function formatGp(experiment: StoredExperiment) {
-  return `${experiment.temporaryGp}/${experiment.stats.gp}`;
+  return `${experiment.input.temporaryGp}/${experiment.input.stats.gp}`;
 }
 
 function formatNodeBonuses(experiment: StoredExperiment) {
   if (experiment.kind === 'collectable') {
-    return `${experiment.nodeBonuses.gatheringCount}`;
+    return t('tomeLibrary.nodeState.collectable', {
+      gathering: experiment.input.nodeBonuses.gatheringCount
+    });
   }
-  return `${experiment.nodeBonuses.gatheringCount}/${experiment.nodeBonuses.yieldCount}/${experiment.nodeBonuses.extraRate}`;
+  return t('tomeLibrary.nodeState.regular', {
+    gathering: experiment.input.nodeBonuses.gatheringCount,
+    yield: experiment.input.nodeBonuses.yieldCount,
+    extra: experiment.input.nodeBonuses.extraRate
+  });
 }
 
 function rotationIcon(experiment: StoredExperiment, step: StoredTomeRotationStep) {
@@ -96,15 +104,25 @@ function collectableActionIcon(experiment: StoredExperiment, action: Collectable
 }
 
 function handleEdit(experiment: StoredExperiment) {
+  if (isExperimentSnapshotStale(experiment)) {
+    pendingEditExperiment.value = experiment;
+    return;
+  }
+
+  loadExperiment(experiment);
+}
+
+function loadExperiment(experiment: StoredExperiment) {
+  pendingEditExperiment.value = null;
   router.push({ path: '/simulator', query: { experiment: experiment.id } });
 }
 
 function foodInfo(experiment: StoredExperiment) {
-  const food = getGatheringFood(experiment.food.foodId);
+  const food = getGatheringFood(experiment.input.food.foodId);
   if (!food) return null;
   return {
     name: getItemName(food.id),
-    quality: t(`solver.food.${experiment.food.quality}`)
+    quality: t(`solver.food.${experiment.input.food.quality}`)
   };
 }
 
@@ -112,6 +130,12 @@ function formatFood(experiment: StoredExperiment) {
   const food = foodInfo(experiment);
   if (!food) return t('tomeLibrary.noFood');
   return `${food.name} ${food.quality}`;
+}
+
+function relicBonusLabel(experiment: StoredExperiment) {
+  return experiment.input.hasRelicToolBonus
+    ? t('tomeLibrary.relicBonus.enabled')
+    : t('tomeLibrary.relicBonus.disabled');
 }
 
 function formatChance(chance: number) {
@@ -124,7 +148,9 @@ function collectableActionLabel(experiment: StoredExperiment, action: Collectabl
 }
 
 function enabledCollectableRules(experiment: StoredExperiment) {
-  return (experiment.collectableRules ?? []).filter((rule) => rule.enabled);
+  return experiment.strategy.kind === 'collectable'
+    ? experiment.strategy.rules.filter((rule) => rule.enabled)
+    : [];
 }
 
 function previewCollectableActions(rule: StoredCollectableStrategyRule) {
@@ -147,34 +173,70 @@ function totalExpectedLabel(experiment: StoredExperiment) {
     : t('experimentDatabase.rows.totalExpected');
 }
 
+function maxMetricLabel(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? t('experimentDatabase.rows.maxScore')
+    : t('simulator.analysis.maxYield');
+}
+
+function minMetricLabel(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable'
+    ? t('experimentDatabase.rows.minScore')
+    : t('simulator.analysis.minYield');
+}
+
 function totalExpectedValue(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
-    ? experiment.collectableAnalysis?.expectedScore ?? '-'
-    : experiment.analysis?.total.expectedYield ?? '-';
+    ? formatNumber(experiment.lastAnalysisSnapshot?.kind === 'collectable' ? experiment.lastAnalysisSnapshot.expectedScore : undefined)
+    : formatNumber(experiment.lastAnalysisSnapshot?.kind === 'regular' ? experiment.lastAnalysisSnapshot.expectedYield : undefined);
 }
 
 function maxValue(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
-    ? experiment.collectableAnalysis?.maxScore ?? '-'
-    : experiment.analysis?.total.maxYield ?? '-';
+    ? formatNumber(experiment.lastAnalysisSnapshot?.kind === 'collectable' ? experiment.lastAnalysisSnapshot.maxScore : undefined)
+    : formatNumber(experiment.lastAnalysisSnapshot?.kind === 'regular' ? experiment.lastAnalysisSnapshot.maxYield : undefined);
 }
 
 function minValue(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
-    ? experiment.collectableAnalysis?.minScore ?? '-'
-    : experiment.analysis?.total.minYield ?? '-';
+    ? formatNumber(experiment.lastAnalysisSnapshot?.kind === 'collectable' ? experiment.lastAnalysisSnapshot.minScore : undefined)
+    : formatNumber(experiment.lastAnalysisSnapshot?.kind === 'regular' ? experiment.lastAnalysisSnapshot.minYield : undefined);
 }
 
 function maxChance(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
-    ? experiment.collectableAnalysis?.maxScoreChance ?? 0
-    : experiment.analysis?.total.maxYieldChance ?? 0;
+    ? experiment.lastAnalysisSnapshot?.kind === 'collectable' ? experiment.lastAnalysisSnapshot.maxScoreChance ?? 0 : 0
+    : experiment.lastAnalysisSnapshot?.kind === 'regular' ? experiment.lastAnalysisSnapshot.maxYieldChance ?? 0 : 0;
 }
 
 function minChance(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
-    ? experiment.collectableAnalysis?.minScoreChance ?? 0
-    : experiment.analysis?.total.minYieldChance ?? 0;
+    ? experiment.lastAnalysisSnapshot?.kind === 'collectable' ? experiment.lastAnalysisSnapshot.minScoreChance ?? 0 : 0
+    : experiment.lastAnalysisSnapshot?.kind === 'regular' ? experiment.lastAnalysisSnapshot.minYieldChance ?? 0 : 0;
+}
+
+function regularPrimaryRotation(experiment: StoredExperiment) {
+  return experiment.strategy.kind === 'regular' ? experiment.strategy.primaryRotation : [];
+}
+
+function regularRevisitRotation(experiment: StoredExperiment) {
+  return experiment.strategy.kind === 'regular' ? experiment.strategy.revisitRotation : [];
+}
+
+function formatNumber(value?: number) {
+  return typeof value === 'number' ? Number(value.toFixed(2)).toString() : '-';
+}
+
+function experimentScenario(experiment: StoredExperiment) {
+  return experiment.kind === 'collectable' ? 'experiment.collectable' as const : 'experiment.regular' as const;
+}
+
+function isExperimentSnapshotStale(experiment: StoredExperiment) {
+  return isModelVersionSnapshotStale(experimentScenario(experiment), experiment.lastAnalysisSnapshot?.modelVersions);
+}
+
+function cancelStaleSnapshotDialog() {
+  pendingEditExperiment.value = null;
 }
 
 </script>
@@ -249,6 +311,10 @@ function minChance(experiment: StoredExperiment) {
                 <i class="pi pi-compass"></i>
                 {{ experimentSystemLabel(experiment) }}
               </span>
+              <span v-if="isExperimentSnapshotStale(experiment)" class="snapshot-stale-badge">
+                <i class="pi pi-history"></i>
+                {{ t('experimentDatabase.snapshot.staleBadge') }}
+              </span>
             </div>
           </div>
         </div>
@@ -271,9 +337,13 @@ function minChance(experiment: StoredExperiment) {
             <span>{{ t('experimentDatabase.rows.nodeBonuses') }}</span>
             <strong>{{ formatNodeBonuses(experiment) }}</strong>
           </div>
-          <div v-if="foodInfo(experiment)" class="info-group food">
+          <div class="info-group food">
             <span>{{ t('tomeLibrary.rows.food') }}</span>
-            <strong>{{ foodInfo(experiment)?.name }} ({{ foodInfo(experiment)?.quality }})</strong>
+            <strong>{{ formatFood(experiment) }}</strong>
+          </div>
+          <div v-if="experiment.kind === 'collectable'" class="info-group">
+            <span>{{ t('tomeLibrary.rows.relicBonus') }}</span>
+            <strong>{{ relicBonusLabel(experiment) }}</strong>
           </div>
         </div>
 
@@ -286,7 +356,7 @@ function minChance(experiment: StoredExperiment) {
             </strong>
           </div>
           <div>
-            <span>{{ t('simulator.analysis.maxYield') }}</span>
+            <span>{{ maxMetricLabel(experiment) }}</span>
             <strong>
               {{ maxValue(experiment) }}
               <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
@@ -294,7 +364,7 @@ function minChance(experiment: StoredExperiment) {
             <small>{{ t('solver.strategy.yieldChance', { chance: formatChance(maxChance(experiment)) }) }}</small>
           </div>
           <div>
-            <span>{{ t('simulator.analysis.minYield') }}</span>
+            <span>{{ minMetricLabel(experiment) }}</span>
             <strong>
               {{ minValue(experiment) }}
               <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
@@ -331,24 +401,24 @@ function minChance(experiment: StoredExperiment) {
           <div v-else class="rotation-strip">
             <h4>{{ hideRevisitExperimentFeatures ? t('experimentDatabase.rotations.preview') : t('experimentDatabase.rotations.primary') }}</h4>
             <div class="rotation-icons">
-              <template v-for="(step, index) in experiment.primaryRotation ?? []" :key="`p-${experiment.id}-${index}`">
+              <template v-for="(step, index) in regularPrimaryRotation(experiment)" :key="`p-${experiment.id}-${index}`">
                 <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'">
                   <img v-if="rotationIcon(experiment, step)" :src="rotationIcon(experiment, step)" class="rotation-icon" alt="" />
                   <i v-else class="pi pi-sparkles text-xs"></i>
                 </span>
-                <i v-if="index < (experiment.primaryRotation ?? []).length - 1" class="pi pi-angle-right rotation-arrow"></i>
+                <i v-if="index < regularPrimaryRotation(experiment).length - 1" class="pi pi-angle-right rotation-arrow"></i>
               </template>
             </div>
           </div>
-          <div v-if="experiment.kind !== 'collectable' && !hideRevisitExperimentFeatures && experiment.revisitRotation?.length" class="rotation-strip">
+          <div v-if="experiment.kind !== 'collectable' && !hideRevisitExperimentFeatures && regularRevisitRotation(experiment).length" class="rotation-strip">
             <h4>{{ t('experimentDatabase.rotations.revisit') }}</h4>
             <div class="rotation-icons">
-              <template v-for="(step, index) in experiment.revisitRotation ?? []" :key="`r-${experiment.id}-${index}`">
+              <template v-for="(step, index) in regularRevisitRotation(experiment)" :key="`r-${experiment.id}-${index}`">
                 <span class="rotation-icon-wrap" :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-revisit'">
                   <img v-if="rotationIcon(experiment, step)" :src="rotationIcon(experiment, step)" class="rotation-icon" alt="" />
                   <i v-else class="pi pi-sparkles text-xs"></i>
                 </span>
-                <i v-if="index < (experiment.revisitRotation ?? []).length - 1" class="pi pi-angle-right rotation-arrow"></i>
+                <i v-if="index < regularRevisitRotation(experiment).length - 1" class="pi pi-angle-right rotation-arrow"></i>
               </template>
             </div>
           </div>
@@ -363,6 +433,43 @@ function minChance(experiment: StoredExperiment) {
         </div>
       </article>
     </div>
+
+    <Teleport to="body">
+      <Transition name="stale-snapshot">
+        <div v-if="pendingEditExperiment" class="stale-snapshot-dialog" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            class="stale-snapshot-backdrop"
+            :aria-label="t('experimentDatabase.snapshot.cancel')"
+            @click="cancelStaleSnapshotDialog"
+          ></button>
+          <section class="stale-snapshot-panel">
+            <div class="stale-snapshot-icon">
+              <i class="pi pi-history"></i>
+            </div>
+            <div class="stale-snapshot-content">
+              <p class="stale-snapshot-kicker">{{ t('experimentDatabase.snapshot.staleKicker') }}</p>
+              <h3>{{ t('experimentDatabase.snapshot.staleTitle') }}</h3>
+              <p>{{ t('experimentDatabase.snapshot.staleDesc') }}</p>
+            </div>
+            <div class="stale-snapshot-actions">
+              <Button
+                icon="pi pi-arrow-right"
+                :label="t('experimentDatabase.snapshot.loadAnyway')"
+                class="p-button-sm p-button-primary stale-snapshot-action"
+                @click="loadExperiment(pendingEditExperiment)"
+              />
+              <Button
+                icon="pi pi-times"
+                :label="t('experimentDatabase.snapshot.cancel')"
+                class="p-button-sm p-button-text stale-snapshot-action"
+                @click="cancelStaleSnapshotDialog"
+              />
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -554,7 +661,8 @@ function minChance(experiment: StoredExperiment) {
 .is-compact .item-job-badge,
 .is-compact .item-regular-badge,
 .is-compact .item-collectable-badge,
-.is-compact .item-crystal-badge {
+.is-compact .item-crystal-badge,
+.is-compact .snapshot-stale-badge {
   padding: 2px 8px;
   font-size: 0.68rem;
   line-height: 1.35;
@@ -566,7 +674,8 @@ function minChance(experiment: StoredExperiment) {
 .item-job-badge,
 .item-regular-badge,
 .item-collectable-badge,
-.item-crystal-badge {
+.item-crystal-badge,
+.snapshot-stale-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -592,9 +701,12 @@ function minChance(experiment: StoredExperiment) {
 .item-crystal-badge {
   background: linear-gradient(135deg, #06b6d4, #0284c7);
 }
+.snapshot-stale-badge {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
 .summary-info-strip {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.2rem, 1fr));
   gap: 0.5rem;
   padding: 0.65rem 0.85rem;
   border-radius: 14px;
@@ -606,13 +718,10 @@ function minChance(experiment: StoredExperiment) {
   border-color: #1e293b;
 }
 .info-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
   min-width: 0;
-  flex: 1 1 120px;
-}
-.info-group.food {
-  flex: 1 1 200px;
 }
 .info-group span {
   color: #94a3b8;
@@ -624,9 +733,8 @@ function minChance(experiment: StoredExperiment) {
   color: #475569;
   font-size: 0.82rem;
   font-weight: 900;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 :global(html.dark .info-group strong) {
   color: #cbd5e1;
@@ -887,6 +995,11 @@ function minChance(experiment: StoredExperiment) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+@media (max-width: 560px) {
+  .summary-info-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 @media (min-width: 768px) {
   .experiment-database-page {
     padding: 2.5rem 2rem;
@@ -896,6 +1009,98 @@ function minChance(experiment: StoredExperiment) {
     align-items: center;
     justify-content: space-between;
   }
+}
+.stale-snapshot-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.stale-snapshot-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(15 23 42 / 0.48);
+}
+.stale-snapshot-panel {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 460px);
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 60px rgb(15 23 42 / 0.2);
+}
+:global(html.dark .stale-snapshot-panel) {
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.42);
+}
+.stale-snapshot-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: #b45309;
+  background: #fef3c7;
+}
+:global(html.dark .stale-snapshot-icon) {
+  color: #fbbf24;
+  background: rgb(120 53 15 / 0.34);
+}
+.stale-snapshot-content {
+  display: grid;
+  gap: 0.45rem;
+}
+.stale-snapshot-kicker {
+  margin: 0;
+  color: #d97706;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.stale-snapshot-content h3,
+.stale-snapshot-content p {
+  margin: 0;
+}
+.stale-snapshot-content h3 {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+.stale-snapshot-content p {
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+:global(html.dark .stale-snapshot-content h3) {
+  color: #f8fafc;
+}
+:global(html.dark .stale-snapshot-content p) {
+  color: #cbd5e1;
+}
+.stale-snapshot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+:deep(.stale-snapshot-action) {
+  min-height: 2.25rem;
+}
+.stale-snapshot-enter-active,
+.stale-snapshot-leave-active {
+  transition: opacity 0.16s ease;
+}
+.stale-snapshot-enter-from,
+.stale-snapshot-leave-to {
+  opacity: 0;
 }
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }

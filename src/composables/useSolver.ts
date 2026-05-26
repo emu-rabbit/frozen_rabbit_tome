@@ -236,22 +236,25 @@ export function useSolver() {
     const item = getGatherableItemById(tome.itemId);
     if (!item) return false;
 
-    const tomeObjectiveMode = tome.objectiveMode ?? 'expected';
+    const tomeObjectiveMode = tome.lastSolvedSnapshot?.objectiveMode ?? 'expected';
     const shouldSyncObjectiveMode = options.syncObjectiveMode ?? true;
 
     cancelActiveSolve();
     activeItem.value = tome.kind === 'collectable' ? { ...item, isCollectable: true } : item;
-    solverStats.value = normalizeStatsForSolver(tome.stats);
-    selectedFood.value = { ...tome.food };
+    solverStats.value = normalizeStatsForSolver(tome.input.stats);
+    selectedFood.value = { ...tome.input.food };
     nodeBonuses.value = normalizeNodeBonusesForSolver({
-      baseIntegrity: item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4,
-      gatheringCount: tome.nodeBonuses.gatheringCount,
-      yieldCount: tome.nodeBonuses.yieldCount,
-      extraRate: tome.nodeBonuses.extraRate
+      baseIntegrity: tome.input.nodeBonuses.baseIntegrity ?? (item.gatheringItemId ? getItemBaseIntegrity(item.gatheringItemId) : 4),
+      gatheringCount: tome.input.nodeBonuses.gatheringCount,
+      yieldCount: tome.input.nodeBonuses.yieldCount,
+      extraRate: tome.input.nodeBonuses.extraRate
     });
-    temporaryGp.value = clampIntegerInput(tome.temporaryGp, 0, effectiveStats.value.gp, effectiveStats.value.gp);
+    temporaryGp.value = clampIntegerInput(tome.input.temporaryGp, 0, effectiveStats.value.gp, effectiveStats.value.gp);
     if (shouldSyncObjectiveMode) {
       solverSettings.value.objectiveMode = tomeObjectiveMode;
+    }
+    if (tome.kind === 'collectable') {
+      solverSettings.value.collectableRelicToolBonus = !!tome.input.hasRelicToolBonus;
     }
     rotationResult.value = null;
     latestSolveInputSignature = createSolveInputSignature();
