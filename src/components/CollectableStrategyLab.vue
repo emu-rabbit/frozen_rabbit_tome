@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
-import type { FoodSelection, GatherableItem, NodeBonuses, PlayerStats, StoredCollectableStrategyRule } from '../types/game';
+import type { FoodSelection, GatherableItem, NodeBonuses, PlayerStats, StoredCollectableStrategyRule, StoredExperiment } from '../types/game';
 import type { CollectableActionKind, CollectableObjective, CollectableRewardTable, CollectableRewardTableSummary, CollectableTierCounts } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
@@ -59,8 +58,7 @@ import {
 } from '../utils/tomeJsonExport';
 
 const { t } = useI18n();
-const route = useRoute();
-const { saveCollectableExperiment, getExperiment } = useExperimentLibrary();
+const { saveCollectableExperiment } = useExperimentLibrary();
 
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
@@ -81,6 +79,7 @@ const props = defineProps<{
   temporaryGp: number;
   selectedFood: FoodSelection;
   hasRelicToolBonus?: boolean;
+  loadedExperiment?: StoredExperiment | null;
 }>();
 
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
@@ -244,7 +243,11 @@ const canRunAnalysis = computed(() => (
   && !hasStrategyLevelIssue.value
 ));
 
-watch(() => props.activeItem.itemId, async () => {
+watch(() => props.activeItem.itemId, async (itemId, previousItemId) => {
+  if (previousItemId !== undefined && itemId !== previousItemId && !loadedCollectableExperiment()) {
+    resetStrategyDraft();
+  }
+
   analysis.value = null;
   rewardTable.value = null;
   rewardError.value = false;
@@ -252,7 +255,7 @@ watch(() => props.activeItem.itemId, async () => {
   try {
     rewardTable.value = await getCollectableRewardTable(props.activeItem.itemId);
     rewardError.value = !rewardTable.value;
-    if (rewardTable.value && !routeCollectableExperiment()) applyDefaultObjective(rewardTable.value);
+    if (rewardTable.value && !loadedCollectableExperiment()) applyDefaultObjective(rewardTable.value);
   } catch (error) {
     console.error('Collectable strategy reward table loading failed:', error);
     rewardError.value = true;
@@ -260,10 +263,10 @@ watch(() => props.activeItem.itemId, async () => {
 }, { immediate: true });
 
 watch([
-  () => route.query.experiment,
+  () => props.loadedExperiment,
   () => props.activeItem.itemId
 ], () => {
-  loadCollectableExperimentFromRoute();
+  loadCollectableExperiment();
 }, { immediate: true });
 
 watch([
@@ -551,32 +554,48 @@ function markJsonExported() {
   }, 1600);
 }
 
-function loadCollectableExperimentFromRoute() {
-  const id = typeof route.query.experiment === 'string' ? route.query.experiment : '';
-  if (!id) return;
-
-  const experiment = routeCollectableExperiment();
+function loadCollectableExperiment() {
+  const experiment = loadedCollectableExperiment();
   if (!experiment || experiment.kind !== 'collectable' || experiment.itemId !== props.activeItem.itemId) return;
 
-  if (experiment.strategy.kind === 'collectable' && experiment.strategy.rules.length) {
+  if (experiment.strategy.kind === 'collectable') {
     rules.value = clonePlain(experiment.strategy.rules) as CollectableStrategyRule[];
   }
   if (experiment.strategy.kind === 'collectable' && experiment.strategy.objective) {
     collectableObjective.value = normalizeCollectableObjective(clonePlain(experiment.strategy.objective));
   }
+  editingRuleId.value = '';
+  editingRuleDraft.value = null;
+  resetRuleEditorView();
   analysis.value = null;
+  isSaved.value = false;
 }
 
 function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function routeCollectableExperiment() {
-  const id = typeof route.query.experiment === 'string' ? route.query.experiment : '';
-  if (!id) return null;
-  const experiment = getExperiment(id);
+function loadedCollectableExperiment() {
+  const experiment = props.loadedExperiment;
   if (!experiment || experiment.kind !== 'collectable' || experiment.itemId !== props.activeItem.itemId) return null;
   return experiment;
+}
+
+function resetStrategyDraft() {
+  treeBuildAbort?.abort();
+  editorBuildAbort?.abort();
+  analysisAbort?.abort();
+  rules.value = createDefaultCollectableStrategyRules();
+  editingRuleId.value = '';
+  editingRuleDraft.value = null;
+  resetRuleEditorView();
+  managedNodesView.value = 'summary';
+  managedNodeIndex.value = 0;
+  analysis.value = null;
+  treeResult.value = null;
+  editorFrontierTreeResult.value = null;
+  isSaved.value = false;
+  isJsonExported.value = false;
 }
 
 function previewRuleActionIcons(rule: CollectableStrategyRule) {

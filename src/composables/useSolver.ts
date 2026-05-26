@@ -174,11 +174,13 @@ export function useSolver() {
 
     const isDifferentItem = activeItem.value?.itemId !== item.itemId;
 
-    if (isDifferentItem) {
-      cancelActiveSolve();
-      rotationResult.value = null;
+    if (!isDifferentItem) {
+      activeItem.value = item;
+      return;
     }
 
+    cancelActiveSolve();
+    rotationResult.value = null;
     activeItem.value = item;
     // 重設節點獎勵
     nodeBonuses.value = normalizeNodeBonusesForSolver({

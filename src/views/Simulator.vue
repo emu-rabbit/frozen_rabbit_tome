@@ -23,7 +23,7 @@ import { simulateGatheringRotation, getSimulatorActions, previewRotationState, c
 import { calculateCollectableScourValue } from '../utils/collectableMath';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { SimulationRequest } from '../utils/rotationSimulator';
-import type { GearStatProfile, SimulationResponse } from '../types/game';
+import type { GearStatProfile, SimulationResponse, StoredExperiment } from '../types/game';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
 import {
@@ -75,6 +75,7 @@ const solverStats = simStats;
 
 const activeBlock = ref<'primary' | 'revisit'>('primary');
 const savedExperimentId = ref<string | null>(null);
+const loadedCollectableExperiment = ref<StoredExperiment | null>(null);
 const isSaved = ref(false);
 const isJsonExported = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
@@ -162,8 +163,9 @@ const collectableRelicToolBonusOptions = computed<RelicToolOption[]>(() => [
 
 onMounted(() => {
   fetchItemLevelData();
-  syncFromSettings();
-  loadExperimentFromRoute();
+  if (!loadExperimentFromRoute()) {
+    syncFromSettings();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -172,19 +174,20 @@ onBeforeUnmount(() => {
 });
 
 onActivated(() => {
-  syncFromSettings();
-
   const isFromDatabase = !!route.query.experiment;
   const isNewExperiment = route.query.new === '1';
 
   if (isFromDatabase) {
-    loadExperimentFromRoute();
+    if (!loadExperimentFromRoute()) {
+      syncFromSettings();
+    }
   } else if (isNewExperiment) {
     // new=1 表示從物品卡進入，setSelectedItem 已根據「是否同一物品」決定是否重置，
     // 此處只需清除暫存的儲存狀態與 URL 參數。
     activeBlock.value = 'primary';
     savedExperimentId.value = null;
     isSaved.value = false;
+    loadedCollectableExperiment.value = null;
 
     // 清除 URL 中的 new 參數，避免重新整理時又觸發
     router.replace({ path: '/simulator', query: {} });
@@ -382,14 +385,14 @@ function markJsonExported() {
 
 function loadExperimentFromRoute() {
   const id = typeof route.query.experiment === 'string' ? route.query.experiment : '';
-  if (!id || savedExperimentId.value === id) return;
+  if (!id) return false;
 
   const experiment = getExperiment(id);
   const rawItem = experiment ? getGatherableItemById(experiment.itemId) : null;
   const item = rawItem && experiment?.kind === 'collectable'
     ? { ...rawItem, isCollectable: true, isCrystalGathering: false }
     : rawItem;
-  if (!experiment || !item) return;
+  if (!experiment || !item) return false;
 
   // 1. 設置物品
   setSelectedItem(item);
@@ -411,10 +414,13 @@ function loadExperimentFromRoute() {
     revisitRotation.value = [];
     analysis.value = null;
     solverSettings.value.collectableRelicToolBonus = !!experiment.input.hasRelicToolBonus;
+    loadedCollectableExperiment.value = experiment;
     savedExperimentId.value = id;
-    return;
+    router.replace({ path: '/simulator', query: {} });
+    return true;
   }
 
+  loadedCollectableExperiment.value = null;
   primaryRotation.value = experiment.strategy.kind === 'regular'
     ? experiment.strategy.primaryRotation.map(fromStoredRotationStep).filter(Boolean)
     : [];
@@ -426,6 +432,8 @@ function loadExperimentFromRoute() {
   // 4. 新版資料庫只保存輕量 snapshot，載入後由使用者重新分析。
   analysis.value = null;
   savedExperimentId.value = id;
+  router.replace({ path: '/simulator', query: {} });
+  return true;
 }
 
 function goCreateExperiment() {
@@ -568,6 +576,7 @@ function progressPercent(range: number[], maxValue: number) {
         :temporary-gp="temporaryGp"
         :selected-food="selectedFood"
         :has-relic-tool-bonus="collectableRelicToolBonusModel"
+        :loaded-experiment="loadedCollectableExperiment"
       />
 
       <section v-else class="panel simulation-panel">

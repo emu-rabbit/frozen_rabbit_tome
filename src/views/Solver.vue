@@ -48,7 +48,6 @@ const {
   boonChance,
   isPerceptionMet,
   baseValues,
-  syncFromSettings,
   itemRealLevel,
   displayName,
   temporaryGp,
@@ -175,9 +174,7 @@ onMounted(() => {
   prewarmActiveSolverWasm();
 });
 
-// 當使用者從設定頁切換回來時，觸發同步以獲取最新數值
 onActivated(() => {
-  syncFromSettings();
   prewarmActiveSolverWasm();
 });
 

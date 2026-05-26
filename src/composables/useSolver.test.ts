@@ -128,6 +128,50 @@ describe('useSolver 同步機制', () => {
     expect(solver.temporaryGp.value).toBe(950);
   });
 
+  it('再次選擇同一物品時，會保留目前編輯中的輸入草稿', async () => {
+    const { solver, gearProfiles } = await createSolverContext();
+
+    updateMinerProfile(gearProfiles, {
+      level: 100,
+      gathering: 5400,
+      perception: 5200,
+      gp: 950
+    });
+    solver.setSelectedItem(minerItem);
+    solver.solverStats.value = {
+      level: 99,
+      gathering: 5100,
+      perception: 5050,
+      gp: 920
+    };
+    solver.selectedFood.value = { foodId: 123, quality: 'nq' };
+    solver.nodeBonuses.value = {
+      baseIntegrity: 6,
+      gatheringCount: 2,
+      yieldCount: 3,
+      extraRate: 4
+    };
+    solver.temporaryGp.value = 300;
+
+    solver.setSelectedItem({ ...minerItem, nameLocale: '更新後的測試礦石' });
+
+    expect(solver.activeItem.value?.nameLocale).toBe('更新後的測試礦石');
+    expect(solver.solverStats.value).toEqual({
+      level: 99,
+      gathering: 5100,
+      perception: 5050,
+      gp: 920
+    });
+    expect(solver.selectedFood.value).toEqual({ foodId: 123, quality: 'nq' });
+    expect(solver.nodeBonuses.value).toEqual({
+      baseIntegrity: 6,
+      gatheringCount: 2,
+      yieldCount: 3,
+      extraRate: 4
+    });
+    expect(solver.temporaryGp.value).toBe(300);
+  });
+
   it('全域設定真的變動時同步最大 GP，但不覆蓋仍在上限內的起始 GP', async () => {
     const { solver, gearProfiles } = await createSolverContext();
 
