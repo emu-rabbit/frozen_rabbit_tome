@@ -255,6 +255,7 @@ export default {
       playerStats: 'プレイヤー数値',
       gpState: 'GP 状態',
       nodeBonuses: '採集ポイントボーナス',
+      objectivePreference: '評価の好み',
       totalExpected: '合計期待値',
       expectedScore: '期待スコア',
       maxScore: '最大スコア',

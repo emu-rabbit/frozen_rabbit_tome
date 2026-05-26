@@ -1587,19 +1587,45 @@ function makeId() {
             </div>
           </div>
         </div>
+        <div class="collectable-save-objective-summary">
+          <span>{{ t('collectableObjective.title') }}</span>
+          <strong>{{ selectedObjectiveLabel }}</strong>
+          <small>{{ t('collectableStrategyLab.analysis.scoringNote') }}</small>
+        </div>
         <div class="collectable-save-preview-metrics">
           <div>
-            <span>{{ t('collectableStrategyLab.analysis.expectedScore', { unit: scoreUnitLabel() }) }}</span>
-            <strong>{{ analysis.expectedScore }}</strong>
+            <span>{{ isTierCountObjective(collectableObjective) ? t('collectableSolver.results.expectedTierCounts') : t('collectableStrategyLab.analysis.expectedScore', { unit: scoreUnitLabel() }) }}</span>
+            <div v-if="isTierCountObjective(collectableObjective) && visibleTierMetricEntries(analysis.expectedTierCounts).length > 1" class="tier-count-list save-tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(analysis.expectedTierCounts)" :key="entry.key" class="tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small>{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else-if="isTierCountObjective(collectableObjective)">{{ formatSingleTierCount(analysis.expectedTierCounts) }}</strong>
+            <strong v-else>{{ analysis.expectedScore }}</strong>
           </div>
           <div>
-            <span>{{ t('collectableStrategyLab.analysis.maxScore', { unit: scoreUnitLabel() }) }}</span>
-            <strong>{{ analysis.maxScore }}</strong>
+            <span>{{ isTierCountObjective(collectableObjective) ? t('collectableSolver.results.maxTierCounts') : t('collectableStrategyLab.analysis.maxScore', { unit: scoreUnitLabel() }) }}</span>
+            <div v-if="isTierCountObjective(collectableObjective) && visibleTierMetricEntries(analysis.maxScoreTierCounts).length > 1" class="tier-count-list save-tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(analysis.maxScoreTierCounts)" :key="entry.key" class="tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small>{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else-if="isTierCountObjective(collectableObjective)">{{ formatSingleTierCount(analysis.maxScoreTierCounts) }}</strong>
+            <strong v-else>{{ analysis.maxScore }}</strong>
             <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.maxScoreChance, false, false) }) }}</small>
           </div>
           <div>
-            <span>{{ t('collectableStrategyLab.analysis.minScore', { unit: scoreUnitLabel() }) }}</span>
-            <strong>{{ analysis.minScore }}</strong>
+            <span>{{ isTierCountObjective(collectableObjective) ? t('collectableSolver.results.minTierCounts') : t('collectableStrategyLab.analysis.minScore', { unit: scoreUnitLabel() }) }}</span>
+            <div v-if="isTierCountObjective(collectableObjective) && visibleTierMetricEntries(analysis.minScoreTierCounts).length > 1" class="tier-count-list save-tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(analysis.minScoreTierCounts)" :key="entry.key" class="tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small>{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else-if="isTierCountObjective(collectableObjective)">{{ formatSingleTierCount(analysis.minScoreTierCounts) }}</strong>
+            <strong v-else>{{ analysis.minScore }}</strong>
             <small>{{ t('simulator.analysis.chance', { chance: formatProbability(analysis.minScoreChance, false, false) }) }}</small>
           </div>
         </div>
@@ -2580,7 +2606,7 @@ function makeId() {
   gap: 0.45rem;
 }
 
-.collectable-save-preview-metrics div {
+.collectable-save-preview-metrics > div {
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -2591,16 +2617,25 @@ function makeId() {
   background: #f8fafc;
 }
 
-.collectable-save-preview-metrics div:first-child {
+.collectable-save-preview-metrics > div:first-child {
   border: 1px solid rgb(82 168 144 / 0.55);
   background: rgb(240 253 244 / 0.86);
 }
 
-:global(html.dark .collectable-save-preview-metrics div:first-child) {
+:global(html.dark .collectable-save-preview-metrics > div:first-child) {
   border-color: rgb(74 222 128 / 0.42);
   background: rgb(20 83 45 / 0.22);
 }
 
+.save-tier-count-list {
+  margin-top: 0;
+}
+
+.save-tier-count-list .tier-count-entry {
+  min-width: 3.4rem;
+}
+
+.collectable-save-objective-summary,
 .collectable-save-strategy-preview {
   min-width: 0;
   max-width: 100%;
@@ -2611,6 +2646,24 @@ function makeId() {
   border: 1px solid #f1f5f9;
   border-radius: 0.85rem;
   background: #f8fafc;
+}
+
+.collectable-save-objective-summary {
+  gap: 0.25rem;
+}
+
+.collectable-save-objective-summary strong {
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.collectable-save-objective-summary small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .collectable-save-rule {
@@ -2626,17 +2679,19 @@ function makeId() {
   background: #ffffff;
 }
 
-:global(html.dark .collectable-save-preview-metrics div),
+:global(html.dark .collectable-save-preview-metrics > div),
 :global(html.dark .collectable-save-rule) {
   background: rgb(30 41 59 / 0.55);
 }
 
+:global(html.dark .collectable-save-objective-summary),
 :global(html.dark .collectable-save-strategy-preview) {
   border-color: #1e293b;
   background: rgb(15 23 42 / 0.6);
 }
 
 .collectable-save-preview-metrics span,
+.collectable-save-objective-summary > span,
 .collectable-save-strategy-preview > span {
   color: #64748b;
   font-size: 0.72rem;
@@ -2644,11 +2699,20 @@ function makeId() {
 }
 
 :global(html.dark .collectable-save-preview-metrics span),
+:global(html.dark .collectable-save-objective-summary > span),
 :global(html.dark .collectable-save-strategy-preview > span) {
   color: #94a3b8;
 }
 
-.collectable-save-preview-metrics strong,
+:global(html.dark .collectable-save-objective-summary strong) {
+  color: #e2e8f0;
+}
+
+:global(html.dark .collectable-save-objective-summary small) {
+  color: #94a3b8;
+}
+
+.collectable-save-preview-metrics > div > strong,
 .collectable-save-rule strong {
   min-width: 0;
   max-width: 8rem;
@@ -2667,7 +2731,7 @@ function makeId() {
   font-weight: 800;
 }
 
-:global(html.dark .collectable-save-preview-metrics strong),
+:global(html.dark .collectable-save-preview-metrics > div > strong),
 :global(html.dark .collectable-save-rule strong) {
   color: #e2e8f0;
 }

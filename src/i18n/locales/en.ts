@@ -255,6 +255,7 @@ export default {
       playerStats: 'Player Stats',
       gpState: 'GP State',
       nodeBonuses: 'Node Bonuses',
+      objectivePreference: 'Scoring Preference',
       totalExpected: 'Total Expected',
       expectedScore: 'Expected Score',
       maxScore: 'Max Score',

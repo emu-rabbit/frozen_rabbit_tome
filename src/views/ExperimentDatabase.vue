@@ -15,11 +15,16 @@ import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, cu
 import { getGatheringFood } from '../services/foodData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
+import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { StoredCollectableStrategyRule, StoredExperiment, StoredTomeRotationStep } from '../types/game';
-import type { CollectableActionKind } from '../types/collectable';
+import type { CollectableActionKind, CollectableObjective, CollectableTierCounts } from '../types/collectable';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { isModelVersionSnapshotStale } from '../utils/modelVersionStatus';
+import {
+  isCustomTierObjective,
+  isTierCountObjective
+} from '../utils/collectableObjectivePresets';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -27,6 +32,7 @@ const { visibleExperiments, deleteExperiment, searchQuery } = useExperimentLibra
 
 const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-experiment-database-display-mode', 'detailed');
 const pendingEditExperiment = ref<StoredExperiment | null>(null);
+const tierCountVisibilityEpsilon = 0.000001;
 const displayModeOptions = computed(() => [
   { label: t('common.displayModes.compact'), value: 'compact' },
   { label: t('common.displayModes.detailed'), value: 'detailed' }
@@ -168,21 +174,21 @@ function experimentSystemLabel(experiment: StoredExperiment) {
 }
 
 function totalExpectedLabel(experiment: StoredExperiment) {
-  return experiment.kind === 'collectable'
-    ? t('experimentDatabase.rows.expectedScore')
-    : t('experimentDatabase.rows.totalExpected');
+  if (experiment.kind !== 'collectable') return t('experimentDatabase.rows.totalExpected');
+  if (isCollectableTierCountExperiment(experiment)) return t('collectableSolver.results.expectedTierCounts');
+  return t('collectableStrategyLab.analysis.expectedScore', { unit: collectableScoreUnitLabel(experiment) });
 }
 
 function maxMetricLabel(experiment: StoredExperiment) {
-  return experiment.kind === 'collectable'
-    ? t('experimentDatabase.rows.maxScore')
-    : t('simulator.analysis.maxYield');
+  if (experiment.kind !== 'collectable') return t('simulator.analysis.maxYield');
+  if (isCollectableTierCountExperiment(experiment)) return t('collectableSolver.results.maxTierCounts');
+  return t('collectableStrategyLab.analysis.maxScore', { unit: collectableScoreUnitLabel(experiment) });
 }
 
 function minMetricLabel(experiment: StoredExperiment) {
-  return experiment.kind === 'collectable'
-    ? t('experimentDatabase.rows.minScore')
-    : t('simulator.analysis.minYield');
+  if (experiment.kind !== 'collectable') return t('simulator.analysis.minYield');
+  if (isCollectableTierCountExperiment(experiment)) return t('collectableSolver.results.minTierCounts');
+  return t('collectableStrategyLab.analysis.minScore', { unit: collectableScoreUnitLabel(experiment) });
 }
 
 function totalExpectedValue(experiment: StoredExperiment) {
@@ -201,6 +207,69 @@ function minValue(experiment: StoredExperiment) {
   return experiment.kind === 'collectable'
     ? formatNumber(experiment.lastAnalysisSnapshot?.kind === 'collectable' ? experiment.lastAnalysisSnapshot.minScore : undefined)
     : formatNumber(experiment.lastAnalysisSnapshot?.kind === 'regular' ? experiment.lastAnalysisSnapshot.minYield : undefined);
+}
+
+function collectableObjective(experiment: StoredExperiment): CollectableObjective | undefined {
+  return experiment.strategy.kind === 'collectable' ? experiment.strategy.objective : undefined;
+}
+
+function collectableObjectiveLabel(experiment: StoredExperiment) {
+  const objective = collectableObjective(experiment);
+  if (!objective) return t('collectableObjective.title');
+
+  if (objective.kind === 'scrip') {
+    const meta = experiment.strategy.kind === 'collectable'
+      ? getCollectableScripRewardMeta(experiment.strategy.rewardTableSummary?.rewardItemId)
+      : getCollectableScripRewardMeta(undefined);
+    if (meta.kind === 'orange') return t('collectableObjective.presets.orangeScrip');
+    if (meta.kind === 'purple') return t('collectableObjective.presets.purpleScrip');
+    return t('collectableObjective.title');
+  }
+
+  if (objective.presetId) return t(`collectableObjective.presets.${objective.presetId}`);
+  return t('collectableObjective.title');
+}
+
+function collectableScoreUnitLabel(experiment: StoredExperiment) {
+  const objective = collectableObjective(experiment);
+  if (isCustomTierObjective(objective)) return t('collectableStrategyLab.analysis.weightedScoreUnit');
+
+  const meta = experiment.strategy.kind === 'collectable'
+    ? getCollectableScripRewardMeta(experiment.strategy.rewardTableSummary?.rewardItemId)
+    : getCollectableScripRewardMeta(undefined);
+  return t(meta.labelKey);
+}
+
+function isCollectableTierCountExperiment(experiment: StoredExperiment) {
+  return isTierCountObjective(collectableObjective(experiment));
+}
+
+function collectableMetricTierCounts(
+  experiment: StoredExperiment,
+  metric: 'expected' | 'max' | 'min'
+): CollectableTierCounts | undefined {
+  if (experiment.lastAnalysisSnapshot?.kind !== 'collectable') return undefined;
+  if (metric === 'expected') return experiment.lastAnalysisSnapshot.expectedTierCounts;
+  if (metric === 'max') return experiment.lastAnalysisSnapshot.maxScoreTierCounts;
+  return experiment.lastAnalysisSnapshot.minScoreTierCounts;
+}
+
+function tierMetricEntries(counts?: CollectableTierCounts) {
+  if (!counts) return [];
+  return [
+    { key: 'high', label: t('collectableObjective.tiers.high'), value: counts.high },
+    { key: 'mid', label: t('collectableObjective.tiers.mid'), value: counts.mid },
+    { key: 'low', label: t('collectableObjective.tiers.low'), value: counts.low }
+  ];
+}
+
+function visibleTierMetricEntries(counts?: CollectableTierCounts) {
+  const entries = tierMetricEntries(counts).filter((entry) => Math.abs(entry.value) > tierCountVisibilityEpsilon);
+  return entries.length ? entries : [{ key: 'none', label: '', value: 0 }];
+}
+
+function formatTierCountValue(value: number) {
+  return Number(value.toFixed(2)).toString();
 }
 
 function maxChance(experiment: StoredExperiment) {
@@ -345,19 +414,35 @@ function cancelStaleSnapshotDialog() {
             <span>{{ t('tomeLibrary.rows.relicBonus') }}</span>
             <strong>{{ relicBonusLabel(experiment) }}</strong>
           </div>
+          <div v-if="experiment.kind === 'collectable'" class="info-group objective-info">
+            <span>{{ t('experimentDatabase.rows.objectivePreference') }}</span>
+            <strong>{{ collectableObjectiveLabel(experiment) }}</strong>
+          </div>
         </div>
 
         <div v-if="displayMode === 'detailed'" class="rotation-plan-stats">
           <div class="is-primary-metric">
             <span>{{ totalExpectedLabel(experiment) }}</span>
-            <strong>
+            <div v-if="isCollectableTierCountExperiment(experiment)" class="database-tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(collectableMetricTierCounts(experiment, 'expected'))" :key="entry.key" class="database-tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small v-if="entry.label">{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else>
               {{ totalExpectedValue(experiment) }}
               <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
             </strong>
           </div>
           <div>
             <span>{{ maxMetricLabel(experiment) }}</span>
-            <strong>
+            <div v-if="isCollectableTierCountExperiment(experiment)" class="database-tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(collectableMetricTierCounts(experiment, 'max'))" :key="entry.key" class="database-tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small v-if="entry.label">{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else>
               {{ maxValue(experiment) }}
               <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
             </strong>
@@ -365,7 +450,13 @@ function cancelStaleSnapshotDialog() {
           </div>
           <div>
             <span>{{ minMetricLabel(experiment) }}</span>
-            <strong>
+            <div v-if="isCollectableTierCountExperiment(experiment)" class="database-tier-count-list">
+              <div v-for="entry in visibleTierMetricEntries(collectableMetricTierCounts(experiment, 'min'))" :key="entry.key" class="database-tier-count-entry">
+                <strong>{{ formatTierCountValue(entry.value) }}</strong>
+                <small v-if="entry.label">{{ entry.label }}</small>
+              </div>
+            </div>
+            <strong v-else>
               {{ minValue(experiment) }}
               <small v-if="experiment.kind !== 'collectable'" class="rotation-plan-stat-unit">{{ t('game.units.count') }}</small>
             </strong>
@@ -744,22 +835,22 @@ function cancelStaleSnapshotDialog() {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
 }
-.rotation-plan-stats div {
+.rotation-plan-stats > div {
   min-width: 0;
   border-radius: 0.75rem;
   background: white;
   padding: 0.65rem 0.75rem;
   border: 1px solid #e2e8f0;
 }
-:global(html.dark .rotation-plan-stats div) {
+:global(html.dark .rotation-plan-stats > div) {
   background: #1e293b;
   border-color: #334155;
 }
-.rotation-plan-stats div.is-primary-metric {
+.rotation-plan-stats > div.is-primary-metric {
   border-color: rgb(82 168 144 / 0.55);
   background: rgb(240 253 244 / 0.86);
 }
-:global(html.dark .rotation-plan-stats div.is-primary-metric) {
+:global(html.dark .rotation-plan-stats > div.is-primary-metric) {
   background: rgb(20 83 45 / 0.22);
 }
 .rotation-plan-stats span,
@@ -796,6 +887,29 @@ function cancelStaleSnapshotDialog() {
   color: #64748b;
   font-size: 0.66rem;
   font-weight: 800;
+}
+.database-tier-count-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.7rem;
+  margin-top: 0.45rem;
+}
+.database-tier-count-entry {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.22rem;
+}
+.database-tier-count-entry strong {
+  margin: 0;
+  font-size: 1rem;
+}
+.database-tier-count-entry small {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.15;
 }
 .rotation-preview-list {
   display: grid;
@@ -998,6 +1112,9 @@ function cancelStaleSnapshotDialog() {
 @media (max-width: 560px) {
   .summary-info-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rotation-plan-stats {
+    grid-template-columns: 1fr;
   }
 }
 @media (min-width: 768px) {
