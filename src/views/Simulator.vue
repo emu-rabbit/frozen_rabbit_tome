@@ -932,7 +932,7 @@ function progressPercent(range: number[], maxValue: number) {
   display: grid;
   gap: 0.75rem;
   padding: 0.85rem;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -1003,6 +1003,7 @@ function progressPercent(range: number[], maxValue: number) {
 .item-job-badge,
 .item-regular-badge,
 .item-crystal-badge {
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -1012,7 +1013,7 @@ function progressPercent(range: number[], maxValue: number) {
   font-size: 0.72rem;
   font-weight: 900;
   line-height: 1.35;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .item-glv-badge {
@@ -1097,6 +1098,16 @@ function progressPercent(range: number[], maxValue: number) {
   font-weight: 800;
 }
 
+.save-preview-metrics div:first-child {
+  border: 1px solid rgb(82 168 144 / 0.55);
+  background: rgb(240 253 244 / 0.86);
+}
+
+:global(html.dark .save-preview-metrics div:first-child) {
+  border-color: rgb(74 222 128 / 0.42);
+  background: rgb(20 83 45 / 0.22);
+}
+
 :global(html.dark .save-preview-row strong),
 :global(html.dark .save-preview-metrics strong),
 :global(html.dark .save-preview-rotation strong) {
@@ -1111,11 +1122,15 @@ function progressPercent(range: number[], maxValue: number) {
 .save-preview-icons {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 0.3rem;
+  padding-bottom: 0.15rem;
+  scrollbar-width: thin;
 }
 
 .save-preview-action-icon {
@@ -1134,6 +1149,7 @@ function progressPercent(range: number[], maxValue: number) {
 .save-preview-arrow {
   color: #cbd5e1;
   font-size: 0.72rem;
+  flex-shrink: 0;
 }
 
 :global(html.dark .save-preview-arrow) {

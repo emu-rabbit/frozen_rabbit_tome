@@ -1328,10 +1328,14 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 }
 
 .save-preview-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   display: grid;
   gap: 0.85rem;
   padding: 0.95rem;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -1402,6 +1406,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 .item-job-badge,
 .item-regular-badge,
 .item-collectable-badge {
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -1411,7 +1416,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
   font-size: 0.72rem;
   font-weight: 900;
   line-height: 1.35;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .item-glv-badge {
@@ -1433,7 +1438,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 .save-preview-rows,
 .save-preview-metrics {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
   gap: 0.5rem;
 }
 
@@ -1441,6 +1446,8 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 .save-preview-metrics div,
 .save-preview-rotation {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   display: grid;
   gap: 0.25rem;
   padding: 0.65rem 0.75rem;
@@ -1455,8 +1462,7 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 }
 
 .save-preview-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
 }
 
 .save-preview-row span,
@@ -1483,7 +1489,17 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 }
 
 .save-preview-row strong {
-  text-align: right;
+  text-align: left;
+}
+
+.save-preview-metrics div:first-child {
+  border: 1px solid rgb(82 168 144 / 0.55);
+  background: rgb(240 253 244 / 0.86);
+}
+
+:global(html.dark .save-preview-metrics div:first-child) {
+  border-color: rgb(74 222 128 / 0.42);
+  background: rgb(20 83 45 / 0.22);
 }
 
 :global(html.dark .save-preview-row strong),
@@ -1498,10 +1514,17 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 }
 
 .save-preview-icons {
-  display: flex;
-  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 0.35rem;
+  padding-bottom: 0.15rem;
+  scrollbar-width: thin;
 }
 
 .save-preview-action-icon {
@@ -1520,18 +1543,13 @@ function strategyActionLabelLines(key: StrategyActionKey) {
 .save-preview-arrow {
   color: #cbd5e1;
   font-size: 0.78rem;
+  flex-shrink: 0;
 }
 
 :global(html.dark .save-preview-arrow) {
   color: #64748b;
 }
 
-@media (min-width: 640px) {
-  .save-preview-rows,
-  .save-preview-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 .solver-total-summary {
   display: flex;
   flex-direction: column;

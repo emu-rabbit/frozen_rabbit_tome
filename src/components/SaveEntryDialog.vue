@@ -91,7 +91,7 @@ function confirm() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .save-entry-backdrop {
@@ -105,12 +105,13 @@ function confirm() {
 .save-entry-panel {
   position: relative;
   z-index: 1;
-  width: min(100%, 42rem);
-  max-height: min(90vh, 46rem);
+  width: min(100%, 44rem);
+  max-height: min(calc(100dvh - 1.5rem), 46rem);
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 1rem;
-  overflow: auto;
-  padding: 1rem;
+  overflow: hidden;
+  padding: 0.95rem;
   border-radius: 18px;
   border: 1px solid #dbeafe;
   background: white;
@@ -209,11 +210,16 @@ function confirm() {
 
 .save-entry-preview {
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.15rem;
+  overscroll-behavior: contain;
 }
 
 .save-entry-actions {
   display: grid;
   gap: 0.55rem;
+  padding-top: 0.15rem;
 }
 
 .save-entry-confirm {
@@ -250,8 +256,13 @@ function confirm() {
 }
 
 @media (min-width: 560px) {
+  .save-entry-dialog {
+    padding: 1rem;
+  }
+
   .save-entry-panel {
     padding: 1.15rem;
+    max-height: min(90dvh, 46rem);
   }
 
   .save-entry-actions {

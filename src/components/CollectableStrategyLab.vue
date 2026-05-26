@@ -2553,6 +2553,7 @@ function makeId() {
 
 .item-glv-badge,
 .item-collectable-badge {
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -2562,7 +2563,7 @@ function makeId() {
   font-size: 0.72rem;
   font-weight: 900;
   line-height: 1.35;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .item-glv-badge {
@@ -2588,6 +2589,16 @@ function makeId() {
   padding: 0.62rem 0.7rem;
   border-radius: 0.75rem;
   background: #f8fafc;
+}
+
+.collectable-save-preview-metrics div:first-child {
+  border: 1px solid rgb(82 168 144 / 0.55);
+  background: rgb(240 253 244 / 0.86);
+}
+
+:global(html.dark .collectable-save-preview-metrics div:first-child) {
+  border-color: rgb(74 222 128 / 0.42);
+  background: rgb(20 83 45 / 0.22);
 }
 
 .collectable-save-strategy-preview {
@@ -2664,21 +2675,26 @@ function makeId() {
 .collectable-save-rule-list {
   min-width: 0;
   max-height: 8rem;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  padding-right: 0.1rem;
 }
 
 .collectable-save-icons {
   flex: 0 0 auto;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
   gap: 0.3rem;
+  padding-bottom: 0.1rem;
+  scrollbar-width: thin;
 }
 
 .collectable-save-action-icon {
@@ -2697,6 +2713,7 @@ function makeId() {
 .collectable-save-arrow {
   color: #cbd5e1;
   font-size: 0.72rem;
+  flex-shrink: 0;
 }
 
 :global(html.dark .collectable-save-arrow) {
