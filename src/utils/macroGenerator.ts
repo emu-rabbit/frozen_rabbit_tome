@@ -5,6 +5,7 @@ const ACTION_WAIT_SECONDS = 2;
 const MIN_WAIT_SECONDS = 1;
 const MAX_WAIT_SECONDS = 60;
 const DEFAULT_SOUND_EFFECT = 6;
+const MACRO_LINE_SEPARATOR = '\r\n';
 
 const ACTION_NAMES_BY_ID: Record<number, string> = {
   235: '敏銳視野',
@@ -185,9 +186,9 @@ function buildMacroFromSteps(
   const limitedLines = lines.slice(0, MACRO_LINE_LIMIT);
 
   return {
-    text: limitedLines.join('\n'),
+    text: joinMacroLines(limitedLines),
     lines: limitedLines,
-    fullText: lines.join('\n'),
+    fullText: joinMacroLines(lines),
     fullLines: lines,
     parts: chunkMacroLines(lines),
     isComplete: lines.length <= MACRO_LINE_LIMIT,
@@ -202,12 +203,16 @@ function chunkMacroLines(lines: string[]): MacroPart[] {
     const partLines = lines.slice(index, index + MACRO_LINE_LIMIT);
     parts.push({
       index: parts.length + 1,
-      text: partLines.join('\n'),
+      text: joinMacroLines(partLines),
       lines: partLines
     });
   }
 
   return parts;
+}
+
+function joinMacroLines(lines: string[]) {
+  return lines.join(MACRO_LINE_SEPARATOR);
 }
 
 function normalizeSettings(settings: MacroSettings): MacroSettings {

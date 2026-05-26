@@ -21,6 +21,23 @@ describe('macroGenerator', () => {
     expect(result.isComplete).toBe(true);
   });
 
+  it('複製用文字會使用 CRLF 換行，讓遊戲端更穩定辨識多行巨集', () => {
+    const result = buildGatheringMacro([
+      '沃土的饋贈II',
+      '諾菲卡福音',
+      '採集'
+    ], defaultSettings);
+
+    expect(result.lines).toEqual([
+      '/merror off',
+      '/ac "沃土的饋贈II" <wait.2>',
+      '/ac "諾菲卡福音" <wait.2>',
+      '/e 請採集到底 <se.6>'
+    ]);
+    expect(result.text).toBe(result.lines.join('\r\n'));
+    expect(result.parts[0].text).toBe(result.lines.join('\r\n'));
+  });
+
   it('最後一段採集即使含理智觸發也只提醒採集到底，不額外等待', () => {
     const result = buildGatheringMacro([
       '農夫之智',
