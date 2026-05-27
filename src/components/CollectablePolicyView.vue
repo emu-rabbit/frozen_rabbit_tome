@@ -6,6 +6,16 @@ import type { SolverObjectiveMode } from '../types/game';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
+import {
+  buildCollectableGuidedQuestions,
+  collectableGuidedSelectionComplete,
+  confluentCollectableBranch,
+  hasBranchLabel,
+  resolvedCollectableGuidedBranch,
+  selectedCollectableGuidedBranch,
+  type CollectableGuidedQuestionKind,
+  type CollectableGuidedSelections
+} from '../utils/collectablePolicyInteraction';
 
 const props = defineProps<{
   policy: CollectablePolicyNode;
@@ -27,125 +37,17 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const nodeStack = ref<CollectablePolicyNode[]>([props.policy]);
-const selectedStandard = ref<boolean | null>(null);
-const selectedWise = ref<boolean | null>(null);
-const selectedCollectSuccess = ref<boolean | null>(null);
-const selectedRevisit = ref<boolean | null>(null);
-const selectedCollectability = ref<number | null>(null);
-const selectedIntegrity = ref<number | null>(null);
+const guidedSelections = ref<CollectableGuidedSelections>({});
 const tierCountVisibilityEpsilon = 0.000001;
 
 const currentNode = computed(() => nodeStack.value[nodeStack.value.length - 1] ?? props.policy);
 const previewBranches = computed(() => currentNode.value.branches);
-const collectSuccessOptions = computed(() => {
-  const hasSuccess = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.collectSuccess'));
-  const hasFailed = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.collectFailed'));
-  if (!hasSuccess || !hasFailed) return [];
-  return [
-    { value: true, label: t('collectableSolver.policy.collectOptions.success') },
-    { value: false, label: t('collectableSolver.policy.collectOptions.failed') }
-  ];
-});
-const standardOptions = computed(() => {
-  const hasProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.standardProc'));
-  const hasNoProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.standardNoProc'));
-  if (!hasProc || !hasNoProc) return [];
-  return [
-    { value: true, label: t('collectableSolver.policy.standardOptions.proc') },
-    { value: false, label: t('collectableSolver.policy.standardOptions.noProc') }
-  ];
-});
-const wiseOptions = computed(() => {
-  const hasProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.wiseProc'));
-  const hasNoProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.wiseNoProc'));
-  if (!hasProc || !hasNoProc) return [];
-  return [
-    { value: true, label: t('collectableSolver.policy.wiseOptions.proc') },
-    { value: false, label: t('collectableSolver.policy.wiseOptions.noProc') }
-  ];
-});
-const revisitOptions = computed(() => {
-  const hasProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.revisitProc'));
-  const hasNoProc = previewBranches.value.some((branch) => hasBranchLabel(branch, 'collectableSolver.branches.revisitNoProc'));
-  if (!hasProc || !hasNoProc) return [];
-  return [
-    { value: true, label: t('collectableSolver.policy.revisitOptions.proc') },
-    { value: false, label: t('collectableSolver.policy.revisitOptions.noProc') }
-  ];
-});
-const collectabilityOptions = computed(() => {
-  const hasValueOutcome = previewBranches.value.some((branch) => (
-    hasBranchLabel(branch, 'collectableSolver.branches.valueNormal')
-    || hasBranchLabel(branch, 'collectableSolver.branches.valueIncreased')
-  ));
-  if (!hasValueOutcome) return [];
-  return uniqueNumbers(previewBranches.value.map((branch) => branch.outcome.collectability));
-});
-const integrityOptions = computed(() => {
-  const hasMeticulousOutcome = previewBranches.value.some((branch) => (
-    hasBranchLabel(branch, 'collectableSolver.branches.meticulousSaved')
-    || hasBranchLabel(branch, 'collectableSolver.branches.meticulousConsumed')
-  ));
-  if (!hasMeticulousOutcome) return [];
-  return uniqueNumbers(previewBranches.value.map((branch) => branch.outcome.integrity));
-});
-const usesGuidedQuestions = computed(() => (
-  collectSuccessOptions.value.length > 0
-  || standardOptions.value.length > 0
-  || wiseOptions.value.length > 0
-  || revisitOptions.value.length > 0
-  || collectabilityOptions.value.length > 1
-  || integrityOptions.value.length > 1
-));
-const isGuidedSelectionComplete = computed(() => {
-  if (collectSuccessOptions.value.length > 0 && selectedCollectSuccess.value === null) return false;
-  if (standardOptions.value.length > 0 && selectedStandard.value === null) return false;
-  if (wiseOptions.value.length > 0 && selectedWise.value === null) return false;
-  if (revisitOptions.value.length > 0 && selectedRevisit.value === null) return false;
-  if (collectabilityOptions.value.length > 1 && selectedCollectability.value === null) return false;
-  if (integrityOptions.value.length > 1 && selectedIntegrity.value === null) return false;
-  return true;
-});
-const matchedGuidedBranches = computed(() => {
-  if (!usesGuidedQuestions.value || !isGuidedSelectionComplete.value) return [];
-  return previewBranches.value.filter((branch) => {
-    if (collectSuccessOptions.value.length > 0) {
-      const isCollectSuccess = hasBranchLabel(branch, 'collectableSolver.branches.collectSuccess');
-      if (selectedCollectSuccess.value !== isCollectSuccess) return false;
-    }
-    if (standardOptions.value.length > 0) {
-      const isStandardProc = hasBranchLabel(branch, 'collectableSolver.branches.standardProc');
-      if (selectedStandard.value !== isStandardProc) return false;
-    }
-    if (wiseOptions.value.length > 0) {
-      const isWiseProc = hasBranchLabel(branch, 'collectableSolver.branches.wiseProc');
-      if (selectedWise.value !== isWiseProc) return false;
-    }
-    if (revisitOptions.value.length > 0) {
-      const isRevisitProc = hasBranchLabel(branch, 'collectableSolver.branches.revisitProc');
-      if (selectedRevisit.value !== isRevisitProc) return false;
-    }
-    if (collectabilityOptions.value.length > 1 && selectedCollectability.value !== branch.outcome.collectability) {
-      return false;
-    }
-    if (integrityOptions.value.length > 1 && selectedIntegrity.value !== branch.outcome.integrity) {
-      return false;
-    }
-    return true;
-  });
-});
-const selectedGuidedBranch = computed(() => {
-  if (matchedGuidedBranches.value.length === 1) return matchedGuidedBranches.value[0];
-  if (matchedGuidedBranches.value.length <= 1) return undefined;
-  const routeKeys = new Set(matchedGuidedBranches.value.map((branch) => branchRouteKey(branch)));
-  return routeKeys.size === 1 ? matchedGuidedBranches.value[0] : undefined;
-});
-const confluentBranch = computed(() => {
-  if (usesGuidedQuestions.value || previewBranches.value.length === 0) return undefined;
-  const routeKeys = new Set(previewBranches.value.map((branch) => branchRouteKey(branch)));
-  return routeKeys.size === 1 ? previewBranches.value[0] : undefined;
-});
-const resolvedGuidedBranch = computed(() => selectedGuidedBranch.value ?? confluentBranch.value);
+const guidedQuestions = computed(() => buildCollectableGuidedQuestions(previewBranches.value, guidedQuestionLabels()));
+const usesGuidedQuestions = computed(() => guidedQuestions.value.length > 0);
+const isGuidedSelectionComplete = computed(() => collectableGuidedSelectionComplete(guidedQuestions.value, guidedSelections.value));
+const selectedGuidedBranch = computed(() => selectedCollectableGuidedBranch(previewBranches.value, guidedQuestions.value, guidedSelections.value));
+const confluentBranch = computed(() => confluentCollectableBranch(previewBranches.value, guidedQuestions.value));
+const resolvedGuidedBranch = computed(() => resolvedCollectableGuidedBranch(previewBranches.value, guidedQuestions.value, guidedSelections.value));
 const showsGuidedPanel = computed(() => usesGuidedQuestions.value || !!confluentBranch.value);
 const isConfluentOutcome = computed(() => !!confluentBranch.value && previewBranches.value.length > 1);
 const scripRewardMeta = computed(() => getCollectableScripRewardMeta(props.rewardItemId));
@@ -319,25 +221,47 @@ function tierCountUnit(tierLabel: string) {
   return t('collectableSolver.results.tierCountUnit', { tier: tierLabel });
 }
 
-function uniqueNumbers(values: number[]) {
-  return [...new Set(values)].sort((left, right) => left - right);
-}
-
-function hasBranchLabel(branch: CollectablePolicyBranch, labelKey: string) {
-  return (branch.labelKeys ?? [branch.labelKey]).includes(labelKey);
-}
-
-function branchRouteKey(branch: CollectablePolicyBranch) {
-  return [
-    branch.outcome.gp,
-    branch.outcome.integrity,
-    branch.outcome.collectability,
-    branch.next?.id ?? 'terminal'
-  ].join('|');
-}
-
 function branchLabels(branch: CollectablePolicyBranch) {
   return (branch.labelKeys?.length ? branch.labelKeys : [branch.labelKey]).map((key) => t(key)).join(' / ');
+}
+
+function guidedQuestionLabels() {
+  return {
+    collectQuestion: t('collectableSolver.policy.collectQuestion'),
+    standardQuestion: t('collectableSolver.policy.standardQuestion'),
+    wiseQuestion: t('collectableSolver.policy.wiseQuestion'),
+    revisitQuestion: t('collectableSolver.policy.revisitQuestion'),
+    collectabilityQuestion: t('collectableSolver.policy.collectabilityQuestion'),
+    integrityQuestion: t('collectableSolver.policy.integrityQuestion'),
+    integrityOption: (integrity: number) => t('collectableSolver.policy.integrityOption', { integrity }),
+    collectOptions: {
+      success: t('collectableSolver.policy.collectOptions.success'),
+      failed: t('collectableSolver.policy.collectOptions.failed')
+    },
+    standardOptions: {
+      proc: t('collectableSolver.policy.standardOptions.proc'),
+      noProc: t('collectableSolver.policy.standardOptions.noProc')
+    },
+    wiseOptions: {
+      proc: t('collectableSolver.policy.wiseOptions.proc'),
+      noProc: t('collectableSolver.policy.wiseOptions.noProc')
+    },
+    revisitOptions: {
+      proc: t('collectableSolver.policy.revisitOptions.proc'),
+      noProc: t('collectableSolver.policy.revisitOptions.noProc')
+    }
+  };
+}
+
+function setGuidedSelection(kind: CollectableGuidedQuestionKind, value: boolean | number) {
+  guidedSelections.value = {
+    ...guidedSelections.value,
+    [kind]: value
+  };
+}
+
+function isGuidedSelectionSelected(kind: CollectableGuidedQuestionKind, value: boolean | number) {
+  return guidedSelections.value[kind] === value;
 }
 
 function openBranch(branch: CollectablePolicyBranch) {
@@ -358,12 +282,7 @@ function resetTree() {
 }
 
 function resetGuidedSelection() {
-  selectedStandard.value = null;
-  selectedWise.value = null;
-  selectedCollectSuccess.value = null;
-  selectedRevisit.value = null;
-  selectedCollectability.value = null;
-  selectedIntegrity.value = null;
+  guidedSelections.value = {};
 }
 
 function continueGuidedBranch() {
@@ -469,98 +388,18 @@ function continueGuidedBranch() {
       <div v-if="showsGuidedPanel" class="guided-panel">
         <p class="guided-hint">{{ confluentBranch ? t(isConfluentOutcome ? 'collectableSolver.policy.confluentHint' : 'collectableSolver.policy.deterministicHint') : t('collectableSolver.policy.confirmHint') }}</p>
 
-        <fieldset v-if="collectSuccessOptions.length" class="guided-question">
-          <legend>{{ t('collectableSolver.policy.collectQuestion') }}</legend>
-          <div class="option-grid two-options">
+        <fieldset v-for="question in guidedQuestions" :key="question.kind" class="guided-question">
+          <legend>{{ question.question }}</legend>
+          <div class="option-grid" :class="{ 'two-options': question.options.length === 2 }">
             <button
-              v-for="option in collectSuccessOptions"
-              :key="String(option.value)"
+              v-for="option in question.options"
+              :key="`${question.kind}-${String(option.value)}`"
               type="button"
               class="choice-button"
-              :class="{ 'is-selected': selectedCollectSuccess === option.value }"
-              @click="selectedCollectSuccess = option.value"
+              :class="{ 'is-selected': isGuidedSelectionSelected(question.kind, option.value), 'numeric-choice': question.numeric }"
+              @click="setGuidedSelection(question.kind, option.value)"
             >
               {{ option.label }}
-            </button>
-          </div>
-        </fieldset>
-
-        <fieldset v-if="standardOptions.length" class="guided-question">
-          <legend>{{ t('collectableSolver.policy.standardQuestion') }}</legend>
-          <div class="option-grid two-options">
-            <button
-              v-for="option in standardOptions"
-              :key="String(option.value)"
-              type="button"
-              class="choice-button"
-              :class="{ 'is-selected': selectedStandard === option.value }"
-              @click="selectedStandard = option.value"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-        </fieldset>
-
-        <fieldset v-if="wiseOptions.length" class="guided-question">
-          <legend>{{ t('collectableSolver.policy.wiseQuestion') }}</legend>
-          <div class="option-grid two-options">
-            <button
-              v-for="option in wiseOptions"
-              :key="String(option.value)"
-              type="button"
-              class="choice-button"
-              :class="{ 'is-selected': selectedWise === option.value }"
-              @click="selectedWise = option.value"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-        </fieldset>
-
-        <fieldset v-if="revisitOptions.length" class="guided-question">
-          <legend>{{ t('collectableSolver.policy.revisitQuestion') }}</legend>
-          <div class="option-grid two-options">
-            <button
-              v-for="option in revisitOptions"
-              :key="String(option.value)"
-              type="button"
-              class="choice-button"
-              :class="{ 'is-selected': selectedRevisit === option.value }"
-              @click="selectedRevisit = option.value"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-        </fieldset>
-
-        <fieldset v-if="collectabilityOptions.length > 1" class="guided-question">
-          <legend>{{ t('collectableSolver.policy.collectabilityQuestion') }}</legend>
-          <div class="option-grid">
-            <button
-              v-for="value in collectabilityOptions"
-              :key="value"
-              type="button"
-              class="choice-button numeric-choice"
-              :class="{ 'is-selected': selectedCollectability === value }"
-              @click="selectedCollectability = value"
-            >
-              {{ value }}
-            </button>
-          </div>
-        </fieldset>
-
-        <fieldset v-if="integrityOptions.length > 1" class="guided-question">
-          <legend>{{ t('collectableSolver.policy.integrityQuestion') }}</legend>
-          <div class="option-grid">
-            <button
-              v-for="value in integrityOptions"
-              :key="value"
-              type="button"
-              class="choice-button numeric-choice"
-              :class="{ 'is-selected': selectedIntegrity === value }"
-              @click="selectedIntegrity = value"
-            >
-              {{ t('collectableSolver.policy.integrityOption', { integrity: value }) }}
             </button>
           </div>
         </fieldset>
@@ -992,6 +831,10 @@ function continueGuidedBranch() {
   color: #334155;
   font-size: 0.9rem;
   font-weight: 900;
+}
+
+.guided-question legend {
+  margin-bottom: 0.42rem;
 }
 
 :global(html.dark .guided-question legend),

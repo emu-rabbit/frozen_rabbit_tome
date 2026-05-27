@@ -745,10 +745,41 @@ export default {
       }
     },
     export: {
+      fileScenario: 'Collectable Interactive Decision Tree',
       title: '{item} Collectable Decision Tree',
       exportedAt: 'Exported At',
+      inputTitle: 'Solver Inputs and Conditions',
+      modelVersionsTitle: 'Model Versions',
       itemId: 'Item ID',
       job: 'Job',
+      actions: {
+        exportHtml: 'Export Result',
+        exportingHtml: 'Exporting',
+        exportedHtml: 'Exported'
+      },
+      sections: {
+        item: 'Item',
+        player: 'Player Stats',
+        food: 'Food',
+        node: 'Node Conditions',
+        solver: 'Solver Settings'
+      },
+      fields: {
+        item: 'Item',
+        timedNode: 'Timed Node',
+        baseStats: 'Base Stats',
+        effectiveStats: 'Food-adjusted Stats',
+        foodBonus: 'Food Bonus',
+        solverVersion: 'Solver Version',
+        itemLevel: 'Item Level',
+        baseGathering: 'Base Gathering',
+        basePerception: 'Base Perception',
+        maxIntegrity: 'Effective Integrity',
+        rewardSource: 'Reward Source',
+        rewardItem: 'Reward Item',
+        rewardTiers: 'Reward Tiers',
+        manualMemoCapacityPower: 'Manual Memory Capacity'
+      },
       rootNode: 'Root Node',
       nodeCount: 'Node Count',
       howToReadTitle: 'How To Read',

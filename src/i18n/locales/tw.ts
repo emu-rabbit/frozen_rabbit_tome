@@ -746,10 +746,41 @@ export default {
       }
     },
     export: {
+      fileScenario: '收藏品互動決策樹',
       title: '{item} 收藏品決策樹',
       exportedAt: '匯出時間',
+      inputTitle: '求解輸入與條件',
+      modelVersionsTitle: '模型版本',
       itemId: '物品 ID',
       job: '職業',
+      actions: {
+        exportHtml: '匯出結果',
+        exportingHtml: '正在匯出',
+        exportedHtml: '已匯出'
+      },
+      sections: {
+        item: '物品',
+        player: '玩家數值',
+        food: '食物',
+        node: '採集點條件',
+        solver: '求解設定'
+      },
+      fields: {
+        item: '物品',
+        timedNode: '限時點',
+        baseStats: '裝備原始數值',
+        effectiveStats: '食物後數值',
+        foodBonus: '食物加成',
+        solverVersion: '求解器版本',
+        itemLevel: '物品等級',
+        baseGathering: '獲得力基準',
+        basePerception: '鑑別力基準',
+        maxIntegrity: '實際耐久',
+        rewardSource: '獎勵來源',
+        rewardItem: '獎勵物品',
+        rewardTiers: '獎勵門檻',
+        manualMemoCapacityPower: '手動記憶體容量'
+      },
       rootNode: '起始節點',
       nodeCount: '節點數',
       howToReadTitle: '閱讀方式',

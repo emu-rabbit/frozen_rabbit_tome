@@ -723,10 +723,41 @@ export default {
       workerFailed: { title: '收藏品求解器暂时无法启动', desc: '请刷新页面后再试一次。' }
     },
     export: {
+      fileScenario: '收藏品互动决策树',
       title: '{item} 收藏品决策树',
       exportedAt: '导出时间',
+      inputTitle: '求解输入与条件',
+      modelVersionsTitle: '模型版本',
       itemId: '物品 ID',
       job: '职业',
+      actions: {
+        exportHtml: '导出结果',
+        exportingHtml: '正在导出',
+        exportedHtml: '已导出'
+      },
+      sections: {
+        item: '物品',
+        player: '玩家数值',
+        food: '食物',
+        node: '采集点条件',
+        solver: '求解设置'
+      },
+      fields: {
+        item: '物品',
+        timedNode: '限时点',
+        baseStats: '装备原始数值',
+        effectiveStats: '食物后数值',
+        foodBonus: '食物加成',
+        solverVersion: '求解器版本',
+        itemLevel: '物品等级',
+        baseGathering: '获得力基准',
+        basePerception: '鉴别力基准',
+        maxIntegrity: '实际耐久',
+        rewardSource: '奖励来源',
+        rewardItem: '奖励物品',
+        rewardTiers: '奖励门槛',
+        manualMemoCapacityPower: '手动内存容量'
+      },
       rootNode: '起始节点',
       nodeCount: '节点数',
       howToReadTitle: '阅读方式',

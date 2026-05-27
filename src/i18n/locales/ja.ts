@@ -723,10 +723,41 @@ export default {
       workerFailed: { title: '収集品ソルバーを起動できません', desc: 'ページを再読み込みしてもう一度お試しください。' }
     },
     export: {
+      fileScenario: '収集品インタラクティブ決定木',
       title: '{item} 収集品決定木',
       exportedAt: '書き出し日時',
+      inputTitle: '計算入力と条件',
+      modelVersionsTitle: 'モデルバージョン',
       itemId: 'アイテム ID',
       job: 'ジョブ',
+      actions: {
+        exportHtml: '結果を書き出し',
+        exportingHtml: '書き出し中',
+        exportedHtml: '書き出し済み'
+      },
+      sections: {
+        item: 'アイテム',
+        player: 'プレイヤー値',
+        food: '食事',
+        node: '採集地点条件',
+        solver: '計算設定'
+      },
+      fields: {
+        item: 'アイテム',
+        timedNode: '時間限定',
+        baseStats: '装備基礎値',
+        effectiveStats: '食事込み値',
+        foodBonus: '食事ボーナス',
+        solverVersion: '計算モデルバージョン',
+        itemLevel: 'アイテムレベル',
+        baseGathering: '獲得力基準',
+        basePerception: '識質力基準',
+        maxIntegrity: '実効耐久',
+        rewardSource: '報酬ソース',
+        rewardItem: '報酬アイテム',
+        rewardTiers: '報酬しきい値',
+        manualMemoCapacityPower: '手動メモリ容量'
+      },
       rootNode: '起点ノード',
       nodeCount: 'ノード数',
       howToReadTitle: '読み方',
