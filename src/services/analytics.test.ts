@@ -57,4 +57,69 @@ describe('analytics consent mode', () => {
     expect(calls.some(([command, eventName]) => command === 'event' && eventName === 'page_view')).toBe(true);
     expect(calls.some(([command, eventName]) => command === 'event' && eventName === 'analytics_ready')).toBe(true);
   });
+
+  it('sends app language and theme mode as user properties and event params after opt-in', async () => {
+    const {
+      initializeAnalytics,
+      setAnalyticsConsent,
+      setAnalyticsLanguage,
+      setAnalyticsThemeMode,
+      trackRouteChange,
+    } = await import('./analytics');
+
+    setAnalyticsLanguage('ja');
+    setAnalyticsThemeMode(true);
+    initializeAnalytics();
+    setAnalyticsConsent('granted');
+    trackRouteChange('settings');
+
+    const calls = getGtagCalls();
+    expect(calls).toContainEqual([
+      'set',
+      'user_properties',
+      expect.objectContaining({
+        app_language: 'ja',
+        app_theme_mode: 'dark',
+      }),
+    ]);
+    expect(calls).toContainEqual([
+      'event',
+      'route_change',
+      expect.objectContaining({
+        app_language: 'ja',
+        app_theme_mode: 'dark',
+        route_name: 'settings',
+      }),
+    ]);
+  });
+
+  it('emits language and theme context update events when preferences change after opt-in', async () => {
+    const {
+      initializeAnalytics,
+      setAnalyticsConsent,
+      setAnalyticsLanguage,
+      setAnalyticsThemeMode,
+    } = await import('./analytics');
+
+    initializeAnalytics();
+    setAnalyticsConsent('granted');
+    setAnalyticsLanguage('en');
+    setAnalyticsThemeMode(false);
+
+    const calls = getGtagCalls();
+    expect(calls).toContainEqual([
+      'event',
+      'language_context_updated',
+      expect.objectContaining({
+        app_language: 'en',
+      }),
+    ]);
+    expect(calls).toContainEqual([
+      'event',
+      'theme_context_updated',
+      expect.objectContaining({
+        app_theme_mode: 'light',
+      }),
+    ]);
+  });
 });

@@ -8,7 +8,7 @@ import SponsorModal from './components/SponsorModal.vue';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner.vue';
 import { useSettings } from './composables/useSettings';
 import { loadGameData } from './services/gameData';
-import { initializeAnalytics, setAnalyticsLanguage, trackRouteChange } from './services/analytics';
+import { initializeAnalytics, setAnalyticsLanguage, setAnalyticsThemeMode, trackRouteChange } from './services/analytics';
 
 const { locale, t } = useI18n();
 const route = useRoute();
@@ -38,6 +38,7 @@ watch(isDarkMode, (newVal) => {
   } else {
     document.documentElement.classList.remove('dark');
   }
+  setAnalyticsThemeMode(newVal);
 }, { immediate: true });
 
 // 更新網頁標題
