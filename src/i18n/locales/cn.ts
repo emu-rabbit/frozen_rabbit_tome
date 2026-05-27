@@ -163,7 +163,7 @@ export default {
     title: '请选择待采集物品',
     description: '在这里搜索并选择物品，以进入求解台计算推荐采集手法。',
     dataScope: '仅显示「采矿工」与「园艺工」可采集的物品，水晶类物品也暂时不支持',
-    searchPlaceholder: '输入物品名称，倘若搜索不到可以尝试使用英文',
+    searchPlaceholder: '请输入简体中文名称，若搜索不到可以试试英文名称',
     loading: '数据加载中，请稍候…',
     noResults: '未找到相符的物品，请尝试使用英文搜索',
     typeToSearch: '请输入物品名称开始搜索',

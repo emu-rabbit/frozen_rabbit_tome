@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'CreateExperiment' });
 
-import { ref, watch, onActivated } from 'vue';
+import { ref, watch, onActivated, onMounted } from 'vue';
 import { watchDebounced } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import InputText from 'primevue/inputtext';
@@ -40,25 +40,27 @@ const isSearching = ref(false);
 const apiError = ref(false);
 /** 記錄上次執行搜尋時的語言，用於 onActivated 比對是否需要重搜 */
 let lastSearchedLang = '';
+let searchRequestId = 0;
 
 async function doSearch(query: string) {
-  if (!query.trim()) {
-    searchResults.value = [];
-    apiError.value = false;
-    return;
-  }
+  const requestId = ++searchRequestId;
   isSearching.value = true;
   hasSearched.value = true;
   apiError.value = false;
   lastSearchedLang = currentLanguage.value;
   try {
-    searchResults.value = await searchGatherables(query);
+    const results = await searchGatherables(query);
+    if (requestId !== searchRequestId) return;
+    searchResults.value = results;
   } catch (err) {
+    if (requestId !== searchRequestId) return;
     console.error('[CreateGuide] Search failed:', err);
     apiError.value = true;
     searchResults.value = [];
   } finally {
-    isSearching.value = false;
+    if (requestId === searchRequestId) {
+      isSearching.value = false;
+    }
   }
 }
 
@@ -69,24 +71,22 @@ watchDebounced(
   { debounce: 450 }
 );
 
+onMounted(() => {
+  doSearch(searchQuery.value);
+});
+
+watch(isGameDataLoading, (loading) => {
+  if (!loading) {
+    doSearch(searchQuery.value);
+  }
+});
+
 // === 語言切換：自動重新搜尋以更新顯示名稱 ===
 // 監聽 gameData service 的 currentLanguage ref：
 // 語言切換且字典載入完成後，立即重算搜尋結果（更新顯示名稱）
 watch(currentLanguage, async (newLang) => {
-  if (searchQuery.value.trim()) {
-    lastSearchedLang = newLang;
-    isSearching.value = true;
-    apiError.value = false;
-    try {
-      searchResults.value = await searchGatherables(searchQuery.value);
-    } catch (err) {
-      console.error('[CreateGuide] Search failed on language change:', err);
-      apiError.value = true;
-      searchResults.value = [];
-    } finally {
-      isSearching.value = false;
-    }
-  }
+  lastSearchedLang = newLang;
+  await doSearch(searchQuery.value);
 });
 
 // === KeepAlive 回來時的語言檢查 ===
@@ -94,22 +94,10 @@ watch(currentLanguage, async (newLang) => {
 // 這是雙重保障：watch(currentLanguage) 在同頁面有效，onActivated 覆蓋跨頁面情境
 onActivated(async () => {
   if (
-    searchQuery.value.trim() &&
     currentLanguage.value &&
     currentLanguage.value !== lastSearchedLang
   ) {
-    lastSearchedLang = currentLanguage.value;
-    isSearching.value = true;
-    apiError.value = false;
-    try {
-      searchResults.value = await searchGatherables(searchQuery.value);
-    } catch (err) {
-      console.error('[CreateGuide] Search failed on activated:', err);
-      apiError.value = true;
-      searchResults.value = [];
-    } finally {
-      isSearching.value = false;
-    }
+    await doSearch(searchQuery.value);
   }
 });
 
@@ -118,8 +106,8 @@ function clearSearch() {
   hasSearched.value = false;
   isSearching.value = false;
   apiError.value = false;
-  searchResults.value = [];
   lastSearchedLang = '';
+  doSearch('');
 }
 
 function handleSearchPaste(event: ClipboardEvent) {
@@ -139,7 +127,7 @@ function handleSearchPaste(event: ClipboardEvent) {
 function getUiState() {
   if (apiError.value) return 'error';
   if (isGameDataLoading.value || isSearching.value) return 'loading';
-  if (!hasSearched.value || !searchQuery.value.trim()) return 'idle';
+  if (!hasSearched.value) return 'idle';
   if (searchResults.value.length === 0) return 'empty';
   return 'results';
 }

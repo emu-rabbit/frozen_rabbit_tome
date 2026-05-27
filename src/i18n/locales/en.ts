@@ -163,7 +163,7 @@ export default {
     title: 'Select Item to Gather',
     description: 'Search and select an item here to enter the solver and calculate the recommended gathering rotation.',
     dataScope: 'Only Miner & Botanist items are shown; crystal items are not supported yet.',
-    searchPlaceholder: 'Search by name, or try English if not found',
+    searchPlaceholder: 'Enter the English item name',
     loading: 'Loading data, please wait…',
     noResults: 'No items found. Try searching in English.',
     typeToSearch: 'Type an item name to search',

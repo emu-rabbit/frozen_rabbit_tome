@@ -25,6 +25,7 @@ const XIVAPI_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-dataminin
 const XIVAPI_V2_ITEM_SHEET_URL = 'https://v2.xivapi.com/api/sheet/Item';
 const GATHERING_POINT_BASE_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPointBase.csv';
 const GATHERING_POINT_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPoint.csv';
+const GATHERABLE_SEARCH_RESULT_LIMIT = 50;
 const ACTION_DICT_URLS: Record<string, string> = {
   tw: `${BASE_URL}/tw/tw-actions.json`,
   zh: `${BASE_URL}/zh/zh-actions.json`,
@@ -410,7 +411,8 @@ export async function loadGameData(lang: string): Promise<void> {
 
 export async function searchGatherables(query: string): Promise<GatherableItem[]> {
   const q = normalizeGatherableSearchQuery(query);
-  if (!q || itemInfoMap.size === 0) return [];
+  if (itemInfoMap.size === 0) return [];
+
   const results: GatherableItem[] = [];
   for (const [itemId, info] of itemInfoMap) {
     if (shouldHideCrystalGatheringItem({ itemId })) continue;
@@ -420,12 +422,13 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
     const nameLocale = localeRaw || enRaw;
     const nameEn = enRaw || localeRaw;
     if (!nameLocale && !nameEn) continue;
-    if (nameLocale.toLowerCase().includes(q) || nameEn.toLowerCase().includes(q)) {
+
+    if (!q || nameLocale.toLowerCase().includes(q) || nameEn.toLowerCase().includes(q)) {
       results.push(toGatherableItem(itemId, info));
     }
   }
   results.sort((a, b) => b.glv - a.glv || a.itemId - b.itemId);
-  const visibleResults = results.slice(0, 50);
+  const visibleResults = results.slice(0, GATHERABLE_SEARCH_RESULT_LIMIT);
   if (visibleResults.length > 0) {
     try {
       const collectableMap = await fetchCollectableFlags(visibleResults.map(r => r.itemId));

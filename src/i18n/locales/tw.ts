@@ -164,7 +164,7 @@ export default {
     title: '請選擇待採集物品',
     description: '在這裡搜尋並選擇物品，以進入求解台計算推薦採集手法。',
     dataScope: '僅顯示「採掘師」與「園藝師」可採集的物品，水晶類物品也暫時不支援',
-    searchPlaceholder: '輸入物品名稱，倘若搜尋不到可以嘗試使用英文',
+    searchPlaceholder: '請輸入繁體中文名稱，若搜尋不到可以試試英文名稱',
     loading: '資料載入中，請稍候…',
     noResults: '未找到相符的物品，請嘗試使用英文搜尋',
     typeToSearch: '請輸入物品名稱開始搜尋',
