@@ -234,7 +234,7 @@ export default {
     copyPrimaryRotation: 'Copy Primary Rotation',
     primaryGathering: 'Primary Gathering',
     revisitGathering: 'After Revisit',
-    emptyPrimaryRotation: 'Click skills below to build a rotation.',
+    emptyPrimaryRotation: 'With no skills selected, analysis treats this as taking no actions. You can also click skills below to build a rotation.',
     emptyRevisitRotation: 'After durability reaches zero, build the second rotation for Revisit.',
     removeFromHere: 'Remove this skill and everything after it',
     rotationIssueTitle: 'This rotation has a skill that cannot be used',

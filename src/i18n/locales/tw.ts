@@ -235,7 +235,7 @@ export default {
     copyPrimaryRotation: '複製一般手法',
     primaryGathering: '一般採集',
     revisitGathering: '再起後採集',
-    emptyPrimaryRotation: '點下方技能開始建立手法。',
+    emptyPrimaryRotation: '未加入技能時會以「不施放技能」分析；也可以點下方技能建立手法。',
     emptyRevisitRotation: '耐久歸零後可建立再起發動時的第二段手法。',
     removeFromHere: '移除此技能與後方技能',
     rotationIssueTitle: '手法串目前有無法施展的技能',

@@ -234,7 +234,7 @@ export default {
     copyPrimaryRotation: '通常手順をコピー',
     primaryGathering: '通常採集',
     revisitGathering: '再発見後の採集',
-    emptyPrimaryRotation: '下のスキルを押して手順を作成します。',
+    emptyPrimaryRotation: 'スキル未選択時は「何もしない」手順として分析します。下のスキルから手順を作成することもできます。',
     emptyRevisitRotation: '耐久が 0 になった後、再発見発動時の 2 つ目の手順を作成できます。',
     removeFromHere: 'このスキル以降を削除',
     rotationIssueTitle: 'この手順には使用できないスキルがあります',

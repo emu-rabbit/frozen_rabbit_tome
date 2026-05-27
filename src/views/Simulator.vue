@@ -92,7 +92,7 @@ const actionGroups = computed(() => actionCategoryOrder
     actions: actionOptions.value.filter((action) => action.category === category)
   }))
   .filter((group) => group.actions.length > 0));
-const canSimulate = computed(() => !!activeItem.value && !!baseValues.value && isPerceptionMet.value && primaryRotation.value.length > 0);
+const canSimulate = computed(() => !!activeItem.value && !!baseValues.value && isPerceptionMet.value);
 const selectedFoodModel = computed<FoodOption | null>({
   get: () => selectedFoodItem.value ? buildFoodOption(selectedFoodItem.value, selectedFood.value.quality, t) : null,
   set: (option) => {

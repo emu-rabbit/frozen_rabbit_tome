@@ -28,6 +28,17 @@ const baseRequest: SimulationRequest = {
 };
 
 describe('rotationSimulator', () => {
+  it('treats an empty user rotation as taking no actions', () => {
+    const result = simulateGatheringRotation(baseRequest);
+
+    expect(validateSimulatorRotation(baseRequest, baseRequest.primaryRotation).isValid).toBe(true);
+    expect(result.primary.finalIntegrityRange).toEqual([4, 4]);
+    expect(result.primary.finalGpRange).toEqual([930, 930]);
+    expect(result.primary.expectedYield).toBe(0);
+    expect(result.primary.outcomeDistribution).toEqual([{ yield: 0, probability: 100 }]);
+    expect(result.total.outcomeDistribution).toEqual([{ yield: 0, probability: 100 }]);
+  });
+
   it('simulates a user rotation without requiring integrity to reach zero', () => {
     const result = simulateGatheringRotation({
       ...baseRequest,
