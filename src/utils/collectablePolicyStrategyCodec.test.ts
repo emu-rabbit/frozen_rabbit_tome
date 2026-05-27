@@ -12,10 +12,10 @@ import type { CollectableSolverRequest } from '../types/collectable';
 function createRequest(overrides: Partial<CollectableSolverRequest> = {}): CollectableSolverRequest {
   return {
     stats: {
-      level: 100,
+      level: 50,
       gathering: 5345,
       perception: 5173,
-      gp: 930
+      gp: 300
     },
     baseValues: {
       Gathering: 5085,
@@ -23,12 +23,12 @@ function createRequest(overrides: Partial<CollectableSolverRequest> = {}): Colle
     },
     itemLevel: 100,
     nodeBonuses: {
-      baseIntegrity: 4,
+      baseIntegrity: 2,
       gatheringCount: 0,
       yieldCount: 0,
       extraRate: 0
     },
-    temporaryGp: 720,
+    temporaryGp: 300,
     jobType: 'miner',
     isTimedNode: false,
     rewardTable: {
@@ -48,6 +48,13 @@ function createRequest(overrides: Partial<CollectableSolverRequest> = {}): Colle
 }
 
 describe('collectablePolicyStrategyCodec', () => {
+  const revisitStats = {
+    level: 100,
+    gathering: 5345,
+    perception: 5173,
+    gp: 300
+  };
+
   it('round-trips a primary policy plan without changing the decision tree', () => {
     const request = createRequest();
     const result = solveCollectableRotation(request);
@@ -74,7 +81,7 @@ describe('collectablePolicyStrategyCodec', () => {
   });
 
   it('keeps revisit policies as separate codec plans', () => {
-    const request = createRequest({ temporaryGp: 200 });
+    const request = createRequest({ stats: revisitStats, temporaryGp: 200 });
     const result = solveCollectableRotation(request);
     const strategies = result.policyPlans.map((plan) => compressCollectablePolicyToExactStrategy(plan.policy, {
       kind: plan.kind,
@@ -112,7 +119,7 @@ describe('collectablePolicyStrategyCodec', () => {
   });
 
   it('rejects the combined policy when it contains a synthetic revisit gate', () => {
-    const request = createRequest({ temporaryGp: 200 });
+    const request = createRequest({ stats: revisitStats, temporaryGp: 200 });
     const result = solveCollectableRotation(request);
 
     expect(() => compressCollectablePolicyToExactStrategy(result.policy, {
