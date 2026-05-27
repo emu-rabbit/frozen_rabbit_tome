@@ -5,6 +5,7 @@ import type {
   CollectableStateSummary
 } from '../types/collectable';
 import type { GatherableItem } from '../types/game';
+import type { CollectableStrategyNode } from './collectableStrategyTree';
 import {
   buildCollectableGuidedQuestions,
   collectableBranchRouteKey,
@@ -42,7 +43,9 @@ export interface CollectableDecisionTreeNodeExport {
   id: string;
   state: CollectableStateSummary;
   stateSummary: string;
-  recommendedAction: CollectableDecisionTreeActionExport;
+  status: 'decided' | 'terminal' | 'uncovered' | 'limited';
+  statusLabel: string;
+  recommendedAction: CollectableDecisionTreeActionExport | null;
   expectedScore: number;
   guidedQuestions: CollectableGuidedQuestion[];
   confluentBranchIndex: number | null;
@@ -58,9 +61,11 @@ export interface CollectableDecisionTreeSnapshot {
 export interface CollectableDecisionTreeSnapshotOptions {
   actionName: (kind: CollectableActionKind) => string;
   actionIcon: (kind: CollectableActionKind) => string;
+  actionGpCost?: (kind: CollectableActionKind) => number;
   branchLabel: (labelKey: string) => string;
   conditionLabel: (conditionKey: string) => string;
   formatStateSummary: (state: Pick<CollectableStateSummary, 'gp' | 'integrity' | 'collectability'>) => string;
+  statusLabel?: (status: CollectableDecisionTreeNodeExport['status']) => string;
   guidedQuestionLabels: CollectableGuidedQuestionLabels;
 }
 
@@ -166,6 +171,8 @@ export function buildCollectableDecisionTreeSnapshot(
       id: node.id,
       state: node.state,
       stateSummary: options.formatStateSummary(node.state),
+      status: 'decided',
+      statusLabel: options.statusLabel?.('decided') ?? '',
       recommendedAction: {
         kind: node.recommendedAction.kind,
         name: options.actionName(node.recommendedAction.kind),
@@ -180,6 +187,56 @@ export function buildCollectableDecisionTreeSnapshot(
 
     for (const branch of node.branches) {
       if (branch.next) visit(branch.next);
+    }
+  }
+
+  visit(root);
+
+  return {
+    rootNodeId: root.id,
+    nodes,
+    nodeOrder
+  };
+}
+
+export function buildCollectableStrategyDecisionTreeSnapshot(
+  root: CollectableStrategyNode,
+  options: CollectableDecisionTreeSnapshotOptions
+): CollectableDecisionTreeSnapshot {
+  const nodes: Record<string, CollectableDecisionTreeNodeExport> = {};
+  const nodeOrder: string[] = [];
+
+  function visit(node: CollectableStrategyNode) {
+    if (nodes[node.id]) return;
+
+    nodeOrder.push(node.id);
+    const guidedBranches = node.branches.map(toGuidedPolicyBranch);
+    const guidedQuestions = buildCollectableGuidedQuestions(guidedBranches, options.guidedQuestionLabels);
+    const serializedBranches = node.branches.map((branch) => serializeStrategyBranch(branch, guidedQuestions, options));
+    const recommendedAction = node.status === 'decided' && node.action
+      ? {
+          kind: node.action,
+          name: options.actionName(node.action),
+          iconUrl: options.actionIcon(node.action),
+          gpCost: options.actionGpCost?.(node.action) ?? 0
+        }
+      : null;
+
+    nodes[node.id] = {
+      id: node.id,
+      state: node.state,
+      stateSummary: options.formatStateSummary(node.state),
+      status: node.status,
+      statusLabel: options.statusLabel?.(node.status) ?? node.status,
+      recommendedAction,
+      expectedScore: 0,
+      guidedQuestions,
+      confluentBranchIndex: guidedQuestions.length ? null : findConfluentBranchIndex(serializedBranches),
+      branches: serializedBranches
+    };
+
+    for (const branch of node.branches) {
+      if (branch.child) visit(branch.child);
     }
   }
 
@@ -310,6 +367,55 @@ function serializeBranch(
       summary: options.formatStateSummary(branch.outcome)
     },
     nextId: branch.next?.id ?? null
+  };
+}
+
+function serializeStrategyBranch(
+  branch: CollectableStrategyNode['branches'][number],
+  guidedQuestions: CollectableGuidedQuestion[],
+  options: CollectableDecisionTreeSnapshotOptions
+): CollectableDecisionTreeBranchExport {
+  const labelKeys = branch.labelKeys?.length ? branch.labelKeys : [];
+  const labels = labelKeys.length ? labelKeys.map(options.branchLabel) : [branch.label];
+  const guidedBranch = toGuidedPolicyBranch(branch);
+
+  return {
+    labelKeys,
+    labels,
+    condition: labels.join(' / '),
+    probability: branch.probability,
+    routeKey: collectableBranchRouteKey({
+      outcome: branch.state,
+      nextId: branch.child?.id ?? null
+    }),
+    criteria: buildBranchCriteria(guidedBranch, guidedQuestions),
+    outcome: {
+      gp: branch.state.gp,
+      integrity: branch.state.integrity,
+      collectability: branch.state.collectability,
+      score: 0,
+      summary: options.formatStateSummary(branch.state)
+    },
+    nextId: branch.child?.id ?? null
+  };
+}
+
+function toGuidedPolicyBranch(branch: CollectableStrategyNode['branches'][number]): CollectablePolicyBranch {
+  const labelKeys = branch.labelKeys?.length ? branch.labelKeys : [];
+
+  return {
+    labelKey: labelKeys[0] ?? '',
+    labelKeys,
+    conditionKey: labelKeys[0] ?? '',
+    probability: branch.probability,
+    outcome: {
+      gp: branch.state.gp,
+      integrity: branch.state.integrity,
+      collectability: branch.state.collectability,
+      reward: { exp: 0, gil: 0, scrip: 0, items: {} },
+      score: 0
+    },
+    next: branch.child as unknown as CollectablePolicyNode | undefined
   };
 }
 
@@ -1177,6 +1283,15 @@ function standaloneScript() {
     return selectedGuidedBranch() || confluentBranch();
   }
 
+  function nodeActionName(node) {
+    return node && node.recommendedAction ? node.recommendedAction.name : (node && node.statusLabel ? node.statusLabel : texts.terminal);
+  }
+
+  function renderActionIcon(action) {
+    if (!action) return '<i class="pi pi-flag"></i>';
+    return action.iconUrl ? '<img src="' + escapeHtml(action.iconUrl) + '" alt="">' : '<i class="pi pi-sparkles"></i>';
+  }
+
   function resetSelections() {
     state.selections = {};
   }
@@ -1228,7 +1343,7 @@ function standaloneScript() {
         + '<strong>' + escapeHtml(confluent ? (hasConfluentOutcome ? texts.sameOutcome : texts.readyOutcome) : resolved.labels.join(' / ')) + '</strong>'
         + '<p>' + escapeHtml(format(texts.outcomeValue, { value: resolved.outcome.collectability, integrity: resolved.outcome.integrity })) + '</p>'
         + (resolved.nextId
-          ? '<small>' + escapeHtml(format(texts.nextAction, { action: policy.nodes[resolved.nextId].recommendedAction.name })) + '</small>'
+          ? '<small>' + escapeHtml(format(texts.nextAction, { action: nodeActionName(policy.nodes[resolved.nextId]) })) + '</small>'
           : '<small>' + escapeHtml(texts.terminal) + '</small>')
         + '</div><button type="button" class="guided-next-button" data-action="continue" ' + (!resolved.nextId ? 'disabled' : '') + '>'
         + escapeHtml(texts.continue) + '<i class="pi pi-angle-right"></i></button>'
@@ -1247,7 +1362,7 @@ function standaloneScript() {
       return '<button type="button" class="branch-row' + (next ? ' is-clickable' : '') + '" data-branch-index="' + index + '" ' + (!next ? 'disabled' : '') + '>'
         + '<div><strong>' + escapeHtml(branch.labels.join(' / ')) + '</strong>'
         + '<p>' + escapeHtml(branch.condition) + '</p>'
-        + '<small>' + escapeHtml(next ? format(texts.nextAction, { action: next.recommendedAction.name }) : texts.terminal) + '</small></div>'
+        + '<small>' + escapeHtml(next ? format(texts.nextAction, { action: nodeActionName(next) }) : texts.terminal) + '</small></div>'
         + '<div class="branch-outcome"><span>' + escapeHtml(formatProbability(branch)) + '</span>'
         + '<small>' + escapeHtml(branch.outcome.summary) + '</small>'
         + (next ? '<i class="pi pi-angle-right"></i>' : '')
@@ -1260,8 +1375,8 @@ function standaloneScript() {
     const action = node.recommendedAction;
     const hasGuidedPanel = usesGuidedQuestions() || !!confluentBranch();
     root.innerHTML = '<section class="current-action">'
-      + '<div class="action-icon-wrap">' + (action.iconUrl ? '<img src="' + escapeHtml(action.iconUrl) + '" alt="">' : '<i class="pi pi-sparkles"></i>') + '</div>'
-      + '<div><span>' + escapeHtml(texts.now) + '</span><strong>' + escapeHtml(action.name) + '</strong><p>' + escapeHtml(node.stateSummary) + '</p></div>'
+      + '<div class="action-icon-wrap">' + renderActionIcon(action) + '</div>'
+      + '<div><span>' + escapeHtml(action ? texts.now : node.statusLabel) + '</span><strong>' + escapeHtml(nodeActionName(node)) + '</strong><p>' + escapeHtml(node.stateSummary) + '</p></div>'
       + '</section>'
       + '<section class="branch-list">'
       + '<div class="branch-list-header"><span>' + escapeHtml(hasGuidedPanel ? texts.confirmOutcome : texts.nextBranches) + '</span>'

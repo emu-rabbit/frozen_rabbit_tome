@@ -6,6 +6,7 @@ import type { FoodSelection, GatherableItem, NodeBonuses, PlayerStats, StoredCol
 import type { CollectableActionKind, CollectableObjective, CollectableRewardTable, CollectableRewardTableSummary, CollectableTierCounts } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
+import { useSettings } from '../composables/useSettings';
 import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { getItemName } from '../services/gameData';
@@ -28,7 +29,12 @@ import {
   type CollectableStrategyTreeResult,
   type CollectableStrategyRule
 } from '../utils/collectableStrategyTree';
-import { getCollectableActionIcon, getCollectableActionMinLevel, getCollectableActionName } from '../services/collectableActions';
+import {
+  COLLECTABLE_ACTION_DEFINITIONS,
+  getCollectableActionIcon,
+  getCollectableActionMinLevel,
+  getCollectableActionName
+} from '../services/collectableActions';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
 import SaveEntryDialog from './SaveEntryDialog.vue';
 import FloatingJsonExportButton from './FloatingJsonExportButton.vue';
@@ -56,9 +62,18 @@ import {
   buildJsonExportFileName,
   downloadJsonFile
 } from '../utils/tomeJsonExport';
+import {
+  buildCollectableDecisionTreeHtml,
+  buildCollectableStrategyDecisionTreeSnapshot,
+  buildHtmlExportFileName,
+  downloadHtmlFile,
+  type CollectableDecisionTreeHtmlDocument,
+  type CollectableDecisionTreeHtmlRow
+} from '../utils/collectableDecisionTreeHtmlExport';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { saveCollectableExperiment } = useExperimentLibrary();
+const { isDarkMode } = useSettings();
 
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
@@ -95,6 +110,8 @@ const isObjectiveDialogOpen = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
 const isSaved = ref(false);
 const isJsonExported = ref(false);
+const isDecisionTreeExported = ref(false);
+const isDecisionTreeExporting = ref(false);
 const treeResult = ref<CollectableStrategyTreeResult | null>(null);
 const editorFrontierTreeResult = ref<CollectableStrategyTreeResult | null>(null);
 const isTreeBuilding = ref(false);
@@ -111,6 +128,7 @@ const compactPathHiddenBranchKeys = new Set([
 const { collectableObjective } = useCollectableSolver();
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
+let decisionTreeExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let treeBuildAbort: AbortController | null = null;
 let editorBuildAbort: AbortController | null = null;
 let analysisAbort: AbortController | null = null;
@@ -308,6 +326,7 @@ watch([
   analysisAbort?.abort();
   analysis.value = null;
   isSaved.value = false;
+  isDecisionTreeExported.value = false;
 }, { deep: true });
 
 watch(rules, () => {
@@ -325,6 +344,7 @@ watch(() => managedNodes.value.length, (length) => {
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
   if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
+  if (decisionTreeExportTimer) window.clearTimeout(decisionTreeExportTimer);
   treeBuildAbort?.abort();
   editorBuildAbort?.abort();
   analysisAbort?.abort();
@@ -545,6 +565,33 @@ function handleExportCollectableExperimentJson() {
   markJsonExported();
 }
 
+async function handleExportCollectableDecisionTree() {
+  if (!analysis.value || !treeResult.value?.root || !props.baseValues || isDecisionTreeExported.value || isDecisionTreeExporting.value) return;
+
+  isDecisionTreeExporting.value = true;
+  await nextTick();
+  await waitForUiFrame();
+
+  try {
+    const generatedAt = new Date().toISOString();
+    const html = buildCollectableDecisionTreeHtml(buildDecisionTreeHtmlDocument(generatedAt));
+
+    downloadHtmlFile(html, buildHtmlExportFileName({
+      item: props.activeItem,
+      scenarioLabel: t('collectableStrategyLab.export.fileScenario')
+    }));
+
+    isDecisionTreeExported.value = true;
+    if (decisionTreeExportTimer) window.clearTimeout(decisionTreeExportTimer);
+    decisionTreeExportTimer = window.setTimeout(() => {
+      isDecisionTreeExported.value = false;
+      decisionTreeExportTimer = null;
+    }, 1600);
+  } finally {
+    isDecisionTreeExporting.value = false;
+  }
+}
+
 function markJsonExported() {
   isJsonExported.value = true;
   if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
@@ -552,6 +599,239 @@ function markJsonExported() {
     isJsonExported.value = false;
     jsonExportTimer = null;
   }, 1600);
+}
+
+function waitForUiFrame() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.setTimeout(resolve, 0);
+    });
+  });
+}
+
+function buildDecisionTreeHtmlDocument(generatedAt: string): CollectableDecisionTreeHtmlDocument {
+  return {
+    locale: locale.value,
+    generatedAt,
+    theme: isDarkMode.value ? 'dark' : 'light',
+    item: props.activeItem,
+    texts: buildDecisionTreeTexts(),
+    inputSections: buildDecisionTreeInputSections(),
+    resultMetrics: buildDecisionTreeResultMetrics(),
+    modelVersionRows: buildDecisionTreeModelVersionRows(),
+    policy: buildCollectableStrategyDecisionTreeSnapshot(treeResult.value!.root, {
+      actionName,
+      actionIcon,
+      actionGpCost: (kind) => COLLECTABLE_ACTION_DEFINITIONS[kind].gpCost,
+      branchLabel: (labelKey) => t(labelKey),
+      conditionLabel: (conditionKey) => t(conditionKey),
+      formatStateSummary: (state) => t('collectableSolver.policy.stateSummary', {
+        gp: state.gp,
+        integrity: state.integrity,
+        collectability: state.collectability
+      }),
+      statusLabel: decisionTreeStatusLabel,
+      guidedQuestionLabels: buildGuidedQuestionLabels()
+    })
+  };
+}
+
+function buildDecisionTreeTexts() {
+  const itemName = props.activeItem.nameLocale || props.activeItem.nameEn;
+
+  return {
+    documentTitle: t('collectableStrategyLab.export.title', { item: itemName }),
+    appTitle: t('app.title'),
+    appSubtitle: t('collectableStrategyLab.export.appSubtitle'),
+    inputTitle: t('collectableStrategyLab.export.inputTitle'),
+    resultTitle: t('collectableStrategyLab.analysis.title'),
+    modelVersionsTitle: t('collectableSolver.export.modelVersionsTitle'),
+    howToReadTitle: t('collectableSolver.export.howToReadTitle'),
+    howToReadDescription: t('collectableSolver.export.howToReadDesc'),
+    generatedAt: t('collectableSolver.export.exportedAt'),
+    policy: {
+      now: t('collectableStrategyLab.export.currentAction'),
+      confirmOutcome: t('collectableSolver.policy.confirmOutcome'),
+      nextBranches: t('collectableSolver.policy.nextBranches'),
+      confirmHint: t('collectableSolver.policy.confirmHint'),
+      confluentHint: t('collectableSolver.policy.confluentHint'),
+      deterministicHint: t('collectableSolver.policy.deterministicHint'),
+      collectQuestion: t('collectableSolver.policy.collectQuestion'),
+      standardQuestion: t('collectableSolver.policy.standardQuestion'),
+      wiseQuestion: t('collectableSolver.policy.wiseQuestion'),
+      revisitQuestion: t('collectableSolver.policy.revisitQuestion'),
+      collectabilityQuestion: t('collectableSolver.policy.collectabilityQuestion'),
+      integrityQuestion: t('collectableSolver.policy.integrityQuestion'),
+      integrityOption: t('collectableSolver.policy.integrityOption', { integrity: '{integrity}' }),
+      collectOptions: {
+        success: t('collectableSolver.policy.collectOptions.success'),
+        failed: t('collectableSolver.policy.collectOptions.failed')
+      },
+      standardOptions: {
+        proc: t('collectableSolver.policy.standardOptions.proc'),
+        noProc: t('collectableSolver.policy.standardOptions.noProc')
+      },
+      wiseOptions: {
+        proc: t('collectableSolver.policy.wiseOptions.proc'),
+        noProc: t('collectableSolver.policy.wiseOptions.noProc')
+      },
+      revisitOptions: {
+        proc: t('collectableSolver.policy.revisitOptions.proc'),
+        noProc: t('collectableSolver.policy.revisitOptions.noProc')
+      },
+      matchedOutcome: t('collectableSolver.policy.matchedOutcome'),
+      confluentOutcome: t('collectableSolver.policy.confluentOutcome'),
+      deterministicOutcome: t('collectableSolver.policy.deterministicOutcome'),
+      sameOutcome: t('collectableSolver.policy.sameOutcome'),
+      readyOutcome: t('collectableSolver.policy.readyOutcome'),
+      waitingSelection: t('collectableSolver.policy.waitingSelection'),
+      noMatchedOutcome: t('collectableSolver.policy.noMatchedOutcome'),
+      continue: t('collectableSolver.policy.continue'),
+      outcomeValue: t('collectableSolver.policy.outcomeValue', { value: '{value}', integrity: '{integrity}' }),
+      nextAction: t('collectableSolver.policy.nextAction', { action: '{action}' }),
+      terminal: t('collectableSolver.policy.terminal'),
+      back: t('collectableSolver.policy.back'),
+      root: t('collectableSolver.policy.root')
+    }
+  };
+}
+
+function buildGuidedQuestionLabels() {
+  return {
+    collectQuestion: t('collectableSolver.policy.collectQuestion'),
+    standardQuestion: t('collectableSolver.policy.standardQuestion'),
+    wiseQuestion: t('collectableSolver.policy.wiseQuestion'),
+    revisitQuestion: t('collectableSolver.policy.revisitQuestion'),
+    collectabilityQuestion: t('collectableSolver.policy.collectabilityQuestion'),
+    integrityQuestion: t('collectableSolver.policy.integrityQuestion'),
+    integrityOption: (integrity: number) => t('collectableSolver.policy.integrityOption', { integrity }),
+    collectOptions: {
+      success: t('collectableSolver.policy.collectOptions.success'),
+      failed: t('collectableSolver.policy.collectOptions.failed')
+    },
+    standardOptions: {
+      proc: t('collectableSolver.policy.standardOptions.proc'),
+      noProc: t('collectableSolver.policy.standardOptions.noProc')
+    },
+    wiseOptions: {
+      proc: t('collectableSolver.policy.wiseOptions.proc'),
+      noProc: t('collectableSolver.policy.wiseOptions.noProc')
+    },
+    revisitOptions: {
+      proc: t('collectableSolver.policy.revisitOptions.proc'),
+      noProc: t('collectableSolver.policy.revisitOptions.noProc')
+    }
+  };
+}
+
+function buildDecisionTreeInputSections() {
+  return [
+    {
+      title: t('collectableSolver.export.sections.item'),
+      rows: [
+        decisionTreeRow(t('collectableSolver.export.fields.item'), props.activeItem.nameLocale || props.activeItem.nameEn),
+        decisionTreeRow(t('createGuide.glv'), props.activeItem.glv),
+        decisionTreeRow(t('collectableSolver.export.job'), t(`game.jobs.${jobType.value}`))
+      ]
+    },
+    {
+      title: t('collectableSolver.export.sections.player'),
+      rows: [
+        decisionTreeRow(t('game.stats.level'), props.effectiveStats.level),
+        decisionTreeRow(t('game.stats.gathering'), props.effectiveStats.gathering),
+        decisionTreeRow(t('game.stats.perception'), props.effectiveStats.perception),
+        decisionTreeRow(t('game.stats.gp'), props.effectiveStats.gp),
+        decisionTreeRow(t('solver.currentGp'), props.temporaryGp)
+      ]
+    },
+    {
+      title: t('collectableSolver.export.sections.food'),
+      rows: [
+        decisionTreeRow(t('solver.food.label'), formatFood())
+      ]
+    },
+    {
+      title: t('collectableSolver.export.sections.node'),
+      rows: [
+        decisionTreeRow(t('solver.nodeBonuses.baseIntegrity'), props.nodeBonuses.baseIntegrity),
+        decisionTreeRow(t('solver.nodeBonuses.gatheringCount'), props.nodeBonuses.gatheringCount)
+      ]
+    },
+    {
+      title: t('collectableStrategyLab.export.sections.experiment'),
+      rows: [
+        decisionTreeRow(t('collectableObjective.title'), selectedObjectiveLabel.value),
+        decisionTreeRow(t('solver.nodeBonuses.collectableRelicToolBonus'), formatBoolean(!!props.hasRelicToolBonus)),
+        decisionTreeRow(t('collectableStrategyLab.export.fields.coverage'), summary.value ? `${summary.value.decidedNodes}/${summary.value.totalNodes}` : '-')
+      ]
+    }
+  ];
+}
+
+function buildDecisionTreeResultMetrics() {
+  if (!analysis.value) return [];
+
+  return [
+    {
+      label: isTierCountObjective(collectableObjective.value)
+        ? t('collectableSolver.results.expectedTierCounts')
+        : t('collectableStrategyLab.analysis.expectedScore', { unit: scoreUnitLabel() }),
+      value: isTierCountObjective(collectableObjective.value)
+        ? formatTierCountsForExport(analysis.value.expectedTierCounts)
+        : String(analysis.value.expectedScore),
+      primary: true
+    },
+    {
+      label: isTierCountObjective(collectableObjective.value)
+        ? t('collectableSolver.results.maxTierCounts')
+        : t('collectableStrategyLab.analysis.maxScore', { unit: scoreUnitLabel() }),
+      value: isTierCountObjective(collectableObjective.value)
+        ? formatTierCountsForExport(analysis.value.maxScoreTierCounts)
+        : String(analysis.value.maxScore),
+      detail: t('simulator.analysis.chance', { chance: formatProbability(analysis.value.maxScoreChance, false, false) })
+    },
+    {
+      label: isTierCountObjective(collectableObjective.value)
+        ? t('collectableSolver.results.minTierCounts')
+        : t('collectableStrategyLab.analysis.minScore', { unit: scoreUnitLabel() }),
+      value: isTierCountObjective(collectableObjective.value)
+        ? formatTierCountsForExport(analysis.value.minScoreTierCounts)
+        : String(analysis.value.minScore),
+      detail: t('simulator.analysis.chance', { chance: formatProbability(analysis.value.minScoreChance, false, false) })
+    }
+  ];
+}
+
+function buildDecisionTreeModelVersionRows(): CollectableDecisionTreeHtmlRow[] {
+  if (!analysis.value?.modelVersions) return [];
+  return Object.entries(analysis.value.modelVersions).map(([label, value]) => decisionTreeRow(label, value));
+}
+
+function decisionTreeRow(label: string, value: unknown): CollectableDecisionTreeHtmlRow {
+  return {
+    label,
+    value: String(value ?? '-')
+  };
+}
+
+function formatTierCountsForExport(counts: CollectableTierCounts) {
+  return visibleTierMetricEntries(counts)
+    .filter((entry) => entry.label)
+    .map((entry) => `${entry.label} ${formatTierCountValue(entry.value)}`)
+    .join(' / ') || '0';
+}
+
+function decisionTreeStatusLabel(status: 'decided' | 'terminal' | 'uncovered' | 'limited') {
+  return t(`collectableStrategyLab.export.status.${status}`);
+}
+
+function formatFood() {
+  if (!props.selectedFood.foodId) return t('tomeLibrary.noFood');
+  return `${getItemName(props.selectedFood.foodId)} ${t(`solver.food.${props.selectedFood.quality}`)}`;
+}
+
+function formatBoolean(value: boolean) {
+  return value ? t('solver.nodeBonuses.enabled') : t('solver.nodeBonuses.disabled');
 }
 
 function loadCollectableExperiment() {
@@ -611,6 +891,7 @@ function applyDefaultObjective(table: CollectableRewardTable) {
 function handleObjectiveChange(objective: CollectableObjective) {
   collectableObjective.value = normalizeCollectableObjective(objective);
   analysis.value = null;
+  isDecisionTreeExported.value = false;
 }
 
 function scoreUnitLabel() {
@@ -1568,6 +1849,18 @@ function makeId() {
       <div v-if="analysis" class="collectable-analysis-actions">
         <Button
           class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
+          :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isDecisionTreeExported }"
+          :aria-label="t('collectableSolver.export.actions.exportHtml')"
+          :disabled="isDecisionTreeExported || isDecisionTreeExporting"
+          @click="handleExportCollectableDecisionTree"
+        >
+          <i :class="isDecisionTreeExporting ? 'pi pi-spinner pi-spin' : isDecisionTreeExported ? 'pi pi-check' : 'pi pi-download'"></i>
+          <span>
+            {{ isDecisionTreeExporting ? t('collectableSolver.export.actions.exportingHtml') : isDecisionTreeExported ? t('collectableSolver.export.actions.exportedHtml') : t('collectableSolver.export.actions.exportHtml') }}
+          </span>
+        </Button>
+        <Button
+          class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
           :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isSaved }"
           :aria-label="t('simulator.actions.save')"
           :disabled="isSaved"
@@ -2519,6 +2812,12 @@ function makeId() {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .collectable-analysis-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .collectable-save-preview-card {

@@ -731,9 +731,9 @@ export default {
       itemId: '物品 ID',
       job: '职业',
       actions: {
-        exportHtml: '导出结果',
-        exportingHtml: '正在导出',
-        exportedHtml: '已导出'
+        exportHtml: '导出互动决策树',
+        exportingHtml: '正在导出决策树',
+        exportedHtml: '已导出决策树'
       },
       sections: {
         item: '物品',
@@ -861,6 +861,25 @@ export default {
     simpleExample: {
       improveName: '提高价值',
       collectName: '采集'
+    },
+    export: {
+      fileScenario: '收藏品实验决策树',
+      title: '{item} 收藏品实验决策树',
+      appSubtitle: '收藏品实验台',
+      inputTitle: '实验输入与条件',
+      currentAction: '当前动作',
+      sections: {
+        experiment: '实验设置'
+      },
+      fields: {
+        coverage: '已决策节点'
+      },
+      status: {
+        decided: '已套用策略',
+        terminal: '已完成',
+        uncovered: '尚待决策',
+        limited: '展开已停止'
+      }
     },
     treeKicker: '决策树覆盖',
     treeTitle: '当前展开状态',

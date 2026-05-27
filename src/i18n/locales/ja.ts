@@ -731,9 +731,9 @@ export default {
       itemId: 'アイテム ID',
       job: 'ジョブ',
       actions: {
-        exportHtml: '結果を書き出し',
-        exportingHtml: '書き出し中',
-        exportedHtml: '書き出し済み'
+        exportHtml: 'インタラクティブ決定木を書き出し',
+        exportingHtml: '決定木を書き出し中',
+        exportedHtml: '決定木を書き出し済み'
       },
       sections: {
         item: 'アイテム',
@@ -861,6 +861,25 @@ export default {
     simpleExample: {
       improveName: '価値を上げる',
       collectName: '採集'
+    },
+    export: {
+      fileScenario: '収集品実験決定木',
+      title: '{item} 収集品実験決定木',
+      appSubtitle: '収集品実験',
+      inputTitle: '実験入力と条件',
+      currentAction: '現在のアクション',
+      sections: {
+        experiment: '実験設定'
+      },
+      fields: {
+        coverage: '決定済みノード'
+      },
+      status: {
+        decided: '方針を適用済み',
+        terminal: '完了',
+        uncovered: '未決定',
+        limited: '展開停止'
+      }
     },
     treeKicker: '決定木カバー率',
     treeTitle: '現在の展開状態',

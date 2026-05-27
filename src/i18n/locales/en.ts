@@ -753,9 +753,9 @@ export default {
       itemId: 'Item ID',
       job: 'Job',
       actions: {
-        exportHtml: 'Export Result',
-        exportingHtml: 'Exporting',
-        exportedHtml: 'Exported'
+        exportHtml: 'Export Interactive Tree',
+        exportingHtml: 'Exporting Tree',
+        exportedHtml: 'Tree Exported'
       },
       sections: {
         item: 'Item',
@@ -883,6 +883,25 @@ export default {
     simpleExample: {
       improveName: 'Raise Value',
       collectName: 'Collect'
+    },
+    export: {
+      fileScenario: 'Collectable Experiment Decision Tree',
+      title: '{item} Collectable Experiment Decision Tree',
+      appSubtitle: 'Collectable Experiment Lab',
+      inputTitle: 'Experiment Inputs and Conditions',
+      currentAction: 'Current Action',
+      sections: {
+        experiment: 'Experiment Settings'
+      },
+      fields: {
+        coverage: 'Decided Nodes'
+      },
+      status: {
+        decided: 'Strategy Applied',
+        terminal: 'Completed',
+        uncovered: 'Awaiting Decision',
+        limited: 'Expansion Stopped'
+      }
     },
     treeKicker: 'Decision Tree Coverage',
     treeTitle: 'Current Expanded State',

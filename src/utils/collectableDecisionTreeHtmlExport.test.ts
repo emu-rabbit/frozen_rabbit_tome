@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCollectableDecisionTreeHtml,
   buildCollectableDecisionTreeSnapshot,
+  buildCollectableStrategyDecisionTreeSnapshot,
   buildHtmlExportFileName,
   sanitizeHtmlFileName,
   type CollectableDecisionTreeHtmlDocument
 } from './collectableDecisionTreeHtmlExport';
 import type { CollectablePolicyNode } from '../types/collectable';
+import type { CollectableStrategyNode } from './collectableStrategyTree';
 
 const terminalNode: CollectablePolicyNode = {
   id: 'terminal',
@@ -122,6 +124,103 @@ describe('collectableDecisionTreeHtmlExport', () => {
     expect(html).toContain('data-action=\"continue\"');
     expect(html).toContain('currentNode().guidedQuestions');
     expect(html).not.toContain('<Rarefied> Ore Collectable Decision Tree');
+  });
+
+  it('serializes experiment strategy trees with terminal status nodes', () => {
+    const strategyRoot: CollectableStrategyNode = {
+      id: 'strategy-root',
+      state: {
+        gp: 900,
+        integrity: 4,
+        collectability: 0,
+        scrutinyActive: false,
+        collectorsFocusActive: false,
+        primingTouchActive: false,
+        standardActive: false,
+        successBonus: 0,
+        nextCollectSuccessBonus: 0,
+        wiseToTheWorldActive: false,
+        hasUsedCollectableAction: false,
+        hasCollected: false,
+        successIActive: false,
+        successIIActive: false,
+        successIIIActive: false
+      },
+      path: [],
+      status: 'decided',
+      matchedRuleId: 'rule-1',
+      matchedRuleName: 'Raise value',
+      action: 'meticulous',
+      pendingActions: [],
+      branches: [{
+        label: 'Value increased',
+        labelKeys: ['collectableSolver.branches.valueIncreased'],
+        probability: 100,
+        state: {
+          gp: 900,
+          integrity: 3,
+          collectability: 200,
+          scrutinyActive: false,
+          collectorsFocusActive: false,
+          primingTouchActive: false,
+          standardActive: false,
+          successBonus: 0,
+          nextCollectSuccessBonus: 0,
+          wiseToTheWorldActive: false,
+          hasUsedCollectableAction: true,
+          hasCollected: false,
+          successIActive: false,
+          successIIActive: false,
+          successIIIActive: false
+        },
+        child: {
+          id: 'strategy-terminal',
+          state: {
+            gp: 900,
+            integrity: 0,
+            collectability: 200,
+            scrutinyActive: false,
+            collectorsFocusActive: false,
+            primingTouchActive: false,
+            standardActive: false,
+            successBonus: 0,
+            nextCollectSuccessBonus: 0,
+            wiseToTheWorldActive: false,
+            hasUsedCollectableAction: true,
+            hasCollected: false,
+            successIActive: false,
+            successIIActive: false,
+            successIIIActive: false
+          },
+          path: [],
+          status: 'terminal',
+          pendingActions: [],
+          branches: []
+        }
+      }]
+    };
+
+    const snapshot = buildCollectableStrategyDecisionTreeSnapshot(strategyRoot, {
+      actionName: (kind) => `action:${kind}`,
+      actionIcon: () => '',
+      branchLabel: (key) => `label:${key}`,
+      conditionLabel: (key) => key,
+      formatStateSummary: (state) => `GP ${state.gp} / Integrity ${state.integrity} / Collectability ${state.collectability}`,
+      statusLabel: (status) => `status:${status}`,
+      guidedQuestionLabels: guidedQuestionLabels()
+    });
+
+    expect(snapshot.nodeOrder).toEqual(['strategy-root', 'strategy-terminal']);
+    expect(snapshot.nodes['strategy-root'].recommendedAction?.name).toBe('action:meticulous');
+    expect(snapshot.nodes['strategy-terminal']).toMatchObject({
+      status: 'terminal',
+      statusLabel: 'status:terminal',
+      recommendedAction: null
+    });
+    expect(snapshot.nodes['strategy-root'].branches[0]).toMatchObject({
+      labels: ['label:collectableSolver.branches.valueIncreased'],
+      nextId: 'strategy-terminal'
+    });
   });
 
   it('sanitizes generated html filenames', () => {

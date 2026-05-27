@@ -14,13 +14,15 @@ import { useSettings } from '../composables/useSettings';
 import PendingFeature from '../components/PendingFeature.vue';
 import CollectableStrategyLab from '../components/CollectableStrategyLab.vue';
 import FloatingJsonExportButton from '../components/FloatingJsonExportButton.vue';
+import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
 import FoodAutoComplete from '../components/FoodAutoComplete.vue';
-import { getGatherableItemById, getItemName, getItemBaseIntegrity } from '../services/gameData';
+import { getActionName, getGatherableItemById, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
 import { calculateCollectableScourValue } from '../utils/collectableMath';
+import { buildGatheringMacro, buildGatheringMacroGroups, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 import { hideRevisitExperimentFeatures } from '../config/experimentFeatures';
 import type { SimulationRequest } from '../utils/rotationSimulator';
 import type { GearStatProfile, SimulationResponse, StoredExperiment } from '../types/game';
@@ -47,7 +49,7 @@ type RelicToolOption = {
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const { solverSettings } = useSettings();
+const { macroSettings, solverSettings } = useSettings();
 const {
   activeItem,
   simStats,
@@ -78,8 +80,10 @@ const savedExperimentId = ref<string | null>(null);
 const loadedCollectableExperiment = ref<StoredExperiment | null>(null);
 const isSaved = ref(false);
 const isJsonExported = ref(false);
+const isMacroPreviewOpen = ref(false);
 const isSaveExperimentDialogOpen = ref(false);
 const isGearProfilePickerOpen = ref(false);
+const macroPreview = ref<MacroBuildResult | null>(null);
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 const actionCategoryOrder = ['gather', 'success', 'boon', 'nextSuccess', 'nextYield', 'restore', 'wholeYield', 'boonYield'] as const;
@@ -324,6 +328,34 @@ function saveCurrentExperiment() {
   isSaveExperimentDialogOpen.value = true;
 }
 
+function handlePreviewMacro() {
+  if (!activeItem.value || activeItem.value.isCollectable || !primaryRotation.value.length) return;
+
+  const options: MacroBuildOptions = {
+    resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
+    formatGatherPrompt: formatMacroGatherPrompt
+  };
+  const plans = [
+    {
+      key: 'primary',
+      title: t('experimentDatabase.rotations.primary'),
+      rotation: primaryRotation.value
+    },
+    ...(!hideRevisitExperimentFeatures && revisitRotation.value.length
+      ? [{
+          key: 'revisit',
+          title: t('experimentDatabase.rotations.revisit'),
+          rotation: revisitRotation.value
+        }]
+      : [])
+  ];
+
+  macroPreview.value = plans.length > 1
+    ? buildGatheringMacroGroups(plans, macroSettings.value, options)
+    : buildGatheringMacro(primaryRotation.value, macroSettings.value, options);
+  isMacroPreviewOpen.value = true;
+}
+
 function confirmSaveExperiment(name: string) {
   if (!activeItem.value || !analysis.value) return;
 
@@ -450,6 +482,26 @@ function formatProbability(chance: number, useSpacePadding = false, includePerce
     return formatted.padStart(6, ' ') + percentSuffix;
   }
   return formatted + percentSuffix;
+}
+
+function formatMacroGatherPrompt(context: {
+  count: number;
+  hasConditionalGather: boolean;
+  isFinalRun: boolean;
+  waitSeconds: number | null;
+}) {
+  if (context.isFinalRun) {
+    return t('macro.prompts.finalGather');
+  }
+
+  const gatherMessage = context.hasConditionalGather
+    ? t('macro.prompts.conditionalGatherCount', { count: context.count })
+    : t('macro.prompts.gatherCount', { count: context.count });
+
+  return t('macro.prompts.continueAfterSeconds', {
+    message: gatherMessage,
+    seconds: context.waitSeconds ?? 0
+  });
 }
 
 function summarizePreview(states: Array<{ gp: number; integrity: number }>) {
@@ -803,7 +855,16 @@ function progressPercent(range: number[], maxValue: number) {
         </article>
           </div>
           
-          <div class="grid grid-cols-1 gap-3 w-full">
+          <div class="simulator-result-actions">
+            <Button
+              class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
+              :aria-label="t('solver.strategy.copyMacro')"
+              :disabled="!primaryRotation.length || hasRotationIssue"
+              @click="handlePreviewMacro"
+            >
+              <i class="pi pi-copy"></i>
+              <span>{{ t('solver.strategy.copyMacro') }}</span>
+            </Button>
             <Button
               class="w-full font-bold flex items-center justify-center gap-2 py-3 p-button-outlined rounded-xl transition-all"
               :class="{ '!bg-green-100/75 !text-green-700 !border-transparent dark:!bg-green-900/20 dark:!text-green-300': isSaved }"
@@ -916,6 +977,7 @@ function progressPercent(range: number[], maxValue: number) {
       :exported="isJsonExported"
       @click="handleExportRegularExperimentJson"
     />
+    <MacroPreviewDialog v-model="isMacroPreviewOpen" :macro="macroPreview" />
   </div>
 </template>
 
@@ -1709,6 +1771,12 @@ function progressPercent(range: number[], maxValue: number) {
   flex-direction: column;
   margin-top: 1rem;
 }
+.simulator-result-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
 .analysis-grid {
   grid-template-columns: 1fr;
 }
@@ -1816,6 +1884,10 @@ function progressPercent(range: number[], maxValue: number) {
 @media (min-width: 640px) {
   .simulate-actions {
     flex-direction: row;
+  }
+
+  .simulator-result-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 768px) {
