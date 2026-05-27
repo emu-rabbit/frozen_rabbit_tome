@@ -10,7 +10,6 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
-import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import FloatingJsonImportButton from '../components/FloatingJsonImportButton.vue';
 import JsonImportErrorDialog from '../components/JsonImportErrorDialog.vue';
@@ -20,13 +19,12 @@ import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
-import { getActionName, getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
+import { getGatherableItemById, getItemEnglishName, getItemIcon, getItemName, currentLanguage } from '../services/gameData';
 import { getRotationActionIconById } from '../services/actionIcons';
 import { getCollectableActionIcon, getCollectableActionName } from '../services/collectableActions';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import type { CollectableTierCounts } from '../types/collectable';
 import type { SolverObjectiveMode, SolverRotationPlanKind, StoredCollectableTomeSnapshot, StoredTome, StoredTomeRotationStep } from '../types/game';
-import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromStoredRotations, type MacroBuildOptions, type MacroBuildResult } from '../utils/macroGenerator';
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { isModelVersionSnapshotStale } from '../utils/modelVersionStatus';
 import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
@@ -42,12 +40,10 @@ const router = useRouter();
 const { visibleTomes, deleteTome, saveImportedTome } = useTomeLibrary();
 const { saveImportedExperiment } = useExperimentLibrary();
 const { loadTomeForEditing } = useSolver();
-const { macroSettings, solverSettings } = useSettings();
+const { solverSettings } = useSettings();
 const searchQuery = ref('');
-const isMacroPreviewOpen = ref(false);
 const pendingEditTome = ref<StoredTome | null>(null);
 const pendingImport = ref<TomeJsonImportProjection | null>(null);
-const macroPreview = ref<MacroBuildResult | null>(null);
 const importErrorKey = ref<string | null>(null);
 const isImportWarningOpen = ref(false);
 const isImportSaveDialogOpen = ref(false);
@@ -161,12 +157,6 @@ function tomeRotationPlans(tome: StoredTome) {
       : [];
 }
 
-function rotationPlanTitle(kind: SolverRotationPlanKind) {
-  return kind === 'revisit'
-    ? t('solver.strategy.revisitRotation')
-    : t('solver.strategy.primaryRotation');
-}
-
 function rotationCardTitle(tome: StoredTome, kind: SolverRotationPlanKind) {
   const revisit = tome.lastSolvedSnapshot?.kind === 'regular' ? tome.lastSolvedSnapshot.revisit : undefined;
   if (kind === 'primary' && revisit?.enabled && revisit.isFullGp && tomeRotationPlans(tome).length === 1) {
@@ -205,54 +195,6 @@ function handleEditWithCurrentMode() {
 
 function cancelEditModeChoice() {
   pendingEditTome.value = null;
-}
-
-function handlePreviewMacro(tome: StoredTome) {
-  if (isCollectableTome(tome)) return;
-
-  const options: MacroBuildOptions = {
-    resolveActionName: (_, actionId) => actionId ? getActionName(actionId) : '',
-    formatGatherPrompt: formatMacroGatherPrompt
-  };
-  const plans = tomeRotationPlans(tome);
-  const primaryRotation = plans[0]?.rotation ?? [];
-  if (!primaryRotation.length) return;
-  macroPreview.value = plans.length > 1
-    ? buildGatheringMacroGroupsFromStoredRotations(plans.map((plan) => ({
-        key: plan.kind,
-        title: rotationPlanTitle(plan.kind),
-        rotation: plan.rotation
-      })), macroSettings.value, options)
-    : buildGatheringMacroFromStoredRotation(primaryRotation, macroSettings.value, options);
-  isMacroPreviewOpen.value = true;
-}
-
-function formatMacroGatherPrompt(context: {
-  count: number;
-  hasConditionalGather: boolean;
-  isFinalRun: boolean;
-  waitSeconds: number | null;
-}) {
-  if (context.isFinalRun) {
-    return t('macro.prompts.finalGather');
-  }
-
-  const gatherMessage = context.hasConditionalGather
-    ? t('macro.prompts.conditionalGatherCount', { count: context.count })
-    : t('macro.prompts.gatherCount', { count: context.count });
-
-  return t('macro.prompts.continueAfterSeconds', {
-    message: gatherMessage,
-    seconds: context.waitSeconds ?? 0
-  });
-}
-
-function copyMacroLabel() {
-  return t('tomeLibrary.actions.copyMacro');
-}
-
-function copyMacroIcon() {
-  return 'pi pi-file-edit';
 }
 
 function collectableRootActionName(tome: StoredTome) {
@@ -606,17 +548,10 @@ function importErrorDescription() {
 
         <div v-if="displayMode === 'compact'" class="compact-action-bar action-bar">
           <Button
-            icon="pi pi-pencil"
+            icon="pi pi-copy"
             :label="t('tomeLibrary.actions.edit')"
             class="p-button-sm p-button-text library-action"
             @click="handleEdit(tome)"
-          />
-          <Button
-            v-if="!isCollectableTome(tome)"
-            :icon="copyMacroIcon()"
-            :label="copyMacroLabel()"
-            class="p-button-sm p-button-text library-action"
-            @click="handlePreviewMacro(tome)"
           />
           <Button
             icon="pi pi-trash"
@@ -721,16 +656,16 @@ function importErrorDescription() {
             <div class="rotation-strip">
               <h4 class="rotation-strip-title">{{ rotationCardTitle(tome, plan.kind) }}</h4>
               <div class="rotation-icons">
-              <template v-for="(step, index) in plan.rotation" :key="`${tome.id}-${plan.kind}-${index}`">
-                <span
-                  class="rotation-icon-wrap"
-                  :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'"
-                >
-                  <img v-if="rotationIcon(tome, step)" :src="rotationIcon(tome, step)" class="rotation-icon" alt="" />
-                  <i v-else class="pi pi-sparkles text-xs"></i>
-                </span>
-                <i v-if="index < plan.rotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
-              </template>
+                <template v-for="(step, index) in plan.rotation" :key="`${tome.id}-${plan.kind}-${index}`">
+                  <span
+                    class="rotation-icon-wrap"
+                    :class="step.type === 'gather' ? 'rotation-gather' : 'rotation-action'"
+                  >
+                    <img v-if="rotationIcon(tome, step)" :src="rotationIcon(tome, step)" class="rotation-icon" alt="" />
+                    <i v-else class="pi pi-sparkles text-xs"></i>
+                  </span>
+                  <i v-if="index < plan.rotation.length - 1" class="pi pi-angle-right rotation-arrow"></i>
+                </template>
               </div>
             </div>
           </div>
@@ -740,17 +675,10 @@ function importErrorDescription() {
           <span class="created-at">{{ t('tomeLibrary.createdAt', { time: formatCreatedAt(tome.createdAt) }) }}</span>
           <div class="action-bar">
             <Button
-              icon="pi pi-pencil"
+              icon="pi pi-copy"
               :label="t('tomeLibrary.actions.edit')"
               class="p-button-sm p-button-text library-action"
               @click="handleEdit(tome)"
-            />
-            <Button
-              v-if="!isCollectableTome(tome)"
-              :icon="copyMacroIcon()"
-              :label="copyMacroLabel()"
-              class="p-button-sm p-button-text library-action"
-              @click="handlePreviewMacro(tome)"
             />
             <Button
               icon="pi pi-trash"
@@ -762,8 +690,6 @@ function importErrorDescription() {
         </div>
       </article>
     </div>
-
-    <MacroPreviewDialog v-model="isMacroPreviewOpen" :macro="macroPreview" />
 
     <Teleport to="body">
       <Transition name="mode-choice">

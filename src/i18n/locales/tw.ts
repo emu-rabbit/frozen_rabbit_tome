@@ -315,7 +315,7 @@ export default {
       cancel: '取消'
     },
     actions: {
-      edit: '編輯',
+      edit: '開啟副本',
       delete: '刪除實驗'
     }
   },
@@ -1124,7 +1124,7 @@ export default {
     searchPlaceholder: '搜尋秘笈名稱或物品名稱',
     noFood: '未使用食物',
     unknownDate: '未知時間',
-    rotationPreview: '最佳手法預覽',
+    rotationPreview: '保存時手法預覽',
     startFromAction: '從 {action} 開始',
     createdAt: '建立於 {time}',
     emptyTitle: '書庫目前是空的',
@@ -1161,7 +1161,7 @@ export default {
       loadAnyway: '載入秘笈'
     },
     actions: {
-      edit: '編輯',
+      edit: '開啟副本',
       copyMacro: '預覽巨集',
       copyMacroStates: {
         copied: '已複製',

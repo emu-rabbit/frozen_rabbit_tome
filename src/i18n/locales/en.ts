@@ -314,7 +314,7 @@ export default {
       cancel: 'Cancel'
     },
     actions: {
-      edit: 'Edit',
+      edit: 'Open Copy',
       delete: 'Delete Experiment'
     }
   },
@@ -1123,7 +1123,7 @@ export default {
     searchPlaceholder: 'Search tome or item names',
     noFood: 'No food',
     unknownDate: 'Unknown time',
-    rotationPreview: 'Best rotation preview',
+    rotationPreview: 'Saved rotation preview',
     startFromAction: 'Start with {action}',
     createdAt: 'Created {time}',
     emptyTitle: 'Your library is empty',
@@ -1160,7 +1160,7 @@ export default {
       loadAnyway: 'Load Tome'
     },
     actions: {
-      edit: 'Edit',
+      edit: 'Open Copy',
       copyMacro: 'Preview Macro',
       copyMacroStates: {
         copied: 'Copied',

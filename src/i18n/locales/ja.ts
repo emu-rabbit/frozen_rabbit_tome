@@ -314,7 +314,7 @@ export default {
       cancel: 'キャンセル'
     },
     actions: {
-      edit: '編集',
+      edit: 'コピーを開く',
       delete: '実験を削除'
     }
   },
@@ -1101,7 +1101,7 @@ export default {
     searchPlaceholder: '秘伝書名またはアイテム名を検索',
     noFood: '食事なし',
     unknownDate: '不明な時刻',
-    rotationPreview: '最適手順プレビュー',
+    rotationPreview: '保存時の手順プレビュー',
     startFromAction: '{action} から開始',
     createdAt: '作成日時 {time}',
     emptyTitle: 'ライブラリはまだ空です',
@@ -1138,7 +1138,7 @@ export default {
       loadAnyway: '秘伝書を読み込む'
     },
     actions: {
-      edit: '編集',
+      edit: 'コピーを開く',
       copyMacro: 'マクロを確認',
       copyMacroStates: {
         copied: 'コピーしました',

@@ -459,7 +459,7 @@ function importErrorDescription() {
         </div>
 
         <div v-if="displayMode === 'compact'" class="compact-action-bar action-bar">
-          <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
+          <Button icon="pi pi-copy" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
           <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
         </div>
 
@@ -588,7 +588,7 @@ function importErrorDescription() {
         <div v-if="displayMode === 'detailed'" class="card-footer">
           <span>{{ t('experimentDatabase.createdAt', { time: formatCreatedAt(experiment.createdAt) }) }}</span>
           <div class="action-bar">
-            <Button icon="pi pi-pencil" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
+            <Button icon="pi pi-copy" :label="t('experimentDatabase.actions.edit')" class="p-button-sm p-button-text library-action" @click="handleEdit(experiment)" />
             <Button icon="pi pi-trash" :label="t('experimentDatabase.actions.delete')" class="p-button-sm p-button-text p-button-danger library-action" @click="deleteExperiment(experiment.id)" />
           </div>
         </div>

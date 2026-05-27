@@ -314,7 +314,7 @@ export default {
       cancel: '取消'
     },
     actions: {
-      edit: '编辑',
+      edit: '打开副本',
       delete: '删除实验'
     }
   },
@@ -1101,7 +1101,7 @@ export default {
     searchPlaceholder: '搜索秘籍名称或物品名称',
     noFood: '未使用食物',
     unknownDate: '未知时间',
-    rotationPreview: '最佳手法预览',
+    rotationPreview: '保存时手法预览',
     startFromAction: '从 {action} 开始',
     createdAt: '创建于 {time}',
     emptyTitle: '书库目前是空的',
@@ -1138,7 +1138,7 @@ export default {
       loadAnyway: '载入秘籍'
     },
     actions: {
-      edit: '编辑',
+      edit: '打开副本',
       copyMacro: '预览宏',
       copyMacroStates: {
         copied: '已复制',
