@@ -13,6 +13,42 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: '1.0.0',
+    date: '2026-05-27',
+    changes: [
+      {
+        tw: '移植求解器至 WASM，大幅加速運算。',
+        cn: '将求解器移植至 WASM，大幅加速运算。',
+        en: 'Moved the solvers to WASM for much faster calculation.',
+        ja: 'ソルバーを WASM に移植し、計算速度を大幅に向上しました。',
+      },
+      {
+        tw: '支援秘笈與實驗的 JSON 匯出與匯入。',
+        cn: '支持秘笈与实验的 JSON 导出与导入。',
+        en: 'Added JSON export and import support for Tomes and Experiments.',
+        ja: '秘笈と実験の JSON エクスポート / インポートに対応しました。',
+      },
+      {
+        tw: '強化實驗台的策略編輯 UI/UX。',
+        cn: '强化实验台的策略编辑 UI/UX。',
+        en: 'Improved the Strategy Lab editing UI/UX.',
+        ja: '実験台のストラテジー編集 UI/UX を改善しました。',
+      },
+      {
+        tw: '新增匯出互動式決策樹功能。',
+        cn: '新增导出互动式决策树功能。',
+        en: 'Added interactive decision tree export.',
+        ja: 'インタラクティブな意思決定ツリーのエクスポート機能を追加しました。',
+      },
+      {
+        tw: '改善多處的 UI/UX 統一和表現。',
+        cn: '改善多处 UI/UX 的统一性与表现。',
+        en: 'Improved UI/UX consistency and presentation across multiple areas.',
+        ja: '複数箇所の UI/UX の統一感と見せ方を改善しました。',
+      },
+    ],
+  },
+  {
     version: '0.9.1',
     date: '2026-05-20',
     changes: [
