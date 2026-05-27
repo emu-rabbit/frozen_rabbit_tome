@@ -53,7 +53,7 @@ export const TOME_MODEL_VERSION_CATALOG = {
   app: {
     key: 'app',
     category: 'application',
-    label: 'Frozen Rabbit Tome app',
+    label: 'Frozen Rabbit Tome',
     version: packageInfo.version,
     visibility: ['external', 'internal']
   },

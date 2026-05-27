@@ -377,7 +377,31 @@ export default {
     title: '版本更新紀錄',
     description: '這裡記錄了秘笈的歷史更新與功能迭代。',
     version: '版本 {v}',
-    latest: '最新'
+    latest: '最新',
+    currentModelVersionsTitle: '現行模型版本',
+    currentModelVersionsDescription: '目前秘笈與實驗會寫入結果、藏書庫快照與 JSON 匯出的版本來源。',
+    currentModelVersionsSummary: '{count} 個版本',
+    modelVersionsButton: '查看現行模型版本',
+    modelVersionsClose: '關閉模型版本視窗',
+    modelVersionGroups: {
+      overall: '整體',
+      jsonExport: 'JSON輸出',
+      tomeSolver: '秘笈推薦求解器',
+      experimentSimulator: '實驗模擬器',
+      experimentAnalyzer: '實驗分析器',
+      strategyCodec: '決策樹/策略表無損轉換'
+    },
+    modelVersionKeys: {
+      exportSchema: 'JSON 匯出格式',
+      app: '冷凍兔肉的秘笈',
+      regularSolver: '一般採集推薦模型',
+      collectableSolver: '收藏品採集推薦模型',
+      regularSimulator: '一般採集模擬模型',
+      regularAnalyzer: '一般採集分析模型',
+      collectableSimulator: '收藏品策略模擬模型',
+      collectableAnalyzer: '收藏品策略分析模型',
+      collectableStrategyCodec: '收藏品策略 codec'
+    }
   },
   solver: {
     title: '秘笈求解器',

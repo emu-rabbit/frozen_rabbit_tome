@@ -376,7 +376,31 @@ export default {
     title: 'Version Changelog',
     description: 'A history of Tome updates and feature changes.',
     version: 'Version {v}',
-    latest: 'Latest'
+    latest: 'Latest',
+    currentModelVersionsTitle: 'Current Model Versions',
+    currentModelVersionsDescription: 'The version sources currently written into Tome and Experiment results, library snapshots, and JSON exports.',
+    currentModelVersionsSummary: '{count} versions',
+    modelVersionsButton: 'View current model versions',
+    modelVersionsClose: 'Close model versions window',
+    modelVersionGroups: {
+      overall: 'Overall',
+      jsonExport: 'JSON export',
+      tomeSolver: 'Tome recommendation solvers',
+      experimentSimulator: 'Experiment simulators',
+      experimentAnalyzer: 'Experiment analyzers',
+      strategyCodec: 'Lossless decision tree / strategy table conversion'
+    },
+    modelVersionKeys: {
+      exportSchema: 'JSON export schema',
+      app: 'Frozen Rabbit Tome',
+      regularSolver: 'Regular gathering recommendation model',
+      collectableSolver: 'Collectable gathering recommendation model',
+      regularSimulator: 'Regular gathering simulation model',
+      regularAnalyzer: 'Regular gathering analysis model',
+      collectableSimulator: 'Collectable strategy simulation model',
+      collectableAnalyzer: 'Collectable strategy analysis model',
+      collectableStrategyCodec: 'Collectable strategy codec'
+    }
   },
   solver: {
     title: 'Tome Solver',

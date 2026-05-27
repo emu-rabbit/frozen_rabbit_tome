@@ -376,7 +376,31 @@ export default {
     title: '版本更新记录',
     description: '这里记录了秘籍的历史更新与功能迭代。',
     version: '版本 {v}',
-    latest: '最新'
+    latest: '最新',
+    currentModelVersionsTitle: '当前模型版本',
+    currentModelVersionsDescription: '目前秘籍与实验会写入结果、藏书库快照与 JSON 导出的版本来源。',
+    currentModelVersionsSummary: '{count} 个版本',
+    modelVersionsButton: '查看当前模型版本',
+    modelVersionsClose: '关闭模型版本窗口',
+    modelVersionGroups: {
+      overall: '整体',
+      jsonExport: 'JSON输出',
+      tomeSolver: '秘籍推荐求解器',
+      experimentSimulator: '实验模拟器',
+      experimentAnalyzer: '实验分析器',
+      strategyCodec: '决策树/策略表无损转换'
+    },
+    modelVersionKeys: {
+      exportSchema: 'JSON 导出格式',
+      app: '冷冻兔肉的秘籍',
+      regularSolver: '一般采集推荐模型',
+      collectableSolver: '收藏品采集推荐模型',
+      regularSimulator: '一般采集模拟模型',
+      regularAnalyzer: '一般采集分析模型',
+      collectableSimulator: '收藏品策略模拟模型',
+      collectableAnalyzer: '收藏品策略分析模型',
+      collectableStrategyCodec: '收藏品策略 codec'
+    }
   },
   solver: {
     title: '秘籍求解器',

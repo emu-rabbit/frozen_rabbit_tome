@@ -376,7 +376,31 @@ export default {
     title: 'アップデート履歴',
     description: '秘伝書の更新履歴や新機能はこちらで確認できます。',
     version: 'バージョン {v}',
-    latest: '最新'
+    latest: '最新',
+    currentModelVersionsTitle: '現在のモデルバージョン',
+    currentModelVersionsDescription: '秘伝書と実験の結果、ライブラリのスナップショット、JSON エクスポートに現在書き込まれるバージョン情報です。',
+    currentModelVersionsSummary: '{count} 件',
+    modelVersionsButton: '現在のモデルバージョンを表示',
+    modelVersionsClose: 'モデルバージョンウィンドウを閉じる',
+    modelVersionGroups: {
+      overall: '全体',
+      jsonExport: 'JSON書き出し',
+      tomeSolver: '秘伝書の推奨ソルバー',
+      experimentSimulator: '実験シミュレーター',
+      experimentAnalyzer: '実験アナライザー',
+      strategyCodec: '決定木/戦略表のロスレス変換'
+    },
+    modelVersionKeys: {
+      exportSchema: 'JSON エクスポート形式',
+      app: '冷凍兔肉の秘伝書',
+      regularSolver: '通常採集の推奨モデル',
+      collectableSolver: '収集品採集の推奨モデル',
+      regularSimulator: '通常採集のシミュレーションモデル',
+      regularAnalyzer: '通常採集の分析モデル',
+      collectableSimulator: '収集品戦略のシミュレーションモデル',
+      collectableAnalyzer: '収集品戦略の分析モデル',
+      collectableStrategyCodec: '収集品戦略 codec'
+    }
   },
   solver: {
     title: '秘伝書ソルバー',
