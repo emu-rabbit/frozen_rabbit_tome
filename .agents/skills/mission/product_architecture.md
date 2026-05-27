@@ -112,5 +112,6 @@
 ## 與既有 Skill 的關係
 
 - `project_mission.md` 定義專案目標，本文件定義目前產品架構與文案邊界。
+- `runtime_input_boundaries.md` 定義物品選定後 runtime 可重建資料、使用者 / 設定檔輸入、以及 engine request 的分界；設計分享連結、匯入、儲存或 URL schema 時必須同讀，避免把 solver request 欄位誤判為使用者必填。
 - `gathering_math_formulas.md` 是底層公式來源，秘笈與實驗都必須遵守。
 - `ffxiv_gathering_skills.md` 定義可用 action model 與目前排除的技能。

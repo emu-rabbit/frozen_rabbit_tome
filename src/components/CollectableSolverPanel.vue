@@ -5,6 +5,7 @@ import Button from 'primevue/button';
 import type { AppliedFoodBonus, FoodSelection, GatherableItem, NodeBonuses, PlayerStats } from '../types/game';
 import type { CollectableObjective, CollectableRewardTable, CollectableSolverRequest, CollectableSolverResult } from '../types/collectable';
 import { useCollectableSolver } from '../composables/useCollectableSolver';
+import FloatingJsonExportButton from './FloatingJsonExportButton.vue';
 import CollectablePolicyView from './CollectablePolicyView.vue';
 import CollectableDebugDialog from './CollectableDebugDialog.vue';
 import CollectableObjectivePreferenceDialog from './CollectableObjectivePreferenceDialog.vue';
@@ -25,6 +26,11 @@ import {
   type CollectableDecisionTreeHtmlDocument,
   type CollectableDecisionTreeHtmlRow
 } from '../utils/collectableDecisionTreeHtmlExport';
+import {
+  buildCollectableSolverJsonExportAsync,
+  buildJsonExportFileName,
+  downloadJsonFile
+} from '../utils/tomeJsonExport';
 
 const props = defineProps<{
   activeItem: GatherableItem;
@@ -59,9 +65,12 @@ const isObjectiveDialogOpen = ref(false);
 const isSaved = ref(false);
 const isDecisionTreeExported = ref(false);
 const isDecisionTreeExporting = ref(false);
+const isJsonExported = ref(false);
+const isJsonExporting = ref(false);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 let savedTimer: ReturnType<typeof window.setTimeout> | null = null;
 let exportedTimer: ReturnType<typeof window.setTimeout> | null = null;
+let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 const isCollectableLevelLocked = computed(() => props.effectiveStats.level < MIN_COLLECTABLE_LEVEL);
 const canSolve = computed(() => !!props.baseValues && !!props.activeItem.itemId && !isCollectableLevelLocked.value);
@@ -82,6 +91,9 @@ onBeforeUnmount(() => {
   if (exportedTimer) {
     window.clearTimeout(exportedTimer);
   }
+  if (jsonExportTimer) {
+    window.clearTimeout(jsonExportTimer);
+  }
 });
 
 watch(() => [
@@ -99,6 +111,7 @@ watch(() => [
   clearCollectableResult();
   isSaved.value = false;
   isDecisionTreeExported.value = false;
+  isJsonExported.value = false;
 }, { deep: true });
 
 watch(() => props.activeItem.itemId, async () => {
@@ -155,6 +168,7 @@ function handleObjectiveChange(objective: CollectableObjective) {
   clearCollectableResult();
   isSaved.value = false;
   isDecisionTreeExported.value = false;
+  isJsonExported.value = false;
 }
 
 function handleSave() {
@@ -196,6 +210,49 @@ async function handleExportDecisionTree() {
   } finally {
     isDecisionTreeExporting.value = false;
   }
+}
+
+async function handleExportCollectableSolverJson() {
+  const request = buildCurrentCollectableRequest();
+  if (!collectableResult.value || !request || isJsonExported.value || isJsonExporting.value) return;
+
+  isJsonExporting.value = true;
+  await nextTick();
+  await waitForUiFrame();
+
+  try {
+    const payload = await buildCollectableSolverJsonExportAsync({
+      meta: { locale: locale.value },
+      item: props.activeItem,
+      request,
+      result: collectableResult.value,
+      food: {
+        selection: { ...props.selectedFood },
+        appliedBonus: { ...props.appliedFoodBonus },
+        baseStats: { ...props.baseStats }
+      }
+    });
+
+    downloadJsonFile(payload, buildJsonExportFileName({
+      item: props.activeItem,
+      scenario: 'tome.collectable',
+      scenarioLabel: t('jsonExport.scenarios.tomeCollectable')
+    }));
+    markJsonExported();
+  } catch (error) {
+    console.error('Collectable solver JSON export failed:', error);
+  } finally {
+    isJsonExporting.value = false;
+  }
+}
+
+function markJsonExported() {
+  isJsonExported.value = true;
+  if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
+  jsonExportTimer = window.setTimeout(() => {
+    isJsonExported.value = false;
+    jsonExportTimer = null;
+  }, 1600);
 }
 
 function waitForUiFrame() {
@@ -561,6 +618,15 @@ function formatBoolean(value: boolean) {
       :objective="collectableObjective"
       context="solver"
       @change="handleObjectiveChange"
+    />
+    <FloatingJsonExportButton
+      v-if="collectableResult"
+      :label="t('common.exportJson')"
+      :busy-label="t('common.exportingJson')"
+      :exported-label="t('common.exportedJson')"
+      :busy="isJsonExporting"
+      :exported="isJsonExported"
+      @click="handleExportCollectableSolverJson"
     />
   </div>
 </template>

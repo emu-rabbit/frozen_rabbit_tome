@@ -18,8 +18,9 @@
 2. `.agents/skills/core/global_standards.md`
 3. `.agents/skills/mission/project_mission.md`
 4. `.agents/skills/mission/product_architecture.md`
-5. `.agents/skills/mission/brand_identity.md`
-6. `.agents/skills/mission/reference_project.md`
+5. `.agents/skills/mission/runtime_input_boundaries.md`
+6. `.agents/skills/mission/brand_identity.md`
+7. `.agents/skills/mission/reference_project.md`
 
 ## `.agents` 目錄地圖
 
@@ -41,6 +42,7 @@
 
 - `.agents/skills/mission/project_mission.md`：專案定位、產品目標與不可宣稱「最佳 / 唯一正解」的邊界。
 - `.agents/skills/mission/product_architecture.md`：秘笈 / 實驗分工、收藏品秘笈現況與文案邊界。
+- `.agents/skills/mission/runtime_input_boundaries.md`：定義 runtime 可依物品重建的資料、使用者 / 設定檔輸入，以及 solver / simulator request 之間的分界；設計分享連結、匯入、儲存或 URL schema 時必讀。
 - `.agents/skills/mission/brand_identity.md`：Frozen Rabbit 品牌人格、語氣與視覺方向。
 - `.agents/skills/mission/reference_project.md`：姊妹專案 `frozen_rabbit_workshop` 的視覺、資料與 i18n 參考。
 
@@ -91,6 +93,10 @@
 若任務是在整理產品待辦、Shikhu 回饋、策略台 UI 或研究者分享 / 匯出方向，另讀：
 
 - `.agents/roadmaps/shikhu-feedback-todo.md`
+
+若任務涉及分享連結、匯入、儲存、URL schema、runtime data 重建、表單預填或判斷哪些欄位必須由使用者提供，另讀：
+
+- `.agents/skills/mission/runtime_input_boundaries.md`
 
 若使用者要求提交 git 變更，另讀：
 
