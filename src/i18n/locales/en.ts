@@ -28,6 +28,42 @@ export default {
       experimentCollectable: 'Collectable Experiment'
     }
   },
+  jsonImport: {
+    actions: {
+      upload: 'Import JSON'
+    },
+    save: {
+      tome: {
+        title: 'Import Tome',
+        description: 'Review this JSON, give it a name, then save it to the Tome Library.',
+        confirm: 'Save Tome'
+      },
+      experiment: {
+        title: 'Import Experiment',
+        description: 'Review this JSON, give it a name, then save it to the Experiment Database.',
+        confirm: 'Save Experiment'
+      }
+    },
+    warning: {
+      kicker: 'Different file type',
+      tomeLibraryTitle: 'This file contains experiment data',
+      tomeLibraryDescription: 'You uploaded it from the Tome Library, but this JSON came from an Experiment. Continuing will save it to the Experiment Database, not as a Tome.',
+      experimentDatabaseTitle: 'This file contains tome data',
+      experimentDatabaseDescription: 'You uploaded it from the Experiment Database, but this JSON came from a Tome. Continuing will save it to the Tome Library, not as an Experiment.',
+      continueToExperiment: 'Save to Database',
+      continueToTome: 'Save to Library',
+      cancel: 'Cancel'
+    },
+    errors: {
+      title: 'Could not import file',
+      invalidJson: 'This is not readable JSON. Please choose a JSON file downloaded from Tome.',
+      unsupportedSchema: 'This JSON is not a Tome export format supported by this version.',
+      unsupportedScenario: 'This JSON scenario is not supported for import yet.',
+      invalidContent: 'This JSON is missing required content, so Tome cannot rebuild a saved card from it.',
+      unknown: 'Something unexpected happened while importing. Please check the file and try again.',
+      close: 'Got it'
+    }
+  },
   saveEntry: {
     nameLabel: 'Name',
     cancel: 'Cancel',

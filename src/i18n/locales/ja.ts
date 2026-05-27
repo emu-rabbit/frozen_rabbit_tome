@@ -28,6 +28,42 @@ export default {
       experimentCollectable: '収集品実験'
     }
   },
+  jsonImport: {
+    actions: {
+      upload: 'JSONを読み込む'
+    },
+    save: {
+      tome: {
+        title: '秘伝書を読み込む',
+        description: 'この JSON の内容を確認し、名前を付けて秘伝書ライブラリに保存できます。',
+        confirm: '秘伝書を保存'
+      },
+      experiment: {
+        title: '実験を読み込む',
+        description: 'この JSON の内容を確認し、名前を付けて実験データベースに保存できます。',
+        confirm: '実験を保存'
+      }
+    },
+    warning: {
+      kicker: 'ファイル種別が違います',
+      tomeLibraryTitle: 'このファイルは実験データです',
+      tomeLibraryDescription: '秘伝書ライブラリから読み込もうとしていますが、この JSON は実験から書き出されたものです。続行すると実験データベースに保存され、秘伝書としては保存されません。',
+      experimentDatabaseTitle: 'このファイルは秘伝書データです',
+      experimentDatabaseDescription: '実験データベースから読み込もうとしていますが、この JSON は秘伝書から書き出されたものです。続行すると秘伝書ライブラリに保存され、実験としては保存されません。',
+      continueToExperiment: '実験DBに保存',
+      continueToTome: '秘伝書に保存',
+      cancel: '中止'
+    },
+    errors: {
+      title: 'ファイルを読み込めません',
+      invalidJson: '読み取れる JSON ではありません。秘伝書からダウンロードした JSON を選んでください。',
+      unsupportedSchema: 'この JSON は現在のバージョンで対応している秘伝書の書き出し形式ではありません。',
+      unsupportedScenario: 'この JSON のシナリオ種別は、まだ読み込みに対応していません。',
+      invalidContent: 'この JSON には必要な内容が不足しているため、秘伝書または実験カードを再作成できません。',
+      unknown: '読み込み中に予期しないエラーが発生しました。ファイル内容を確認してからもう一度お試しください。',
+      close: '了解'
+    }
+  },
   saveEntry: {
     nameLabel: '名前',
     cancel: 'キャンセル',

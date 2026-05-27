@@ -15,6 +15,7 @@ import type {
 } from '../types/game';
 import type { CollectableObjective, CollectableRewardTableSummary } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
+import type { ImportedExperimentDraft } from '../utils/tomeJsonImport';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-experiments';
 const STORAGE_SCHEMA_VERSION = 2;
@@ -281,6 +282,29 @@ export function useExperimentLibrary() {
     return experiment;
   };
 
+  const saveImportedExperiment = (payload: ImportedExperimentDraft & { name?: string }) => {
+    if (shouldHideCrystalGatheringItem({ itemId: payload.itemId })) {
+      throw new Error('Crystal gathering items are hidden by configuration');
+    }
+
+    const now = new Date().toISOString();
+    const experiment: StoredExperiment = {
+      schemaVersion: STORAGE_SCHEMA_VERSION,
+      id: createExperimentId(),
+      name: payload.name?.trim() || undefined,
+      kind: payload.kind,
+      itemId: payload.itemId,
+      input: cloneStoragePayload(payload.input),
+      strategy: cloneStoragePayload(payload.strategy),
+      lastAnalysisSnapshot: payload.lastAnalysisSnapshot ? cloneStoragePayload(payload.lastAnalysisSnapshot) : undefined,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    experiments.value = [experiment, ...experiments.value];
+    return experiment;
+  };
+
   const deleteExperiment = (id: string) => {
     experiments.value = experiments.value.filter((experiment) => experiment.id !== id);
   };
@@ -293,6 +317,7 @@ export function useExperimentLibrary() {
     experimentCount,
     saveExperiment,
     saveCollectableExperiment,
+    saveImportedExperiment,
     deleteExperiment,
     getExperiment,
     fromStoredRotationStep,

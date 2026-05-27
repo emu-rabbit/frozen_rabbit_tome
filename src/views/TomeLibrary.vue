@@ -11,6 +11,12 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import SelectButton from 'primevue/selectbutton';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
+import SaveEntryDialog from '../components/SaveEntryDialog.vue';
+import FloatingJsonImportButton from '../components/FloatingJsonImportButton.vue';
+import JsonImportErrorDialog from '../components/JsonImportErrorDialog.vue';
+import JsonImportPreview from '../components/JsonImportPreview.vue';
+import JsonImportWarningDialog from '../components/JsonImportWarningDialog.vue';
+import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useSolver } from '../composables/useSolver';
 import { useSettings } from '../composables/useSettings';
@@ -24,16 +30,27 @@ import { buildGatheringMacroFromStoredRotation, buildGatheringMacroGroupsFromSto
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { isModelVersionSnapshotStale } from '../utils/modelVersionStatus';
 import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
+import {
+  isImportMismatch,
+  parseTomeJsonImport,
+  TomeJsonImportError,
+  type TomeJsonImportProjection
+} from '../utils/tomeJsonImport';
 
 const { t, locale } = useI18n();
 const router = useRouter();
-const { visibleTomes, deleteTome } = useTomeLibrary();
+const { visibleTomes, deleteTome, saveImportedTome } = useTomeLibrary();
+const { saveImportedExperiment } = useExperimentLibrary();
 const { loadTomeForEditing } = useSolver();
 const { macroSettings, solverSettings } = useSettings();
 const searchQuery = ref('');
 const isMacroPreviewOpen = ref(false);
 const pendingEditTome = ref<StoredTome | null>(null);
+const pendingImport = ref<TomeJsonImportProjection | null>(null);
 const macroPreview = ref<MacroBuildResult | null>(null);
+const importErrorKey = ref<string | null>(null);
+const isImportWarningOpen = ref(false);
+const isImportSaveDialogOpen = ref(false);
 const displayMode = useLocalStorage<'compact' | 'detailed'>('frozen-rabbit-tome-library-display-mode', 'detailed');
 const tierCountVisibilityEpsilon = 0.000001;
 const displayModeOptions = computed(() => [
@@ -438,6 +455,59 @@ function snapshotMetricRows(tome: StoredTome): SnapshotMetricRow[] {
 function formatNumber(value?: number) {
   return typeof value === 'number' ? Number(value.toFixed(2)).toString() : '-';
 }
+
+async function handleImportFile(file: File) {
+  try {
+    pendingImport.value = parseTomeJsonImport(await file.text());
+    importErrorKey.value = null;
+    if (isImportMismatch('tomeLibrary', pendingImport.value)) {
+      isImportWarningOpen.value = true;
+      return;
+    }
+
+    openImportSaveDialog();
+  } catch (error) {
+    pendingImport.value = null;
+    importErrorKey.value = error instanceof TomeJsonImportError ? error.message : 'unknown';
+  }
+}
+
+function openImportSaveDialog() {
+  if (!pendingImport.value) return;
+  isImportSaveDialogOpen.value = true;
+}
+
+function confirmImportSave(name: string) {
+  if (!pendingImport.value) return;
+
+  if (pendingImport.value.sourceType === 'tome') {
+    saveImportedTome({ ...pendingImport.value.tome, name });
+  } else {
+    saveImportedExperiment({ ...pendingImport.value.experiment, name });
+  }
+
+  pendingImport.value = null;
+}
+
+function importSaveTitle() {
+  if (pendingImport.value?.sourceType === 'experiment') return t('jsonImport.save.experiment.title');
+  return t('jsonImport.save.tome.title');
+}
+
+function importSaveDescription() {
+  if (pendingImport.value?.sourceType === 'experiment') return t('jsonImport.save.experiment.description');
+  return t('jsonImport.save.tome.description');
+}
+
+function importSaveConfirmLabel() {
+  if (pendingImport.value?.sourceType === 'experiment') return t('jsonImport.save.experiment.confirm');
+  return t('jsonImport.save.tome.confirm');
+}
+
+function importErrorDescription() {
+  const key = importErrorKey.value ?? 'unknown';
+  return t(`jsonImport.errors.${key.startsWith('missing:') ? 'invalidContent' : key}`);
+}
 </script>
 
 <template>
@@ -750,6 +820,43 @@ function formatNumber(value?: number) {
         </div>
       </Transition>
     </Teleport>
+
+    <SaveEntryDialog
+      v-if="pendingImport"
+      v-model="isImportSaveDialogOpen"
+      :title="importSaveTitle()"
+      :description="importSaveDescription()"
+      :name-label="t('saveEntry.nameLabel')"
+      :default-name="pendingImport.defaultName"
+      :confirm-label="importSaveConfirmLabel()"
+      :cancel-label="t('saveEntry.cancel')"
+      @confirm="confirmImportSave"
+    >
+      <JsonImportPreview :projection="pendingImport" />
+    </SaveEntryDialog>
+
+    <JsonImportWarningDialog
+      v-model="isImportWarningOpen"
+      :kicker="t('jsonImport.warning.kicker')"
+      :title="t('jsonImport.warning.tomeLibraryTitle')"
+      :description="t('jsonImport.warning.tomeLibraryDescription')"
+      :continue-label="t('jsonImport.warning.continueToExperiment')"
+      :cancel-label="t('jsonImport.warning.cancel')"
+      @continue="openImportSaveDialog"
+    />
+
+    <JsonImportErrorDialog
+      :model-value="!!importErrorKey"
+      :title="t('jsonImport.errors.title')"
+      :description="importErrorDescription()"
+      :close-label="t('jsonImport.errors.close')"
+      @update:model-value="importErrorKey = null"
+    />
+
+    <FloatingJsonImportButton
+      :label="t('jsonImport.actions.upload')"
+      @select="handleImportFile"
+    />
   </div>
 </template>
 

@@ -28,6 +28,42 @@ export default {
       experimentCollectable: '收藏品实验'
     }
   },
+  jsonImport: {
+    actions: {
+      upload: '导入 JSON'
+    },
+    save: {
+      tome: {
+        title: '导入秘籍',
+        description: '确认这份 JSON 的内容后，可以替它命名并保存进秘籍书库。',
+        confirm: '保存秘籍'
+      },
+      experiment: {
+        title: '导入实验',
+        description: '确认这份 JSON 的内容后，可以替它命名并保存进实验数据库。',
+        confirm: '保存实验'
+      }
+    },
+    warning: {
+      kicker: '文件类型不同',
+      tomeLibraryTitle: '这份文件是实验数据',
+      tomeLibraryDescription: '你目前在秘籍书库上传，但这份 JSON 来自实验。继续后会保存进实验数据库，不会保存成秘籍。',
+      experimentDatabaseTitle: '这份文件是秘籍数据',
+      experimentDatabaseDescription: '你目前在实验数据库上传，但这份 JSON 来自秘籍。继续后会保存进秘籍书库，不会保存成实验。',
+      continueToExperiment: '保存进实验数据库',
+      continueToTome: '保存进秘籍书库',
+      cancel: '放弃'
+    },
+    errors: {
+      title: '无法导入文件',
+      invalidJson: '这不是可解析的 JSON 文件，请确认你选到的是从秘籍下载的 JSON。',
+      unsupportedSchema: '这份 JSON 不是当前版本支持的秘籍导出格式。',
+      unsupportedScenario: '这份 JSON 的情境类型目前尚未支持导入。',
+      invalidContent: '这份 JSON 缺少必要内容，无法重建秘籍或实验卡片。',
+      unknown: '导入时发生未预期的错误，请确认文件内容后再试一次。',
+      close: '知道了'
+    }
+  },
   saveEntry: {
     nameLabel: '名称',
     cancel: '取消',

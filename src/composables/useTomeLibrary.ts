@@ -14,6 +14,7 @@ import type {
 } from '../types/game';
 import type { CollectableSolverResult } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
+import type { ImportedTomeDraft } from '../utils/tomeJsonImport';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-library';
 const STORAGE_SCHEMA_VERSION = 2;
@@ -262,6 +263,28 @@ export function useTomeLibrary() {
     return tome;
   };
 
+  const saveImportedTome = (payload: ImportedTomeDraft & { name?: string }) => {
+    if (shouldHideCrystalGatheringItem({ itemId: payload.itemId })) {
+      throw new Error('Crystal gathering items are hidden by configuration');
+    }
+
+    const now = new Date().toISOString();
+    const tome: StoredTome = {
+      schemaVersion: STORAGE_SCHEMA_VERSION,
+      id: createTomeId(),
+      kind: payload.kind,
+      name: payload.name?.trim() || undefined,
+      itemId: payload.itemId,
+      input: cloneStoragePayload(payload.input),
+      lastSolvedSnapshot: payload.lastSolvedSnapshot ? cloneStoragePayload(payload.lastSolvedSnapshot) : undefined,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    tomes.value = [tome, ...tomes.value];
+    return tome;
+  };
+
   const deleteTome = (id: string) => {
     tomes.value = tomes.value.filter((tome) => tome.id !== id);
   };
@@ -271,6 +294,7 @@ export function useTomeLibrary() {
     visibleTomes,
     tomeCount,
     saveTome,
+    saveImportedTome,
     deleteTome
   };
 }

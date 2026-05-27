@@ -29,6 +29,42 @@ export default {
       experimentCollectable: '收藏品實驗'
     }
   },
+  jsonImport: {
+    actions: {
+      upload: '匯入 JSON'
+    },
+    save: {
+      tome: {
+        title: '匯入秘笈',
+        description: '確認這份 JSON 的內容後，可以替它取名並存進秘笈書庫。',
+        confirm: '儲存秘笈'
+      },
+      experiment: {
+        title: '匯入實驗',
+        description: '確認這份 JSON 的內容後，可以替它取名並存進實驗資料庫。',
+        confirm: '儲存實驗'
+      }
+    },
+    warning: {
+      kicker: '檔案類型不同',
+      tomeLibraryTitle: '這份檔案是實驗資料',
+      tomeLibraryDescription: '你目前在秘笈書庫上傳，但這份 JSON 來自實驗。繼續後會存進實驗資料庫，不會存成秘笈。',
+      experimentDatabaseTitle: '這份檔案是秘笈資料',
+      experimentDatabaseDescription: '你目前在實驗資料庫上傳，但這份 JSON 來自秘笈。繼續後會存進秘笈書庫，不會存成實驗。',
+      continueToExperiment: '存進實驗資料庫',
+      continueToTome: '存進秘笈書庫',
+      cancel: '放棄'
+    },
+    errors: {
+      title: '無法匯入檔案',
+      invalidJson: '這不是可解析的 JSON 檔案，請確認你選到的是從秘笈下載的 JSON。',
+      unsupportedSchema: '這份 JSON 不是目前版本支援的秘笈匯出格式。',
+      unsupportedScenario: '這份 JSON 的情境類型目前尚未支援匯入。',
+      invalidContent: '這份 JSON 缺少必要內容，無法重建秘笈或實驗卡片。',
+      unknown: '匯入時發生未預期的錯誤，請確認檔案內容後再試一次。',
+      close: '知道了'
+    }
+  },
   saveEntry: {
     nameLabel: '名稱',
     cancel: '取消',
