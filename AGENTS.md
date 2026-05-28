@@ -121,9 +121,11 @@
 
 - 一般採集或收藏品求解器：`assembly/*SolverCore.ts`、`src/wasm/*.wasm`、`src/utils/rotationSolver.ts`、`src/utils/regularGatheringWasmSolver.ts`、`src/utils/collectableSolver.ts`、`src/utils/collectableWasmSolver.ts`、`src/utils/collectableWasmPolicy.ts`、`src/workers/*solver*.ts`。
 - 模擬、分析與策略模型：`src/utils/rotationSimulator.ts`、`src/utils/collectableStrategyAnalysis.ts`、`src/utils/collectableStrategyTree.ts`、`src/utils/collectablePolicyStrategyCodec.ts`。
-- 公式、機制、action model、objective scoring、reward / tier 判定、輸入正規化中會影響結果的部分：`src/utils/*Math.ts`、`src/utils/*Mechanics.ts`、`src/utils/collectableObjectivePresets.ts`、`src/config/inputLimits.ts`、相關 business `.agents` 文件。
+- 公式、機制、action model、objective scoring、reward / tier 判定、輸入正規化中會影響結果的部分：`src/utils/*Math.ts`、`src/utils/*Mechanics.ts`、`src/utils/collectableObjectivePresets.ts`、`src/config/inputLimits.ts`。
 
-版本 bump 底線是「同一份輸入在新版模型下，使用者可觀察結果是否可能不同」或「修改 / 重構了模型相關實作」。即使重構目標是保持行為不變，也不能假設沒有改壞；模型相關重構必須 bump 對應版本。只改 UI 排版、純 i18n 文案、README、測試描述或完全不碰模型路徑的重構，通常不需要 bump，但 commit 前仍應說明判斷。
+版本 bump 底線是「同一份輸入在新版模型下，使用者可觀察結果是否可能不同」或「修改 / 重構了模型相關實作」。即使重構目標是保持行為不變，也不能假設沒有改壞；模型相關重構必須 bump 對應版本。只改 UI 排版、純 i18n 文案、README、測試描述、`.agents` / Markdown 文件，或完全不碰模型路徑的重構，不需要 bump，但 commit 前仍應說明判斷。
+
+`.agents` 與其他 Markdown 文件的職責是反映目前真實模型、流程與維護規則；純文件修正不會改變 solver / simulator / analyzer 行為，也不納入 model version 管理。若同一個任務同時修改模型實作與文件，是否 bump 由實作變更決定，不由文件變更本身決定。
 
 ## Unit Test 壓力案例硬約束
 

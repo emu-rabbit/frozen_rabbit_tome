@@ -33,13 +33,13 @@
 collectability -> score
 ```
 
-目前可理解為：
+現行 reward vector 評分可理解為：
 
 ```txt
 collectability -> reward tier -> scrip amount -> score
 ```
 
-未來應允許：
+現行 tier-aware 評分已允許：
 
 ```txt
 collectability -> tier / custom breakpoint -> score
@@ -52,24 +52,24 @@ collectability -> tier / custom breakpoint -> score
 - 精選或宇宙探索等未完整支援模型：可先提供「收藏價值評分模式」或推薦權重，避免假裝已知道完整 reward model。
 - 使用者自訂：允許使用者針對不同檔位設定自己的分數。
 
-## 建議的使用者介面概念
+## 現行使用者介面概念
 
-在求解按鈕旁或左側設定區加入一個小型 `評分偏好` 設定入口。
+求解台與策略分析使用小型 `評分偏好` 設定入口，讓使用者選擇本次推薦或分析要重視的目標。
 
-不要稱為「真實收益」或「最佳權重」，避免誤導。建議文案方向：
+不要稱為「真實收益」或「最佳權重」，避免誤導。可用文案方向：
 
 - `評分偏好`
 - `推薦排序權重`
 - `依目前目標評分`
 
-小視窗可提供三種模式：
+小視窗目前提供下列方向：
 
-1. **使用預設評分**
+1. **使用 reward vector 評分**
    - 一般素材票據收藏品：使用現有 reward table，也就是票據 / 經驗 / 金幣 / 物品權重。
-   - 老主顧：預設使用高標優先。
 
-2. **使用推薦權重**
-   - 精選：預設偏向 1000 收藏價值。例如低標 0、中標少量分數、高標或 1000 大幅加權。
+2. **使用 tier-aware 評分**
+   - 老主顧或交納品質導向：使用高價值、中價值、低價值等 preset，而不是只看票據總量。
+   - 精選：在正式 reward model 尚未建立前，可用收藏價值 / 高檔位偏好做研究用排序，但必須清楚標示不是完整 reduction 期望。
    - 宇宙探索：可先做「收藏價值評分模式」，但必須標明尚未等於 mission score / 銀星金星 reward。
 
 3. **自訂權重**
@@ -80,7 +80,6 @@ collectability -> tier / custom breakpoint -> score
    低標: 1
    中標: 3
    高標: 8
-   1000: 12 或 20
    ```
 
 ## 老主顧案例的建議 preset
@@ -114,10 +113,10 @@ collectability -> tier / custom breakpoint -> score
 | 票據總量 | 沿用目前 `scrip` reward | 一般收藏品、刷票、想最大化單點總票據 |
 | 老主顧高標 | 高標大幅加權，中標作 fallback | 每週 6 顆、非限時可刷點、重視交納品質 |
 | 穩定交納 | 中標與高標都有明顯分數，低標較低 | 裝備不足或想保守達標 |
-| 收藏價值優先 | 1000 或最高可達收藏價值大幅加權 | 精選、未知 reward model、研究用途 |
+| 收藏價值優先 | 最高檔位或最高可達收藏價值大幅加權 | 精選、未知 reward model、研究用途 |
 | 自訂 | 使用者自行設定各檔位 / breakpoint | edge case、個人習慣、第三方驗證 |
 
-## 實作建議
+## 現行實作與維護規則
 
 ### 1. 不要重寫 action engine
 
@@ -125,14 +124,14 @@ collectability -> tier / custom breakpoint -> score
 
 WASM 遷移後，正式路徑是 WASM core 負責 DP / memo / objective score / best action / search counters，TS wrapper 負責 request parsing、reward table、objective preset、policy materialization、export 與 debug。TS solver 仍是 fallback 與 parity 參考。修改 scoring layer 時必須同步考慮 WASM 介面能否表達該 objective。
 
-這次問題應改 scoring layer，不應重寫動作模型。
+Objective / tie-break / scoring 問題應優先改 scoring layer，不應重寫動作模型。
 
-### 2. 擴充 objective 型別
+### 2. Objective 型別現況
 
-目前 `CollectableObjective` 已有：
+`CollectableObjective` 目前已支援 reward vector 與 tier-aware objective：
 
 ```ts
-export type CollectableObjectiveKind = 'scrip' | 'exp' | 'gil' | 'custom';
+export type CollectableObjectiveKind = 'scrip' | 'exp' | 'gil' | 'custom' | 'tierScore';
 
 export interface CollectableRewardWeights {
   exp?: number;
@@ -140,49 +139,27 @@ export interface CollectableRewardWeights {
   scrip?: number;
   items?: Record<number, number>;
 }
-```
-
-這是 reward vector 權重，不是 tier 權重。
-
-未來可擴充成 tier-aware / breakpoint-aware objective，例如：
-
-```ts
-export type CollectableObjectiveKind =
-  | 'scrip'
-  | 'exp'
-  | 'gil'
-  | 'customReward'
-  | 'tierScore';
 
 export interface CollectableTierScoreWeights {
   none?: number;
   low?: number;
   mid?: number;
   high?: number;
-  cap?: number;
 }
 
 export interface CollectableObjective {
   kind: CollectableObjectiveKind;
+  presetId?: CollectableObjectivePresetId;
   weights?: CollectableRewardWeights;
   tierWeights?: CollectableTierScoreWeights;
 }
 ```
 
-若需要支援精選或宇宙探索的特殊 breakpoint，可再加：
+現行 preset 包含 `scrip`、`highValue`、`midValue`、`lowValue`、`customTier`。`tierScore` 會把收藏價值先映射到 `none / low / mid / high`，再用 tier weights 算分。若未來需要支援精選、宇宙探索或任意 breakpoint，不能只改 UI；必須同步設計 WASM input shape、TS fallback parity、export/debug 呈現與模型版本。
 
-```ts
-export interface CollectableBreakpointScore {
-  collectability: number;
-  score: number;
-}
-```
+### 3. Collectability scoring helper
 
-WASM core 目前只接收可壓成 reward tier scalar score 的 objective。若未來 objective 需要依「路徑形狀」、「第 N 次採集」、「任意多檔 reward table」或特殊 breakpoint 動態計分，不能只改 TS UI；必須同步設計 WASM input shape、TS fallback parity 與 export/debug 呈現。
-
-### 3. 新增 collectability scoring helper
-
-目前 `scoreCollectableReward(reward, objective)` 只看 reward vector。建議新增：
+現行 `scoreCollectability(collectability, rewardTable, objective)` 是秘笈求解、策略 codec 與實驗分析共用的評分入口：
 
 ```ts
 scoreCollectability(collectability, rewardTable, objective)
@@ -190,9 +167,9 @@ scoreCollectability(collectability, rewardTable, objective)
 
 行為：
 
-- `scrip` / `exp` / `gil` / `customReward`：沿用目前 reward vector scoring。
+- `scrip` / `exp` / `gil` / `custom`：沿用目前 reward vector scoring。
 - `tierScore`：先由 `getCollectableRewardTier(collectability, rewardTable)` 判斷 `none / low / mid / high`，再查 `tierWeights`。
-- 若有 `cap` 且 `collectability >= 1000`，可額外使用 cap 權重或加分，但需小心不要讓「1000」與「高標」語意混淆。
+- 若未來加入 `cap` 或特殊 breakpoint 權重，需小心不要讓「1000」與「高標」語意混淆。
 
 ### 4. 保留 reward 顯示
 
@@ -206,15 +183,15 @@ scoreCollectability(collectability, rewardTable, objective)
 
 ### 5. 顯示預期檔位顆數
 
-若使用自訂權重或高標優先 preset，UI 不應只顯示 `expectedScore`。此時分數是使用者偏好權重，不是遊戲內真實單位；更有用的摘要是「預期會拿到幾顆高標 / 中標 / 低標」。
+現行結果已提供 `expectedTierCounts`。若使用自訂權重或高標優先 preset，UI 不應只顯示 `expectedScore`。此時分數是使用者偏好權重，不是遊戲內真實單位；更有用的摘要是「預期會拿到幾顆高標 / 中標 / 低標」。
 
 不要嘗試從 scalar score 反推檔位顆數。原因：
 
 - 權重可能導致碰撞，例如同一個總分可由不同低 / 中 / 高組合得到。
 - `scrip` 模式下，總票數也無法可靠還原每顆的檔位。
-- 未來若加入特殊 breakpoint、精選評分或物品權重，反推會更不穩定。
+- 若未來加入特殊 breakpoint、精選評分或物品權重，反推會更不穩定。
 
-建議新增一個與 `expectedReward` 平行的摘要向量：
+`expectedTierCounts` 是與 `expectedReward` 平行的摘要向量：
 
 ```ts
 export interface CollectableTierCounts {
@@ -222,7 +199,6 @@ export interface CollectableTierCounts {
   low: number;
   mid: number;
   high: number;
-  cap?: number;
 }
 ```
 
@@ -263,13 +239,13 @@ UI 可顯示為：
 - `expectedTierCounts` 是結果摘要，不是求解狀態；不要把它加入 DP state key。
 - 不要為了一般 UI 把 endpoint outcome key 擴成 `score + lowCount + midCount + highCount`。這會放大 outcome distribution，尤其在多次 `Collect`、`Revisit` 與洞察分支下容易變胖。
 - 若未來需要完整檔位組合分布，建議只在 `debugMode` 或專門研究匯出中計算，平常求解不要保存。
-- 第一版 UI 只需要期望檔位顆數即可，不需要完整 endpoint tier distribution。
+- 一般 UI 只需要期望檔位顆數即可，不需要完整 endpoint tier distribution。
 
-因此，若只是為畫面顯示「預期高標 / 中標 / 低標顆數」，可以直接做；主要風險不是 RAM，而是命名、顯示與測試要避免讓使用者誤解 scoring 分數。
+主要風險不是 RAM，而是命名、顯示與測試要避免讓使用者誤解 scoring 分數。
 
 ### 7. Tome Library 與實驗系統
 
-若實作此功能，儲存到 Tome Library 時應保存 objective/preset，而不是只保存當下顯示文字。
+儲存到 Tome Library 時應保存 objective/preset，而不是只保存當下顯示文字。
 
 實驗系統的策略分析也應共用同一 scoring helper，避免同一手法在秘笈與實驗中被不同規則評分。
 
@@ -282,16 +258,9 @@ UI 可顯示為：
 - Objective / tie-break / scoring 變更至少要驗證 TS 與 WASM 的 summary、distribution、reward/tier counts 與可達尾端；同分 root action 差異可視情況寬鬆驗收，但必須能解釋。
 - 對外文案仍只能使用「推薦」、「依目前模型」、「評分偏好」等保守語氣，不可宣稱「最佳」或「唯一正解」。
 
-## 最短落地路線
+## 後續擴充檢查清單
 
-1. 在型別新增 tier-aware objective。
-2. 新增 `scoreCollectability()` 並讓 solver / strategy analysis 共用。
-3. 加入老主顧高標 preset，至少針對 `rewardTable.source === 'customDelivery'` 作為建議預設。
-4. UI 加 `評分偏好` 小視窗，先提供 preset 與自訂低 / 中 / 高權重。
-5. 新增 `expectedTierCounts` 摘要，讓 UI 能顯示預期高標 / 中標 / 低標顆數。
-6. 補 unit tests：
-   - 現有 `scrip` 模式維持舊行為。
-   - 老主顧高標 preset 不會因中標票數總和較高而提早停手。
-   - 自訂權重能改變推薦策略。
-   - `expectedTierCounts` 會隨 `Collect` 成功分支正確累積，且不影響 DP state key。
-   - 秘笈與實驗分析使用同一 scoring helper。
+1. 若新增 objective kind、preset、breakpoint 或 reward model，先確認 WASM input shape、TS fallback、strategy analysis 與 export/import 都能表達同一語意。
+2. 若 scoring 實作變更可能影響同一輸入的推薦、分析分數、distribution 或檔位摘要，提交前必須依 `AGENTS.md` bump `src/config/modelVersions.ts` 的對應 model version。純文件修正只是讓說明貼近目前真實模型，不需 bump。
+3. 測試至少覆蓋：現有 `scrip` 模式維持舊行為、tier preset 能改變推薦策略、`expectedTierCounts` 隨 `Collect` 成功分支正確累積且不進 DP state key、秘笈與實驗分析使用同一 scoring helper。
+4. 若新增完整 endpoint tier distribution，只能放在 debug / 研究匯出或專門比較工具，平常求解不要讓 outcome key 因檔位組合而膨脹。
