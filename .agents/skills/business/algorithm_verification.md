@@ -93,6 +93,7 @@ Golden scenario 可先寫在 test 檔內；若數量增加，應移到 `src/util
 WASM 路徑另需注意：
 
 - `stateKeyEngine` 或等價欄位應能辨識 `wasm-packed`、`js-packed`、`string` 等 key 建立路徑。
+- TS mechanics / math / solver 與 AssemblyScript WASM core 是雙實作關係，不是同一份 source 的自動產物。任何公式、action model、狀態轉移、state key、objective scoring、tie-break、reward / tier 判定或 Revisit 語意變更，都必須同步檢查兩側並以 parity / oracle / benchmark 驗證；不可只因 unit summary 數值相同就認定雙方完全等價。
 - memo capacity / allocation failure 必須回傳受控錯誤，不應讓頁面或 worker 直接 OOM。
 - 若手動提高 memo capacity，debug/export 應保留足夠線索讓第三方知道該結果使用的 engine 與容量。
 - 一般採集 WASM 修改 `tie-break metadata`、capacity selector 或 worker fallback policy 時，必須重跑 worker parity test；不能只跑 wrapper test 或 summary test。
@@ -223,6 +224,7 @@ JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 change
 - 模型版本硬約束：修改或重構核心演算法、WASM core / wrapper、worker fallback、模擬器、分析器、策略 codec、公式、action model、objective scoring、reward / tier 判定或其他模型內容時，必須同步更新 `src/config/modelVersions.ts` 對應的 scenario-aware model version。模型重構即使目標是不改行為，也必須 bump，因為無法保證重構沒有改壞輸出。若尚未更新，Agent 不得 commit；除非使用者明確要求未更新模型版本也提交，否則必須在 commit 前停下詢問。純 `.agents` / Markdown 文件修正、研究紀錄整理或工作流程文字更新不算模型內容，不需 bump。
 - 修改核心演算法時，至少跑 `npm run test:unit`。
 - 若修改普通採集或收藏品求解器，必須檢查公式表測試、invariant 測試、golden scenario 與 oracle 是否仍符合模型。
+- 若修改 TS mechanics / math / solver 或 AssemblyScript WASM core 中任一側的公式、action、state transition、state key、tie-break 或 scoring，必須主動搜尋並檢查另一側對應實作。除非能清楚證明另一側不受影響，否則必須同步修改，重新產出對應 `.wasm`，並跑 TS/WASM parity 測試或適合的 bench / diagnostic。
 - 若修改一般採集 WASM core、wrapper、worker fallback、memo capacity selector 或 rotation materialization，必須檢查 `src/utils/regularGatheringWasmSolver.test.ts`、`src/workers/solver.worker.test.ts` 與 `src/utils/regularGatheringRotationContract.test.ts`；高壓案例改用 `npm run bench:regular-wasm` 驗證。
 - 若修改收藏品 WASM core、wrapper、policy materialization、objective scoring 或剪枝策略，必須檢查 `src/utils/collectableWasmSolver.test.ts` 與 TS/WASM parity，並確認不會移除極低機率但可達的高分尾端。
 - 若新增支援技能或新 reward model，必須同步更新：

@@ -88,6 +88,12 @@
 - 使用者可見的 `bestRotation` 與 `rotationPlans` 必須維持既有 TS solver 的 rotation shape；數值一致但 action 順序不同時，不能視為可接受的正式行為。
 - 高 GP / 高耐久 / 低成功率 / Revisit 的壓力案例應放在 benchmark 或 diagnostic，不應塞進預設 unit test。
 
+### WASM 與 TS 雙實作同步約束
+
+一般採集與收藏品的正式求解路徑雖然是 WASM-first，但 TS mechanics / math / solver 仍同時承擔實驗、結果物化、fallback、oracle 與 parity 參考。AssemblyScript WASM core 不是 TS mechanics 的自動編譯產物，而是另一份 solver 熱路徑實作；後續 Agent 不可假設改了 `src/utils/*Math.ts`、`src/utils/*Mechanics.ts` 或 TS solver 就會自動更新 WASM 行為，也不可假設改了 `assembly/*SolverCore.ts` 就已同步實驗與 TS fallback。
+
+凡是修改公式、action model、狀態欄位、state key、狀態轉移、objective scoring、tie-break、reward / tier 判定、Revisit 或 memo / policy 查詢語意，都必須檢查 TS 與 WASM 兩側是否需要同步修改。若刻意只改其中一側，必須能說明另一側為何不受影響，並用 parity / oracle / benchmark 或測試範圍說明支撐該判斷。
+
 ## 收藏品秘笈現況
 
 收藏品採集已不是「施工中」的空入口；後續 Agent 應以目前已存在的收藏品求解器為基礎維護，而不是重開大型規劃。
