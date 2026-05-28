@@ -126,6 +126,8 @@
 
 若變更碰到上述 TS 與 AssemblyScript 雙實作邊界，不可只改其中一邊就提交。若有意只改其中一側，必須在回覆與提交說明中明確指出另一側不受影響的原因、已跑哪些 parity / oracle / benchmark 驗證，以及是否需要後續補齊。
 
+本專案的 model version 刻意維持 runner-facing / scenario-facing，不為底層機制另設 `formulaVersion`、`mechanicsVersion` 或 `actionModelVersion` 作為必要欄位。這代表紀律必須由 Agent 維持：若 shared formula、mechanics、action model 或雙實作同步變更會影響多個 surface，就必須同步 bump 所有受影響的 runner model version，例如 `regularSolver`、`regularSimulator`、`regularAnalyzer` 或收藏品對應版本；不可只因實際修改檔案集中在「機制層」就漏掉實驗或秘笈的版本。
+
 版本 bump 底線是「同一份輸入在新版模型下，使用者可觀察結果是否可能不同」或「修改 / 重構了模型相關實作」。即使重構目標是保持行為不變，也不能假設沒有改壞；模型相關重構必須 bump 對應版本。只改 UI 排版、純 i18n 文案、README、測試描述、`.agents` / Markdown 文件，或完全不碰模型路徑的重構，不需要 bump，但 commit 前仍應說明判斷。
 
 `.agents` 與其他 Markdown 文件的職責是反映目前真實模型、流程與維護規則；純文件修正不會改變 solver / simulator / analyzer 行為，也不納入 model version 管理。若同一個任務同時修改模型實作與文件，是否 bump 由實作變更決定，不由文件變更本身決定。

@@ -71,6 +71,7 @@
   - `experiment.regular`：`exportSchema`、`app`、`regularSimulator`、`regularAnalyzer`。
   - `experiment.collectable`：`exportSchema`、`app`、`collectableSimulator`、`collectableAnalyzer`。
 - `formulaVersion`、`actionModelVersion`、`gameDataVersion` 可作為內部 release note、debug 或長期擴充欄位，但第一版不應要求所有 JSON 都獨立維護這三個板號。若公式、技能模型或資料來源改動會影響結果，應 bump 對應的 solver / simulator / analyzer model version。
+- 版本模型刻意維持 runner-facing / scenario-facing。即使架構上有 shared mechanics / formula layer，也不把它拆成必填的獨立版本 key；這個決策必須靠維護紀律補足。若底層公式、action model、狀態轉移或 TS/WASM 雙實作同步變更會影響秘笈與實驗，就要同時 bump 對應的 solver、simulator、analyzer 版本，並在提交說明中寫清楚影響面。不能只 bump 實際被修改最多的 runner。
 - 提交硬約束：涉及求解、模擬、分析、策略 codec、公式、action model 或模型相關重構的變更，若尚未同步 bump `src/config/modelVersions.ts` 對應模型版本，Agent 不得執行 `git commit`。即使重構宣稱不改行為，也應 bump；除非使用者明確要求不更新模型版本也提交，否則 Agent 在 commit 前必須停下詢問。
 - 純 `.agents` / Markdown 文件更新不納入 model version 管理。文件應反映目前真實模型、產品邊界與維護規則；修正文件本身不會改變 solver / simulator / analyzer 行為。若同一任務同時修改模型實作與文件，是否 bump 由實作變更決定。
 

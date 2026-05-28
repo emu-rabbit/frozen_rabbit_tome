@@ -205,7 +205,7 @@ WASM 路徑另需注意：
 
 實作時 `modelVersions` 不必每個 scenario 都塞滿所有欄位；應只輸出該 JSON 會用到的版本。例如 `tome.collectable` 需要 collectable solver 與 collectable strategy codec，`experiment.regular` 則需要 regular simulator / analyzer。
 
-版本粒度以「同一份輸入在新版模型下，使用者可觀察輸出是否可能不同」或「模型相關實作是否被修改 / 重構」為判準。第一版不建議把 `formulaVersion`、`actionModelVersion`、`gameDataVersion` 做成所有 JSON 的第一層必填欄位；若公式、技能模型、資料來源或模型重構可能影響結果，應 bump 對應的 solver / simulator / analyzer model version。內部公式、action model、資料來源與 server region 可作為 debug / release note / future extension 欄位。純文件更新不納入 model version 管理；文件只用來反映目前真實模型狀況。
+版本粒度以「同一份輸入在新版模型下，使用者可觀察輸出是否可能不同」或「模型相關實作是否被修改 / 重構」為判準。第一版不建議把 `formulaVersion`、`actionModelVersion`、`gameDataVersion` 做成所有 JSON 的第一層必填欄位；若公式、技能模型、資料來源或模型重構可能影響結果，應 bump 對應的 solver / simulator / analyzer model version。內部公式、action model、資料來源與 server region 可作為 debug / release note / future extension 欄位。這是刻意的 runner-facing 版本治理：shared mechanics 變更不靠獨立 mechanics key 追蹤，而是由 Agent 判斷並 bump 所有受影響 scenario 的 runner 版本。純文件更新不納入 model version 管理；文件只用來反映目前真實模型狀況。
 
 JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 changelog 說明。
 
@@ -222,6 +222,7 @@ JSON 欄位需保持穩定；若破壞相容性，應在 release note 或 change
 ## Agent 維護規則
 
 - 模型版本硬約束：修改或重構核心演算法、WASM core / wrapper、worker fallback、模擬器、分析器、策略 codec、公式、action model、objective scoring、reward / tier 判定或其他模型內容時，必須同步更新 `src/config/modelVersions.ts` 對應的 scenario-aware model version。模型重構即使目標是不改行為，也必須 bump，因為無法保證重構沒有改壞輸出。若尚未更新，Agent 不得 commit；除非使用者明確要求未更新模型版本也提交，否則必須在 commit 前停下詢問。純 `.agents` / Markdown 文件修正、研究紀錄整理或工作流程文字更新不算模型內容，不需 bump。
+- model version 維持 runner-facing，不新增必要的 mechanics / formula / action-model 版本 key。若 shared mechanics 或公式變更同時影響秘笈與實驗，Agent 必須 bump 所有受影響的 runner 版本，並在回覆或提交說明中列出判斷；不可只 bump solver 或只 bump analyzer 來代表整個底層變更。
 - 修改核心演算法時，至少跑 `npm run test:unit`。
 - 若修改普通採集或收藏品求解器，必須檢查公式表測試、invariant 測試、golden scenario 與 oracle 是否仍符合模型。
 - 若修改 TS mechanics / math / solver 或 AssemblyScript WASM core 中任一側的公式、action、state transition、state key、tie-break 或 scoring，必須主動搜尋並檢查另一側對應實作。除非能清楚證明另一側不受影響，否則必須同步修改，重新產出對應 `.wasm`，並跑 TS/WASM parity 測試或適合的 bench / diagnostic。
