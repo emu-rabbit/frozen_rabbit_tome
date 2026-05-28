@@ -9,6 +9,7 @@
 1. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
+   - 已收斂的第一階段實作計畫見 `.agents/roadmaps/frontier-collectable-implementation-plan.md`。
 
 2. **報表比較功能**
    - JSON 匯出 / 匯入第一版已落地，後續可在此基礎上做兩份分析報表比較。
