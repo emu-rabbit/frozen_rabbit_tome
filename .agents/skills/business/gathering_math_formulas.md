@@ -72,7 +72,19 @@
 - `Scour + Scrutiny = Scour + ScrutinyBonus`
 - `Meticulous + Scrutiny = Floor(Scour * 75 / 100) + ScrutinyBonus`
 - `Meticulous + Collector's Standard + Scrutiny = Scour + ScrutinyBonus`
+- `Meticulous + Collector's High Standard + Scrutiny = Scour + ScrutinyBonus`
+- `Brazen + Scrutiny = BrazenRawGain + ScrutinyBonus`
+- `Brazen + Collector's Standard + Scrutiny = Max(Scour, BrazenRawGain) + ScrutinyBonus`
+- `Brazen + Collector's High Standard + Scrutiny = Floor(Scour * 150 / 100) + ScrutinyBonus`
 - 價值提升效果另加 `Floor(Scour * 50 / 100)`；最大值 case 中 `Scrutiny + Meticulous` 為 `400 / 500`，不是 `400 / 550`。
+
+`BrazenRawGain` 是依 `Brazen` 未確認隨機倍率算出的單次基礎提升量；目前僅確認倍率範圍為 `Scour * 50%` 到 `Scour * 150%`，實際 bucket 與機率分布仍待實證或使用者輸入。2026-05-29 使用者提供遊戲畫面確認最大值裝備 case：
+
+- `Scour = 200`
+- `ScrutinyBonus = 250`
+- `Collector's Standard + Brazen = 200 ~ 300`
+- `Collector's High Standard + Brazen = 300`
+- `Collector's High Standard + Scrutiny + Brazen = 550`
 
 ### 價值提升率 (Collector's Intuition / IntuitionRate)
 `IntuitionRate` 使用 **獲得力** 計算 `RateScore`，遊戲繁中 UI 顯示為「價值提升機率」。
@@ -90,14 +102,22 @@
 - `RateScore <= 66`：5%
 - `66 < RateScore <= 85`：`Floor((RateScore - 66) * 5 / 19 + 5)` (%)
 - `85 < RateScore <= 100`：`(RateScore - 85) + 10` (%)，最高 25%
-- `Priming Touch / 預備碰觸`：目前實測為只將慎重不耗耐久率翻倍；最大值 case 25% 變 50%。強化洞察相關疊加不納入第一版。
+- `Priming Touch / 預備碰觸`：目前實測為只將慎重不耗耐久率翻倍；最大值 case 25% 變 50%。
+- `Collector's High Standard / 強化洞察`：2026-05-29 使用者提供遊戲畫面確認，對 `Meticulous` 不耗耐久率直接加 **40 percentage points**。最大值 case 中強化洞察為 65%，`Priming Touch + Collector's High Standard` 為 90%，表示 `Priming Touch` 不會放大強化洞察提供的 +40。
 
-### 一般洞察 Buff (Collector's Standard)
-繁中遊戲 UI 的 **洞察** Buff 對應 Teamcraft 的 `Collector's Standard`，不是 `Collector's Intuition`。
+### 洞察與強化洞察 Buff (Collector's Standard / Collector's High Standard)
+繁中遊戲 UI 的 **洞察** Buff 對應 Teamcraft 的 `Collector's Standard`，不是 `Collector's Intuition`。`Collector's High Standard / 強化洞察` 是同一個洞察欄位的強化狀態，不會與一般洞察同時存在；狀態模型應使用互斥槽位，例如 `none | standard | highStandard`，不要建成兩個可共存 boolean。
 
 - 這是使用收藏品技能時可能發生的隱藏 proc。
-- 觸發後會使下一次 `Brazen` / `Meticulous` 提升到接近 `Scour` 的基準。
-- 第一版排除 `Brazen`，但可納入 `Meticulous`：最大值 case 實測為慎重 `+200`，價值提升時 `+300`。
+- 一般洞察 `Collector's Standard`：
+  - `Meticulous` 提升到 `Scour` 基準。
+  - `Brazen` 下限提升到 `Scour` 基準，但仍保留到 `Scour * 150%` 的隨機上限；最大值 case 實測為 `200 ~ 300`。
+- 強化洞察 `Collector's High Standard`：
+  - `Meticulous` 提升到 `Scour` 基準。
+  - `Meticulous` 不耗耐久率額外 +40 percentage points，且此 +40 不受 `Priming Touch` 翻倍。
+  - `Brazen` 固定為 `Scour * 150%`；最大值 case 實測為 `300`。
+  - 不會改變價值提升機率；最大值 case 仍為 40%，使用 `Collector's Focus` 後變為 70%。
+- `Scour`、`Brazen`、`Meticulous` 都會消耗洞察 / 強化洞察狀態；使用後回到無洞察狀態。
 - 觸發限制：
   - 剛開節點不能立即觸發，必須先使用一次收藏品技能。
   - 收藏價值達 1000 時不能觸發。
@@ -122,14 +142,15 @@
 - 收藏價值達 1000 時，遊戲內不可施放 `Scour`、`Brazen`、`Meticulous` 與提煉 Buff（`Scrutiny`、`Collector's Focus`、`Priming Touch`）；求解器不可把目前支援的這些 action 納入合法候選。
 - `Priming Touch` 不會被 `Scour` 消耗，只在下一次 `Meticulous` 後消耗。
 - `Scrutiny` 與 `Collector's Focus` 在下一次提煉類技能後消耗。
-- `Collector's Standard` 只能在已使用過收藏品技能、耐久仍大於 0、收藏價值未達 1000 且目前沒有洞察狀態時觸發。
+- 洞察 / 強化洞察只能在已使用過收藏品技能、耐久仍大於 0、收藏價值未達 1000 且目前沒有洞察狀態時觸發。
 - `Revisit`：91 級以上納入，普通採集點 5%，限時採集點 8%；若觸發，求解器需另外評估滿 GP 重新開始的 policy。
 
 目前仍不可自行補模型的項目：
 
-- `Brazen / 大膽提煉`：隨機分布、檔位與取整順序尚未確認；不要放進秘笈推薦。
-- `Collector's High Standard / 強化洞察`：觸發率未知。已知其會使強化後的慎重不耗耐久率出現額外提升，但完整觸發模型與對大膽提煉、節點特殊效果的疊加順序仍需實測確認。
-- 節點特殊效果若影響慎重不耗耐久率，與 `Priming Touch`、`Collector's High Standard` 的疊加順序未定；需要使用者決策或遊戲內樣本。
+- `Brazen / 大膽提煉`：隨機分布、檔位、各檔機率與取整順序尚未確認；不要放進秘笈推薦。
+- `Collector's High Standard / 強化洞察`：效果模型已由 2026-05-29 畫面確認如上，但觸發率未知；不要放進秘笈推薦。
+- `Collect / 收藏品採集` 是否消耗洞察 / 強化洞察狀態仍待確認；已確認 `Scour`、`Brazen`、`Meticulous` 會消耗。
+- 目前沒有需要納入的「節點特殊效果提高慎重不耗耐久率」模型；Frontier 第一版不應為此新增節點 bonus 欄位。
 - 精選 reward model 與宇宙探索 score/reward model 不可沿用目前一般收藏品 reward table。
 
 ## 6. 其他關鍵數值

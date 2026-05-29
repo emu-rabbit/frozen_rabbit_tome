@@ -13,7 +13,7 @@
 - Frontier 模型必須自成一套，不串接現有任何正式模型層，避免後續維護管理困難。
 - 可以使用現有物品、物品搜尋、runtime game data、reward table hydration 與 gear / food 輸入流程；這些是資料來源與 UI 基礎，不是模型串接。
 - `Brazen / 大膽提煉` 的未知機率資料採用使用者輸入的離散 bucket 形式，不用單一 uniform 假設。
-- `Collector's High Standard / 強化洞察` 的公式與觸發資料尚待核對或遊戲實證；第一版應先預留研究假設輸入與 model slot，不可把未知內容寫成正式規則。
+- `Collector's High Standard / 強化洞察` 的效果模型已由 2026-05-29 使用者提供遊戲畫面確認；觸發率仍未知，第一版應保留使用者輸入觸發率或手動狀態，不可把未知觸發率寫成正式規則。
 - 分析引擎採精確分布，不採 Monte Carlo 作為第一階段主路徑。
 
 ## 產品定位
@@ -133,8 +133,7 @@ interface FrontierCollectableState {
   scrutinyActive: boolean;
   collectorsFocusActive: boolean;
   primingTouchActive: boolean;
-  standardActive: boolean;
-  highStandardActive: boolean;
+  standardMode: 'none' | 'standard' | 'highStandard';
   hasUsedCollectableAction: boolean;
   hasCollected: boolean;
   successBonus: number;
@@ -170,8 +169,6 @@ interface FrontierCollectableProbabilityProfile {
   brazenBuckets: FrontierBrazenBucket[];
   standardProcRatePercent: number;
   highStandardProcRatePercent: number | null;
-  highStandardMode: FrontierHighStandardMode;
-  meticulousSaveRateBonusPercent?: number;
   notes?: string;
 }
 
@@ -188,22 +185,41 @@ interface FrontierBrazenBucket {
 - probability 全部加總必須等於 `100%`。UI 可提供 normalize 或補差值輔助，但不要偷偷改使用者資料而不顯示。
 - 第一版可提供快速模板：`50-150 每 10% 等機率`、`50/75/100/125/150 等機率`、`空白自填`。模板必須標示為便利起點，不是官方模型。
 
-High Standard 因公式待確認，建議第一版 UI 先提供兩層：
+High Standard 觸發率仍待確認，建議第一版 UI 先提供兩層：
 
 - `尚未使用 High Standard 假設`：預設。
-- `手動輸入 High Standard 假設`：展開後可填觸發率與效果模式。
+- `手動輸入 High Standard 假設`：展開後可填觸發率，或在策略狀態中手動指定目前是否為 `highStandard`。
 
-`FrontierHighStandardMode` 建議先設計但可先不全部啟用：
+不再需要把 High Standard 效果做成多個未確認模式。2026-05-29 使用者提供遊戲畫面已確認效果模型如下：
 
-```ts
-type FrontierHighStandardMode =
-  | 'disabled'
-  | 'manualMeticulousSaveBonus'
-  | 'manualMeticulousSaveOverride'
-  | 'manualBrazenMultiplierOverride';
+- 洞察與強化洞察是同一個互斥狀態槽：`none | standard | highStandard`。
+- `Scour`、`Brazen`、`Meticulous` 都會消耗洞察 / 強化洞察狀態。
+- `standard`：
+  - `Meticulous` 收藏值提升到 `Scour` 基準。
+  - `Brazen` 下限提升到 `Scour` 基準，上限仍為 `Scour * 150%`。
+- `highStandard`：
+  - `Meticulous` 收藏值提升到 `Scour` 基準。
+  - `Meticulous` 不耗耐久率額外 +40 percentage points；此 +40 不受 `Priming Touch` 翻倍。
+  - `Brazen` 固定為 `Scour * 150%`。
+  - 不提高價值提升機率；`Collector's Focus` 仍只將價值提升機率乘 1.75 後 floor 並套上限。
+- `Scrutiny` 的額外加成在上述 action gain 之後加算。
+
+最大值裝備實測例：
+
+```txt
+Scour = 200
+ScrutinyBonus = 250
+Meticulous base = 150
+Meticulous + standard = 200
+Meticulous + highStandard = 200
+Meticulous no-integrity + highStandard = 65%
+Meticulous no-integrity + Priming Touch + highStandard = 90%
+Brazen + standard = 200 ~ 300
+Brazen + highStandard = 300
+Brazen + Scrutiny + highStandard = 550
+value increase rate = 40%
+value increase rate + Collector's Focus = 70%
 ```
-
-若 High Standard 實證尚未完成，實作時可以只啟用 `disabled` 與 `manualMeticulousSaveBonus`，其餘作為型別保留或 TODO，但不要在 UI 顯示不可用選項造成雜音。
 
 ## Brazen bucket UI 要求
 
@@ -269,8 +285,7 @@ Frontier 不做 solver，只展開使用者策略。建議使用 state aggregati
 - `scrutinyActive`
 - `collectorsFocusActive`
 - `primingTouchActive`
-- `standardActive`
-- `highStandardActive`
+- `standardMode`
 - `wiseToTheWorldActive`
 - `successBonus`
 - `nextCollectSuccessBonus`
@@ -351,7 +366,7 @@ manifest limitations 建議至少包含：
 
 - `frontier-user-supplied-probabilities`
 - `brazen-distribution-user-supplied`
-- `high-standard-model-pending-verification`
+- `high-standard-proc-rate-user-supplied`
 - `not-a-solver`
 
 ## 設定與 i18n
@@ -380,7 +395,9 @@ manifest limitations 建議至少包含：
 - Formula tests
   - 已複製進 Frontier 的 Scour / Scrutiny / Meticulous 基準公式。
   - Brazen bucket gain 的取整順序。
-  - High Standard disabled 時不影響結果。
+  - 一般洞察與強化洞察對 `Meticulous` / `Brazen` 的差異。
+  - `Priming Touch + High Standard` 不耗耐久率為基礎率翻倍後再加 40 percentage points。
+  - `Collector's Focus` 不改 action gain，只改價值提升機率。
 - Simulator invariant tests
   - outcome probability 約等於 100%。
   - `min <= expected <= max`。
@@ -390,7 +407,7 @@ manifest limitations 建議至少包含：
 - Exact distribution tests
   - 兩條不同路徑抵達相同 state 時會合併機率。
   - Brazen bucket 分布會正確展開。
-  - Meticulous / Standard / High Standard 分支會正確乘機率。
+  - Meticulous / Standard / High Standard 分支會正確乘機率，且 `standardMode` 不會出現一般洞察與強化洞察共存狀態。
 - UI tests 或 focused component tests
   - 設定關閉時入口隱藏。
   - 直接進 route 會顯示啟用提示。
@@ -426,9 +443,9 @@ manifest limitations 建議至少包含：
 - 補 localStorage research studies。
 - 補匯出 / 匯入或至少匯出。
 
-### Phase 4：High Standard 實證後接入
+### Phase 4：High Standard 觸發率實證後接入
 
-- 根據實證結果固定 High Standard model。
+- 根據實證結果固定 High Standard 觸發率；High Standard 效果模型已先依 2026-05-29 遊戲畫面收斂。
 - 補測試與 Frontier model version bump。
 - 更新本文件與 `.agents/skills/business/gathering_math_formulas.md`，但仍不要自動把 High Standard 接入正式秘笈，除非使用者另行決策。
 
@@ -437,9 +454,9 @@ manifest limitations 建議至少包含：
 以下項目不得由 Agent 自行猜測成正式規則：
 
 - `Collector's High Standard` 觸發率。
-- `Collector's High Standard` 與 `Priming Touch`、節點特殊效果、`Meticulous` 不耗耐久率的疊加順序。
-- `Collector's High Standard` 是否影響 Brazen、如何影響 Brazen。
 - Brazen bucket 的官方或實測分布。
+- Brazen bucket 的取整順序若未能由實測分布推得，仍需另行確認。
+- `Collect / 收藏品採集` 是否消耗洞察 / 強化洞察狀態。
 - Frontier 第一版是否要納入 Revisit。
 - Frontier study 是否要進 Experiment Database，或長期維持獨立 Frontier Studies。
 

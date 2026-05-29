@@ -148,15 +148,15 @@ WASM 路徑另需注意：
 - 限制聲明
   - 普通採集與收藏品各自的支援技能。
   - `Brazen` 排除。
-  - `Collector's High Standard` 排除。
+  - `Collector's High Standard` 排除，並標示排除原因是觸發率未知；效果模型已有 2026-05-29 遊戲畫面確認。
   - 精選 reward model 排除。
   - 宇宙探索 / Stellar Mission 專用模型排除。
 
 ### 暫時不應宣稱第三方可完整驗證的內容
 
 - `Brazen` 隨機分布、檔位與取整順序。
-- `Collector's High Standard` 完整觸發模型與疊加順序。
-- 節點特殊效果對慎重不耗耐久率的完整疊加順序。
+- `Collector's High Standard` 觸發率。
+- `Collect / 收藏品採集` 是否消耗洞察 / 強化洞察狀態。
 - 精選 reduction reward model。
 - 宇宙探索 mission score 與 reward model。
 - 任何未由 `.agents/skills/business/gathering_math_formulas.md` 或可靠來源確認的推測公式。

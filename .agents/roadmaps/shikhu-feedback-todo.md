@@ -9,6 +9,7 @@
 1. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
+   - 2026-05-29 已由使用者遊戲畫面確認 High Standard 的效果模型；仍未知的是觸發率，以及 Brazen bucket 分布。
    - 已收斂的第一階段實作計畫見 `.agents/roadmaps/frontier-collectable-implementation-plan.md`。
 
 2. **報表比較功能**
@@ -57,7 +58,7 @@
 
 ### 背景
 
-目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是機率、分布與疊加規則尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制，尤其 `Brazen under Collector's High Standard` 可能是 guaranteed amount。
+目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是 Brazen 分布與 High Standard 觸發率尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制；2026-05-29 使用者提供遊戲畫面確認 `Brazen under Collector's High Standard` 為 guaranteed `Scour * 150%`，最大值 case 顯示為 `300`。
 
 ### User Story
 
@@ -67,7 +68,7 @@
 
 - Brazen probability distribution。
 - Collector's High Standard proc rate。
-- Brazen under Collector's High Standard 的確定值或公式。
+- Brazen bucket 的取整順序若無法由分布樣本推得，仍需另行確認。
 - 可能允許使用者選擇節點類型或手動覆蓋 proc rate。
 
 ### 已討論取捨
