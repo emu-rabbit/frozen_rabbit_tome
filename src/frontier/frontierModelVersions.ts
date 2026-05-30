@@ -11,7 +11,7 @@ export type FrontierModelVersionKey =
 
 export type FrontierModelVersions = Partial<Record<FrontierModelVersionKey, string | number>>;
 
-export const FRONTIER_COLLECTABLE_SCHEMA_VERSION = 1;
+export const FRONTIER_COLLECTABLE_SCHEMA_VERSION = 2;
 
 export const FRONTIER_MODEL_VERSION_CATALOG = {
   frontierCollectableSchema: {

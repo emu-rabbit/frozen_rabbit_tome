@@ -134,9 +134,46 @@ export default {
       title: '研究ケース',
       description: '開拓研究ケースを保存し、同じ仮定と戦略を後から見返せる場所です。',
       emptyTitle: '保存された研究ケースはまだありません',
-      emptyDescription: '保存した研究ケースはここにまとまり、後から振り返りや比較に使えます。'
+      emptyDescription: '保存した研究ケースはここにまとまり、後から振り返りや比較に使えます。',
+      emptySearchTitle: '一致する研究ケースがありません',
+      emptySearchDescription: '別の名前やアイテム名で試してください。',
+      searchPlaceholder: '研究ケースを検索',
+      updatedAt: '{time} 更新',
+      rules: '戦略ルール',
+      open: '開く',
+      delete: '削除'
+    },
+    create: {
+      title: '研究アイテムを選択',
+      description: '採集アイテムを選ぶと、利用できる開拓モデルを確認します。',
+      searchPlaceholder: '採集アイテムを検索',
+      modelResult: 'モデル検索結果',
+      dawntrailCollectableModel: '黄金のレガシー収集品モデル',
+      modelDescription: '入力した確率仮定で収集品戦略を分析するモデルです。',
+      noModelTitle: '一致するモデルがありません',
+      noModelDescription: '現在の開拓研究は収集品モデルのみ対応しています。通常採集品は既存の秘伝書または実験を利用してください。',
+      startModel: 'このモデルを使う',
+      states: {
+        loading: '採集アイテムを検索しています...',
+        idle: 'アイテム名を入力して検索します。',
+        empty: '一致するアイテムがありません。',
+        error: '検索に失敗しました。後でもう一度試してください。',
+        results: '検索結果'
+      }
+    },
+    workspace: {
+      assumptionNote: 'この研究は入力した確率仮定のみを表し、公式のゲーム期待値ではありません。',
+      changeItem: 'アイテム変更',
+      inputs: '研究条件',
+      inputsDesc: 'プレイヤー数値と採集場所状態をアイテムデータと組み合わせて、この研究を分析します。',
+      relicBonus: '収集品レリック道具効果を適用',
+      effectiveStats: '食事後の数値'
     },
     profile: {
+      title: '研究仮定',
+      description: '洞察と大胆純化の確率を設定します。未確定データは入力値として扱い、公式ルールにはしません。',
+      standardRate: '洞察発生率',
+      highStandardRate: '強化洞察発生率',
       brazenTitle: '大胆純化の分布',
       brazenDescription: '大胆純化の倍率と確率を離散 bucket で表します。これは研究仮定であり、公式分布ではありません。',
       bucketCount: '段階数',
@@ -150,6 +187,84 @@ export default {
       multiplier: '倍率 %',
       probability: '確率 %',
       removeBucket: 'bucket を削除'
+    },
+    strategy: {
+      title: '戦略ルール',
+      description: 'ルールを上から順に確認し、条件一致後にアクション列を実行します。対応するルールがない状態はそこで終了します。',
+      addRule: 'ルール追加',
+      newRule: '新規ルール',
+      ruleName: 'ルール名',
+      enabled: '有効',
+      removeRule: 'ルール削除',
+      conditions: '条件',
+      actions: 'アクション',
+      all: 'すべて',
+      any: 'いずれか',
+      addCondition: '条件追加',
+      removeCondition: '条件削除',
+      addAction: 'アクション追加',
+      noActions: 'アクション未設定',
+      ruleOrder: '{index} 番目のルールとして確認されます。',
+      boolean: {
+        true: 'はい',
+        false: 'いいえ'
+      },
+      standardModes: {
+        none: '洞察なし',
+        standard: '洞察',
+        highStandard: '強化洞察'
+      },
+      fields: {
+        gp: 'GP',
+        integrity: '耐久',
+        collectability: '収集価値',
+        scrutinyActive: '集中検分',
+        collectorsFocusActive: '価値注視',
+        primingTouchActive: '下準備',
+        standardMode: '洞察状態',
+        wiseToTheWorldActive: '理智興起準備',
+        successBonus: '採集成功率補正',
+        nextCollectSuccessBonus: '次回採集成功補正',
+        hasUsedCollectableAction: '収集品アクション使用済み',
+        hasCollected: '採集済み'
+      }
+    },
+    analysis: {
+      title: '分析結果',
+      description: '現在の戦略を結果分布として展開し、各到達結果を確認しやすくします。',
+      run: '分析',
+      save: '保存',
+      invalidProfile: '先に確率設定を有効にしてください。',
+      noRewardTable: 'このアイテムの収集品報酬データが見つかりません。',
+      expectedScore: '期待スコア',
+      minScore: '最低スコア',
+      maxScore: '最高スコア',
+      states: '状態 / 遷移',
+      scoreDistribution: 'スコア分布',
+      limited: '状態上限に達したため、結果は制限付きの概要です。'
+    },
+    save: {
+      title: '開拓研究を保存',
+      description: '後で研究庫から見つけやすい名前を付けます。',
+      defaultName: '開拓研究',
+      confirm: '研究を保存'
+    },
+    json: {
+      scenario: '開拓研究',
+      export: '開拓 JSON を出力',
+      exported: '出力済み',
+      import: '開拓 JSON を取り込み',
+      importTitle: '開拓研究を取り込み',
+      importDescription: 'JSON の研究仮定と戦略を確認して、開拓研究庫に保存できます。',
+      importConfirm: '研究を保存',
+      errors: {
+        title: '開拓 JSON を取り込めません',
+        invalidJson: '解析できる JSON ファイルではありません。',
+        unsupportedScenario: 'この JSON は開拓研究のものではありません。',
+        missingItem: 'この JSON にはアイテム情報がありません。',
+        invalidContent: 'この JSON には必要な研究内容がありません。',
+        unknown: '取り込み時に予期しないエラーが発生しました。'
+      }
     }
   },
   faq: {

@@ -134,9 +134,46 @@ export default {
       title: '研究案例',
       description: '这里保存开拓研究案例，方便日后回顾同一组假设与策略。',
       emptyTitle: '尚未保存研究案例',
-      emptyDescription: '保存后的研究案例会集中在这里，方便日后回顾与比较。'
+      emptyDescription: '保存后的研究案例会集中在这里，方便日后回顾与比较。',
+      emptySearchTitle: '没有找到研究案例',
+      emptySearchDescription: '换个名称或物品关键字再试一次。',
+      searchPlaceholder: '搜索研究案例',
+      updatedAt: '更新于 {time}',
+      rules: '策略规则',
+      open: '开启',
+      delete: '删除'
+    },
+    create: {
+      title: '选择研究物品',
+      description: '先选定采集物品，再由系统判断目前可用的开拓模型。',
+      searchPlaceholder: '搜索采集物品',
+      modelResult: '模型搜索结果',
+      dawntrailCollectableModel: '黄金遗产收藏品模型',
+      modelDescription: '此模型会使用你提供的概率假设分析收藏品策略。',
+      noModelTitle: '没有找到相符模型',
+      noModelDescription: '目前开拓研究只支持收藏品模型；一般采集品可以先使用既有秘籍或实验。',
+      startModel: '使用此模型',
+      states: {
+        loading: '正在搜索可采集物品...',
+        idle: '输入物品名称开始搜索。',
+        empty: '没有找到符合条件的物品。',
+        error: '搜索失败，请稍后再试。',
+        results: '搜索结果'
+      }
+    },
+    workspace: {
+      assumptionNote: '此研究只代表目前输入的概率假设，不代表正式游戏期望值。',
+      changeItem: '更换物品',
+      inputs: '研究条件',
+      inputsDesc: '玩家数值与采集点状态会搭配物品数据，用来分析这次研究。',
+      relicBonus: '套用收藏品遗物工具效果',
+      effectiveStats: '食物后数值'
     },
     profile: {
+      title: '研究假设',
+      description: '设置洞察与大胆提炼的概率；未知数据由你提供，不写成正式规则。',
+      standardRate: '洞察触发率',
+      highStandardRate: '强化洞察触发率',
       brazenTitle: '大胆提炼分布',
       brazenDescription: '用离散 bucket 描述大胆提炼倍率与概率。这是研究假设，不代表官方分布。',
       bucketCount: '档数',
@@ -150,6 +187,84 @@ export default {
       multiplier: '倍率 %',
       probability: '概率 %',
       removeBucket: '移除 bucket'
+    },
+    strategy: {
+      title: '策略规则',
+      description: '依序比对规则，符合条件后执行动作串；没有规则覆盖的状态会停止。',
+      addRule: '新增规则',
+      newRule: '新规则',
+      ruleName: '规则名称',
+      enabled: '启用',
+      removeRule: '删除规则',
+      conditions: '条件',
+      actions: '动作',
+      all: '全部符合',
+      any: '任一符合',
+      addCondition: '新增条件',
+      removeCondition: '移除条件',
+      addAction: '加入动作',
+      noActions: '尚未加入动作',
+      ruleOrder: '第 {index} 条规则，会依序比对。',
+      boolean: {
+        true: '是',
+        false: '否'
+      },
+      standardModes: {
+        none: '无洞察',
+        standard: '洞察',
+        highStandard: '强化洞察'
+      },
+      fields: {
+        gp: 'GP',
+        integrity: '耐久',
+        collectability: '收藏价值',
+        scrutinyActive: '集中检查',
+        collectorsFocusActive: '价值瞩目',
+        primingTouchActive: '预备碰触',
+        standardMode: '洞察状态',
+        wiseToTheWorldActive: '理智同兴预备',
+        successBonus: '采集成功率补强',
+        nextCollectSuccessBonus: '下次采集成功补强',
+        hasUsedCollectableAction: '已用收藏品技能',
+        hasCollected: '已采集'
+      }
+    },
+    analysis: {
+      title: '分析结果',
+      description: '完整展开目前策略的结果分布，方便检查每种落点。',
+      run: '分析',
+      save: '保存',
+      invalidProfile: '请先让概率设置有效。',
+      noRewardTable: '找不到此物品的收藏品奖励数据。',
+      expectedScore: '期望分数',
+      minScore: '最低分数',
+      maxScore: '最高分数',
+      states: '状态 / 转移',
+      scoreDistribution: '分数分布',
+      limited: '分析达到状态上限，结果仅为受限摘要。'
+    },
+    save: {
+      title: '保存开拓研究',
+      description: '替这份研究取一个好认的名字，之后可在研究库再次开启。',
+      defaultName: '开拓研究',
+      confirm: '保存研究'
+    },
+    json: {
+      scenario: '开拓研究',
+      export: '导出开拓 JSON',
+      exported: '已导出',
+      import: '导入开拓 JSON',
+      importTitle: '导入开拓研究',
+      importDescription: '确认这份 JSON 的研究假设与策略后，可以存进开拓研究库。',
+      importConfirm: '保存研究',
+      errors: {
+        title: '无法导入开拓 JSON',
+        invalidJson: '这不是可解析的 JSON 文件。',
+        unsupportedScenario: '这份 JSON 不是开拓研究情境。',
+        missingItem: '这份 JSON 缺少物品信息。',
+        invalidContent: '这份 JSON 缺少必要研究内容。',
+        unknown: '导入时发生未预期的错误。'
+      }
     }
   },
   faq: {

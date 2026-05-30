@@ -108,11 +108,11 @@ export default {
     createGuide: 'Create New Tome',
     solver: 'Tome Solver',
     createExperiment: 'Create New Experiment',
-    frontierCollectable: 'Create Pioneering Research',
+    frontierCollectable: 'Create Frontier Research',
     favoriteItems: 'Favorite Items',
     tomeLibrary: 'Tome Library',
     experimentDatabase: 'Experiment Database',
-    frontierStudies: 'Pioneering Study Library',
+    frontierStudies: 'Frontier Study Library',
     faq: 'FAQ',
     settings: 'Settings',
     github: 'GitHub Project',
@@ -120,23 +120,60 @@ export default {
   },
   frontier: {
     disabled: {
-      title: 'Pioneering research mode is not enabled yet',
-      description: 'Pioneering is an advanced research area for strategies under your own probability assumptions. Results are for research reference.',
+      title: 'Frontier research mode is not enabled yet',
+      description: 'Frontier is an advanced research area for strategies under your own probability assumptions. Results are for research reference.',
       action: 'Enable in Settings'
     },
     collectable: {
-      title: 'Pioneering Research',
+      title: 'Frontier Research',
       description: 'Analyze advanced gathering strategies with custom probability assumptions for situations such as Brazen actions and Collector\'s High Standard.',
       emptyTitle: 'Ready to Start Research',
       emptyDescription: 'Choose research conditions here to organize strategy assumptions, review outcome distributions, and keep studies for later.'
     },
     studies: {
       title: 'Research Studies',
-      description: 'Save pioneering research studies here so the same assumptions and strategies are easy to revisit.',
+      description: 'Save Frontier research studies here so the same assumptions and strategies are easy to revisit.',
       emptyTitle: 'No studies saved yet',
-      emptyDescription: 'Saved research studies will be gathered here for later review and comparison.'
+      emptyDescription: 'Saved research studies will be gathered here for later review and comparison.',
+      emptySearchTitle: 'No matching studies',
+      emptySearchDescription: 'Try another name or item keyword.',
+      searchPlaceholder: 'Search studies',
+      updatedAt: 'Updated {time}',
+      rules: 'Strategy rules',
+      open: 'Open',
+      delete: 'Delete'
+    },
+    create: {
+      title: 'Choose a Research Item',
+      description: 'Pick a gatherable item first, then the app checks which Frontier model can handle it.',
+      searchPlaceholder: 'Search gatherable items',
+      modelResult: 'Model match',
+      dawntrailCollectableModel: 'Dawntrail Collectable Model',
+      modelDescription: 'This model analyzes collectable strategies using your probability assumptions.',
+      noModelTitle: 'No matching model',
+      noModelDescription: 'Frontier currently supports collectable research only. Regular items can use the existing Tome or Experiment flow.',
+      startModel: 'Use This Model',
+      states: {
+        loading: 'Searching gatherable items...',
+        idle: 'Type an item name to search.',
+        empty: 'No matching items found.',
+        error: 'Search failed. Please try again later.',
+        results: 'Search results'
+      }
+    },
+    workspace: {
+      assumptionNote: 'This study only represents the probability assumptions entered here, not official in-game expected value.',
+      changeItem: 'Change Item',
+      inputs: 'Research Inputs',
+      inputsDesc: 'Player stats and node state are combined with item data for this study.',
+      relicBonus: 'Apply collectable relic tool effect',
+      effectiveStats: 'Effective stats'
     },
     profile: {
+      title: 'Research Assumptions',
+      description: 'Set Standard and Brazen probabilities. Unknown data comes from you and is not treated as official rules.',
+      standardRate: 'Standard proc rate',
+      highStandardRate: 'High Standard proc rate',
       brazenTitle: 'Brazen Distribution',
       brazenDescription: 'Describe Brazen as discrete multiplier and probability buckets. This is a research assumption, not an official distribution.',
       bucketCount: 'Buckets',
@@ -150,6 +187,84 @@ export default {
       multiplier: 'Multiplier %',
       probability: 'Probability %',
       removeBucket: 'Remove bucket'
+    },
+    strategy: {
+      title: 'Strategy Rules',
+      description: 'Rules are checked in order. Matching rules execute their action sequence; states without a matching rule stop there.',
+      addRule: 'Add Rule',
+      newRule: 'New Rule',
+      ruleName: 'Rule name',
+      enabled: 'Enabled',
+      removeRule: 'Remove rule',
+      conditions: 'Conditions',
+      actions: 'Actions',
+      all: 'All',
+      any: 'Any',
+      addCondition: 'Add condition',
+      removeCondition: 'Remove condition',
+      addAction: 'Add action',
+      noActions: 'No actions yet',
+      ruleOrder: 'Rule {index}, checked in order.',
+      boolean: {
+        true: 'Yes',
+        false: 'No'
+      },
+      standardModes: {
+        none: 'None',
+        standard: 'Standard',
+        highStandard: 'High Standard'
+      },
+      fields: {
+        gp: 'GP',
+        integrity: 'Integrity',
+        collectability: 'Collectability',
+        scrutinyActive: 'Scrutiny',
+        collectorsFocusActive: 'Collector\'s Focus',
+        primingTouchActive: 'Priming Touch',
+        standardMode: 'Standard state',
+        wiseToTheWorldActive: 'Wise ready',
+        successBonus: 'Success bonus',
+        nextCollectSuccessBonus: 'Next collect bonus',
+        hasUsedCollectableAction: 'Used collectable action',
+        hasCollected: 'Collected'
+      }
+    },
+    analysis: {
+      title: 'Analysis Result',
+      description: 'Expands the current strategy into a full outcome distribution for review.',
+      run: 'Analyze',
+      save: 'Save',
+      invalidProfile: 'Make the probability profile valid first.',
+      noRewardTable: 'No collectable reward table was found for this item.',
+      expectedScore: 'Expected score',
+      minScore: 'Min score',
+      maxScore: 'Max score',
+      states: 'States / transitions',
+      scoreDistribution: 'Score distribution',
+      limited: 'The analysis reached a state guard; this is a limited summary.'
+    },
+    save: {
+      title: 'Save Frontier Study',
+      description: 'Name this study so it is easy to find in the library later.',
+      defaultName: 'Frontier Study',
+      confirm: 'Save Study'
+    },
+    json: {
+      scenario: 'Frontier Research',
+      export: 'Export Frontier JSON',
+      exported: 'Exported',
+      import: 'Import Frontier JSON',
+      importTitle: 'Import Frontier Study',
+      importDescription: 'Review the assumptions and strategy, then save this JSON into the study library.',
+      importConfirm: 'Save Study',
+      errors: {
+        title: 'Cannot import Frontier JSON',
+        invalidJson: 'This is not parseable JSON.',
+        unsupportedScenario: 'This JSON is not a Frontier research scenario.',
+        missingItem: 'This JSON is missing item data.',
+        invalidContent: 'This JSON is missing required research content.',
+        unknown: 'An unexpected import error occurred.'
+      }
     }
   },
   faq: {
@@ -403,10 +518,10 @@ export default {
       max: 'Scores only by the highest possible yield. Probability does not affect scoring.',
       min: 'Scores only by the lowest possible yield for more conservative planning.'
     },
-    frontierTitle: 'Pioneering Research Mode',
+    frontierTitle: 'Frontier Research Mode',
     frontierDesc: 'When enabled, advanced research entries are shown. This mode analyzes strategies using your probability assumptions, and results are for research reference.',
-    frontierCollectable: 'Show pioneering research',
-    frontierCollectableDesc: 'Show Pioneering Research and Pioneering Study Library entries in the sidebar.',
+    frontierCollectable: 'Show Frontier research',
+    frontierCollectableDesc: 'Show Frontier Research and Frontier Study Library entries in the sidebar.',
     debugTitle: 'Expert Check Mode',
     debugDesc: 'When enabled, solved results show formulas, probability distributions, and search statistics.',
     solverDebugMode: 'Show solver check info',

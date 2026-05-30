@@ -7,7 +7,7 @@ import {
 describe('frontierModelVersions', () => {
   it('exports only Frontier collectable model versions', () => {
     expect(buildFrontierModelVersionsForScenario('frontier.collectable')).toEqual({
-      frontierCollectableSchema: 1,
+      frontierCollectableSchema: 2,
       app: FRONTIER_MODEL_VERSION_CATALOG.app.version,
       frontierCollectableSimulator: 'frontier-collectable-simulator-v1',
       frontierCollectableAnalyzer: 'frontier-collectable-analyzer-v1',

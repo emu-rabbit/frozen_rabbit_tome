@@ -25,7 +25,7 @@ Phase 0 的入口與開關骨架已完成，但本段紀錄的是目前工作區
 
 使用者在本輪明確修正的產品規範：
 
-- 使用者可見文字不可保留 `Frontier`；繁中 / 日文用「開拓」，簡中用「开拓」，英文目前用 `Pioneering`。
+- 使用者可見文字英文使用 `Frontier`；繁中 / 日文用「開拓」，簡中用「开拓」。`Pioneering` 不是官方用語，不可再用於對外文案。
 - 對外入口名稱不可綁「收藏品」，因為未來可能支援多個開拓模型；側邊欄建立入口目前對外稱「建立開拓研究」，頁面 title 稱「開拓研究」。
 - 對外畫面不可暴露內部邏輯、開發狀態或 debug 語氣。避免出現「第一版」、「尚未接入」、「後續再接入」、「正式模型」等施工或內部治理文字。
 - 開拓頁面 title 要對齊其他既有頁面：單層主標題加描述，不要再加一層 kicker / eyebrow 造成視覺雜音。
@@ -71,7 +71,7 @@ Phase 1 與 Phase 2 的第一版 domain / engine 骨架已完成，尚未等於�
 - 新增精確分布 analyzer / simulator：`frontierCollectableSimulator.ts`。
 - 新增 Frontier JSON export skeleton：`frontierCollectableExport.ts`。
 - 新增 Frontier Studies storage skeleton：`frontierCollectableStorage.ts`。
-- 新增 `FrontierBrazenBucketEditor.vue`，並在開拓頁啟用狀態中顯示可編輯 bucket profile。
+- 開拓的 Brazen bucket profile 應嵌入既有收藏品實驗台風格，不再使用獨立自製的 `FrontierBrazenBucketEditor.vue` UI。
 - 補四語系 bucket editor 文案。
 
 Phase 2 engine 現況：
@@ -176,7 +176,6 @@ src/frontier/collectable/
 src/views/FrontierCollectable.vue
 src/views/FrontierStudies.vue
 src/components/frontier/FrontierProbabilityProfileEditor.vue
-src/components/frontier/FrontierBrazenBucketEditor.vue
 src/components/frontier/FrontierStrategyEditor.vue
 src/components/frontier/FrontierAnalysisPanel.vue
 ```

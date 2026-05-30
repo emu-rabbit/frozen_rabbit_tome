@@ -3,7 +3,7 @@ import type {
   CollectableRewardTable,
   CollectableTierCounts
 } from '../../types/collectable';
-import type { GatherableItem, GatheringJob, NodeBonuses, PlayerStats } from '../../types/game';
+import type { FoodSelection, GatherableItem, GatheringJob, NodeBonuses, PlayerStats } from '../../types/game';
 import type { FrontierModelVersions } from '../frontierModelVersions';
 
 export type FrontierCollectableStandardMode = 'none' | 'standard' | 'highStandard';
@@ -145,7 +145,7 @@ export interface FrontierCollectableAnalysisResult {
 }
 
 export interface FrontierCollectableStudy {
-  schemaVersion: 1;
+  schemaVersion: 2;
   kind: 'frontier.collectable';
   id: string;
   name?: string;
@@ -153,6 +153,7 @@ export interface FrontierCollectableStudy {
   input: {
     stats: PlayerStats;
     temporaryGp: number;
+    food?: FoodSelection;
     nodeBonuses: NodeBonuses;
     hasRelicToolBonus?: boolean;
   };
@@ -167,6 +168,10 @@ export interface FrontierCollectableJsonExportInput {
   item: GatherableItem;
   request: FrontierCollectableSimulationRequest;
   analysis: FrontierCollectableAnalysisResult;
+  food?: {
+    selection: FoodSelection;
+    baseStats?: PlayerStats;
+  };
   generatedAt?: string;
   locale?: string;
   commit?: string | null;

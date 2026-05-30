@@ -11,6 +11,15 @@ import { getCollectableRewardTable } from '../services/collectableRewards';
 import { getCollectableScripRewardMeta } from '../services/collectableScripRewards';
 import { getItemName } from '../services/gameData';
 import { analyzeCollectableStrategyTreeAsync, type CollectableStrategyAnalysis } from '../utils/collectableStrategyAnalysis';
+import { analyzeFrontierCollectableStrategy } from '../frontier/collectable/frontierCollectableSimulator';
+import { buildFrontierCollectableJsonExport } from '../frontier/collectable/frontierCollectableExport';
+import { useFrontierCollectableStudies } from '../frontier/collectable/frontierCollectableStorage';
+import {
+  FRONTIER_COLLECTABLE_ACTION_DEFINITIONS,
+  frontierCollectableActionKinds,
+  getFrontierCollectableActionIcon,
+  getFrontierCollectableActionName
+} from '../frontier/collectable/frontierCollectableActions';
 import {
   buildCollectableStrategyTreeAsync,
   collectableStrategyActionKinds,
@@ -60,7 +69,8 @@ import { isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeSched
 import {
   buildCollectableExperimentJsonExport,
   buildJsonExportFileName,
-  downloadJsonFile
+  downloadJsonFile,
+  sanitizeJsonFileName
 } from '../utils/tomeJsonExport';
 import {
   buildCollectableDecisionTreeHtml,
@@ -70,13 +80,23 @@ import {
   type CollectableDecisionTreeHtmlDocument,
   type CollectableDecisionTreeHtmlRow
 } from '../utils/collectableDecisionTreeHtmlExport';
+import type {
+  FrontierCollectableAnalysisResult,
+  FrontierCollectableProbabilityProfile,
+  FrontierCollectableSimulationRequest,
+  FrontierCollectableStudy,
+  FrontierCollectableStrategyCondition,
+  FrontierCollectableStrategyRule
+} from '../frontier/collectable/frontierCollectableTypes';
 
 const { t, locale } = useI18n();
 const { saveCollectableExperiment } = useExperimentLibrary();
+const { createStudy } = useFrontierCollectableStudies();
 const { isDarkMode } = useSettings();
 
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
+type StrategyLabActionKind = CollectableActionKind | FrontierCollectableStrategyRule['actions'][number];
 type ManagedNodeMeterKey = 'gp' | 'integrity' | 'collectability';
 type ManagedOverviewSource = Pick<CollectableStrategyNode, 'state'>;
 type ManagedOverviewMetricKey =
@@ -95,6 +115,9 @@ const props = defineProps<{
   selectedFood: FoodSelection;
   hasRelicToolBonus?: boolean;
   loadedExperiment?: StoredExperiment | null;
+  frontierProbabilityProfile?: FrontierCollectableProbabilityProfile | null;
+  frontierStudyId?: string | null;
+  frontierLoadedStudy?: FrontierCollectableStudy | null;
 }>();
 
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
@@ -104,6 +127,7 @@ const ruleEditorView = ref<RuleEditorView>('main');
 const managedNodesView = ref<ManagedNodesView>('summary');
 const managedNodeIndex = ref(0);
 const analysis = ref<CollectableStrategyAnalysis | null>(null);
+const frontierAnalysis = ref<FrontierCollectableAnalysisResult | null>(null);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 const rewardError = ref(false);
 const isObjectiveDialogOpen = ref(false);
@@ -126,6 +150,10 @@ const compactPathHiddenBranchKeys = new Set([
   'collectableSolver.branches.wiseNoProc'
 ]);
 const { collectableObjective } = useCollectableSolver();
+const isFrontierMode = computed(() => !!props.frontierProbabilityProfile);
+const strategyActionKinds = computed<StrategyLabActionKind[]>(() => (
+  isFrontierMode.value ? frontierCollectableActionKinds : collectableStrategyActionKinds
+));
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let decisionTreeExportTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -206,7 +234,7 @@ const editorCoverageText = computed(() => (
 ));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
 const actionEffectPreviews = computed(() => buildCollectableActionEffectPreviews({
-  actions: editingRuleDraft.value?.actions ?? [],
+  actions: (editingRuleDraft.value?.actions ?? []).filter(isFormalCollectableAction),
   states: managedNodes.value.map((node) => node.state),
   mechanics: collectableMechanicsContext.value
 }));
@@ -288,6 +316,13 @@ watch([
 }, { immediate: true });
 
 watch([
+  () => props.frontierLoadedStudy,
+  () => props.activeItem.itemId
+], () => {
+  loadFrontierStudy();
+}, { immediate: true });
+
+watch([
   rules,
   () => props.effectiveStats,
   () => props.baseValues,
@@ -321,10 +356,12 @@ watch([
   () => props.nodeBonuses,
   () => props.temporaryGp,
   () => props.hasRelicToolBonus,
+  () => props.frontierProbabilityProfile,
   collectableObjective
 ], () => {
   analysisAbort?.abort();
   analysis.value = null;
+  frontierAnalysis.value = null;
   isSaved.value = false;
   isDecisionTreeExported.value = false;
 }, { deep: true });
@@ -354,12 +391,13 @@ async function rebuildStrategyTree() {
   treeBuildAbort?.abort();
   analysisAbort?.abort();
   const sequence = treeBuildSequence += 1;
-  const request = buildStrategyTreeRequest(clonePlain(rules.value));
+  const request = buildStrategyTreeRequest(toFormalStrategyRules(clonePlain(rules.value)));
 
   if (!request) {
     treeResult.value = null;
     isTreeBuilding.value = false;
     analysis.value = null;
+    frontierAnalysis.value = null;
     return;
   }
 
@@ -367,6 +405,7 @@ async function rebuildStrategyTree() {
   treeBuildAbort = controller;
   treeResult.value = null;
   analysis.value = null;
+  frontierAnalysis.value = null;
   isSaved.value = false;
   isTreeBuilding.value = true;
 
@@ -401,7 +440,7 @@ async function rebuildEditorFrontierTree() {
     return;
   }
 
-  const request = buildStrategyTreeRequest(clonePlain(editorFrontierRules.value));
+  const request = buildStrategyTreeRequest(toFormalStrategyRules(clonePlain(editorFrontierRules.value)));
   if (!request) {
     editorFrontierTreeResult.value = null;
     isEditorFrontierBuilding.value = false;
@@ -448,15 +487,17 @@ async function runAnalysis() {
   try {
     await nextTick();
     await yieldToEventQueue();
-    const result = await analyzeCollectableStrategyTreeAsync(
-      treeResult.value.root,
-      rewardTable.value,
-      clonePlain(collectableObjective.value),
-      {
-        signal: controller.signal,
-        yieldEvery: 80
-      }
-    );
+    const result = isFrontierMode.value
+      ? runFrontierAnalysis()
+      : await analyzeCollectableStrategyTreeAsync(
+        treeResult.value.root,
+        rewardTable.value,
+        clonePlain(collectableObjective.value),
+        {
+          signal: controller.signal,
+          yieldEvery: 80
+        }
+      );
     if (sequence === analysisSequence && !controller.signal.aborted) {
       analysis.value = result;
     }
@@ -469,6 +510,94 @@ async function runAnalysis() {
       isAnalysisRunning.value = false;
     }
   }
+}
+
+function runFrontierAnalysis(): CollectableStrategyAnalysis {
+  const request = buildFrontierRequest();
+  if (!request) throw new Error('Frontier analysis request is not ready.');
+  const result = analyzeFrontierCollectableStrategy(request);
+  frontierAnalysis.value = result;
+  return adaptFrontierAnalysis(result);
+}
+
+function buildFrontierRequest(): FrontierCollectableSimulationRequest | null {
+  if (!props.baseValues || !rewardTable.value || !props.frontierProbabilityProfile) return null;
+
+  return {
+    itemId: props.activeItem.itemId,
+    stats: { ...props.effectiveStats },
+    baseValues: { ...props.baseValues },
+    itemLevel: props.itemRealLevel,
+    nodeBonuses: { ...props.nodeBonuses },
+    temporaryGp: props.temporaryGp,
+    jobType: props.activeItem.jobType ?? 'miner',
+    isTimedNode: props.activeItem.isTimedNode ?? false,
+    hasRelicToolBonus: props.hasRelicToolBonus,
+    rewardTable: rewardTable.value,
+    objective: clonePlain(collectableObjective.value),
+    probabilityProfile: clonePlain(props.frontierProbabilityProfile),
+    strategy: rules.value.map(toFrontierStrategyRule)
+  };
+}
+
+function toFrontierStrategyRule(rule: CollectableStrategyRule): FrontierCollectableStrategyRule {
+  return {
+    id: rule.id,
+    name: rule.name,
+    mode: rule.mode,
+    enabled: rule.enabled,
+    conditions: rule.conditions.map((condition) => {
+      if (condition.field === 'standardActive') {
+        return {
+          id: condition.id,
+          field: 'standardMode',
+          comparator: '=',
+          value: condition.value ? 'standard' : 'none'
+        };
+      }
+      if (condition.field === 'successIActive' || condition.field === 'successIIActive' || condition.field === 'successIIIActive') {
+        return {
+          id: condition.id,
+          field: 'successBonus',
+          comparator: condition.value ? '>' : '=',
+          value: 0
+        };
+      }
+      return {
+        id: condition.id,
+        field: condition.field,
+        comparator: condition.comparator,
+        value: condition.value
+      };
+    }) as FrontierCollectableStrategyRule['conditions'],
+    actions: rule.actions
+      .map(toFrontierAction)
+      .filter((action): action is NonNullable<ReturnType<typeof toFrontierAction>> => action !== null)
+  };
+}
+
+function toFrontierAction(action: StrategyLabActionKind) {
+  if (action === 'revisitCheck') return null;
+  return action as FrontierCollectableStrategyRule['actions'][number];
+}
+
+function adaptFrontierAnalysis(result: FrontierCollectableAnalysisResult): CollectableStrategyAnalysis {
+  return {
+    modelVersions: result.modelVersions,
+    expectedScore: result.expectedScore,
+    minScore: result.minScore,
+    maxScore: result.maxScore,
+    minScoreChance: result.minScoreChance,
+    maxScoreChance: result.maxScoreChance,
+    expectedTierCounts: result.expectedTierCounts,
+    minScoreTierCounts: result.outcomeDistribution.find((entry) => entry.score === result.minScore)?.tierCounts ?? createEmptyTierCounts(),
+    maxScoreTierCounts: result.outcomeDistribution.find((entry) => entry.score === result.maxScore)?.tierCounts ?? createEmptyTierCounts(),
+    outcomeDistribution: result.outcomeDistribution
+  };
+}
+
+function createEmptyTierCounts(): CollectableTierCounts {
+  return { none: 0, low: 0, mid: 0, high: 0 };
 }
 
 function defaultExperimentName() {
@@ -508,6 +637,31 @@ function saveCurrentExperiment() {
 function confirmSaveExperiment(name: string) {
   if (!analysis.value) return;
 
+  if (isFrontierMode.value && props.frontierProbabilityProfile) {
+    createStudy({
+      id: props.frontierStudyId ?? undefined,
+      name,
+      itemId: props.activeItem.itemId,
+      input: {
+        stats: { ...props.effectiveStats },
+        temporaryGp: props.temporaryGp,
+        food: { ...props.selectedFood },
+        nodeBonuses: { ...props.nodeBonuses },
+        hasRelicToolBonus: props.hasRelicToolBonus
+      },
+      probabilityProfile: clonePlain(props.frontierProbabilityProfile),
+      strategy: rules.value.map(toFrontierStrategyRule),
+      lastAnalysisSnapshot: frontierAnalysis.value ?? undefined
+    });
+    isSaved.value = true;
+    if (saveTimer) window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      isSaved.value = false;
+      saveTimer = null;
+    }, 1600);
+    return;
+  }
+
   saveCollectableExperiment({
     name,
     itemId: props.activeItem.itemId,
@@ -532,6 +686,26 @@ function confirmSaveExperiment(name: string) {
 
 function handleExportCollectableExperimentJson() {
   if (!analysis.value || !props.baseValues) return;
+
+  if (isFrontierMode.value && frontierAnalysis.value) {
+    const request = buildFrontierRequest();
+    if (!request) return;
+    downloadJsonFile(
+      buildFrontierCollectableJsonExport({
+        item: props.activeItem,
+        request,
+        analysis: frontierAnalysis.value,
+        food: {
+          selection: { ...props.selectedFood },
+          baseStats: { ...props.effectiveStats }
+        },
+        locale: locale.value
+      }),
+      sanitizeJsonFileName(`${getItemName(props.activeItem.itemId)} - ${t('frontier.json.scenario')} - ${new Date().toISOString().slice(0, 10)}.json`)
+    );
+    markJsonExported();
+    return;
+  }
 
   const payload = buildCollectableExperimentJsonExport({
     meta: {},
@@ -851,6 +1025,63 @@ function loadCollectableExperiment() {
   isSaved.value = false;
 }
 
+function loadFrontierStudy() {
+  const study = props.frontierLoadedStudy;
+  if (!isFrontierMode.value || !study || study.itemId !== props.activeItem.itemId) return;
+
+  rules.value = study.strategy.map(toCollectableStrategyRule).filter((rule) => rule.actions.length > 0);
+  editingRuleId.value = '';
+  editingRuleDraft.value = null;
+  resetRuleEditorView();
+  analysis.value = study.lastAnalysisSnapshot ? adaptFrontierAnalysis(study.lastAnalysisSnapshot) : null;
+  frontierAnalysis.value = study.lastAnalysisSnapshot ?? null;
+  isSaved.value = false;
+}
+
+function toCollectableStrategyRule(rule: FrontierCollectableStrategyRule): CollectableStrategyRule {
+  return {
+    id: rule.id,
+    name: rule.name,
+    mode: rule.mode,
+    enabled: rule.enabled,
+    conditions: rule.conditions.map(toCollectableStrategyCondition).filter((condition): condition is CollectableStrategyCondition => condition !== null),
+    actions: rule.actions.map(toCollectableAction).filter((action): action is CollectableActionKind => action !== null)
+  };
+}
+
+function toCollectableStrategyCondition(condition: FrontierCollectableStrategyCondition): CollectableStrategyCondition | null {
+  if (condition.field === 'standardMode') {
+    if (condition.value === 'highStandard') return null;
+    return {
+      id: condition.id,
+      field: 'standardActive',
+      comparator: '=',
+      value: condition.value === 'standard'
+    };
+  }
+
+  if (condition.field === 'successBonus' || condition.field === 'nextCollectSuccessBonus') {
+    return {
+      id: condition.id,
+      field: condition.field,
+      comparator: condition.comparator,
+      value: Number(condition.value)
+    };
+  }
+
+  return {
+    id: condition.id,
+    field: condition.field,
+    comparator: condition.comparator,
+    value: condition.value as number | boolean
+  };
+}
+
+function toCollectableAction(action: FrontierCollectableStrategyRule['actions'][number]): CollectableActionKind | null {
+  if (action === 'brazen') return null;
+  return action;
+}
+
 function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -1106,6 +1337,17 @@ function sanitizeRule(rule: CollectableStrategyRule) {
   for (const condition of rule.conditions) clampConditionValue(condition);
 }
 
+function toFormalStrategyRules(strategyRules: CollectableStrategyRule[]): CollectableStrategyRule[] {
+  return strategyRules.map((rule) => ({
+    ...rule,
+    actions: rule.actions.filter(isFormalCollectableAction)
+  }));
+}
+
+function isFormalCollectableAction(action: StrategyLabActionKind): action is CollectableActionKind {
+  return collectableStrategyActionKinds.includes(action as CollectableActionKind);
+}
+
 function addAction(rule: CollectableStrategyRule) {
   rule.actions.push('collect');
 }
@@ -1115,30 +1357,38 @@ function removeLastAction(rule: CollectableStrategyRule) {
   rule.actions.pop();
 }
 
-function setAction(rule: CollectableStrategyRule, actionIndex: number, action: CollectableActionKind) {
+function setAction(rule: CollectableStrategyRule, actionIndex: number, action: StrategyLabActionKind) {
   if (isActionLevelLocked(action)) return;
-  rule.actions[actionIndex] = action;
+  rule.actions[actionIndex] = action as CollectableActionKind;
 }
 
-function actionName(action: CollectableActionKind) {
-  return getCollectableActionName(action, jobType.value);
+function actionName(action: StrategyLabActionKind) {
+  if (isFrontierMode.value) return getFrontierCollectableActionName(action as FrontierCollectableStrategyRule['actions'][number], jobType.value);
+  return getCollectableActionName(action as CollectableActionKind, jobType.value);
 }
 
-function actionIcon(action: CollectableActionKind) {
-  return getCollectableActionIcon(action, jobType.value);
+function actionIcon(action: StrategyLabActionKind) {
+  if (isFrontierMode.value) return getFrontierCollectableActionIcon(action as FrontierCollectableStrategyRule['actions'][number], jobType.value);
+  return getCollectableActionIcon(action as CollectableActionKind, jobType.value);
 }
 
-function isActionLevelLocked(action: CollectableActionKind) {
-  return props.effectiveStats.level < getCollectableActionMinLevel(action);
+function isActionLevelLocked(action: StrategyLabActionKind) {
+  if (isFrontierMode.value) {
+    return props.effectiveStats.level < FRONTIER_COLLECTABLE_ACTION_DEFINITIONS[action as FrontierCollectableStrategyRule['actions'][number]].minLevel;
+  }
+  return props.effectiveStats.level < getCollectableActionMinLevel(action as CollectableActionKind);
 }
 
 function hasRuleLevelIssue(rule: CollectableStrategyRule) {
   return rule.enabled && rule.actions.some(isActionLevelLocked);
 }
 
-function actionLevelRequirement(action: CollectableActionKind) {
+function actionLevelRequirement(action: StrategyLabActionKind) {
+  const level = isFrontierMode.value
+    ? FRONTIER_COLLECTABLE_ACTION_DEFINITIONS[action as FrontierCollectableStrategyRule['actions'][number]].minLevel
+    : getCollectableActionMinLevel(action as CollectableActionKind);
   return t('collectableStrategyLab.actionLevelRequirement', {
-    level: getCollectableActionMinLevel(action)
+    level
   });
 }
 
@@ -1874,11 +2124,11 @@ function makeId() {
 
     <SaveEntryDialog
       v-model="isSaveExperimentDialogOpen"
-      :title="t('saveEntry.experiment.title')"
-      :description="t('saveEntry.experiment.description')"
+      :title="t(isFrontierMode ? 'frontier.save.title' : 'saveEntry.experiment.title')"
+      :description="t(isFrontierMode ? 'frontier.save.description' : 'saveEntry.experiment.description')"
       :name-label="t('saveEntry.nameLabel')"
       :default-name="defaultExperimentName()"
-      :confirm-label="t('saveEntry.experiment.confirm')"
+      :confirm-label="t(isFrontierMode ? 'frontier.save.confirm' : 'saveEntry.experiment.confirm')"
       :cancel-label="t('saveEntry.cancel')"
       @confirm="confirmSaveExperiment"
     >
@@ -2201,10 +2451,10 @@ function makeId() {
                     </span>
                     <select
                       :value="action"
-                      @change="setAction(editingRule, actionIndex, ($event.target as HTMLSelectElement).value as CollectableActionKind)"
+                      @change="setAction(editingRule, actionIndex, ($event.target as HTMLSelectElement).value as StrategyLabActionKind)"
                     >
                       <option
-                        v-for="option in collectableStrategyActionKinds"
+                        v-for="option in strategyActionKinds"
                         :key="option"
                         :value="option"
                         :disabled="isActionLevelLocked(option)"
