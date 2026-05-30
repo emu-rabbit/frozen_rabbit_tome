@@ -62,7 +62,7 @@
 ### Roadmaps / Research
 
 - `.agents/roadmaps/shikhu-feedback-todo.md`：Shikhu 回饋收斂出的產品與技術待辦，不代表全部都要立即實作。
-- `.agents/roadmaps/frontier-collectable-implementation-plan.md`：Frontier 收藏品研究模式的第一階段實作計畫；設計新入口、設定開關、自成一套的收藏品研究模型、Brazen bucket 與 High Standard 待實證邊界時必讀。
+- `.agents/roadmaps/frontier-collectable-implementation-plan.md`：Frontier 收藏品研究模式的第一階段實作計畫；設計新入口、設定開關、獨立研究 schema / 儲存區、延續既有收藏品模型的 Frontier 差異層、Brazen bucket 與 High Standard 待實證邊界時必讀。
 - `.agents/roadmaps/collectable-solver-research-history.md`：歷史研究與踩坑紀錄；用來避免重複錯誤，不是 active roadmap。
 
 ## 任務型補充資料
@@ -95,7 +95,7 @@
 
 - `.agents/roadmaps/shikhu-feedback-todo.md`
 
-若任務涉及 Frontier、新研究模式、Brazen / 大膽提煉機率輸入、Collector's High Standard / 強化洞察假設、或隔離於正式模型之外的收藏品研究台，另讀：
+若任務涉及 Frontier、新研究模式、Brazen / 大膽提煉機率輸入、Collector's High Standard / 強化洞察假設、或獨立於正式秘笈 / 實驗 surface 但延續既有收藏品邏輯的研究台，另讀：
 
 - `.agents/roadmaps/frontier-collectable-implementation-plan.md`
 

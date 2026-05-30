@@ -47,7 +47,7 @@
 
 目前排除於收藏品秘笈推薦：
 
-- **大膽提煉 / Brazen Prospector / Brazen Woodsman**：50% 到 150% 隨機分布、檔位與取整順序尚未確認；且收藏價值已滿時遊戲內不可施放。
+- **大膽提煉 / Brazen Prospector / Brazen Woodsman**：50% 到 150% 隨機分布與檔位機率尚未確認；取整順序已確認為最後再 `floor`；且收藏價值已滿時遊戲內不可施放。
 - **強化洞察 / Collector's High Standard**：2026-05-29 使用者提供遊戲畫面已確認效果模型，但觸發率尚未確認，因此不要放入秘笈推薦。可在未來 Frontier / 實驗系統讓使用者手動指定狀態或機率。
 - **精選專用 reward model** 與 **宇宙探索專用技能 / score model**：需獨立設計，不能沿用目前一般收藏品模型。
 
@@ -56,7 +56,7 @@
 此段用於 Frontier 或未來實驗系統，不代表目前收藏品秘笈已支援 `Brazen` 或 `Collector's High Standard`。
 
 - 洞察與強化洞察是同一個互斥狀態槽；UI 只會顯示其中之一，不會同時存在。
-- `Scour`、`Brazen`、`Meticulous` 都會消耗洞察 / 強化洞察狀態，使用後回到無洞察狀態。
+- `Scour`、`Brazen`、`Meticulous` 與 `Collect` 都會消耗洞察 / 強化洞察狀態，使用後回到無洞察狀態。
 - 一般洞察 `Collector's Standard`：
   - `Meticulous` 的收藏值提升量提高到 `Scour` 基準。
   - `Brazen` 的下限提高到 `Scour` 基準，上限仍為 `Scour * 150%`；最大值 case 實測為 `200 ~ 300`。
@@ -67,7 +67,7 @@
   - `Brazen` 固定為 `Scour * 150%`；最大值 case 實測為 `300`。
   - 不提高價值提升機率；最大值 case 仍為 40%，使用 `Collector's Focus` 後為 70%。
 - `Scrutiny` 的額外加成在上述基礎上加算；最大值 case 中 `Collector's High Standard + Scrutiny + Brazen = 550`。
-- `Collect` 是否消耗洞察 / 強化洞察狀態尚待確認。
+- `Brazen` 的倍率、`Scrutiny`、價值提升等加成計算完成後，最後再 `floor` 成收藏值提升量。
 
 ## 採掘師 (Miner)
 

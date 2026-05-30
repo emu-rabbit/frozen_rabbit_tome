@@ -9,7 +9,7 @@
 1. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
-   - 2026-05-29 已由使用者遊戲畫面確認 High Standard 的效果模型；仍未知的是觸發率，以及 Brazen bucket 分布。
+   - 2026-05-29 已由使用者遊戲畫面確認 High Standard 的效果模型；後續又確認 Brazen 最後再 `floor`，且 `Collect` 會消耗洞察 / 強化洞察。仍未知的是 High Standard 觸發率，以及 Brazen bucket 分布。
    - 已收斂的第一階段實作計畫見 `.agents/roadmaps/frontier-collectable-implementation-plan.md`。
 
 2. **報表比較功能**
@@ -58,24 +58,29 @@
 
 ### 背景
 
-目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是 Brazen 分布與 High Standard 觸發率尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制；2026-05-29 使用者提供遊戲畫面確認 `Brazen under Collector's High Standard` 為 guaranteed `Scour * 150%`，最大值 case 顯示為 `300`。
+目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是 Brazen 分布與 High Standard 觸發率尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制；2026-05-29 使用者提供遊戲畫面確認 `Brazen under Collector's High Standard` 為 guaranteed `Scour * 150%`，最大值 case 顯示為 `300`。後續使用者確認 Brazen 取整順序為最後再 `floor`，且 `Collect / 收藏品採集` 會消耗洞察 / 強化洞察。
 
 ### User Story
 
-作為高階玩家或研究者，我希望能手動輸入尚未確認的 proc rate 或分布，並在隔離的實驗區測試接近 endgame 實際手法的模型，而不是等待所有資料完全確認。
+作為高階玩家或研究者，我希望能手動輸入尚未確認的 proc rate 或分布，並在 Frontier 區測試接近 endgame 實際手法的模型，而不是等待所有資料完全確認。Frontier 應延續既有收藏品實驗模型，只在 `Brazen` 與 `Collector's High Standard` 這兩個差異點上加入研究假設。
 
 ### 初步範圍
 
 - Brazen probability distribution。
 - Collector's High Standard proc rate。
-- Brazen bucket 的取整順序若無法由分布樣本推得，仍需另行確認。
-- 可能允許使用者選擇節點類型或手動覆蓋 proc rate。
+- 已確認 Brazen 取整順序為最後再 `floor`。
+- 已確認 `Collect / 收藏品採集` 會消耗洞察 / 強化洞察。
+- 第一版不納入 `Revisit`，只做單點採集分析。
+- Frontier study 使用獨立 Frontier Studies，不進 Experiment Database。
+- UI 完整度比照現有實驗台：建立、分析、儲存、再次開啟、JSON 匯出 / 匯入。
+- 可能允許使用者選擇節點類型或手動覆蓋 proc rate；若實作時發現其他缺資料的收藏品機制，需先詢問使用者。
 
 ### 已討論取捨
 
 - Frontier 區不能把未確認資料包裝成正式求解器結果。
 - UI 必須明確標示「研究 / 實驗 / 未確認」。
 - 正式秘笈仍應保守，不納入缺乏機率的機制。
+- Frontier 的產品入口、schema、版本與儲存區應獨立；但 `Brazen` / `High Standard` 以外的已知收藏品邏輯應沿用既有模型，避免平行實作漂移。
 - 這對 Evercold 之後也可能有價值，因為新資料收集需要時間。
 
 ## 次要待辦 A：新增兩個報表比較功能

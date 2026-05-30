@@ -10,15 +10,21 @@
 - Frontier 入口必須由設定頁的新設定開關控制，預設關閉；一般使用者預設看不到。
 - 第一階段只做收藏品。
 - 第一階段是使用者輸入策略後模擬與分析，不做求解器，不自動產生推薦策略。
-- Frontier 模型必須自成一套，不串接現有任何正式模型層，避免後續維護管理困難。
-- 可以使用現有物品、物品搜尋、runtime game data、reward table hydration 與 gear / food 輸入流程；這些是資料來源與 UI 基礎，不是模型串接。
+- Frontier 是既有收藏品實驗模型的研究延伸：沿用目前已確認的收藏品採集邏輯，但額外納入 `Brazen / 大膽提煉` 與 `Collector's High Standard / 強化洞察`。
+- Frontier 的入口、schema、model version、localStorage 與研究假設輸入必須獨立；但既有收藏品公式、採集成功、GP、耐久、reward / tier、`Scrutiny`、`Collector's Focus`、`Priming Touch`、成功率補強、恢復耐久、`Wise to the World` 等已知行為應與現有收藏品模型保持一致，不可另寫一份會漂移的平行邏輯。
+- 可以使用現有物品、物品搜尋、runtime game data、reward table hydration 與 gear / food 輸入流程；這些是資料來源與 UI 基礎。
 - `Brazen / 大膽提煉` 的未知機率資料採用使用者輸入的離散 bucket 形式，不用單一 uniform 假設。
+- `Brazen / 大膽提煉` 的取整順序已由使用者確認為最後再 `floor`。
 - `Collector's High Standard / 強化洞察` 的效果模型已由 2026-05-29 使用者提供遊戲畫面確認；觸發率仍未知，第一版應保留使用者輸入觸發率或手動狀態，不可把未知觸發率寫成正式規則。
+- `Collect / 收藏品採集` 已由使用者確認會消耗洞察 / 強化洞察。
+- 第一版不納入 `Revisit`；範圍比照現有實驗台，只考慮單點採集。
+- Frontier study 不進 Experiment Database，長期作為新的 Frontier Studies 區域；側邊欄上區放 Frontier 建立 / 進入入口，下區放 Frontier Studies 儲存入口。
+- UI 完整度比照現有實驗台處理：建立、分析、儲存、再次開啟、JSON 匯出 / 匯入都應納入第一版產品路徑；比較功能不在第一版額外擴張。
 - 分析引擎採精確分布，不採 Monte Carlo 作為第一階段主路徑。
 
 ## 產品定位
 
-Frontier 是研究沙盒。它可以幫玩家測試「如果這組機率與疊加規則為真，這套策略的分布會如何」，但不能對外宣稱結果等同正式遊戲模型。
+Frontier 是研究沙盒。它延續已確認的收藏品採集邏輯，並讓玩家替尚未確認的 `Brazen` 分布與 `High Standard` 觸發率提供假設後，測試接近 endgame 實際手法的策略分布；但不能對外宣稱這兩個未知機率已等同正式遊戲模型。
 
 使用者可見文案要避免：
 
@@ -37,18 +43,20 @@ Frontier 是研究沙盒。它可以幫玩家測試「如果這組機率與疊�
 
 ## 硬邊界
 
-Frontier 第一階段不得 import 或呼叫下列正式模型層作為引擎：
+Frontier 第一階段的硬邊界不是「重寫一份完全不同的收藏品模型」，而是「不要把研究假設污染正式秘笈 / 實驗模型」。後續實作必須遵守：
 
-- `src/utils/collectableMechanics.ts`
-- `src/utils/collectableMath.ts`
-- `src/utils/collectableStrategyTree.ts`
-- `src/utils/collectableStrategyAnalysis.ts`
-- `src/utils/collectableSolver.ts`
-- `src/utils/collectableWasmSolver.ts`
-- `assembly/collectableSolverCore.ts`
-- `src/types/collectable.ts` 中的正式 request / result 型別作為 Frontier engine schema
+- Frontier 的 route、UI 入口、localStorage key、JSON scenario、schema 與 model version 應獨立於 `tome.collectable` 與 `experiment.collectable`。
+- Frontier engine request / result 型別應有自己的命名與 schema，不直接把正式 `CollectableSolverRequest`、`CollectableSolverResult`、`CollectableStrategyBuildRequest` 或現有儲存型別當成 Frontier 對外資料格式。
+- 已確認的收藏品公式與狀態轉移應盡量共用或抽出可共用 helper，確保 Frontier 與既有收藏品實驗在 `Brazen` / `High Standard` 以外的行為一致。
+- 若暫時需要複製既有公式或狀態邏輯，必須在 Frontier 檔案註明來源，並用 Frontier 專用測試與現有收藏品測試守住 parity；後續若正式模型修正同一段已知邏輯，也要同步檢查 Frontier。
+- `Brazen` 分布與 `High Standard` 觸發率只能從 `probabilityProfile` 或手動狀態輸入而來，不可寫成未經確認的固定正式規則。
+- Frontier 不應呼叫正式收藏品 solver / WASM core 來產生推薦；第一版只展開使用者策略並分析分布。
 
-可以參考其概念、測試案例與 UI 經驗，但 Frontier engine 需要自己的 type、formula helper、action transition 與 analyzer。若複製已確認公式，請在 Frontier 檔案註明來源與 Frontier model version，並用 Frontier 專用測試守住行為。
+可重用現有資料與經驗：
+
+- `src/utils/collectableMath.ts` 的已確認公式可以直接共用，或先抽成更清楚的 shared helper。
+- `src/utils/collectableMechanics.ts`、`src/utils/collectableStrategyTree.ts`、`src/utils/collectableStrategyAnalysis.ts` 的行為可作為單點採集實驗 parity 來源；若直接共用內部 helper，必須先確認不會把 Frontier-only action / state 寫回正式模型路徑。
+- 現有收藏品 UI、策略台、JSON export / import、storage 與測試案例可作為實作參考，但 Frontier 的研究假設、版本與保存區域要獨立。
 
 ## 建議檔案架構
 
@@ -70,6 +78,7 @@ src/frontier/collectable/
 
 ```txt
 src/views/FrontierCollectable.vue
+src/views/FrontierStudies.vue
 src/components/frontier/FrontierProbabilityProfileEditor.vue
 src/components/frontier/FrontierBrazenBucketEditor.vue
 src/components/frontier/FrontierStrategyEditor.vue
@@ -83,13 +92,16 @@ src/components/frontier/FrontierAnalysisPanel.vue
 建議新增：
 
 - route：`/#/frontier/collectable`
+- studies route：例如 `/#/frontier/studies`
 - route name：`FrontierCollectable`
+- studies route name：`FrontierStudies`
 - 設定 key：例如 `settings.frontier.enabled` 或 `experimentalFeatures.frontierCollectable`
 
 入口行為：
 
 - 設定預設為 `false`。
-- 設定關閉時，主導覽、首頁入口與其他自然流程不顯示 Frontier。
+- 設定關閉時，主導覽、首頁入口、Frontier Studies 入口與其他自然流程不顯示 Frontier。
+- 設定開啟後，側邊欄上區顯示 Frontier 收藏品研究入口；側邊欄下區顯示 Frontier Studies 儲存入口，心智模型比照「創建新實驗」與「實驗資料庫」的分工。
 - 若使用者直接開 `/#/frontier/collectable`，頁面應顯示簡短的啟用提示與前往設定的操作，不要完全空白或 redirect 到首頁。
 - 設定開啟後，才顯示 Frontier 入口。
 
@@ -158,7 +170,7 @@ interface FrontierCollectableState {
 - `restoreIntegrity`
 - `wiseToTheWorld`
 
-`revisitCheck` 第一階段建議先不做，除非使用者明確要求。原因是 Frontier 主要要處理 Brazen / High Standard 的研究假設；Revisit 會顯著增加分支與 UI 解釋成本。
+`revisitCheck` 第一階段不做。Frontier 第一版比照現有實驗台，只分析單點採集範圍，不展開 `Revisit` 的第二輪採集。
 
 ## 機率 Profile 設計
 
@@ -193,7 +205,7 @@ High Standard 觸發率仍待確認，建議第一版 UI 先提供兩層：
 不再需要把 High Standard 效果做成多個未確認模式。2026-05-29 使用者提供遊戲畫面已確認效果模型如下：
 
 - 洞察與強化洞察是同一個互斥狀態槽：`none | standard | highStandard`。
-- `Scour`、`Brazen`、`Meticulous` 都會消耗洞察 / 強化洞察狀態。
+- `Scour`、`Brazen`、`Meticulous` 與 `Collect` 都會消耗洞察 / 強化洞察狀態。
 - `standard`：
   - `Meticulous` 收藏值提升到 `Scour` 基準。
   - `Brazen` 下限提升到 `Scour` 基準，上限仍為 `Scour * 150%`。
@@ -203,6 +215,7 @@ High Standard 觸發率仍待確認，建議第一版 UI 先提供兩層：
   - `Brazen` 固定為 `Scour * 150%`。
   - 不提高價值提升機率；`Collector's Focus` 仍只將價值提升機率乘 1.75 後 floor 並套上限。
 - `Scrutiny` 的額外加成在上述 action gain 之後加算。
+- `Brazen` 的倍率、`Scrutiny`、價值提升等加成計算完成後，最後再 `floor` 成收藏價值提升量。
 
 最大值裝備實測例：
 
@@ -246,7 +259,7 @@ value increase rate + Collector's Focus = 70%
 
 ## 精確分布 engine
 
-Frontier 不做 solver，只展開使用者策略。建議使用 state aggregation / DAG：
+Frontier 不做 solver，只展開使用者策略。第一版為單點採集，不納入 `Revisit`。建議使用 state aggregation / DAG：
 
 - key 只包含會影響後續決策與結果的 state 欄位。
 - key 不包含 path、depth 或純 UI label。
@@ -275,7 +288,7 @@ Frontier 不做 solver，只展開使用者策略。建議使用 state aggregati
 
 ## 策略 UI 與策略模型
 
-第一版可沿用現有收藏品策略台的心智模型：使用者用 rules 管理未覆蓋狀態。但不要共用正式 `CollectableStrategyRule` 型別。
+第一版可沿用現有收藏品策略台的心智模型：使用者用 rules 管理未覆蓋狀態。Frontier 對外 schema 應使用自己的 rule 型別，但欄位與行為要盡量貼近現有實驗台，方便玩家遷移，也方便未來維護 parity。
 
 建議 rule fields：
 
@@ -331,7 +344,7 @@ interface FrontierCollectableSimulationRequest {
 
 ## 儲存與 JSON 匯出
 
-Frontier localStorage 建議另用：
+Frontier Studies 是獨立於 Experiment Database 的儲存區。localStorage 建議另用：
 
 ```txt
 frozen-rabbit-tome-frontier-studies
@@ -368,6 +381,8 @@ manifest limitations 建議至少包含：
 - `brazen-distribution-user-supplied`
 - `high-standard-proc-rate-user-supplied`
 - `not-a-solver`
+
+匯入 / 儲存體驗應比照現有實驗台：JSON 匯入後可重建 Frontier study 草稿或保存到 Frontier Studies，不應投影成 Experiment Database 卡片。
 
 ## 設定與 i18n
 
@@ -420,19 +435,22 @@ manifest limitations 建議至少包含：
 ### Phase 0：文件與開關骨架
 
 - 新增設定頁開關，預設關閉。
-- 新增 route 與隱藏入口。
-- 新增空 Frontier 頁與啟用提示。
+- 新增 Frontier collectable route、Frontier Studies route 與隱藏入口。
+- 側邊欄上區新增 Frontier 收藏品研究入口；側邊欄下區新增 Frontier Studies 儲存入口，兩者都受設定開關控制。
+- 新增空 Frontier 頁、Frontier Studies 空頁與啟用提示。
 - 補 i18n。
 
 ### Phase 1：Frontier domain skeleton
 
 - 建立 Frontier 專用 types、model versions、probability profile validation。
 - 建立 Brazen bucket editor。
-- 建立最小 JSON export shape。
+- 建立最小 JSON export / import shape。
+- 建立 Frontier Studies storage skeleton，行為比照現有實驗台的保存與再次開啟。
+- 對既有收藏品單點採集邏輯建立 parity 測試，確認 `Brazen` / `High Standard` 以外的行為不漂移。
 
 ### Phase 2：精確分布模擬
 
-- 實作 Frontier action transition。
+- 實作 Frontier action transition，沿用既有收藏品邏輯並新增 `Brazen` / `High Standard` 差異層。
 - 實作 rule-based strategy expansion。
 - 實作 state aggregation 與 limited guard。
 - 實作 analyzer summary。
@@ -441,7 +459,7 @@ manifest limitations 建議至少包含：
 
 - 補策略編輯器、未覆蓋狀態提示、結果圖表。
 - 補 localStorage research studies。
-- 補匯出 / 匯入或至少匯出。
+- 補匯出 / 匯入、保存、再次開啟與刪除 / 管理流程，比照現有實驗台。
 
 ### Phase 4：High Standard 觸發率實證後接入
 
@@ -455,12 +473,16 @@ manifest limitations 建議至少包含：
 
 - `Collector's High Standard` 觸發率。
 - Brazen bucket 的官方或實測分布。
-- Brazen bucket 的取整順序若未能由實測分布推得，仍需另行確認。
-- `Collect / 收藏品採集` 是否消耗洞察 / 強化洞察狀態。
-- Frontier 第一版是否要納入 Revisit。
-- Frontier study 是否要進 Experiment Database，或長期維持獨立 Frontier Studies。
 
-在這些資料確認前，Frontier 只能呈現為「使用者提供假設後的分析」。
+已確認並應納入第一版：
+
+- Brazen 取整順序為最後再 `floor`。
+- `Collect / 收藏品採集` 會消耗洞察 / 強化洞察狀態。
+- 第一版不納入 `Revisit`，只做單點採集分析。
+- Frontier study 使用獨立 Frontier Studies，不進 Experiment Database。
+- UI 完整度比照現有實驗台處理。
+
+在 `Brazen` 分布與 `High Standard` 觸發率確認前，Frontier 只能呈現為「使用者提供假設後的分析」。若實作過程發現其他缺乏資料的收藏品機制，必須先詢問使用者，不可自行填補。
 
 ## Commit 前注意
 
