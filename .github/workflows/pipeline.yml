@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, staging ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, staging ]
 
 permissions:
   contents: read
@@ -13,8 +13,8 @@ permissions:
 
 jobs:
   # 整合階段：安裝、單元測試、建置
-  build:
-    name: Build
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -43,25 +43,84 @@ jobs:
         
       - name: Build
         run: npm run build
-        
-      - name: Upload Pages Artifact
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
+        env:
+          VITE_TEAMCRAFT_BRANCH: ${{ vars.VITE_TEAMCRAFT_BRANCH || 'staging' }}
 
   # 部署階段：僅在建置成功且為 push 時執行
   deploy:
     name: Deploy to Pages
-    needs: build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/staging')
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SITE_BASE_PATH: /frozen_rabbit_tome/
+      STAGING_BASE_PATH: /frozen_rabbit_tome/staging/
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Resolve deployment branches
+        id: branches
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --heads origin main >/dev/null 2>&1; then
+            echo "production=main" >> "$GITHUB_OUTPUT"
+          else
+            echo "production=master" >> "$GITHUB_OUTPUT"
+          fi
+
+          if git ls-remote --exit-code --heads origin staging >/dev/null 2>&1; then
+            echo "has_staging=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_staging=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Pages artifact
+        shell: bash
+        env:
+          PRODUCTION_BRANCH: ${{ steps.branches.outputs.production }}
+          HAS_STAGING: ${{ steps.branches.outputs.has_staging }}
+          TEAMCRAFT_BRANCH: ${{ vars.VITE_TEAMCRAFT_BRANCH || 'staging' }}
+        run: |
+          set -euo pipefail
+
+          rm -rf ../pages-site ../production-site ../staging-site
+          mkdir -p ../pages-site
+
+          git worktree add ../production-site "origin/${PRODUCTION_BRANCH}"
+          pushd ../production-site
+          npm ci
+          VITE_BASE_PATH="${SITE_BASE_PATH}" VITE_TEAMCRAFT_BRANCH="${TEAMCRAFT_BRANCH}" npm run build
+          popd
+          cp -a ../production-site/dist/. ../pages-site/
+
+          if [ "${HAS_STAGING}" = "true" ]; then
+            git worktree add ../staging-site origin/staging
+            pushd ../staging-site
+            npm ci
+            VITE_BASE_PATH="${STAGING_BASE_PATH}" VITE_TEAMCRAFT_BRANCH="${TEAMCRAFT_BRANCH}" npm run build
+            popd
+            mkdir -p ../pages-site/staging
+            cp -a ../staging-site/dist/. ../pages-site/staging/
+          fi
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ../pages-site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
