@@ -108,13 +108,49 @@ export default {
     createGuide: '创建新秘籍',
     solver: '秘籍求解器',
     createExperiment: '创建新实验',
+    frontierCollectable: '建立开拓研究',
     favoriteItems: '最爱的物品',
     tomeLibrary: '秘籍藏书库',
     experimentDatabase: '实验数据库',
+    frontierStudies: '开拓研究库',
     faq: '常见问题',
     settings: '设置页面',
     github: 'GitHub 项目',
     sponsor: '赞助冷冻库电费'
+  },
+  frontier: {
+    disabled: {
+      title: '开拓研究模式尚未启用',
+      description: '开拓是进阶研究区，会根据你提供的概率假设分析策略；结果仅供研究参考。',
+      action: '前往设置启用'
+    },
+    collectable: {
+      title: '开拓研究',
+      description: '用自定义概率假设分析进阶采集策略，适合研究大胆提炼与强化洞察等尚待实证的采集情境。',
+      emptyTitle: '准备建立研究',
+      emptyDescription: '选定研究条件后，就能在这里整理策略假设、观察结果分布，并保留给日后回顾。'
+    },
+    studies: {
+      title: '研究案例',
+      description: '这里保存开拓研究案例，方便日后回顾同一组假设与策略。',
+      emptyTitle: '尚未保存研究案例',
+      emptyDescription: '保存后的研究案例会集中在这里，方便日后回顾与比较。'
+    },
+    profile: {
+      brazenTitle: '大胆提炼分布',
+      brazenDescription: '用离散 bucket 描述大胆提炼倍率与概率。这是研究假设，不代表官方分布。',
+      bucketCount: '档数',
+      totalRate: '总概率',
+      average: '平均',
+      addBucket: '新增',
+      applyTemplate: '套用模板',
+      normalize: '归一化',
+      clear: '清空',
+      invalidTotal: '大胆提炼概率总和必须等于 100%。',
+      multiplier: '倍率 %',
+      probability: '概率 %',
+      removeBucket: '移除 bucket'
+    }
   },
   faq: {
     title: '常见问题',
@@ -367,6 +403,10 @@ export default {
       max: '只看手法可达到的最高获得量，概率不会进入评分。',
       min: '只看手法最差情况下的最低获得量，适合想要保底的采集规划。'
     },
+    frontierTitle: '开拓研究模式',
+    frontierDesc: '启用后显示进阶研究入口。此模式会使用你提供的概率假设分析策略，结果仅供研究参考。',
+    frontierCollectable: '显示开拓研究',
+    frontierCollectableDesc: '在侧边栏显示开拓研究与开拓研究库入口。',
     debugTitle: '专家检查模式',
     debugDesc: '开启后，求解结果会显示公式、概率分布与搜索统计。',
     solverDebugMode: '显示求解器检查信息',

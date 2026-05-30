@@ -4,6 +4,102 @@
 
 執行前仍需先依 `AGENTS.md` 讀取核心脈絡；若開始實作 UI，另讀 `.agents/skills/professional/ui_ux_standards.md`；若碰到採集公式、收藏品技能、分析輸出或 JSON 匯出，另讀 `.agents/skills/business/gathering_math_formulas.md`、`.agents/skills/business/ffxiv_gathering_skills.md` 與 `.agents/skills/business/algorithm_verification.md`。
 
+## 2026-05-30 Phase 0 交接報告
+
+Phase 0 的入口與開關骨架已完成，但本段紀錄的是目前工作區進度；若尚未 commit，後續 Agent 需先檢查 `git status --short` 與實際 diff。
+
+已完成：
+
+- 新增設定狀態 `frozen-rabbit-tome-frontier-settings`，目前 shape 為 `{ enabled: boolean }`，預設 `false`。
+- `useSettings.ts` 保留舊欄位 `{ collectableEnabled: boolean }` 到 `{ enabled: boolean }` 的一次性遷移，避免已開過開關的本機設定失效。
+- 新增開拓主入口 route：`/#/frontier`。
+- 保留舊 route `/#/frontier/collectable`，目前 redirect 到 `/#/frontier`，避免早期測試連結斷掉。
+- 新增研究庫 route：`/#/frontier/studies`。
+- 新增空頁：
+  - `src/views/FrontierCollectable.vue`：目前仍沿用內部檔名，但對外顯示為「開拓研究」。
+  - `src/views/FrontierStudies.vue`：對外顯示為「開拓研究庫 / 研究案例」。
+- `Sidebar.vue` 只有在 `frontierSettings.enabled` 為 `true` 時才顯示「建立開拓研究」入口。
+- `Settings.vue` 新增使用者可見開關。
+- `App.vue` 的 `KeepAlive` 已加入 `FrontierCollectable` 與 `FrontierStudies`。
+- `tw`、`cn`、`ja`、`en` 四語系已補開拓入口與設定文案。
+
+使用者在本輪明確修正的產品規範：
+
+- 使用者可見文字不可保留 `Frontier`；繁中 / 日文用「開拓」，簡中用「开拓」，英文目前用 `Pioneering`。
+- 對外入口名稱不可綁「收藏品」，因為未來可能支援多個開拓模型；側邊欄建立入口目前對外稱「建立開拓研究」，頁面 title 稱「開拓研究」。
+- 對外畫面不可暴露內部邏輯、開發狀態或 debug 語氣。避免出現「第一版」、「尚未接入」、「後續再接入」、「正式模型」等施工或內部治理文字。
+- 開拓頁面 title 要對齊其他既有頁面：單層主標題加描述，不要再加一層 kicker / eyebrow 造成視覺雜音。
+
+目前驗證：
+
+- `npm run build` 已通過。
+- 已用 Playwright 檢查繁中畫面：
+  - 設定頁顯示「開拓研究模式」與「顯示開拓研究」。
+  - 側邊欄顯示「建立開拓研究」與「開拓研究庫」。
+  - `/#/frontier` 頁面顯示單層「開拓研究」標題。
+  - `/#/frontier/collectable` 會 redirect 到 `/#/frontier`。
+  - 開拓頁 body 不含 `Frontier`、`開拓收藏品` 或 `收藏品研究` 等被使用者要求移除的對外字樣。
+
+尚未完成 / 下一步建議：
+
+- 目前只有 Phase 0 空入口與啟用提示，尚未建立 Frontier domain skeleton、probability profile、Brazen bucket editor、storage、JSON schema 或 engine。
+- 下一步若進入 Phase 1，仍應保持「對外泛用開拓入口、內部可先做 collectable model」的分層；不要把使用者可見入口重新命名成收藏品專用。
+- 若開始新增 engine、分析模型、JSON schema 或 storage schema，需要新增或更新 Frontier / 開拓專用 model version；純 UI 入口與文案調整不需要 bump `src/config/modelVersions.ts`。
+
+### 開拓入口心智模型補充
+
+使用者在 2026-05-30 補充了未來入口設計方向。後續 Agent 不應把「建立開拓研究」做成直接進單一收藏品表單；它應更接近現有「創建秘笈 / 創建實驗」的搜尋選物流程：
+
+- 使用者先在開拓入口搜尋並選擇採集物品。
+- 選中物品後，系統搜尋目前支援的開拓模型。
+- 目前預期只支援一個模型：`黃金遺產收藏品模型`。
+- 因此，只有點選收藏品時會顯示小型模型選擇框或提示卡，內容表示找到相符的 `黃金遺產收藏品模型`。
+- 若使用者選擇一般採集品或其他沒有支援模型的物品，畫面應顯示「沒有找到相符模型」之類的清楚提示，而不是直接進入研究台。
+- 使用者選中 `黃金遺產收藏品模型` 後，才進入使用該模型的開拓研究台。
+- 對外入口仍保持泛用「開拓研究」心智模型；內部第一個 model 可以是 collectable / Dawntrail collectable，但不可讓主入口文案退回收藏品專用。
+
+## 2026-05-30 Phase 1 / Phase 2 交接報告
+
+Phase 1 與 Phase 2 的第一版 domain / engine 骨架已完成，尚未等於完整研究台 UI。下一步仍應走 Phase 3，把策略編輯、分析按鈕、儲存、再次開啟、JSON 匯入整合成完整產品流程。
+
+已完成：
+
+- 新增獨立 Frontier model version catalog：`src/frontier/frontierModelVersions.ts`。
+- 新增開拓收藏品 domain 型別：`src/frontier/collectable/frontierCollectableTypes.ts`。
+- 新增 `probabilityProfile` helper 與驗證：`frontierCollectableProbabilityProfile.ts`。
+- 新增開拓專用 action definition：`frontierCollectableActions.ts`，包含 `brazen`，但不污染正式 `CollectableActionKind`。
+- 新增精確分布 analyzer / simulator：`frontierCollectableSimulator.ts`。
+- 新增 Frontier JSON export skeleton：`frontierCollectableExport.ts`。
+- 新增 Frontier Studies storage skeleton：`frontierCollectableStorage.ts`。
+- 新增 `FrontierBrazenBucketEditor.vue`，並在開拓頁啟用狀態中顯示可編輯 bucket profile。
+- 補四語系 bucket editor 文案。
+
+Phase 2 engine 現況：
+
+- 採用精確分布與 decision-state memo，不採 Monte Carlo。
+- `Brazen` 由使用者提供的離散 bucket 展開。
+- `standardMode` 使用互斥槽位：`none | standard | highStandard`。
+- `Collect`、`Scour`、`Brazen`、`Meticulous` 都會消耗洞察 / 強化洞察。
+- `High Standard + Brazen` 固定為 `Scour * 150%`，`High Standard + Meticulous` 使用 Scour 基準且不耗耐久率額外 +40 percentage points。
+- `Priming Touch + High Standard` 只讓基礎慎重不耗率翻倍，再加 High Standard 的 +40，不把 +40 一起翻倍。
+- `Brazen`、`Scrutiny` 與價值提升加成完成後最後再 `floor`。
+- 無 rule match 或沒有可施放 action 時進入 uncovered terminal，不猜 fallback。
+- 有 `maxStates` / `maxTransitions` guard，觸發時回傳 limited result。
+
+測試 / 驗證：
+
+- `npm run test:unit -- src/frontier/frontierModelVersions.test.ts src/frontier/collectable/frontierCollectableProbabilityProfile.test.ts src/frontier/collectable/frontierCollectableSimulator.test.ts` 通過。
+- `npm run test:unit` 通過。
+- `npm run build` 通過。
+- 使用 Playwright 檢查本機 `/#/frontier`：設定開啟後可看到開拓頁與 bucket editor，5 個預設 bucket 產生 10 個數字輸入，總機率顯示 100%，頁面 body 未出現使用者要求避免的 `Frontier` 對外字樣。
+
+後續 Phase 3 注意：
+
+- 目前開拓頁只接了 Brazen bucket editor，尚未接物品搜尋、模型選擇、策略編輯器、分析按鈕、結果圖表、保存 / 再開啟或完整匯入流程。
+- 若要把 `frontierCollectableSimulator.ts` 接進 UI，應先建立研究台 request 組裝層，從 item runtime data hydrate base values / reward table，而不是要求使用者手填 runtime 欄位。
+- 若新增或破壞 Frontier JSON / storage schema，必須更新 `frontierModelVersions.ts` 對應版本與測試。
+- 若修改正式 collectable math / mechanics / solver 路徑，仍需依 `AGENTS.md` 同步檢查正式 scenario-aware model versions 與 TS/WASM 邊界。
+
 ## 目前已決策
 
 - Frontier 會是新的入口，不是秘笈或現有實驗頁的一個模式。
@@ -101,7 +197,9 @@ src/components/frontier/FrontierAnalysisPanel.vue
 
 - 設定預設為 `false`。
 - 設定關閉時，主導覽、首頁入口、Frontier Studies 入口與其他自然流程不顯示 Frontier。
-- 設定開啟後，側邊欄上區顯示 Frontier 收藏品研究入口；側邊欄下區顯示 Frontier Studies 儲存入口，心智模型比照「創建新實驗」與「實驗資料庫」的分工。
+- 設定開啟後，側邊欄上區顯示「建立開拓研究」入口；側邊欄下區顯示「開拓研究庫」儲存入口，心智模型比照「創建新實驗」與「實驗資料庫」的分工。
+- 「建立開拓研究」不應直接等於收藏品模型頁；未來應先進入搜尋採集物品的建立流程，再依物品尋找目前支援的開拓模型。
+- 目前模型選擇預期只有 `黃金遺產收藏品模型`：選中收藏品時顯示找到此模型；選中一般採集品或其他未支援物品時顯示沒有找到相符模型。
 - 若使用者直接開 `/#/frontier/collectable`，頁面應顯示簡短的啟用提示與前往設定的操作，不要完全空白或 redirect 到首頁。
 - 設定開啟後，才顯示 Frontier 入口。
 

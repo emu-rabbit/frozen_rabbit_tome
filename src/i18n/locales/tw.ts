@@ -109,13 +109,49 @@ export default {
     createGuide: '創建新秘笈',
     solver: '秘笈求解器',
     createExperiment: '創建新實驗',
+    frontierCollectable: '建立開拓研究',
     favoriteItems: '最愛的物品',
     tomeLibrary: '秘笈藏書庫',
     experimentDatabase: '實驗數據庫',
+    frontierStudies: '開拓研究庫',
     faq: '常見問題',
     settings: '設定頁面',
     github: 'GitHub 專案',
     sponsor: '贊助冷凍庫電費'
+  },
+  frontier: {
+    disabled: {
+      title: '開拓研究模式尚未啟用',
+      description: '開拓是進階研究區，會依你提供的機率假設分析策略；結果僅供研究參考。',
+      action: '前往設定啟用'
+    },
+    collectable: {
+      title: '開拓研究',
+      description: '用自訂機率假設分析進階採集策略，適合研究大膽提煉與強化洞察等尚待實證的採集情境。',
+      emptyTitle: '準備建立研究',
+      emptyDescription: '選定研究條件後，就能在這裡整理策略假設、觀察結果分布，並保留給日後回顧。'
+    },
+    studies: {
+      title: '研究案例',
+      description: '這裡保存開拓研究案例，方便日後回顧同一組假設與策略。',
+      emptyTitle: '尚未保存研究案例',
+      emptyDescription: '保存後的研究案例會集中在這裡，方便日後回顧與比較。'
+    },
+    profile: {
+      brazenTitle: '大膽提煉分布',
+      brazenDescription: '用離散 bucket 描述大膽提煉倍率與機率。這是研究假設，不代表官方分布。',
+      bucketCount: '檔數',
+      totalRate: '總機率',
+      average: '平均',
+      addBucket: '新增',
+      applyTemplate: '套用模板',
+      normalize: '正規化',
+      clear: '清空',
+      invalidTotal: '大膽提煉機率總和必須等於 100%。',
+      multiplier: '倍率 %',
+      probability: '機率 %',
+      removeBucket: '移除 bucket'
+    }
   },
   faq: {
     title: '常見問題',
@@ -368,6 +404,10 @@ export default {
       max: '只看手法可達到的最高獲得量，機率不會進入評分。',
       min: '只看手法最差情況下的最低獲得量，適合想要保底的採集規劃。'
     },
+    frontierTitle: '開拓研究模式',
+    frontierDesc: '啟用後顯示進階研究入口。此模式會使用你提供的機率假設分析策略，結果僅供研究參考。',
+    frontierCollectable: '顯示開拓研究',
+    frontierCollectableDesc: '在側邊欄顯示開拓研究與開拓研究庫入口。',
     debugTitle: '專家檢查模式',
     debugDesc: '開啟後，求解結果會顯示公式、機率分布與搜尋統計。',
     solverDebugMode: '顯示求解器檢查資訊',

@@ -148,6 +148,10 @@ export interface DebugSettings {
   solverDebugMode: boolean;
 }
 
+export interface FrontierSettings {
+  enabled: boolean;
+}
+
 /** 採集動作類型 */
 export type GatheringAction = 'Gather' | 'BountifulYield' | 'KingsYield' | 'SolidReason' | 'WiseToTheWorld';
 

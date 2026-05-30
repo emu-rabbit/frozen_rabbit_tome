@@ -112,7 +112,7 @@ const handleLanguageSelect = (lang: string) => {
 
       <div class="w-full max-w-7xl mx-auto">
         <router-view v-slot="{ Component }">
-          <KeepAlive include="CreateGuide,Solver,FavoriteItems,TomeLibrary,Settings,GearProfiles,CreateExperiment,Simulator,ExperimentDatabase">
+          <KeepAlive include="CreateGuide,Solver,FavoriteItems,TomeLibrary,Settings,GearProfiles,CreateExperiment,Simulator,ExperimentDatabase,FrontierCollectable,FrontierStudies">
             <component :is="Component" />
           </KeepAlive>
         </router-view>

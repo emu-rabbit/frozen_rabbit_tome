@@ -8,7 +8,7 @@ import InputNumber from 'primevue/inputnumber';
 import { useI18n } from 'vue-i18n';
 import type { SolverObjectiveMode } from '../types/game';
 
-const { isDarkMode, language, macroSettings, solverSettings } = useSettings();
+const { isDarkMode, language, macroSettings, solverSettings, frontierSettings } = useSettings();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -119,6 +119,39 @@ function goGearProfiles() {
               <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-1">
                 {{ $t(`settings.solverModeDetails.${solverSettings.objectiveMode}`) }}
               </p>
+          </div>
+      </div>
+
+      <!-- Frontier Settings -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+          <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-1">
+                <i class="pi pi-compass text-xl"></i>
+                <label class="font-bold text-lg">{{ $t('settings.frontierTitle') }}</label>
+              </div>
+
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed -mt-3 px-1">{{ $t('settings.frontierDesc') }}</p>
+
+              <div class="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                  <div class="flex flex-col">
+                      <span class="font-bold text-slate-700 dark:text-slate-200">{{ $t('settings.frontierCollectable') }}</span>
+                      <span class="text-xs text-slate-500 dark:text-slate-400">{{ $t('settings.frontierCollectableDesc') }}</span>
+                  </div>
+                  <button
+                    type="button"
+                    @click="frontierSettings.enabled = !frontierSettings.enabled"
+                    class="w-14 h-8 rounded-full transition-all duration-300 relative flex-shrink-0"
+                    :class="frontierSettings.enabled ? 'bg-soft-green-500' : 'bg-slate-300 dark:bg-slate-700'"
+                    :aria-pressed="frontierSettings.enabled"
+                  >
+                    <div
+                        class="absolute top-1 w-6 h-6 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center overflow-hidden"
+                        :class="frontierSettings.enabled ? 'left-7' : 'left-1'"
+                    >
+                        <i :class="frontierSettings.enabled ? 'pi pi-check text-soft-green-600' : 'pi pi-times text-slate-400'" class="text-[10px]"></i>
+                    </div>
+                  </button>
+              </div>
           </div>
       </div>
 

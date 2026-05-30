@@ -3,6 +3,7 @@ import { useRoute } from 'vue-router';
 import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useFavoriteItems } from '../composables/useFavoriteItems';
+import { useSettings } from '../composables/useSettings';
 import packageJson from '../../package.json';
 
 const route = useRoute();
@@ -11,6 +12,7 @@ const githubUrl = 'https://github.com/emu-rabbit/frozen_rabbit_tome';
 const { tomeCount } = useTomeLibrary();
 const { experimentCount } = useExperimentLibrary();
 const { favoriteCount } = useFavoriteItems();
+const { frontierSettings } = useSettings();
 
 defineEmits(['close-mobile', 'open-sponsor']);
 </script>
@@ -51,6 +53,17 @@ defineEmits(['close-mobile', 'open-sponsor']);
         <span class="leading-tight">{{ $t('nav.createExperiment') }}</span>
       </router-link>
 
+      <router-link
+        v-if="frontierSettings.enabled"
+        to="/frontier"
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-bold"
+        :class="route.path === '/frontier' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-sparkles shrink-0"></i>
+        <span class="leading-tight">{{ $t('nav.frontierCollectable') }}</span>
+      </router-link>
+
       <hr class="border-soft-green-100 dark:border-slate-800 my-2" />
 
       <router-link
@@ -84,6 +97,17 @@ defineEmits(['close-mobile', 'open-sponsor']);
         <i class="pi pi-database shrink-0"></i>
         <span class="leading-tight flex-1">{{ $t('nav.experimentDatabase') }}</span>
         <span class="ml-2 bg-soft-green-200 dark:bg-soft-green-900 text-soft-green-800 dark:text-soft-green-300 text-xs px-2 py-0.5 rounded-full shrink-0">{{ experimentCount }}</span>
+      </router-link>
+
+      <router-link
+        v-if="frontierSettings.enabled"
+        to="/frontier/studies"
+        @click="$emit('close-mobile')"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left font-medium"
+        :class="route.path === '/frontier/studies' ? 'bg-soft-green-100 dark:bg-soft-green-900/40 text-soft-green-800 dark:text-soft-green-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-soft-green-50 dark:hover:bg-slate-800 hover:text-soft-green-700 dark:hover:text-soft-green-300'"
+      >
+        <i class="pi pi-folder-open shrink-0"></i>
+        <span class="leading-tight flex-1">{{ $t('nav.frontierStudies') }}</span>
       </router-link>
 
       <router-link

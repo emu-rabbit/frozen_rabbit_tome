@@ -108,13 +108,49 @@ export default {
     createGuide: '新しい秘伝書を作成',
     solver: '秘伝書ソルバー',
     createExperiment: '新しい実験を作成',
+    frontierCollectable: '開拓研究を作成',
     favoriteItems: 'お気に入りアイテム',
     tomeLibrary: '秘伝書庫',
     experimentDatabase: '実験データベース',
+    frontierStudies: '開拓研究庫',
     faq: 'よくある質問',
     settings: '設定ページ',
     github: 'GitHub プロジェクト',
     sponsor: '電気代を支援する'
+  },
+  frontier: {
+    disabled: {
+      title: '開拓研究モードはまだ有効ではありません',
+      description: '開拓は上級者向けの研究エリアです。入力した確率仮定に基づいて戦略を分析し、結果は研究用の参考として扱います。',
+      action: '設定で有効化'
+    },
+    collectable: {
+      title: '開拓研究',
+      description: 'カスタム確率仮定で上級採集戦略を分析します。大胆選別や強化洞察など、実証待ちの採集条件を研究するための場所です。',
+      emptyTitle: '研究を始める準備',
+      emptyDescription: '研究条件を選ぶと、戦略の仮定や結果分布を整理し、後から見返せる形で残せます。'
+    },
+    studies: {
+      title: '研究ケース',
+      description: '開拓研究ケースを保存し、同じ仮定と戦略を後から見返せる場所です。',
+      emptyTitle: '保存された研究ケースはまだありません',
+      emptyDescription: '保存した研究ケースはここにまとまり、後から振り返りや比較に使えます。'
+    },
+    profile: {
+      brazenTitle: '大胆純化の分布',
+      brazenDescription: '大胆純化の倍率と確率を離散 bucket で表します。これは研究仮定であり、公式分布ではありません。',
+      bucketCount: '段階数',
+      totalRate: '合計確率',
+      average: '平均',
+      addBucket: '追加',
+      applyTemplate: 'テンプレート',
+      normalize: '正規化',
+      clear: 'クリア',
+      invalidTotal: '大胆純化の確率合計は 100% にしてください。',
+      multiplier: '倍率 %',
+      probability: '確率 %',
+      removeBucket: 'bucket を削除'
+    }
   },
   faq: {
     title: 'よくある質問',
@@ -367,6 +403,10 @@ export default {
       max: '到達可能な最大獲得数だけで評価します。確率は評価に入りません。',
       min: '最悪時の最小獲得数だけで評価します。堅実な採集計画向けです。'
     },
+    frontierTitle: '開拓研究モード',
+    frontierDesc: '有効にすると上級研究用の入口を表示します。このモードは入力した確率仮定で戦略を分析し、結果は研究用の参考として扱います。',
+    frontierCollectable: '開拓研究を表示',
+    frontierCollectableDesc: 'サイドバーに開拓研究と開拓研究庫の入口を表示します。',
     debugTitle: '専門家向けチェックモード',
     debugDesc: '有効にすると、計算結果に数式、確率分布、探索統計を表示します。',
     solverDebugMode: 'ソルバーのチェック情報を表示',

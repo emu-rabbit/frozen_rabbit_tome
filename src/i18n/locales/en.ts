@@ -108,13 +108,49 @@ export default {
     createGuide: 'Create New Tome',
     solver: 'Tome Solver',
     createExperiment: 'Create New Experiment',
+    frontierCollectable: 'Create Pioneering Research',
     favoriteItems: 'Favorite Items',
     tomeLibrary: 'Tome Library',
     experimentDatabase: 'Experiment Database',
+    frontierStudies: 'Pioneering Study Library',
     faq: 'FAQ',
     settings: 'Settings',
     github: 'GitHub Project',
     sponsor: 'Sponsor the Freezer bill'
+  },
+  frontier: {
+    disabled: {
+      title: 'Pioneering research mode is not enabled yet',
+      description: 'Pioneering is an advanced research area for strategies under your own probability assumptions. Results are for research reference.',
+      action: 'Enable in Settings'
+    },
+    collectable: {
+      title: 'Pioneering Research',
+      description: 'Analyze advanced gathering strategies with custom probability assumptions for situations such as Brazen actions and Collector\'s High Standard.',
+      emptyTitle: 'Ready to Start Research',
+      emptyDescription: 'Choose research conditions here to organize strategy assumptions, review outcome distributions, and keep studies for later.'
+    },
+    studies: {
+      title: 'Research Studies',
+      description: 'Save pioneering research studies here so the same assumptions and strategies are easy to revisit.',
+      emptyTitle: 'No studies saved yet',
+      emptyDescription: 'Saved research studies will be gathered here for later review and comparison.'
+    },
+    profile: {
+      brazenTitle: 'Brazen Distribution',
+      brazenDescription: 'Describe Brazen as discrete multiplier and probability buckets. This is a research assumption, not an official distribution.',
+      bucketCount: 'Buckets',
+      totalRate: 'Total',
+      average: 'Average',
+      addBucket: 'Add',
+      applyTemplate: 'Template',
+      normalize: 'Normalize',
+      clear: 'Clear',
+      invalidTotal: 'Brazen probabilities must total 100%.',
+      multiplier: 'Multiplier %',
+      probability: 'Probability %',
+      removeBucket: 'Remove bucket'
+    }
   },
   faq: {
     title: 'FAQ',
@@ -367,6 +403,10 @@ export default {
       max: 'Scores only by the highest possible yield. Probability does not affect scoring.',
       min: 'Scores only by the lowest possible yield for more conservative planning.'
     },
+    frontierTitle: 'Pioneering Research Mode',
+    frontierDesc: 'When enabled, advanced research entries are shown. This mode analyzes strategies using your probability assumptions, and results are for research reference.',
+    frontierCollectable: 'Show pioneering research',
+    frontierCollectableDesc: 'Show Pioneering Research and Pioneering Study Library entries in the sidebar.',
     debugTitle: 'Expert Check Mode',
     debugDesc: 'When enabled, solved results show formulas, probability distributions, and search statistics.',
     solverDebugMode: 'Show solver check info',
