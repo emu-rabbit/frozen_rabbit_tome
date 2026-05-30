@@ -186,4 +186,73 @@ const collectableRelicToolBonusOptions = computed<RelicToolOption[]>(() => [
   color: #dc2626;
   font-weight: 800;
 }
+
+@media (min-width: 1024px) {
+  .stats-input-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .stats-input-grid:not(.is-collectable) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .stats-grid-spacer {
+    display: block;
+  }
+
+  .field-level {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .field-gathering {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .field-perception {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .field-food {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .stats-grid-spacer {
+    grid-column: 5;
+    grid-row: 1;
+  }
+
+  .field-current-gp {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .field-max-gp {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .field-gathering-count {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .field-relic-tool {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .field-yield-count {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .field-extra-rate {
+    grid-column: 5;
+    grid-row: 2;
+  }
+}
 </style>

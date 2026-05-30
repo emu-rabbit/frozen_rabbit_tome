@@ -25,6 +25,8 @@ export type CollectableStrategyBooleanField =
   | 'collectorsFocusActive'
   | 'primingTouchActive'
   | 'standardActive'
+  | 'highStandardActive'
+  | 'anyStandardActive'
   | 'hasUsedCollectableAction'
   | 'hasCollected'
   | 'successIActive'
@@ -146,6 +148,8 @@ export const collectableStrategyBooleanFields: CollectableStrategyBooleanField[]
   'collectorsFocusActive',
   'primingTouchActive',
   'standardActive',
+  'highStandardActive',
+  'anyStandardActive',
   'hasUsedCollectableAction',
   'hasCollected',
   'successIActive',
@@ -543,6 +547,15 @@ function findExecutableRule(
 }
 
 function matchesCondition(condition: CollectableStrategyCondition, state: CollectableExperimentState): boolean {
+  if (condition.field === 'highStandardActive') {
+    const active = (state as any).frontierStandardMode === 'highStandard';
+    return active === Boolean(condition.value);
+  }
+  if (condition.field === 'anyStandardActive') {
+    const active = state.standardActive;
+    return active === Boolean(condition.value);
+  }
+
   const left = state[condition.field];
   if (typeof left === 'boolean') return left === Boolean(condition.value);
   const right = Number(condition.value);

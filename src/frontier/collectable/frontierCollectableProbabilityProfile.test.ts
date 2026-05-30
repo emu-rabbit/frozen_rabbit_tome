@@ -7,27 +7,29 @@ import {
 
 describe('frontierCollectableProbabilityProfile', () => {
   it('accepts the default discrete Brazen bucket profile', () => {
-    const result = validateFrontierProbabilityProfile(createDefaultFrontierProbabilityProfile());
+    const profile = createDefaultFrontierProbabilityProfile();
+    const result = validateFrontierProbabilityProfile(profile);
 
+    expect(profile.highStandardProcRatePercent).toBe(10);
     expect(result.valid).toBe(true);
     expect(result.totalProbabilityPercent).toBe(100);
     expect(result.averageMultiplierPercent).toBe(100);
   });
 
-  it('rejects invalid bucket totals and proc rates', () => {
+  it('rejects invalid bucket totals and high standard rates', () => {
     const result = validateFrontierProbabilityProfile({
       brazenBuckets: [
         { id: 'low', multiplierPercent: 40, probabilityPercent: 60 },
         { id: 'high', multiplierPercent: 150, probabilityPercent: 20 }
       ],
-      standardProcRatePercent: 80,
-      highStandardProcRatePercent: 30
+      standardProcRatePercent: 0,
+      highStandardProcRatePercent: 101
     });
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('brazenBuckets.0.multiplierOutOfRange');
     expect(result.errors).toContain('brazenBuckets.totalProbabilityNot100');
-    expect(result.errors).toContain('standardProcRates.totalOver100');
+    expect(result.errors).toContain('highStandardProcRatePercent.outOfRange');
   });
 
   it('normalizes bucket probabilities without changing multipliers', () => {

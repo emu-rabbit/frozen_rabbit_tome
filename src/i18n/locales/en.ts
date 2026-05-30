@@ -6,6 +6,8 @@ export default {
   },
   common: {
     cancel: 'Cancel',
+    close: 'Close',
+    done: 'Done',
     backToSelection: 'Back to Selection',
     exportJson: 'Export JSON',
     exportingJson: 'Exporting JSON',
@@ -171,11 +173,16 @@ export default {
     },
     profile: {
       title: 'Research Assumptions',
-      description: 'Set Standard and Brazen probabilities. Unknown data comes from you and is not treated as official rules.',
+      description: 'Set the Brazen distribution and High Standard proc rate. Standard uses confirmed data.',
       standardRate: 'Standard proc rate',
+      standardFixed: 'Standard proc rate (fixed)',
       highStandardRate: 'High Standard proc rate',
+      highStandardDescription: 'Set the assumed chance that High Standard appears after refining.',
       brazenTitle: 'Brazen Distribution',
+      brazenShortDescription: 'Set the possible multiplier buckets for Brazen.',
       brazenDescription: 'Describe Brazen as discrete multiplier and probability buckets. This is a research assumption, not an official distribution.',
+      distribution: 'Distribution',
+      editBrazen: 'Edit distribution',
       bucketCount: 'Buckets',
       totalRate: 'Total',
       average: 'Average',
@@ -187,6 +194,9 @@ export default {
       multiplier: 'Multiplier %',
       probability: 'Probability %',
       removeBucket: 'Remove bucket'
+    },
+    branches: {
+      highStandardProc: 'High Standard proc'
     },
     strategy: {
       title: 'Strategy Rules',
@@ -1110,6 +1120,7 @@ export default {
       collectSuccessRate: 'Collect success rate',
       valueIncreaseRate: 'Value increase rate',
       meticulousSaveRate: 'Meticulous Save Rate',
+      noneHasBuff: 'None has {buff}',
       someHasBuff: 'Some has {buff}',
       allHasBuff: 'All has {buff}'
     },
@@ -1233,6 +1244,8 @@ export default {
       collectorsFocusActive: "Collector's Focus",
       primingTouchActive: 'Priming Touch',
       standardActive: "Collector's Standard",
+      highStandardActive: "Collector's High Standard",
+      anyStandardActive: 'Any Standard',
       hasUsedCollectableAction: 'Used collectable action',
       hasCollected: 'Collected already',
       successBonus: 'Collect success bonus',
@@ -1250,6 +1263,8 @@ export default {
       collectorsFocusActive: 'Whether Collector\'s Focus is active. It raises the value-increase chance for the next refine action, then is consumed.',
       primingTouchActive: 'Whether Priming Touch is active. It only affects the next Meticulous integrity-save chance.',
       standardActive: 'Whether Collector\'s Standard is active. Use it to route Standard branches toward Meticulous or another high-tier choice.',
+      highStandardActive: 'Whether Collector\'s High Standard is active. Use it to route High Standard branches toward Brazen or another high-multiplier choice.',
+      anyStandardActive: 'Whether either Collector\'s Standard or High Standard is active. Use it when both insight states should share one strategy.',
       wiseToTheWorldActive: 'Whether Wise to the World is available. Usually used to immediately restore 1 integrity for free after it procs.',
       successIActive: 'Whether Gathering Rate I has been applied. Use it to avoid repeating the same success-rate buff tier.',
       successIIActive: 'Whether Gathering Rate II has been applied. Use it to avoid repeating the same success-rate buff tier.',

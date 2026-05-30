@@ -19,7 +19,10 @@ import { gpPerCollect, MIN_COLLECTABLE_LEVEL } from '../../utils/collectableMech
 import { isTierCountObjective } from '../../utils/collectableObjectivePresets';
 import { buildFrontierModelVersionsForScenario } from '../frontierModelVersions';
 import { FRONTIER_COLLECTABLE_ACTION_DEFINITIONS } from './frontierCollectableActions';
-import { validateFrontierProbabilityProfile } from './frontierCollectableProbabilityProfile';
+import {
+  getFrontierStandardProcRatePercent,
+  validateFrontierProbabilityProfile
+} from './frontierCollectableProbabilityProfile';
 import type {
   FrontierCollectableActionKind,
   FrontierCollectableAnalysisResult,
@@ -30,8 +33,9 @@ import type {
   FrontierCollectableStrategyRule
 } from './frontierCollectableTypes';
 import type { CollectableTierCounts } from '../../types/collectable';
+import type { NodeBonuses, PlayerStats } from '../../types/game';
 
-interface FrontierCollectableContext {
+export interface FrontierCollectableContext {
   maxIntegrity: number;
   maxGp: number;
   level: number;
@@ -44,10 +48,24 @@ interface FrontierCollectableContext {
   probabilityProfile: FrontierCollectableProbabilityProfile;
 }
 
-interface FrontierTransition {
+export interface FrontierCollectableMechanicsRequest {
+  stats: PlayerStats;
+  baseValues: {
+    Gathering: number;
+    Perception: number;
+  };
+  itemLevel: number;
+  nodeBonuses: NodeBonuses;
+  hasRelicToolBonus?: boolean;
+  probabilityProfile: FrontierCollectableProbabilityProfile;
+}
+
+export interface FrontierTransition {
   state: FrontierCollectableState;
   probability: number;
   collectSuccess?: boolean;
+  label?: string;
+  labelKeys?: string[];
 }
 
 interface OutcomeDetail {
@@ -115,7 +133,7 @@ export function analyzeFrontierCollectableStrategy(
 }
 
 export function createFrontierCollectableContext(
-  request: FrontierCollectableSimulationRequest
+  request: FrontierCollectableMechanicsRequest
 ): FrontierCollectableContext {
   if (request.stats.level < MIN_COLLECTABLE_LEVEL) {
     throw new Error(`Frontier collectable analysis requires level ${MIN_COLLECTABLE_LEVEL} or higher.`);
@@ -316,7 +334,7 @@ function resolveNextAction(
   return null;
 }
 
-function applyFrontierCollectableAction(
+export function applyFrontierCollectableAction(
   action: FrontierCollectableActionKind,
   state: FrontierCollectableState,
   context: FrontierCollectableContext
@@ -357,12 +375,14 @@ function applyCollect(state: FrontierCollectableState, context: FrontierCollecta
         gp: Math.min(context.maxGp, state.gp + gpPerCollect(context.level))
       }),
       probability: successRate,
-      collectSuccess: true
+      collectSuccess: true,
+      labelKeys: ['collectableSolver.branches.collectSuccess']
     },
     {
       state: cloneFrontierState(state, common),
       probability: 1 - successRate,
-      collectSuccess: false
+      collectSuccess: false,
+      labelKeys: ['collectableSolver.branches.collectFailed']
     }
   ].filter((branch) => branch.probability > 0);
 }
@@ -396,7 +416,19 @@ function applyRefine(
         });
         const probability = valueBranch.probability * durabilityBranch.probability * gainBranch.probability;
 
-        applyStandardProc(baseState, probability, context).forEach((transition) => transitions.push(transition));
+        const labels = [
+          ...(gainBranch.label ? [gainBranch.label] : []),
+          ...(valueBranch.valueIncrease
+            ? [contextBranchLabel('collectableSolver.branches.valueIncreased')]
+            : [contextBranchLabel('collectableSolver.branches.valueNormal')]),
+          ...(durabilityBranch.labelKeys ?? []).map(contextBranchLabel)
+        ];
+
+        applyStandardProc(baseState, probability, context).forEach((transition) => transitions.push({
+          ...transition,
+          label: [...labels, transition.label].filter(Boolean).join(' / '),
+          labelKeys: transition.labelKeys
+        }));
       });
     });
   });
@@ -408,7 +440,7 @@ function buildGainBranches(
   action: 'scour' | 'brazen' | 'meticulous',
   state: FrontierCollectableState,
   context: FrontierCollectableContext
-): Array<{ gain: number; probability: number }> {
+): Array<{ gain: number; probability: number; label?: string }> {
   const scrutinyBonus = state.scrutinyActive
     ? calculateScrutinyBonus(context.scourValue, context.scrutinyMultiplier)
     : 0;
@@ -431,7 +463,11 @@ function buildGainBranches(
   }
 
   if (state.standardMode === 'highStandard') {
-    return [{ gain: Math.floor(context.scourValue * 150 / 100 + scrutinyBonus), probability: 1 }];
+    return [{
+      gain: Math.floor(context.scourValue * 150 / 100 + scrutinyBonus),
+      probability: 1,
+      label: '150%'
+    }];
   }
 
   return context.probabilityProfile.brazenBuckets
@@ -444,7 +480,8 @@ function buildGainBranches(
 
       return {
         gain: Math.floor(standardizedGain + scrutinyBonus),
-        probability: bucket.probabilityPercent / 100
+        probability: bucket.probabilityPercent / 100,
+        label: `${bucket.multiplierPercent}%`
       };
     });
 }
@@ -453,8 +490,10 @@ function buildDurabilityBranches(
   action: 'scour' | 'brazen' | 'meticulous',
   state: FrontierCollectableState,
   context: FrontierCollectableContext
-): Array<{ integrityCost: number; probability: number }> {
-  if (action !== 'meticulous') return [{ integrityCost: 1, probability: 1 }];
+): Array<{ integrityCost: number; probability: number; labelKeys?: string[] }> {
+  if (action !== 'meticulous') {
+    return [{ integrityCost: 1, probability: 1, labelKeys: ['collectableSolver.branches.integrityConsumed'] }];
+  }
 
   const baseRate = state.primingTouchActive
     ? Math.min(100, context.meticulousRate * 2)
@@ -463,8 +502,8 @@ function buildDurabilityBranches(
   const saveRate = Math.min(100, baseRate + highStandardBonus) / 100;
 
   return [
-    { integrityCost: 0, probability: saveRate },
-    { integrityCost: 1, probability: 1 - saveRate }
+    { integrityCost: 0, probability: saveRate, labelKeys: ['collectableSolver.branches.meticulousSaved'] },
+    { integrityCost: 1, probability: 1 - saveRate, labelKeys: ['collectableSolver.branches.meticulousConsumed'] }
   ].filter((branch) => branch.probability > 0);
 }
 
@@ -474,7 +513,7 @@ function applyStandardProc(
   context: FrontierCollectableContext
 ): FrontierTransition[] {
   const highRate = (context.probabilityProfile.highStandardProcRatePercent ?? 0) / 100;
-  const standardRate = context.probabilityProfile.standardProcRatePercent / 100;
+  const standardRate = (1 - highRate) * (getFrontierStandardProcRatePercent() / 100);
   const canProc = state.integrity > 0
     && state.collectability < COLLECTABILITY_CAP
     && state.standardMode === 'none'
@@ -485,15 +524,21 @@ function applyStandardProc(
   return [
     {
       state: cloneFrontierState(state, { standardMode: 'highStandard' }),
-      probability: probability * highRate
+      probability: probability * highRate,
+      labelKeys: ['frontier.branches.highStandardProc'],
+      label: contextBranchLabel('frontier.branches.highStandardProc')
     },
     {
       state: cloneFrontierState(state, { standardMode: 'standard' }),
-      probability: probability * standardRate
+      probability: probability * standardRate,
+      labelKeys: ['collectableSolver.branches.standardProc'],
+      label: contextBranchLabel('collectableSolver.branches.standardProc')
     },
     {
       state,
-      probability: probability * Math.max(0, 1 - highRate - standardRate)
+      probability: probability * Math.max(0, 1 - highRate - standardRate),
+      labelKeys: ['collectableSolver.branches.standardNoProc'],
+      label: contextBranchLabel('collectableSolver.branches.standardNoProc')
     }
   ].filter((transition) => transition.probability > 0);
 }
@@ -531,12 +576,15 @@ function canRaiseCollectSuccess(state: FrontierCollectableState, context: Fronti
   return context.baseSuccessRate > 1 && context.baseSuccessRate + state.successBonus < 100;
 }
 
-function matchesRule(rule: FrontierCollectableStrategyRule, state: FrontierCollectableState): boolean {
+export function matchesFrontierCollectableStrategyRule(rule: FrontierCollectableStrategyRule, state: FrontierCollectableState): boolean {
   if (rule.conditions.length === 0) return true;
   const results = rule.conditions.map((condition) => {
     const left = state[condition.field];
     if (typeof left === 'boolean') return left === Boolean(condition.value);
-    if (typeof left === 'string') return left === condition.value;
+    if (typeof left === 'string') {
+      if (condition.comparator === '!=') return left !== condition.value;
+      return left === condition.value;
+    }
 
     const right = Number(condition.value);
     if (condition.comparator === '<') return left < right;
@@ -547,6 +595,14 @@ function matchesRule(rule: FrontierCollectableStrategyRule, state: FrontierColle
   });
 
   return rule.mode === 'all' ? results.every(Boolean) : results.some(Boolean);
+}
+
+function matchesRule(rule: FrontierCollectableStrategyRule, state: FrontierCollectableState): boolean {
+  return matchesFrontierCollectableStrategyRule(rule, state);
+}
+
+function contextBranchLabel(labelKey: string) {
+  return labelKey;
 }
 
 function terminalOutcome(terminalCollectability: number): Map<string, OutcomeDetail> {

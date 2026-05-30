@@ -7,6 +7,8 @@ export default {
   common: {
     getStarted: '立即開始',
     cancel: '取消',
+    close: '關閉',
+    done: '完成',
     backToSelection: '返回物品選擇',
     exportJson: '匯出 JSON',
     exportingJson: '正在匯出 JSON',
@@ -172,11 +174,16 @@ export default {
     },
     profile: {
       title: '研究假設',
-      description: '設定洞察與大膽提煉的機率；未知資料由你提供，不寫成正式規則。',
+      description: '設定大膽提煉分布與強化洞察觸發率；一般洞察使用已確認資料。',
       standardRate: '洞察觸發率',
+      standardFixed: '洞察觸發率（固定）',
       highStandardRate: '強化洞察觸發率',
+      highStandardDescription: '輸入強化洞察在提煉後出現的假設機率。',
       brazenTitle: '大膽提煉分布',
+      brazenShortDescription: '設定大膽提煉可能落在哪些倍率。',
       brazenDescription: '用離散 bucket 描述大膽提煉倍率與機率。這是研究假設，不代表官方分布。',
+      distribution: '分布',
+      editBrazen: '編輯分布',
       bucketCount: '檔數',
       totalRate: '總機率',
       average: '平均',
@@ -188,6 +195,9 @@ export default {
       multiplier: '倍率 %',
       probability: '機率 %',
       removeBucket: '移除 bucket'
+    },
+    branches: {
+      highStandardProc: '觸發強化洞察'
     },
     strategy: {
       title: '策略規則',
@@ -1111,6 +1121,7 @@ export default {
       collectSuccessRate: '採集成功率',
       valueIncreaseRate: '價值提升率',
       meticulousSaveRate: '慎重提煉不耗耐久率',
+      noneHasBuff: '沒有 {buff}',
       someHasBuff: '部分有 {buff}',
       allHasBuff: '全部有 {buff}'
     },
@@ -1234,6 +1245,8 @@ export default {
       collectorsFocusActive: '價值矚目',
       primingTouchActive: '預備碰觸',
       standardActive: '洞察',
+      highStandardActive: '強化洞察',
+      anyStandardActive: '洞察或強化洞察',
       hasUsedCollectableAction: '已用收藏品技能',
       hasCollected: '已採集過',
       successBonus: '採集成功率加成',
@@ -1251,6 +1264,8 @@ export default {
       collectorsFocusActive: '價值矚目是否已啟用。啟用後會提高下一次提煉類技能的價值提升機率，提煉後消耗。',
       primingTouchActive: '預備碰觸是否已啟用。啟用後只影響下一次慎重提煉的不消耗耐久機率。',
       standardActive: '洞察是否已觸發。常用來讓有洞察的分支改走慎重提煉或其他高價值判斷。',
+      highStandardActive: '強化洞察是否已觸發。常用來讓強化洞察分支改走大膽提煉或其他高倍率判斷。',
+      anyStandardActive: '一般洞察或強化洞察是否已觸發。常用來讓任何洞察分支共用同一條策略。',
       wiseToTheWorldActive: '理智同興是否可用。通常用來在觸發後立刻免費恢復 1 點耐久。',
       successIActive: '獲得率 I 是否已套用。用來避免重複使用同階成功率補強。',
       successIIActive: '獲得率 II 是否已套用。用來避免重複使用同階成功率補強。',

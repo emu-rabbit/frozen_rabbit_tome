@@ -4,7 +4,8 @@ import {
   analyzeFrontierCollectableStrategy,
   createFrontierCollectableContext,
   createInitialFrontierCollectableState,
-  frontierCollectableStateKey
+  frontierCollectableStateKey,
+  matchesFrontierCollectableStrategyRule
 } from './frontierCollectableSimulator';
 import type {
   FrontierCollectableSimulationRequest,
@@ -90,6 +91,39 @@ describe('frontierCollectableSimulator', () => {
       .not.toBe(frontierCollectableStateKey({ ...state, standardMode: 'highStandard' }));
   });
 
+  it('keeps regular Standard and High Standard conditions distinct', () => {
+    const context = createFrontierCollectableContext(request([]));
+    const baseState = createInitialFrontierCollectableState(context, 930);
+    const noStandardState = { ...baseState, standardMode: 'none' as const };
+    const regularStandardState = { ...baseState, standardMode: 'standard' as const };
+    const highStandardState = { ...baseState, standardMode: 'highStandard' as const };
+
+    expect(matchesFrontierCollectableStrategyRule(
+      rule('regular-standard', ['scour'], [
+        { id: 'regular', field: 'standardMode', comparator: '=', value: 'standard' }
+      ]),
+      regularStandardState
+    )).toBe(true);
+    expect(matchesFrontierCollectableStrategyRule(
+      rule('regular-standard', ['scour'], [
+        { id: 'regular', field: 'standardMode', comparator: '=', value: 'standard' }
+      ]),
+      highStandardState
+    )).toBe(false);
+    expect(matchesFrontierCollectableStrategyRule(
+      rule('high-standard', ['brazen'], [
+        { id: 'high', field: 'standardMode', comparator: '=', value: 'highStandard' }
+      ]),
+      highStandardState
+    )).toBe(true);
+    const anyStandardRule = rule('any-standard', ['meticulous'], [
+      { id: 'any', field: 'standardMode', comparator: '!=', value: 'none' }
+    ]);
+    expect(matchesFrontierCollectableStrategyRule(anyStandardRule, regularStandardState)).toBe(true);
+    expect(matchesFrontierCollectableStrategyRule(anyStandardRule, highStandardState)).toBe(true);
+    expect(matchesFrontierCollectableStrategyRule(anyStandardRule, noStandardState)).toBe(false);
+  });
+
   it('expands Brazen buckets with exact probabilities and scores collect results', () => {
     const result = analyzeFrontierCollectableStrategy({
       ...request([
@@ -166,6 +200,10 @@ describe('frontierCollectableSimulator', () => {
         rule('collect-with-standard', ['collect'], [
           { id: 'standard', field: 'standardMode', comparator: '=', value: 'standard' }
         ]),
+        rule('collect-without-standard', ['collect'], [
+          { id: 'none-before-collect', field: 'standardMode', comparator: '=', value: 'none' },
+          { id: 'not-collected', field: 'hasCollected', comparator: '=', value: false }
+        ]),
         rule('after-standard-consumed', ['scour'], [
           { id: 'none', field: 'standardMode', comparator: '=', value: 'none' },
           { id: 'used', field: 'hasCollected', comparator: '=', value: true }
@@ -179,7 +217,7 @@ describe('frontierCollectableSimulator', () => {
       },
       probabilityProfile: {
         ...createDefaultFrontierProbabilityProfile(),
-        standardProcRatePercent: 100,
+        standardProcRatePercent: 0,
         highStandardProcRatePercent: null
       }
     });

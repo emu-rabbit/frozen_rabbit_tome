@@ -6,6 +6,8 @@ export default {
   },
   common: {
     cancel: '取消',
+    close: '关闭',
+    done: '完成',
     backToSelection: '返回物品选择',
     exportJson: '导出 JSON',
     exportingJson: '正在导出 JSON',
@@ -171,11 +173,16 @@ export default {
     },
     profile: {
       title: '研究假设',
-      description: '设置洞察与大胆提炼的概率；未知数据由你提供，不写成正式规则。',
+      description: '设置大胆提炼分布与强化洞察触发率；一般洞察使用已确认数据。',
       standardRate: '洞察触发率',
+      standardFixed: '洞察触发率（固定）',
       highStandardRate: '强化洞察触发率',
+      highStandardDescription: '输入强化洞察在提炼后出现的假设概率。',
       brazenTitle: '大胆提炼分布',
+      brazenShortDescription: '设定大胆提炼可能落在哪些倍率。',
       brazenDescription: '用离散 bucket 描述大胆提炼倍率与概率。这是研究假设，不代表官方分布。',
+      distribution: '分布',
+      editBrazen: '编辑分布',
       bucketCount: '档数',
       totalRate: '总概率',
       average: '平均',
@@ -187,6 +194,9 @@ export default {
       multiplier: '倍率 %',
       probability: '概率 %',
       removeBucket: '移除 bucket'
+    },
+    branches: {
+      highStandardProc: '触发强化洞察'
     },
     strategy: {
       title: '策略规则',
@@ -1088,6 +1098,7 @@ export default {
       collectSuccessRate: '采集成功率',
       valueIncreaseRate: '价值提升率',
       meticulousSaveRate: '慎重提炼不耗耐久率',
+      noneHasBuff: '没有 {buff}',
       someHasBuff: '部分有 {buff}',
       allHasBuff: '全部有 {buff}'
     },
@@ -1211,6 +1222,8 @@ export default {
       collectorsFocusActive: '价值瞩目',
       primingTouchActive: '预备碰触',
       standardActive: '洞察',
+      highStandardActive: '强化洞察',
+      anyStandardActive: '洞察或强化洞察',
       hasUsedCollectableAction: '已用收藏品技能',
       hasCollected: '已采集过',
       successBonus: '采集成功率加成',
@@ -1228,6 +1241,8 @@ export default {
       collectorsFocusActive: '价值瞩目是否已启用。启用后会提高下一次提炼类技能的价值提升概率，提炼后消耗。',
       primingTouchActive: '预备碰触是否已启用。启用后只影响下一次慎重提炼的不消耗耐久概率。',
       standardActive: '洞察是否已触发。常用于让有洞察的分支改走慎重提炼或其他高价值判断。',
+      highStandardActive: '强化洞察是否已触发。常用于让强化洞察分支改走大胆提炼或其他高倍率判断。',
+      anyStandardActive: '一般洞察或强化洞察是否已触发。常用于让任何洞察分支共用同一条策略。',
       wiseToTheWorldActive: '理智同兴是否可用。通常用于在触发后立刻免费恢复 1 点耐久。',
       successIActive: '获得率 I 是否已套用。用于避免重复使用同阶成功率补强。',
       successIIActive: '获得率 II 是否已套用。用于避免重复使用同阶成功率补强。',

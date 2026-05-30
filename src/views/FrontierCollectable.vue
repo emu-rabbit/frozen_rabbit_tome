@@ -5,7 +5,6 @@ import { computed, onActivated, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { watchDebounced } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
-import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -99,18 +98,22 @@ const collectableRelicToolBonusModel = computed<boolean>({
 onMounted(() => {
   fetchItemLevelData();
   doSearch(searchQuery.value);
-  loadStudyFromRoute();
+  if (!consumeCreateRoute()) loadStudyFromRoute();
 });
 
 onActivated(() => {
-  loadStudyFromRoute();
+  if (!consumeCreateRoute()) loadStudyFromRoute();
 });
 
 watchDebounced(searchQuery, (query) => doSearch(query), { debounce: 450 });
 
 watch(currentLanguage, () => doSearch(searchQuery.value));
 
-watch(() => route.query.study, () => loadStudyFromRoute());
+watch(() => route.query.study, () => {
+  if (!consumeCreateRoute()) loadStudyFromRoute();
+});
+
+watch(() => route.query.new, () => consumeCreateRoute());
 
 watch(activeItem, async (item) => {
   rewardTable.value = null;
@@ -182,6 +185,21 @@ function startCollectableModel() {
   loadedStudyId.value = null;
   loadedStudy.value = null;
   router.replace({ path: '/frontier', query: {} });
+}
+
+function resetToCreateMode() {
+  hasSelectedModel.value = false;
+  selectedCandidate.value = null;
+  isModelDialogOpen.value = false;
+  loadedStudyId.value = null;
+  loadedStudy.value = null;
+}
+
+function consumeCreateRoute() {
+  if (route.query.new !== '1') return false;
+  resetToCreateMode();
+  router.replace({ path: '/frontier', query: {} });
+  return true;
 }
 
 function loadStudyFromRoute() {
@@ -338,7 +356,7 @@ function getUiState() {
       </section>
 
       <section v-else class="simulator-page frontier-model-workspace">
-        <div class="space-y-6">
+        <div class="frontier-workspace-stack">
           <CollectableItemSummaryPanel
             v-if="activeItem"
             :item="activeItem"
@@ -348,9 +366,6 @@ function getUiState() {
             :success-rate="successRate"
             :collectable-scour-value="collectableScourValue"
             :model-label="$t('frontier.create.dawntrailCollectableModel')"
-            :change-item-label="$t('frontier.workspace.changeItem')"
-            show-change-item
-            @change-item="hasSelectedModel = false"
           />
 
           <CollectableStatsPanel
@@ -472,11 +487,11 @@ function getUiState() {
 .simulator-page {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 2rem 0 3rem;
+  padding: 1.5rem 0 3rem;
 }
-.space-y-6 {
+.frontier-workspace-stack {
   display: grid;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 .create-page-header {
   display: flex;

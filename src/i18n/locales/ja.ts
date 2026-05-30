@@ -6,6 +6,8 @@ export default {
   },
   common: {
     cancel: 'キャンセル',
+    close: '閉じる',
+    done: '完了',
     backToSelection: 'アイテム選択に戻る',
     exportJson: 'JSONを書き出す',
     exportingJson: 'JSONを書き出し中',
@@ -171,11 +173,16 @@ export default {
     },
     profile: {
       title: '研究仮定',
-      description: '洞察と大胆純化の確率を設定します。未確定データは入力値として扱い、公式ルールにはしません。',
+      description: '大胆純化の分布と強化洞察の発生率を設定します。通常の洞察は確認済みデータを使います。',
       standardRate: '洞察発生率',
+      standardFixed: '洞察発生率（固定）',
       highStandardRate: '強化洞察発生率',
+      highStandardDescription: '純化後に強化洞察が出る仮定確率を入力します。',
       brazenTitle: '大胆純化の分布',
+      brazenShortDescription: '大胆純化で出る倍率 bucket を設定します。',
       brazenDescription: '大胆純化の倍率と確率を離散 bucket で表します。これは研究仮定であり、公式分布ではありません。',
+      distribution: '分布',
+      editBrazen: '分布を編集',
       bucketCount: '段階数',
       totalRate: '合計確率',
       average: '平均',
@@ -187,6 +194,9 @@ export default {
       multiplier: '倍率 %',
       probability: '確率 %',
       removeBucket: 'bucket を削除'
+    },
+    branches: {
+      highStandardProc: '強化洞察発生'
     },
     strategy: {
       title: '戦略ルール',
@@ -1088,6 +1098,7 @@ export default {
       collectSuccessRate: '採集成功率',
       valueIncreaseRate: '価値上昇率',
       meticulousSaveRate: '慎重純化の耐久保存率',
+      noneHasBuff: '{buff} なし',
       someHasBuff: '一部に {buff}',
       allHasBuff: 'すべてに {buff}'
     },
@@ -1211,6 +1222,8 @@ export default {
       collectorsFocusActive: 'バリューフォーカス',
       primingTouchActive: 'プライミングタッチ',
       standardActive: '活眼',
+      highStandardActive: '強化洞察',
+      anyStandardActive: '活眼または強化洞察',
       hasUsedCollectableAction: '収集品アクション使用済み',
       hasCollected: '採集済み',
       successBonus: '採集成功率ボーナス',
@@ -1228,6 +1241,8 @@ export default {
       collectorsFocusActive: 'バリューフォーカスが有効かどうかです。次の純化系アクションの価値上昇率を上げ、その後消費されます。',
       primingTouchActive: 'プライミングタッチが有効かどうかです。次の慎重純化の耐久消費なし確率だけに影響します。',
       standardActive: '活眼が発動しているかどうかです。活眼ありの分岐を慎重純化など高価値の判断へ分ける時に使います。',
+      highStandardActive: '強化洞察が発動しているかどうかです。強化洞察分岐を大胆純化など高倍率の判断へ分ける時に使います。',
+      anyStandardActive: '活眼または強化洞察が発動しているかどうかです。どちらの洞察状態も同じ戦略に流す時に使います。',
       wiseToTheWorldActive: '理知興起が使用可能かどうかです。発動後にすぐ無料で耐久を 1 回復する判断によく使います。',
       successIActive: '採集成功率 I が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',
       successIIActive: '採集成功率 II が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',

@@ -4,6 +4,8 @@ import type {
   FrontierProbabilityProfileValidation
 } from './frontierCollectableTypes';
 
+export const FRONTIER_STANDARD_PROC_RATE_PERCENT = 25;
+
 export const DEFAULT_FRONTIER_BRAZEN_BUCKETS: FrontierBrazenBucket[] = [
   { id: '50', multiplierPercent: 50, probabilityPercent: 20 },
   { id: '75', multiplierPercent: 75, probabilityPercent: 20 },
@@ -15,8 +17,8 @@ export const DEFAULT_FRONTIER_BRAZEN_BUCKETS: FrontierBrazenBucket[] = [
 export function createDefaultFrontierProbabilityProfile(): FrontierCollectableProbabilityProfile {
   return {
     brazenBuckets: DEFAULT_FRONTIER_BRAZEN_BUCKETS.map((bucket) => ({ ...bucket })),
-    standardProcRatePercent: 25,
-    highStandardProcRatePercent: null
+    standardProcRatePercent: FRONTIER_STANDARD_PROC_RATE_PERCENT,
+    highStandardProcRatePercent: 10
   };
 }
 
@@ -47,14 +49,8 @@ export function validateFrontierProbabilityProfile(
   }
 
   const highStandardProcRate = profile.highStandardProcRatePercent ?? 0;
-  if (!Number.isFinite(profile.standardProcRatePercent) || profile.standardProcRatePercent < 0 || profile.standardProcRatePercent > 100) {
-    errors.push('standardProcRatePercent.outOfRange');
-  }
   if (!Number.isFinite(highStandardProcRate) || highStandardProcRate < 0 || highStandardProcRate > 100) {
     errors.push('highStandardProcRatePercent.outOfRange');
-  }
-  if (profile.standardProcRatePercent + highStandardProcRate > 100) {
-    errors.push('standardProcRates.totalOver100');
   }
 
   return {
@@ -63,6 +59,10 @@ export function validateFrontierProbabilityProfile(
     totalProbabilityPercent,
     averageMultiplierPercent: Number(averageMultiplierPercent.toFixed(4))
   };
+}
+
+export function getFrontierStandardProcRatePercent() {
+  return FRONTIER_STANDARD_PROC_RATE_PERCENT;
 }
 
 export function normalizeFrontierBrazenBuckets(buckets: FrontierBrazenBucket[]): FrontierBrazenBucket[] {

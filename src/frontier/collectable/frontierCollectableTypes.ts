@@ -61,7 +61,7 @@ export interface FrontierProbabilityProfileValidation {
   averageMultiplierPercent: number;
 }
 
-export type FrontierCollectableStrategyComparator = '<' | '<=' | '=' | '>=' | '>';
+export type FrontierCollectableStrategyComparator = '<' | '<=' | '=' | '!=' | '>=' | '>';
 export type FrontierCollectableStrategyConditionMode = 'all' | 'any';
 
 export type FrontierCollectableStrategyField =
