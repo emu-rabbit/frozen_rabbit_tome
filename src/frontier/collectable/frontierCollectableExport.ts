@@ -5,6 +5,7 @@ import type {
   FrontierCollectableStudy
 } from './frontierCollectableTypes';
 import { FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION } from './frontierCollectableTypes';
+import type { GatheringJob } from '../../types/game';
 
 export function buildFrontierCollectableJsonExport(input: FrontierCollectableJsonExportInput) {
   return compactJson({
@@ -70,7 +71,20 @@ export class FrontierCollectableJsonImportError extends Error {
   }
 }
 
+export interface FrontierCollectableJsonImportItemPreview {
+  itemId: number;
+  nameLocale?: string;
+  nameEn?: string;
+  glv?: number;
+  jobType?: GatheringJob;
+  jobTypes?: GatheringJob[];
+  isCollectable?: boolean;
+  isTimedNode?: boolean;
+}
+
 export interface FrontierCollectableJsonImportProjection {
+  sourceScenario: 'frontier.collectable';
+  item: FrontierCollectableJsonImportItemPreview;
   defaultName: string;
   study: FrontierCollectableStudy;
 }
@@ -92,15 +106,20 @@ export function parseFrontierCollectableJsonImport(raw: string): FrontierCollect
     throw new FrontierCollectableJsonImportError('missingItem');
   }
 
+  const item = buildItemPreview(payload, itemId);
   const request = buildRequestProjection(payload);
   const analysis = payload?.analyzer && typeof payload.analyzer === 'object'
     ? payload.analyzer
     : undefined;
   const now = new Date().toISOString();
-  const itemName = payload?.subject?.item?.nameLocale || payload?.subject?.item?.nameEn || `Item ${itemId}`;
-  const defaultName = payload?.name || `${itemName} 開拓研究`;
+  const itemName = item.nameLocale || item.nameEn || `Item ${itemId}`;
+  const defaultName = typeof payload?.name === 'string' && payload.name.trim()
+    ? payload.name.trim()
+    : itemName;
 
   return {
+    sourceScenario: 'frontier.collectable',
+    item,
     defaultName,
     study: {
       schemaVersion: FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION,
@@ -122,6 +141,31 @@ export function parseFrontierCollectableJsonImport(raw: string): FrontierCollect
       updatedAt: now
     }
   };
+}
+
+function buildItemPreview(payload: any, itemId: number): FrontierCollectableJsonImportItemPreview {
+  const item = payload?.subject?.item ?? {};
+  const jobType = isGatheringJob(item.jobType) ? item.jobType : undefined;
+  const jobTypes = Array.isArray(item.jobTypes)
+    ? item.jobTypes.filter(isGatheringJob)
+    : jobType
+      ? [jobType]
+      : undefined;
+
+  return {
+    itemId,
+    nameLocale: typeof item.nameLocale === 'string' ? item.nameLocale : undefined,
+    nameEn: typeof item.nameEn === 'string' ? item.nameEn : undefined,
+    glv: Number.isFinite(Number(item.glv)) ? Number(item.glv) : undefined,
+    jobType,
+    jobTypes,
+    isCollectable: true,
+    isTimedNode: !!item.isTimedNode
+  };
+}
+
+function isGatheringJob(value: unknown): value is GatheringJob {
+  return value === 'miner' || value === 'botanist';
 }
 
 function buildRequestProjection(payload: any): Pick<

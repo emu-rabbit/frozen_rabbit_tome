@@ -104,7 +104,17 @@ describe('frontierCollectableExport', () => {
       dawntrailCollectableSimulator: 'dawntrail-collectable-simulator-v2',
       dawntrailCollectableAnalyzer: 'dawntrail-collectable-analyzer-v2'
     });
-    expect(projection.defaultName).toBe('測試收藏品 開拓研究');
+    expect(projection.defaultName).toBe('測試收藏品');
+    expect(projection.sourceScenario).toBe('frontier.collectable');
+    expect(projection.item).toMatchObject({
+      itemId: 123,
+      nameLocale: '測試收藏品',
+      nameEn: 'Test Collectable',
+      glv: 700,
+      jobType: 'miner',
+      jobTypes: ['miner'],
+      isCollectable: true
+    });
     expect(projection.study.schemaVersion).toBe(2);
     expect(projection.study.itemId).toBe(123);
     expect(projection.study.input.hasRelicToolBonus).toBe(true);

@@ -13,6 +13,7 @@ import SelectButton from 'primevue/selectbutton';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import FloatingJsonImportButton from '../components/FloatingJsonImportButton.vue';
 import JsonImportErrorDialog from '../components/JsonImportErrorDialog.vue';
+import JsonImportPreview from '../components/JsonImportPreview.vue';
 import { useSettings } from '../composables/useSettings';
 import {
   useFrontierCollectableStudies
@@ -160,12 +161,11 @@ async function handleImportFile(file: File) {
 
 function confirmImportSave(name: string) {
   if (!pendingImport.value) return;
-  const saved = saveStudy({
+  saveStudy({
     ...pendingImport.value.study,
     name
   });
   pendingImport.value = null;
-  router.push({ path: '/frontier', query: { study: saved.id } });
 }
 
 function importErrorDescription() {
@@ -389,10 +389,7 @@ function importErrorDescription() {
       :cancel-label="t('saveEntry.cancel')"
       @confirm="confirmImportSave"
     >
-      <div class="import-preview">
-        <strong>{{ pendingImport.defaultName }}</strong>
-        <span>{{ t('frontier.studies.rules') }} {{ pendingImport.study.strategy.length }}</span>
-      </div>
+      <JsonImportPreview :projection="pendingImport" />
     </SaveEntryDialog>
 
     <JsonImportErrorDialog
@@ -405,7 +402,7 @@ function importErrorDescription() {
 
     <FloatingJsonImportButton
       v-if="frontierSettings.enabled"
-      :label="t('frontier.json.import')"
+      :label="t('jsonImport.actions.upload')"
       @select="handleImportFile"
     />
   </div>
@@ -1024,23 +1021,6 @@ function importErrorDescription() {
   justify-content: center;
   flex-shrink: 0;
   font-size: 1.5rem;
-}
-
-.import-preview {
-  display: grid;
-  gap: 0.35rem;
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 0.8rem;
-}
-
-.import-preview strong,
-.import-preview span {
-  overflow-wrap: anywhere;
-}
-
-:global(html.dark .import-preview) {
-  background: #1e293b;
 }
 
 @media (max-width: 560px) {
