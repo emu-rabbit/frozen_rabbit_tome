@@ -10,9 +10,8 @@
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
    - 2026-05-29 已由使用者遊戲畫面確認 High Standard 的效果模型；後續又確認 Brazen 最後再 `floor`，且 `Collect` 會消耗洞察 / 強化洞察。仍未知的是 High Standard 觸發率，以及 Brazen bucket 分布。
-   - 2026-05-31 Shikhu 回饋補充：`Collector's High Standard` 應與 `Collector's Standard` 共用同一個 proc pool。若一般洞察總池為 24%，High Standard 假設為 10%，則一般 Standard 應為 14%，不是額外或乘上剩餘機率。
-   - 2026-05-31 Shikhu 回饋補充：策略 UI 的狀態範圍卡若部分節點有 High Standard，`Meticulous` 不耗耐久率摘要不可只顯示基礎 25%；需顯示情境化範圍或標示 High Standard 節點使用較高機率。
-   - 2026-05-31 Shikhu 回饋補充：英文 UI 不應把 `Collector's Intuition` 系統稱為 `value increase` / `collectability increase`；需改用官方術語 `Intuition`。
+   - 2026-05-31 已修正 Shikhu 回饋的三個 Frontier 缺口（commit `6bb8551`）：High Standard 從同一個 `Collector's Standard` / 洞察 proc pool 扣除、High Standard 輸入框上限限制為總洞察池、策略 UI 的 `Meticulous` 不耗耐久率摘要使用共用 Frontier mechanics、英文 UI 改用 `Collector's Intuition` / `Intuition rate`。
+   - Frontier 模型版本已同步 bump：`dawntrailCollectableSimulator` / `dawntrailCollectableAnalyzer` 由 `v2` 到 `v3`。
    - 已收斂的第一階段實作計畫見 `.agents/roadmaps/frontier-collectable-implementation-plan.md`。
 
 2. **報表比較功能**
@@ -63,7 +62,7 @@
 
 目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是 Brazen 分布與 High Standard 觸發率尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制；2026-05-29 使用者提供遊戲畫面確認 `Brazen under Collector's High Standard` 為 guaranteed `Scour * 150%`，最大值 case 顯示為 `300`。後續使用者確認 Brazen 取整順序為最後再 `floor`，且 `Collect / 收藏品採集` 會消耗洞察 / 強化洞察。
 
-2026-05-31 狀態更新：本段早期只寫「High Standard 觸發率未知」已不足以描述目前 Frontier 需要修正的狀態。High Standard 的實際觸發率仍待實證或由使用者假設輸入，但 Shikhu 回饋指出它不是獨立追加 proc，而是從一般 `Collector's Standard` / 洞察 proc pool 中分出去。後續修正 Frontier model 時，應讓 `probabilityProfile.standardProcRatePercent` 代表總洞察池，`highStandardProcRatePercent` 代表其中屬於 High Standard 的比例或 percentage points，最後一般 Standard 機率應為 `max(0, standardProcRatePercent - highStandardProcRatePercent)`。若欄位語意改變或輸出結果可能改變，必須同步 bump `src/config/modelVersions.ts` 的 `dawntrailCollectableSimulator` / `dawntrailCollectableAnalyzer`。
+2026-05-31 狀態更新：本段早期只寫「High Standard 觸發率未知」已不足以描述目前 Frontier 需要修正的狀態。High Standard 的實際觸發率仍待實證或由使用者假設輸入，但 Shikhu 回饋指出它不是獨立追加 proc，而是從一般 `Collector's Standard` / 洞察 proc pool 中分出去。此修正已於 commit `6bb8551` 落地：`probabilityProfile.standardProcRatePercent` 代表總洞察池，`highStandardProcRatePercent` 代表其中屬於 High Standard 的 percentage points，最後一般 Standard 機率為 `max(0, standardProcRatePercent - highStandardProcRatePercent)`；High Standard 輸入框上限也會限制在目前總洞察池內。因使用者可見分析結果可能改變，`src/config/modelVersions.ts` 的 `dawntrailCollectableSimulator` / `dawntrailCollectableAnalyzer` 已 bump 到 `v3`。
 
 ### User Story
 
@@ -72,11 +71,11 @@
 ### 初步範圍
 
 - Brazen probability distribution。
-- Collector's High Standard proc rate。2026-05-31 補充：High Standard rate 必須從一般 Standard proc pool 扣除，不可當成額外機率。
+- Collector's High Standard proc rate。2026-05-31 補充已落地：High Standard rate 會從一般 Standard proc pool 扣除，不可當成額外機率。
 - 已確認 Brazen 取整順序為最後再 `floor`。
 - 已確認 `Collect / 收藏品採集` 會消耗洞察 / 強化洞察。
-- 策略 UI 的狀態摘要需反映 Frontier-only 狀態：High Standard active 時，`Meticulous` 不耗耐久率應額外 +40 percentage points；若摘要範圍混有一般節點與 High Standard 節點，應顯示區間或清楚提示。
-- 英文 UI 術語需改用官方 `Collector's Intuition` / `Intuition rate`，不要再以 `value increase` 或 `collectability increase` 作為使用者可見英文名稱。內部函式或 legacy key 可暫留，但顯示字串與 export / debug 文案需一致。
+- 策略 UI 的狀態摘要已反映 Frontier-only 狀態：High Standard active 時，`Meticulous` 不耗耐久率使用共用 helper 套用額外 +40 percentage points；混合狀態會自然顯示區間。
+- 英文 UI 術語已改用官方 `Collector's Intuition` / `Intuition rate`，避免再以 `value increase` 或 `collectability increase` 作為使用者可見英文名稱。內部函式或 legacy key 可暫留。
 - 第一版不納入 `Revisit`，只做單點採集分析。
 - Frontier study 使用獨立 Frontier Studies，不進 Experiment Database。
 - UI 完整度比照現有實驗台：建立、分析、儲存、再次開啟、JSON 匯出 / 匯入。
@@ -92,13 +91,13 @@
 
 ### 2026-05-31 維護結論：Frontier mechanics 不應多套手刻
 
-本次 Shikhu 回饋暴露一個維護風險：Frontier engine、strategy tree、策略 UI summary / applied preview 若各自重算機率或狀態效果，容易出現「engine 行為正確，但 UI 卡片摘要錯誤」的漂移。例如目前 engine 已在 `High Standard + Meticulous` 時套用不耗耐久率 `+40 percentage points`，但策略 UI 的狀態範圍卡只看 `Priming Touch` 與基礎 `Meticulous` rate，因此混有 High Standard 節點時仍可能只顯示 25%。
+本次 Shikhu 回饋暴露一個維護風險：Frontier engine、strategy tree、策略 UI summary / applied preview 若各自重算機率或狀態效果，容易出現「engine 行為正確，但 UI 卡片摘要錯誤」的漂移。例如修正前 engine 已在 `High Standard + Meticulous` 時套用不耗耐久率 `+40 percentage points`，但策略 UI 的狀態範圍卡只看 `Priming Touch` 與基礎 `Meticulous` rate，因此混有 High Standard 節點時仍可能只顯示 25%。
 
-後續修正方向應是建立或抽出小型純函式 mechanics layer，讓 engine、strategy tree、UI summary 與 export/debug 都呼叫同一份邏輯；不要在 Vue summary 或 tree adapter 裡重新手刻公式。建議優先抽象：
+已於 commit `6bb8551` 抽出小型純函式 mechanics layer，讓 engine 與 UI summary 呼叫同一份邏輯；後續若繼續擴充 Frontier，仍應避免在 Vue summary 或 tree adapter 裡重新手刻公式。現行優先 helper：
 
 - `getFrontierIntuitionRates(profile)`：統一 Standard / High Standard proc pool 與一般 Standard 剩餘機率。
-- `getFrontierMeticulousSaveRate(state, context)`：統一基礎 rate、`Priming Touch`、`High Standard +40` 與 clamp。
-- `getFrontierRefineGainBranches(action, state, context)` 或等價 helper：統一 `Scour`、`Meticulous`、`Brazen`、`Scrutiny` 與 `Intuition` 分支描述。
+- `getFrontierMeticulousSaveRatePercent(state, context)`：統一基礎 rate、`Priming Touch`、`High Standard +40` 與 clamp。
+- 未來仍可視需要新增 `getFrontierRefineGainBranches(action, state, context)` 或等價 helper，統一 `Scour`、`Meticulous`、`Brazen`、`Scrutiny` 與 `Intuition` 分支描述。
 
 UI summary 的職責應是對目前節點集合呼叫共用 helper 後聚合成範圍或標籤，例如 `25%~65%`；不應自行判斷 High Standard、Priming Touch 或未來 Frontier-only 狀態。正式收藏品與 Frontier 可共用已確認公式與狀態轉移 helper，Frontier 只保留 `Brazen` 分布、High Standard 假設與使用者輸入 probability profile 這些差異層。
 
