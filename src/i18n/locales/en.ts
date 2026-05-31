@@ -114,7 +114,7 @@ export default {
     favoriteItems: 'Favorite Items',
     tomeLibrary: 'Tome Library',
     experimentDatabase: 'Experiment Database',
-    frontierStudies: 'Frontier Study Library',
+    frontierStudies: 'Frontier Studies',
     faq: 'FAQ',
     settings: 'Settings',
     github: 'GitHub Project',

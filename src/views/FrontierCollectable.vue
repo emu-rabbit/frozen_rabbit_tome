@@ -75,6 +75,7 @@ const rewardTable = ref<CollectableRewardTable | null>(null);
 const isRewardLoading = ref(false);
 const loadedStudyId = ref<string | null>(null);
 const loadedStudy = ref<FrontierCollectableStudy | null>(null);
+let lastSearchedLang = '';
 let searchRequestId = 0;
 const selectedFoodModel = computed<FoodOption | null>({
   get: () => selectedFoodItem.value ? buildFoodOption(selectedFoodItem.value, selectedFood.value.quality, t) : null,
@@ -103,11 +104,27 @@ onMounted(() => {
 
 onActivated(() => {
   if (!consumeCreateRoute()) loadStudyFromRoute();
+  if (
+    !hasSelectedModel.value &&
+    currentLanguage.value &&
+    currentLanguage.value !== lastSearchedLang
+  ) {
+    doSearch(searchQuery.value);
+  }
 });
 
 watchDebounced(searchQuery, (query) => doSearch(query), { debounce: 450 });
 
-watch(currentLanguage, () => doSearch(searchQuery.value));
+watch(isGameDataLoading, (loading) => {
+  if (!loading && !hasSelectedModel.value) {
+    doSearch(searchQuery.value);
+  }
+});
+
+watch(currentLanguage, async (newLang) => {
+  lastSearchedLang = newLang;
+  await doSearch(searchQuery.value);
+});
 
 watch(() => route.query.study, () => {
   if (!consumeCreateRoute()) loadStudyFromRoute();
@@ -132,6 +149,7 @@ async function doSearch(query: string) {
   isSearching.value = true;
   hasSearched.value = true;
   apiError.value = false;
+  lastSearchedLang = currentLanguage.value;
   try {
     const results = await searchGatherables(query);
     if (requestId !== searchRequestId) return;
