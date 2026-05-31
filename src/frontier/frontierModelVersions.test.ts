@@ -9,9 +9,9 @@ describe('frontierModelVersions', () => {
     expect(buildFrontierModelVersionsForScenario('frontier.collectable')).toEqual({
       frontierCollectableSchema: 2,
       app: FRONTIER_MODEL_VERSION_CATALOG.app.version,
-      frontierCollectableSimulator: 'frontier-collectable-simulator-v1',
-      frontierCollectableAnalyzer: 'frontier-collectable-analyzer-v1',
-      frontierCollectableProbabilityProfile: 'frontier-collectable-probability-profile-v1'
+      frontierCollectableSimulator: 'frontier-collectable-simulator-v2',
+      frontierCollectableAnalyzer: 'frontier-collectable-analyzer-v2',
+      frontierCollectableProbabilityProfile: 'frontier-collectable-probability-profile-v2'
     });
   });
 });

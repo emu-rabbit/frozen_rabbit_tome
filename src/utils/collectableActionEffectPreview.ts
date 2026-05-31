@@ -1,4 +1,5 @@
 import { calculateScrutinyBonus } from './collectableMath';
+import { createCooperativeScheduler, type CooperativeSchedulerOptions } from './cooperativeScheduler';
 import {
   applyCollectableAction,
   canUseCollectableAction,
@@ -75,6 +76,45 @@ export function buildCollectableActionEffectPreviews(
 
     return preview;
   });
+}
+
+export async function buildCollectableActionEffectPreviewsAsync(
+  request: CollectableActionEffectPreviewRequest,
+  options: CooperativeSchedulerOptions = {}
+): Promise<CollectableActionEffectPreview[]> {
+  if (!request.mechanics) return [];
+
+  const scheduler = createCooperativeScheduler(options);
+  let currentStates = uniqueStates(request.states);
+  const previews: CollectableActionEffectPreview[] = [];
+
+  await scheduler.yieldNow();
+  for (const action of request.actions) {
+    await scheduler.step();
+    const castableStates: CollectableMechanicsState[] = [];
+    for (const state of currentStates) {
+      await scheduler.step();
+      if (canUseCollectableAction(action, state, request.mechanics)) {
+        castableStates.push(state);
+      }
+    }
+
+    const transitions: TransitionSample[] = [];
+    for (const state of castableStates) {
+      await scheduler.step();
+      applyCollectableAction(action, state, request.mechanics).forEach((transition) => {
+        transitions.push({
+          before: state,
+          after: transition.state
+        });
+      });
+    }
+
+    previews.push(buildActionPreview(action, currentStates, castableStates.length, transitions, request.mechanics));
+    currentStates = uniqueStates(transitions.map((transition) => transition.after));
+  }
+
+  return previews;
 }
 
 function buildActionPreview(

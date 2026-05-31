@@ -179,9 +179,39 @@ export default {
       highStandardRate: '強化洞察発生率',
       highStandardDescription: '純化後に強化洞察が出る仮定確率を入力します。',
       brazenTitle: '大胆純化の分布',
-      brazenShortDescription: '大胆純化で出る倍率 bucket を設定します。',
+      brazenShortDescription: '大胆純化の確率分布曲線を選びます。選択中の精度と組み合わせて研究用の確率データを生成します。',
       brazenDescription: '大胆純化の倍率と確率を離散 bucket で表します。これは研究仮定であり、公式分布ではありません。',
       distribution: '分布',
+      curveLabel: '確率分布曲線',
+      granularityLabel: '大胆純化の精度',
+      granularityOption: '{count} 段階',
+      granularityHint: '精度を上げるほど、分析時の大胆純化分岐が増えます。',
+      curves: {
+        uniform: {
+          label: '均等分布',
+          description: '各倍率が同じ確率です。'
+        },
+        triangular: {
+          label: '三角分布',
+          description: '中央が多く、両端が少なめです。'
+        },
+        normal: {
+          label: '正規分布',
+          description: 'ベルカーブの近似です。'
+        },
+        skewLow: {
+          label: '低め偏り',
+          description: '低い倍率が出やすい仮定です。'
+        },
+        skewHigh: {
+          label: '高め偏り',
+          description: '高い倍率が出やすい仮定です。'
+        },
+        uShape: {
+          label: 'U 字分布',
+          description: '両端が多く、中央が少なめです。'
+        }
+      },
       editBrazen: '分布を編集',
       bucketCount: '段階数',
       totalRate: '合計確率',
@@ -1073,7 +1103,7 @@ export default {
     treeKicker: '決定木カバー率',
     treeTitle: '現在の展開状態',
     loadingBaseValues: '収集品の基礎値を読み込み中です。',
-    calculatingTree: '方針ツリーを展開中です。画面は操作できます。',
+    calculatingTree: '方針ツリーを展開中です。しばらくお待ちください。',
     collectableLevelLockedTitle: '収集品採集はまだ開放されていません',
     collectableLevelLockedDesc: '収集品採集にはレベル {level} が必要です。それまでは、実験で決定木の展開や分析を実行しません。',
     actionLevelRequirement: 'レベル {level} が必要',
@@ -1191,6 +1221,7 @@ export default {
       effectPreviewUnavailable: '現在展開されているノードでは、このアクションは実行されません。',
       appliedStateRange: '適用後ノード状態範囲',
       appliedStateRangeDescription: 'この方針が現在管理しているノードだけを集計し、管理外または終端になるまでこの方針を繰り返し適用します。',
+      appliedStateRangeLimited: 'この方針は分岐が多いため、ここでは現在整理できる状態範囲を表示します。',
       appliedCompleteBranches: 'Complete：{complete}/{total} 分岐',
       appliedAllComplete: 'すべての分岐が終了しました。',
       effectMetrics: {

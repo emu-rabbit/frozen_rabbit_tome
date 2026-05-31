@@ -179,9 +179,39 @@ export default {
       highStandardRate: '强化洞察触发率',
       highStandardDescription: '输入强化洞察在提炼后出现的假设概率。',
       brazenTitle: '大胆提炼分布',
-      brazenShortDescription: '设定大胆提炼可能落在哪些倍率。',
+      brazenShortDescription: '选择大胆提炼的概率分布曲线，系统会搭配精细程度换算成研究用概率数据。',
       brazenDescription: '用离散 bucket 描述大胆提炼倍率与概率。这是研究假设，不代表官方分布。',
       distribution: '分布',
+      curveLabel: '概率分布曲线',
+      granularityLabel: '大胆提炼精细程度',
+      granularityOption: '{count} 档',
+      granularityHint: '越精细，分析时的大胆提炼分支会越多。',
+      curves: {
+        uniform: {
+          label: '均匀分布',
+          description: '每个倍率同概率。'
+        },
+        triangular: {
+          label: '三角分布',
+          description: '中间较常见，两端较少。'
+        },
+        normal: {
+          label: '常态分布',
+          description: '钟形曲线近似。'
+        },
+        skewLow: {
+          label: '偏低分布',
+          description: '低倍率较常见。'
+        },
+        skewHigh: {
+          label: '偏高分布',
+          description: '高倍率较常见。'
+        },
+        uShape: {
+          label: 'U 型分布',
+          description: '两端较常见，中间较少。'
+        }
+      },
       editBrazen: '编辑分布',
       bucketCount: '档数',
       totalRate: '总概率',
@@ -1073,7 +1103,7 @@ export default {
     treeKicker: '决策树覆盖',
     treeTitle: '当前展开状态',
     loadingBaseValues: '正在载入收藏品基础值。',
-    calculatingTree: '正在展开策略树，画面会保持可操作。',
+    calculatingTree: '正在展开策略树，请稍候。',
     collectableLevelLockedTitle: '收藏品采集尚未开放',
     collectableLevelLockedDesc: '收藏品采集需要等级 {level}。当前等级不足时，实验区不会展开决策树或执行分析。',
     actionLevelRequirement: '需要等级 {level}',
@@ -1191,6 +1221,7 @@ export default {
       effectPreviewUnavailable: '此技能在当前展开节点中不会被施展。',
       appliedStateRange: '套用后节点状态范围',
       appliedStateRangeDescription: '只统计这条策略目前纳管的节点；会反复套用本策略，直到状态不再纳管或分支结束。',
+      appliedStateRangeLimited: '这条策略的分支很多，这里先显示目前可整理的状态范围。',
       appliedCompleteBranches: 'Complete：{complete}/{total} 分支',
       appliedAllComplete: '所有分支都已结束',
       effectMetrics: {

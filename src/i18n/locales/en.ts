@@ -179,9 +179,39 @@ export default {
       highStandardRate: 'High Standard proc rate',
       highStandardDescription: 'Set the assumed chance that High Standard appears after refining.',
       brazenTitle: 'Brazen Distribution',
-      brazenShortDescription: 'Set the possible multiplier buckets for Brazen.',
+      brazenShortDescription: 'Choose the Brazen probability curve. The selected precision is used to generate the research probability data.',
       brazenDescription: 'Describe Brazen as discrete multiplier and probability buckets. This is a research assumption, not an official distribution.',
       distribution: 'Distribution',
+      curveLabel: 'Probability curve',
+      granularityLabel: 'Brazen precision',
+      granularityOption: '{count} buckets',
+      granularityHint: 'Higher precision creates more Brazen branches during analysis.',
+      curves: {
+        uniform: {
+          label: 'Uniform',
+          description: 'Every multiplier has equal chance.'
+        },
+        triangular: {
+          label: 'Triangular',
+          description: 'Middle values are most common.'
+        },
+        normal: {
+          label: 'Normal',
+          description: 'A compact bell-curve approximation.'
+        },
+        skewLow: {
+          label: 'Skewed low',
+          description: 'Lower multipliers are more common.'
+        },
+        skewHigh: {
+          label: 'Skewed high',
+          description: 'Higher multipliers are more common.'
+        },
+        uShape: {
+          label: 'U-shaped',
+          description: 'Both ends are more common.'
+        }
+      },
       editBrazen: 'Edit distribution',
       bucketCount: 'Buckets',
       totalRate: 'Total',
@@ -1095,7 +1125,7 @@ export default {
     treeKicker: 'Decision Tree Coverage',
     treeTitle: 'Current Expanded State',
     loadingBaseValues: 'Loading collectable base values.',
-    calculatingTree: 'Expanding the strategy tree while keeping the page responsive.',
+    calculatingTree: 'Expanding the strategy tree. Please wait.',
     collectableLevelLockedTitle: 'Collectables are not unlocked yet',
     collectableLevelLockedDesc: 'Collectable gathering requires level {level}. Until then, the lab will not expand a decision tree or run analysis.',
     actionLevelRequirement: 'Requires level {level}',
@@ -1213,6 +1243,7 @@ export default {
       effectPreviewUnavailable: 'This action will not be cast in the currently expanded nodes.',
       appliedStateRange: 'Post-Apply Node State Range',
       appliedStateRangeDescription: 'Only counts nodes currently managed by this strategy, then repeats this strategy until the state is no longer managed or the branch ends.',
+      appliedStateRangeLimited: 'This strategy creates many branches, so this preview shows the state range that can be summarized right now.',
       appliedCompleteBranches: 'Complete: {complete}/{total} branches',
       appliedAllComplete: 'All branches have ended.',
       effectMetrics: {

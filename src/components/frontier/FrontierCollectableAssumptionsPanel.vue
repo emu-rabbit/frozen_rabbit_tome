@@ -1,21 +1,75 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
+import Select from 'primevue/select';
 import {
-  DEFAULT_FRONTIER_BRAZEN_BUCKETS,
-  normalizeFrontierBrazenBuckets,
-  validateFrontierProbabilityProfile
+  FRONTIER_BRAZEN_BUCKET_COUNTS,
+  createFrontierBrazenBuckets,
+  detectFrontierBrazenBucketOptions
 } from '../../frontier/collectable/frontierCollectableProbabilityProfile';
-import type { FrontierCollectableProbabilityProfile } from '../../frontier/collectable/frontierCollectableTypes';
+import type {
+  FrontierBrazenBucketCount,
+  FrontierBrazenDistributionCurve,
+  FrontierCollectableProbabilityProfile
+} from '../../frontier/collectable/frontierCollectableTypes';
 
 const profile = defineModel<FrontierCollectableProbabilityProfile>({ required: true });
 
 const { t } = useI18n();
 
-const validation = computed(() => validateFrontierProbabilityProfile(profile.value));
-const isBrazenDialogOpen = ref(false);
+const detectedBrazenOptions = detectFrontierBrazenBucketOptions(profile.value.brazenBuckets);
+const selectedBrazenCurve = ref<FrontierBrazenDistributionCurve>(detectedBrazenOptions?.curve ?? 'uniform');
+const selectedBrazenBucketCount = ref<FrontierBrazenBucketCount>(detectedBrazenOptions?.bucketCount ?? normalizeBucketCount(profile.value.brazenBuckets.length));
+let isApplyingBrazenOptions = false;
+
+type CurveOption = {
+  value: FrontierBrazenDistributionCurve;
+  label: string;
+  description: string;
+  iconValues: number[];
+};
+
+const curveIconValues: Record<FrontierBrazenDistributionCurve, number[]> = {
+  uniform: [20, 20, 20, 20, 20],
+  triangular: [10, 20, 40, 20, 10],
+  normal: [6, 24, 40, 24, 6],
+  skewLow: [40, 25, 18, 11, 6],
+  skewHigh: [6, 11, 18, 25, 40],
+  uShape: [30, 10, 4, 10, 30]
+};
+
+const brazenCurveOptions = computed<CurveOption[]>(() => [
+  buildCurveOption('uniform'),
+  buildCurveOption('triangular'),
+  buildCurveOption('normal'),
+  buildCurveOption('skewLow'),
+  buildCurveOption('skewHigh'),
+  buildCurveOption('uShape')
+]);
+
+const brazenBucketCountOptions = computed(() => FRONTIER_BRAZEN_BUCKET_COUNTS.map((count) => ({
+  label: t('frontier.profile.granularityOption', { count }),
+  value: count
+})));
+
+applyBrazenOptions();
+
+watch(
+  () => profile.value.brazenBuckets,
+  (buckets) => {
+    if (isApplyingBrazenOptions) {
+      isApplyingBrazenOptions = false;
+      return;
+    }
+
+    const detected = detectFrontierBrazenBucketOptions(buckets);
+    selectedBrazenCurve.value = detected?.curve ?? 'uniform';
+    selectedBrazenBucketCount.value = detected?.bucketCount ?? normalizeBucketCount(buckets.length);
+    applyBrazenOptions();
+  },
+  { deep: true }
+);
 
 function updateHighStandardRate(value: number | null) {
   profile.value = {
@@ -24,53 +78,60 @@ function updateHighStandardRate(value: number | null) {
   };
 }
 
-function updateBucket(index: number, patch: { multiplierPercent?: number; probabilityPercent?: number }) {
-  profile.value = {
-    ...profile.value,
-    brazenBuckets: profile.value.brazenBuckets.map((bucket, bucketIndex) => (
-      bucketIndex === index ? { ...bucket, ...patch } : bucket
-    ))
-  };
+function updateBrazenCurve(value: unknown) {
+  if (!isBrazenCurve(value)) return;
+  selectedBrazenCurve.value = value;
+  applyBrazenOptions();
 }
 
-function addBucket() {
-  profile.value = {
-    ...profile.value,
-    brazenBuckets: [
-      ...profile.value.brazenBuckets,
-      {
-        id: `bucket-${Date.now()}`,
-        multiplierPercent: 100,
-        probabilityPercent: 0
-      }
-    ]
-  };
+function updateBrazenBucketCount(value: unknown) {
+  if (!isBrazenBucketCount(value)) return;
+  selectedBrazenBucketCount.value = value;
+  applyBrazenOptions();
 }
 
-function removeBucket(index: number) {
+function applyBrazenOptions() {
+  isApplyingBrazenOptions = true;
   profile.value = {
     ...profile.value,
-    brazenBuckets: profile.value.brazenBuckets.filter((_, bucketIndex) => bucketIndex !== index)
-  };
-}
-
-function applyDefaultBrazenTemplate() {
-  profile.value = {
-    ...profile.value,
-    brazenBuckets: DEFAULT_FRONTIER_BRAZEN_BUCKETS.map((bucket) => ({ ...bucket }))
-  };
-}
-
-function normalizeBrazenBuckets() {
-  profile.value = {
-    ...profile.value,
-    brazenBuckets: normalizeFrontierBrazenBuckets(profile.value.brazenBuckets)
+    brazenBuckets: createFrontierBrazenBuckets(selectedBrazenCurve.value, selectedBrazenBucketCount.value)
   };
 }
 
 function clampPercent(value: number) {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, value));
+}
+
+function buildCurveOption(value: FrontierBrazenDistributionCurve): CurveOption {
+  return {
+    value,
+    label: t(`frontier.profile.curves.${value}.label`),
+    description: t(`frontier.profile.curves.${value}.description`),
+    iconValues: curveIconValues[value]
+  };
+}
+
+function selectedCurveOption(value: unknown) {
+  const curve = isBrazenCurve(value) ? value : selectedBrazenCurve.value;
+  return brazenCurveOptions.value.find((option) => option.value === curve) ?? brazenCurveOptions.value[0];
+}
+
+function curveBarHeight(value: number, values: number[]) {
+  const maxValue = Math.max(...values, 1);
+  return `${Math.max(18, (value / maxValue) * 100)}%`;
+}
+
+function normalizeBucketCount(value: number): FrontierBrazenBucketCount {
+  return FRONTIER_BRAZEN_BUCKET_COUNTS.find((count) => count === value) ?? 5;
+}
+
+function isBrazenCurve(value: unknown): value is FrontierBrazenDistributionCurve {
+  return typeof value === 'string' && curveIconValues[value as FrontierBrazenDistributionCurve] !== undefined;
+}
+
+function isBrazenBucketCount(value: unknown): value is FrontierBrazenBucketCount {
+  return FRONTIER_BRAZEN_BUCKET_COUNTS.some((count) => count === value);
 }
 </script>
 
@@ -104,7 +165,7 @@ function clampPercent(value: number) {
         </label>
       </article>
 
-      <article class="frontier-assumption-card" :class="{ 'has-warning': !validation.valid }">
+      <article class="frontier-assumption-card">
         <div class="assumption-card-copy">
           <span class="assumption-card-icon"><i class="pi pi-sliders-h"></i></span>
           <div>
@@ -112,87 +173,70 @@ function clampPercent(value: number) {
             <p>{{ t('frontier.profile.brazenShortDescription') }}</p>
           </div>
         </div>
-        <div class="assumption-card-control assumption-card-control-action">
-          <Button icon="pi pi-sliders-h" :label="t('frontier.profile.editBrazen')" class="p-button-sm p-button-outlined rounded-xl assumption-card-action" @click="isBrazenDialogOpen = true" />
+        <label class="assumption-card-control">
+          <Select
+            :model-value="selectedBrazenCurve"
+            :options="brazenCurveOptions"
+            optionLabel="label"
+            optionValue="value"
+            :aria-label="t('frontier.profile.curveLabel')"
+            fluid
+            @update:model-value="updateBrazenCurve"
+          >
+            <template #value="{ value }">
+              <div class="curve-option is-selected">
+                <span class="curve-mini-chart" aria-hidden="true">
+                  <span
+                    v-for="(bar, index) in selectedCurveOption(value).iconValues"
+                    :key="index"
+                    :style="{ height: curveBarHeight(bar, selectedCurveOption(value).iconValues) }"
+                  ></span>
+                </span>
+                <span class="curve-option-text">
+                  <strong>{{ selectedCurveOption(value).label }}</strong>
+                </span>
+              </div>
+            </template>
+            <template #option="{ option }">
+              <div class="curve-option">
+                <span class="curve-mini-chart" aria-hidden="true">
+                  <span
+                    v-for="(bar, index) in option.iconValues"
+                    :key="index"
+                    :style="{ height: curveBarHeight(bar, option.iconValues) }"
+                  ></span>
+                </span>
+                <span class="curve-option-text">
+                  <strong>{{ option.label }}</strong>
+                  <small>{{ option.description }}</small>
+                </span>
+              </div>
+            </template>
+          </Select>
+        </label>
+      </article>
+
+      <article class="frontier-assumption-card">
+        <div class="assumption-card-copy">
+          <span class="assumption-card-icon"><i class="pi pi-sitemap"></i></span>
+          <div>
+            <h3>{{ t('frontier.profile.granularityLabel') }}</h3>
+            <p>{{ t('frontier.profile.granularityHint') }}</p>
+          </div>
         </div>
-        <p v-if="!validation.valid" class="warning-text">{{ t('frontier.profile.invalidTotal') }} {{ validation.totalProbabilityPercent.toFixed(2) }}%</p>
+        <label class="assumption-card-control">
+          <Select
+            :model-value="selectedBrazenBucketCount"
+            :options="brazenBucketCountOptions"
+            optionLabel="label"
+            optionValue="value"
+            :aria-label="t('frontier.profile.granularityLabel')"
+            fluid
+            @update:model-value="updateBrazenBucketCount"
+          />
+        </label>
       </article>
     </div>
-
-    <Teleport to="body">
-      <Transition name="frontier-brazen-dialog">
-        <div
-          v-if="isBrazenDialogOpen"
-          class="frontier-brazen-dialog"
-          role="dialog"
-          aria-modal="true"
-          :aria-label="t('frontier.profile.brazenTitle')"
-        >
-          <button
-            type="button"
-            class="frontier-brazen-backdrop"
-            :aria-label="t('common.close')"
-            @click="isBrazenDialogOpen = false"
-          ></button>
-          <section class="frontier-brazen-panel">
-            <header class="frontier-brazen-panel-header">
-              <div>
-                <h3>{{ t('frontier.profile.brazenTitle') }}</h3>
-                <p>{{ t('frontier.profile.brazenDescription') }}</p>
-              </div>
-              <button
-                type="button"
-                class="icon-button close-button"
-                :aria-label="t('common.close')"
-                @click="isBrazenDialogOpen = false"
-              >
-                <i class="pi pi-times"></i>
-              </button>
-            </header>
-
-            <div class="summary-grid compact">
-              <div>
-                <span>{{ t('frontier.profile.bucketCount') }}</span>
-                <strong>{{ profile.brazenBuckets.length }}</strong>
-              </div>
-              <div :class="{ warning: !validation.valid }">
-                <span>{{ t('frontier.profile.totalRate') }}</span>
-                <strong>{{ validation.totalProbabilityPercent.toFixed(2) }}%</strong>
-              </div>
-              <div>
-                <span>{{ t('frontier.profile.average') }}</span>
-                <strong>{{ validation.averageMultiplierPercent.toFixed(2) }}%</strong>
-              </div>
-            </div>
-
-            <div class="frontier-brazen-tools">
-              <Button icon="pi pi-plus" :label="t('frontier.profile.addBucket')" class="p-button-sm p-button-outlined rounded-xl" @click="addBucket" />
-              <Button icon="pi pi-table" :label="t('frontier.profile.applyTemplate')" class="p-button-sm p-button-outlined rounded-xl" @click="applyDefaultBrazenTemplate" />
-              <Button icon="pi pi-percentage" :label="t('frontier.profile.normalize')" class="p-button-sm p-button-outlined rounded-xl" @click="normalizeBrazenBuckets" />
-            </div>
-            <p v-if="!validation.valid" class="warning-text">{{ t('frontier.profile.invalidTotal') }}</p>
-            <div class="frontier-bucket-list">
-              <div v-for="(bucket, index) in profile.brazenBuckets" :key="bucket.id" class="frontier-bucket-row">
-                <label>
-                  <span>{{ t('frontier.profile.multiplier') }}</span>
-                  <InputNumber :model-value="bucket.multiplierPercent" suffix="%" :min="50" :max="150" :min-fraction-digits="0" :max-fraction-digits="2" fluid @update:model-value="updateBucket(index, { multiplierPercent: Number($event ?? 0) })" />
-                </label>
-                <label>
-                  <span>{{ t('frontier.profile.probability') }}</span>
-                  <InputNumber :model-value="bucket.probabilityPercent" suffix="%" :min="0" :max="100" :min-fraction-digits="0" :max-fraction-digits="2" fluid @update:model-value="updateBucket(index, { probabilityPercent: Number($event ?? 0) })" />
-                </label>
-                <button type="button" class="icon-button" :aria-label="t('frontier.profile.removeBucket')" @click="removeBucket(index)">
-                  <i class="pi pi-times"></i>
-                </button>
-              </div>
-            </div>
-            <footer class="frontier-brazen-panel-actions">
-              <Button :label="t('common.done')" icon="pi pi-check" class="p-button-sm rounded-xl" @click="isBrazenDialogOpen = false" />
-            </footer>
-          </section>
-        </div>
-      </Transition>
-    </Teleport>
   </section>
 </template>
 
@@ -286,7 +330,7 @@ function clampPercent(value: number) {
 
 .frontier-assumption-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -294,17 +338,12 @@ function clampPercent(value: number) {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   gap: 0.8rem;
-  align-content: start;
   border: 1px solid #e2e8f0;
   border-radius: 1rem;
   background: #f8fafc;
   padding: 0.9rem;
-}
-
-.frontier-assumption-card.has-warning {
-  border-color: rgb(225 29 72 / 0.24);
-  background: #fff7f7;
 }
 
 .assumption-card-copy {
@@ -325,229 +364,88 @@ function clampPercent(value: number) {
   color: #299273;
 }
 
-.assumption-card-copy h3,
-.frontier-brazen-panel h3 {
+.assumption-card-copy h3 {
   margin: 0;
   color: #334155;
   font-size: 0.98rem;
   font-weight: 900;
 }
 
-.assumption-card-copy p,
-.frontier-brazen-panel p {
+.assumption-card-copy p {
   margin: 0.2rem 0 0;
   color: #64748b;
   font-size: 0.82rem;
   line-height: 1.45;
 }
 
-.assumption-card-control,
-.frontier-bucket-row label {
+.assumption-card-control {
   min-width: 0;
   display: grid;
-  gap: 0.35rem;
-}
-
-.assumption-card-control span,
-.frontier-bucket-row span,
-.summary-grid span,
-.assumption-card-summary span {
-  color: #64748b;
-  font-size: 0.74rem;
-  font-weight: 900;
+  align-self: end;
 }
 
 .assumption-card-control :deep(.p-inputnumber),
-.assumption-card-control :deep(input),
-.frontier-bucket-row :deep(.p-inputnumber),
-.frontier-bucket-row :deep(input) {
+.assumption-card-control :deep(.p-select),
+.assumption-card-control :deep(input) {
   width: 100% !important;
   min-width: 0 !important;
 }
 
-.assumption-card-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.assumption-card-summary div {
+.curve-option {
   min-width: 0;
-  display: grid;
-  gap: 0.3rem;
-  border-radius: 0.85rem;
-  background: white;
-  padding: 0.62rem 0.7rem;
-}
-
-.assumption-card-summary strong {
-  color: #0f172a;
-  font-size: 1.18rem;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.assumption-card-action {
-  justify-self: start;
-}
-
-.assumption-card-control-action {
-  align-self: end;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
-  align-items: stretch;
-}
-
-.summary-grid div {
-  min-width: 0;
-  min-height: 4.1rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.4rem;
-  border: 1px solid transparent;
-  border-radius: 0.85rem;
-  background: white;
-  padding: 0.62rem 0.7rem;
-}
-
-.summary-grid div.warning {
-  border-color: rgb(82 168 144 / 0.32);
-  background: #ecfdf5;
-}
-
-:global(html.dark .summary-grid div) {
-  border-color: rgb(51 65 85 / 0.62);
-  background: rgb(30 41 59 / 0.55);
-}
-
-:global(html.dark .summary-grid div.warning) {
-  border-color: rgb(94 234 212 / 0.24);
-  background: rgb(20 83 73 / 0.24);
-}
-
-.summary-grid strong {
-  display: block;
-  color: #0f172a;
-  font-size: 1.18rem;
-  font-weight: 950;
-  line-height: 1;
-}
-
-:global(html.dark .summary-grid strong) {
-  color: #f8fafc;
-}
-
-.frontier-brazen-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.frontier-brazen-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 95;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.frontier-brazen-backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: rgb(15 23 42 / 0.48);
-  cursor: pointer;
-}
-
-.frontier-brazen-panel {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 42rem);
-  max-height: min(88vh, 45rem);
-  overflow: auto;
-  display: grid;
-  gap: 1rem;
-  border: 1px solid #dbe3ee;
-  border-radius: 1rem;
-  background: white;
-  padding: 1rem;
-  box-shadow: 0 24px 60px rgb(15 23 42 / 0.22);
-}
-
-.frontier-brazen-panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.frontier-bucket-list {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.frontier-bucket-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 0.65rem;
-  align-items: end;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.85rem;
-  background: #f8fafc;
-  padding: 0.75rem;
 }
 
-:global(html.dark .frontier-bucket-row) {
-  border-color: #334155;
-  background: rgb(30 41 59 / 0.55);
+.curve-option.is-selected {
+  min-height: 1.4rem;
 }
 
-.icon-button {
-  width: 2.35rem;
-  height: 2.35rem;
-  border: 0;
-  border-radius: 10px;
-  background: #f1f5f9;
-  color: #64748b;
-  cursor: pointer;
-}
-
-:global(html.dark .icon-button) {
-  background: #1e293b;
-  color: #cbd5e1;
-}
-
-.close-button {
+.curve-mini-chart {
+  width: 2.4rem;
+  height: 1.35rem;
   flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: end;
+  gap: 0.12rem;
+  border-bottom: 1px solid rgb(82 168 144 / 0.42);
 }
 
-.frontier-brazen-panel-actions {
-  display: flex;
-  justify-content: flex-end;
+.curve-mini-chart span {
+  display: block;
+  min-height: 0.18rem;
+  border-radius: 999px 999px 0 0;
+  background: #52a890;
 }
 
-.warning-text {
-  margin: 0;
-  color: #be123c;
+.curve-option-text {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.curve-option-text strong {
+  overflow: hidden;
+  color: #334155;
+  font-size: 0.84rem;
   font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-:global(html.dark .frontier-assumption-card),
-:global(html.dark .frontier-brazen-panel) {
+.curve-option-text small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+:global(html.dark .frontier-assumption-card) {
   border-color: #334155;
   background: #0f172a;
-}
-
-:global(html.dark .frontier-assumption-card.has-warning) {
-  border-color: rgb(251 113 133 / 0.28);
-  background: rgb(76 29 29 / 0.22);
 }
 
 :global(html.dark .assumption-card-icon) {
@@ -555,54 +453,27 @@ function clampPercent(value: number) {
   color: #86efac;
 }
 
-:global(html.dark .assumption-card-summary div) {
-  background: rgb(30 41 59 / 0.55);
-}
-
-:global(html.dark .assumption-card-summary strong) {
-  color: #f8fafc;
-}
-
 :global(html.dark .frontier-assumption-card h3),
-:global(html.dark .frontier-brazen-panel h3) {
+:global(html.dark .curve-option-text strong) {
   color: #f8fafc;
 }
 
 :global(html.dark .frontier-assumption-card p),
-:global(html.dark .frontier-brazen-panel p) {
+:global(html.dark .curve-option-text small) {
   color: #94a3b8;
 }
 
-.frontier-brazen-dialog-enter-active,
-.frontier-brazen-dialog-leave-active {
-  transition: opacity 0.18s ease;
+:global(html.dark .curve-mini-chart) {
+  border-bottom-color: rgb(94 234 212 / 0.38);
 }
 
-.frontier-brazen-dialog-enter-active .frontier-brazen-panel,
-.frontier-brazen-dialog-leave-active .frontier-brazen-panel {
-  transition: transform 0.18s ease, opacity 0.18s ease;
-}
-
-.frontier-brazen-dialog-enter-from,
-.frontier-brazen-dialog-leave-to {
-  opacity: 0;
-}
-
-.frontier-brazen-dialog-enter-from .frontier-brazen-panel,
-.frontier-brazen-dialog-leave-to .frontier-brazen-panel {
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
+:global(html.dark .curve-mini-chart span) {
+  background: #5eead4;
 }
 
 @media (max-width: 560px) {
-  .frontier-bucket-row,
-  .summary-grid,
-  .assumption-card-summary {
+  .frontier-assumption-cards {
     grid-template-columns: 1fr;
-  }
-
-  .frontier-brazen-panel {
-    padding: 0.9rem;
   }
 }
 </style>

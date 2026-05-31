@@ -89,14 +89,14 @@ export const TOME_MODEL_VERSION_CATALOG = {
     key: 'collectableSimulator',
     category: 'simulator',
     label: 'Collectable strategy simulation model',
-    version: 'collectable-simulator-v1',
+    version: 'collectable-simulator-v2',
     visibility: ['external', 'internal']
   },
   collectableAnalyzer: {
     key: 'collectableAnalyzer',
     category: 'analyzer',
     label: 'Collectable strategy analysis model',
-    version: 'collectable-analyzer-v1',
+    version: 'collectable-analyzer-v2',
     visibility: ['external', 'internal']
   },
   collectableStrategyCodec: {

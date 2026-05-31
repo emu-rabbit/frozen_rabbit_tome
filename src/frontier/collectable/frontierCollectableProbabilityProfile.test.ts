@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createFrontierBrazenBuckets,
   createDefaultFrontierProbabilityProfile,
+  detectFrontierBrazenBucketOptions,
   normalizeFrontierBrazenBuckets,
   validateFrontierProbabilityProfile
 } from './frontierCollectableProbabilityProfile';
@@ -40,5 +42,37 @@ describe('frontierCollectableProbabilityProfile', () => {
       { id: 'a', multiplierPercent: 50, probabilityPercent: 25 },
       { id: 'b', multiplierPercent: 150, probabilityPercent: 75 }
     ]);
+  });
+
+  it('creates the five-bucket curve examples used by the Frontier UI', () => {
+    expect(createFrontierBrazenBuckets('uniform', 5).map((bucket) => bucket.probabilityPercent))
+      .toEqual([20, 20, 20, 20, 20]);
+    expect(createFrontierBrazenBuckets('triangular', 5).map((bucket) => bucket.probabilityPercent))
+      .toEqual([10, 20, 40, 20, 10]);
+    expect(createFrontierBrazenBuckets('normal', 5).map((bucket) => bucket.probabilityPercent))
+      .toEqual([6, 24, 40, 24, 6]);
+    expect(createFrontierBrazenBuckets('skewLow', 5).map((bucket) => bucket.probabilityPercent))
+      .toEqual([40, 25, 18, 11, 6]);
+    expect(createFrontierBrazenBuckets('skewHigh', 5).map((bucket) => bucket.probabilityPercent))
+      .toEqual([6, 11, 18, 25, 40]);
+    expect(createFrontierBrazenBuckets('uShape', 5).map((bucket) => bucket.probabilityPercent))
+      .toEqual([30, 10, 20, 10, 30]);
+  });
+
+  it('keeps generated granular curves valid and detectable', () => {
+    const buckets = createFrontierBrazenBuckets('normal', 20);
+    const result = validateFrontierProbabilityProfile({
+      brazenBuckets: buckets,
+      standardProcRatePercent: 25,
+      highStandardProcRatePercent: 10
+    });
+
+    expect(buckets).toHaveLength(20);
+    expect(result.valid).toBe(true);
+    expect(result.totalProbabilityPercent).toBe(100);
+    expect(detectFrontierBrazenBucketOptions(buckets)).toEqual({
+      curve: 'normal',
+      bucketCount: 20
+    });
   });
 });

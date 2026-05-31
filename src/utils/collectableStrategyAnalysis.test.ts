@@ -183,6 +183,44 @@ describe('collectableStrategyAnalysis', () => {
     }]);
   });
 
+  it('groups tier priority distribution rows by identical score', () => {
+    const terminal = node({ id: 'terminal' });
+    const root = node({
+      id: 'root-tier-score-collision',
+      status: 'decided',
+      action: 'collect',
+      state: { collectability: 100, integrity: 1 },
+      branches: [
+        {
+          label: '成功',
+          labelKeys: ['collectableSolver.branches.collectSuccess'],
+          probability: 50,
+          state: { ...terminal.state },
+          child: terminal
+        },
+        {
+          label: '失敗',
+          labelKeys: ['collectableSolver.branches.collectFailed'],
+          probability: 50,
+          state: { ...terminal.state },
+          child: terminal
+        }
+      ]
+    });
+
+    const result = analyzeCollectableStrategyTree(root, rewardTable, {
+      kind: 'tierScore',
+      presetId: 'highValue',
+      tierWeights: { none: 0, low: 0, mid: 1, high: 100 }
+    });
+
+    expect(result.outcomeDistribution).toEqual([{
+      score: 0,
+      probability: 100,
+      tierCounts: { none: 0, low: 1, mid: 0, high: 0 }
+    }]);
+  });
+
   it('async analysis matches the synchronous score while yielding between chunks', async () => {
     const terminal = node({ id: 'terminal' });
     const root = node({

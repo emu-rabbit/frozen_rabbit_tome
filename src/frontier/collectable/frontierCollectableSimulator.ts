@@ -649,16 +649,26 @@ function buildOutcomeDistribution(
     }));
   }
 
-  return [...details.values()].sort((left, right) => (
-    left.score - right.score
-      || left.tierCounts.high - right.tierCounts.high
-      || left.tierCounts.mid - right.tierCounts.mid
-      || left.tierCounts.low - right.tierCounts.low
-  )).map((detail) => ({
-    score: detail.score,
-    probability: detail.probability * 100,
-    tierCounts: { ...detail.tierCounts }
+  const outcomes = mergeScoreDistribution(details);
+  return [...outcomes.keys()].sort((left, right) => left - right).map((score) => ({
+    score,
+    probability: (outcomes.get(score) ?? 0) * 100,
+    tierCounts: representativeTierCountsForScore(details, score)
   }));
+}
+
+function representativeTierCountsForScore(details: Map<string, OutcomeDetail>, score: number) {
+  const matches = [...details.values()].filter((detail) => detail.score === score);
+  if (matches.length === 0) return createZeroTierCounts();
+
+  return {
+    ...matches.sort((left, right) => (
+      right.probability - left.probability
+        || right.tierCounts.high - left.tierCounts.high
+        || right.tierCounts.mid - left.tierCounts.mid
+        || right.tierCounts.low - left.tierCounts.low
+    ))[0].tierCounts
+  };
 }
 
 function buildCollectabilityDistribution(details: Map<string, OutcomeDetail>) {

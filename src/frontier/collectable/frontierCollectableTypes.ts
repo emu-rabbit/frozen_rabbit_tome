@@ -48,6 +48,16 @@ export interface FrontierCollectableProbabilityProfile {
   notes?: string;
 }
 
+export type FrontierBrazenDistributionCurve =
+  | 'uniform'
+  | 'triangular'
+  | 'normal'
+  | 'skewLow'
+  | 'skewHigh'
+  | 'uShape';
+
+export type FrontierBrazenBucketCount = 5 | 10 | 20;
+
 export interface FrontierBrazenBucket {
   id: string;
   multiplierPercent: number;

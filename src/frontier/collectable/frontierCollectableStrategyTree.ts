@@ -69,7 +69,7 @@ export async function buildFrontierCollectableStrategyTreeAsync(
   const context: AsyncBuildContext = {
     mechanics: createFrontierCollectableContext(request),
     rules: request.strategy.filter((rule) => rule.enabled),
-    maxNodes: request.maxNodes ?? 1200,
+    maxNodes: request.maxNodes ?? Number.POSITIVE_INFINITY,
     nodeCache: new Map(),
     limited: false,
     uncoveredNodes: [],
@@ -268,8 +268,12 @@ function formatFrontierBranchLabel(label: string | undefined, labelKeys: string[
   if (!label) return context.formatBranchLabel(labelKeys);
 
   return label.split(' / ').map((part) => (
-    part.includes('.') ? context.formatBranchLabel([part]) : part
+    isBranchLabelKey(part) ? context.formatBranchLabel([part]) : part
   )).join(' / ');
+}
+
+function isBranchLabelKey(label: string) {
+  return label.startsWith('collectableSolver.') || label.startsWith('frontier.');
 }
 
 function defaultPathStep(payload: { ruleName?: string; actionLabel: string; branchLabel: string }) {

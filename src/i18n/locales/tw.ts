@@ -180,9 +180,39 @@ export default {
       highStandardRate: '強化洞察觸發率',
       highStandardDescription: '輸入強化洞察在提煉後出現的假設機率。',
       brazenTitle: '大膽提煉分布',
-      brazenShortDescription: '設定大膽提煉可能落在哪些倍率。',
+      brazenShortDescription: '選擇大膽提煉的機率分布曲線，系統會搭配精細程度換算成研究用機率資料。',
       brazenDescription: '用離散 bucket 描述大膽提煉倍率與機率。這是研究假設，不代表官方分布。',
       distribution: '分布',
+      curveLabel: '機率分布曲線',
+      granularityLabel: '大膽提煉精細程度',
+      granularityOption: '{count} 檔',
+      granularityHint: '越精細，分析時的大膽提煉分支會越多。',
+      curves: {
+        uniform: {
+          label: '均勻分布',
+          description: '每個倍率同機率。'
+        },
+        triangular: {
+          label: '三角分布',
+          description: '中間較常見，兩端較少。'
+        },
+        normal: {
+          label: '常態分布',
+          description: '鐘形曲線近似。'
+        },
+        skewLow: {
+          label: '偏低分布',
+          description: '低倍率較常見。'
+        },
+        skewHigh: {
+          label: '偏高分布',
+          description: '高倍率較常見。'
+        },
+        uShape: {
+          label: 'U 型分布',
+          description: '兩端較常見，中間較少。'
+        }
+      },
       editBrazen: '編輯分布',
       bucketCount: '檔數',
       totalRate: '總機率',
@@ -1096,7 +1126,7 @@ export default {
     treeKicker: '決策樹覆蓋',
     treeTitle: '目前展開狀態',
     loadingBaseValues: '正在載入收藏品基礎值。',
-    calculatingTree: '正在展開策略樹，畫面會保持可操作。',
+    calculatingTree: '正在展開策略樹，請稍候。',
     collectableLevelLockedTitle: '收藏品採集尚未開放',
     collectableLevelLockedDesc: '收藏品採集需要等級 {level}。目前等級不足時，實驗區不會展開決策樹或執行分析。',
     actionLevelRequirement: '需要等級 {level}',
@@ -1214,6 +1244,7 @@ export default {
       effectPreviewUnavailable: '此技能在目前展開節點中不會被施展。',
       appliedStateRange: '套用後節點狀態範圍',
       appliedStateRangeDescription: '只統計這條策略目前納管的節點；會反覆套用本策略，直到狀態不再納管或分支結束。',
+      appliedStateRangeLimited: '這條策略的分支很多，這裡先顯示目前可整理的狀態範圍。',
       appliedCompleteBranches: 'Complete：{complete}/{total} 分支',
       appliedAllComplete: '所有分支都已結束',
       effectMetrics: {

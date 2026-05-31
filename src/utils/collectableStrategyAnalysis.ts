@@ -314,23 +314,11 @@ function buildOutcomeDistribution(
     }));
   }
 
-  const entries = new Map<string, CollectableStrategyScoreDistributionEntry>();
-  details.forEach((detail) => {
-    const key = outcomeDetailKey(detail.score, detail.tierCounts);
-    const current = entries.get(key);
-    entries.set(key, {
-      score: detail.score,
-      probability: (current?.probability ?? 0) + detail.probability * 100,
-      tierCounts: { ...detail.tierCounts }
-    });
-  });
-
-  return [...entries.values()].sort((left, right) => (
-    left.score - right.score
-      || (left.tierCounts?.high ?? 0) - (right.tierCounts?.high ?? 0)
-      || (left.tierCounts?.mid ?? 0) - (right.tierCounts?.mid ?? 0)
-      || (left.tierCounts?.low ?? 0) - (right.tierCounts?.low ?? 0)
-  ));
+  return [...outcomes.keys()].sort((left, right) => left - right).map((score) => ({
+    score,
+    probability: (outcomes.get(score) ?? 0) * 100,
+    tierCounts: representativeTierCountsForScore(details, score, 'max')
+  }));
 }
 
 function representativeTierCountsForScore(
@@ -341,20 +329,22 @@ function representativeTierCountsForScore(
   const matches = [...details.values()].filter((detail) => detail.score === score);
   if (matches.length === 0) return createZeroTierCounts();
 
-  return matches.sort((left, right) => {
-    if (right.probability !== left.probability) return right.probability - left.probability;
-    const highDiff = direction === 'max'
-      ? right.tierCounts.high - left.tierCounts.high
-      : left.tierCounts.high - right.tierCounts.high;
-    if (highDiff !== 0) return highDiff;
-    const midDiff = direction === 'max'
-      ? right.tierCounts.mid - left.tierCounts.mid
-      : left.tierCounts.mid - right.tierCounts.mid;
-    if (midDiff !== 0) return midDiff;
-    return direction === 'max'
-      ? right.tierCounts.low - left.tierCounts.low
-      : left.tierCounts.low - right.tierCounts.low;
-  })[0].tierCounts;
+  return {
+    ...matches.sort((left, right) => {
+      if (right.probability !== left.probability) return right.probability - left.probability;
+      const highDiff = direction === 'max'
+        ? right.tierCounts.high - left.tierCounts.high
+        : left.tierCounts.high - right.tierCounts.high;
+      if (highDiff !== 0) return highDiff;
+      const midDiff = direction === 'max'
+        ? right.tierCounts.mid - left.tierCounts.mid
+        : left.tierCounts.mid - right.tierCounts.mid;
+      if (midDiff !== 0) return midDiff;
+      return direction === 'max'
+        ? right.tierCounts.low - left.tierCounts.low
+        : left.tierCounts.low - right.tierCounts.low;
+    })[0].tierCounts
+  };
 }
 
 function outcomeDetailKey(score: number, tierCounts: CollectableTierCounts) {

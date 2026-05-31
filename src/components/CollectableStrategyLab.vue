@@ -40,7 +40,7 @@ import {
   createDefaultCollectableStrategyRules,
   createSimpleCollectableStrategyRules,
   isNumericStrategyField,
-  summarizeAppliedRuleOutcome,
+  summarizeAppliedRuleOutcomeAsync,
   type CollectableStrategyCondition,
   type CollectableStrategyComparator,
   type CollectableStrategyField,
@@ -67,7 +67,8 @@ import {
   isTierCountObjective
 } from '../utils/collectableObjectivePresets';
 import {
-  buildCollectableActionEffectPreviews,
+  buildCollectableActionEffectPreviewsAsync,
+  type CollectableActionEffectPreview,
   type CollectableEffectMetric
 } from '../utils/collectableActionEffectPreview';
 import { createCollectableMechanicsContext, MIN_COLLECTABLE_LEVEL, type CollectableMechanicsContext } from '../utils/collectableMechanics';
@@ -78,7 +79,7 @@ import {
   clampIntegerInput,
   normalizeCollectableObjective
 } from '../config/inputLimits';
-import { isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeScheduler';
+import { createCooperativeScheduler, isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeScheduler';
 import {
   buildCollectableExperimentJsonExport,
   buildJsonExportFileName,
@@ -152,11 +153,14 @@ const isDecisionTreeExported = ref(false);
 const isDecisionTreeExporting = ref(false);
 const treeResult = ref<CollectableStrategyTreeResult | null>(null);
 const editorFrontierTreeResult = ref<CollectableStrategyTreeResult | null>(null);
+const actionEffectPreviews = ref<CollectableActionEffectPreview[]>([]);
+const appliedRuleOutcome = ref<CollectableStrategyRuleApplicationSummary>(createEmptyAppliedRuleOutcome());
 const isTreeBuilding = ref(false);
 const isEditorFrontierBuilding = ref(false);
+const isEditorPreviewBuilding = ref(false);
 const isAnalysisRunning = ref(false);
-const internalMaxNodes = 1200;
 const tierCountVisibilityEpsilon = 0.000001;
+const appliedRulePreviewStateLimit = 10000;
 const compactPathHiddenBranchKeys = new Set([
   'collectableSolver.branches.standardProc',
   'collectableSolver.branches.standardNoProc',
@@ -173,9 +177,11 @@ let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let decisionTreeExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let treeBuildAbort: AbortController | null = null;
 let editorBuildAbort: AbortController | null = null;
+let editorPreviewAbort: AbortController | null = null;
 let analysisAbort: AbortController | null = null;
 let treeBuildSequence = 0;
 let editorBuildSequence = 0;
+let editorPreviewSequence = 0;
 let analysisSequence = 0;
 const strategyConditionValueLimits: Record<CollectableStrategyNumericField, { min: number; max: number }> = {
   gp: PLAYER_INPUT_LIMITS.gp,
@@ -201,7 +207,6 @@ function buildStrategyTreeRequest(strategyRules: CollectableStrategyRule[]): Col
     isTimedNode: props.activeItem.isTimedNode ?? false,
     hasRelicToolBonus: props.hasRelicToolBonus,
     rules: strategyRules,
-    maxNodes: internalMaxNodes,
     formatActionLabel: actionName,
     formatBranchLabel: (labelKeys) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
     formatPathStep: ({ ruleName, actionLabel, branchLabel, branchLabelKeys }) => formatCompactPathStep({
@@ -251,24 +256,6 @@ const editorCoverageText = computed(() => (
     : t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length })
 ));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
-const actionEffectPreviews = computed(() => {
-  if (isFrontierMode.value) return buildFrontierActionEffectPreviews();
-
-  return buildCollectableActionEffectPreviews({
-    actions: (editingRuleDraft.value?.actions ?? []).filter(isFormalCollectableAction),
-    states: managedNodes.value.map((node) => node.state),
-    mechanics: collectableMechanicsContext.value
-  });
-});
-const appliedRuleOutcome = computed(() => (
-  isFrontierMode.value
-    ? summarizeFrontierAppliedRuleOutcome()
-    : summarizeAppliedRuleOutcome(
-      editorFrontierTreeResult.value?.uncoveredNodes ?? [],
-      editingRuleDraft.value,
-      collectableMechanicsContext.value
-    )
-));
 const appliedRuleOpenStateSources = computed<ManagedOverviewSource[]>(() => (
   appliedRuleOutcome.value.openStates.map((state) => ({ state }))
 ));
@@ -425,12 +412,25 @@ watch(() => managedNodes.value.length, (length) => {
   if (managedNodeIndex.value >= length) managedNodeIndex.value = length - 1;
 });
 
+watch([
+  managedNodes,
+  editingRuleDraft,
+  () => isEditorFrontierBuilding.value,
+  () => ruleEditorView.value,
+  () => isFrontierMode.value,
+  () => props.frontierProbabilityProfile,
+  collectableMechanicsContext
+], () => {
+  rebuildEditorPreviews();
+}, { deep: true, immediate: true });
+
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
   if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
   if (decisionTreeExportTimer) window.clearTimeout(decisionTreeExportTimer);
   treeBuildAbort?.abort();
   editorBuildAbort?.abort();
+  editorPreviewAbort?.abort();
   analysisAbort?.abort();
 });
 
@@ -532,6 +532,75 @@ async function rebuildEditorFrontierTree() {
   }
 }
 
+async function rebuildEditorPreviews() {
+  editorPreviewAbort?.abort();
+  const sequence = editorPreviewSequence += 1;
+  const rule = editingRuleDraft.value;
+
+  if (!rule || ruleEditorView.value !== 'actions' || isEditorFrontierBuilding.value) {
+    actionEffectPreviews.value = [];
+    appliedRuleOutcome.value = createEmptyAppliedRuleOutcome();
+    isEditorPreviewBuilding.value = false;
+    return;
+  }
+
+  const nodes = managedNodes.value;
+  if (nodes.length === 0) {
+    actionEffectPreviews.value = [];
+    appliedRuleOutcome.value = createEmptyAppliedRuleOutcome();
+    isEditorPreviewBuilding.value = false;
+    return;
+  }
+
+  const controller = new AbortController();
+  editorPreviewAbort = controller;
+  actionEffectPreviews.value = [];
+  appliedRuleOutcome.value = createEmptyAppliedRuleOutcome();
+  isEditorPreviewBuilding.value = true;
+
+  try {
+    await nextTick();
+    await yieldToEventQueue();
+    const [effectPreviews, ruleOutcome] = isFrontierMode.value
+      ? await Promise.all([
+        buildFrontierActionEffectPreviewsAsync(controller.signal),
+        summarizeFrontierAppliedRuleOutcomeAsync(controller.signal)
+      ])
+      : await Promise.all([
+        buildCollectableActionEffectPreviewsAsync({
+          actions: (rule.actions ?? []).filter(isFormalCollectableAction),
+          states: nodes.map((node) => node.state),
+          mechanics: collectableMechanicsContext.value
+        }, {
+          signal: controller.signal,
+          yieldEvery: 80
+        }),
+        summarizeAppliedRuleOutcomeAsync(
+          editorFrontierTreeResult.value?.uncoveredNodes ?? [],
+          rule,
+          collectableMechanicsContext.value,
+          {
+            signal: controller.signal,
+            yieldEvery: 80
+          }
+        )
+      ]);
+
+    if (sequence === editorPreviewSequence && !controller.signal.aborted) {
+      actionEffectPreviews.value = effectPreviews;
+      appliedRuleOutcome.value = ruleOutcome;
+    }
+  } catch (error) {
+    if (!isCooperativeAbort(error)) {
+      console.error('Collectable editor preview build failed:', error);
+    }
+  } finally {
+    if (sequence === editorPreviewSequence) {
+      isEditorPreviewBuilding.value = false;
+    }
+  }
+}
+
 async function runAnalysis() {
   if (!canRunAnalysis.value || !treeResult.value?.root || !rewardTable.value) return;
 
@@ -614,7 +683,6 @@ function buildFrontierTreeRequest(strategyRules: CollectableStrategyRule[]): Fro
     hasRelicToolBonus: props.hasRelicToolBonus,
     probabilityProfile: clonePlain(props.frontierProbabilityProfile),
     strategy: strategyRules.map(toFrontierStrategyRule),
-    maxNodes: internalMaxNodes,
     formatActionLabel: actionName as any,
     formatBranchLabel: (labelKeys: string[]) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
     formatPathStep: ({ ruleName, actionLabel, branchLabel, branchLabelKeys }: { ruleName?: string; actionLabel: string; branchLabel: string; branchLabelKeys: string[] }) => formatCompactPathStep({
@@ -1623,6 +1691,15 @@ function createManagedOverviewMetrics(mechanics: CollectableMechanicsContext | n
   return metrics;
 }
 
+function createEmptyAppliedRuleOutcome(): CollectableStrategyRuleApplicationSummary {
+  return {
+    openStates: [],
+    completeBranches: 0,
+    totalBranches: 0,
+    limited: false
+  };
+}
+
 function buildUncoveredStateGroups(nodes: CollectableStrategyNode[], mechanics: CollectableMechanicsContext | null) {
   const total = nodes.length;
   const metrics = createManagedOverviewMetrics(mechanics);
@@ -1792,39 +1869,53 @@ function formatEffectMetric(action: CollectableActionKind, metric: CollectableEf
   return '';
 }
 
-function buildFrontierActionEffectPreviews() {
+async function buildFrontierActionEffectPreviewsAsync(signal?: AbortSignal): Promise<CollectableActionEffectPreview[]> {
   const request = buildFrontierTreeRequest([]);
   if (!request) return [];
 
+  const scheduler = createCooperativeScheduler({ signal, yieldEvery: 80 });
   const context = createFrontierCollectableContext(request);
   let currentStates = uniqueFrontierStates(
     managedNodes.value
       .map(frontierStateFromNode)
       .filter((state): state is FrontierCollectableState => !!state)
   );
+  const previews: CollectableActionEffectPreview[] = [];
 
-  return (editingRuleDraft.value?.actions ?? []).map((action) => {
+  await scheduler.yieldNow();
+  for (const action of editingRuleDraft.value?.actions ?? []) {
+    await scheduler.step();
     const frontierAction = action as FrontierCollectableStrategyRule['actions'][number];
-    const castableStates = currentStates.filter((state) => (
-      canUseFrontierCollectableAction(frontierAction, state, context)
-    ));
-    const transitions = castableStates.flatMap((state) => (
-      applyFrontierCollectableAction(frontierAction, state, context).map((transition) => ({
-        before: state,
-        after: transition.state
-      }))
-    ));
-    const preview = {
+    const castableStates: FrontierCollectableState[] = [];
+    for (const state of currentStates) {
+      await scheduler.step();
+      if (canUseFrontierCollectableAction(frontierAction, state, context)) {
+        castableStates.push(state);
+      }
+    }
+
+    const transitions: Array<{ before: FrontierCollectableState; after: FrontierCollectableState }> = [];
+    for (const state of castableStates) {
+      await scheduler.step();
+      applyFrontierCollectableAction(frontierAction, state, context).forEach((transition) => {
+        transitions.push({
+          before: state,
+          after: transition.state
+        });
+      });
+    }
+
+    previews.push({
       action: frontierAction as CollectableActionKind,
       sourceStateCount: currentStates.length,
       castableStateCount: castableStates.length,
       metrics: buildFrontierEffectMetrics(frontierAction, castableStates, transitions, context)
-    };
+    });
 
     currentStates = uniqueFrontierStates(transitions.map((transition) => transition.after));
+  }
 
-    return preview;
-  });
+  return previews;
 }
 
 function buildFrontierEffectMetrics(
@@ -1915,79 +2006,118 @@ function collectMatchingFrontierUncoveredStrategyNodes(
   });
 }
 
-function summarizeFrontierAppliedRuleOutcome(): CollectableStrategyRuleApplicationSummary {
+async function summarizeFrontierAppliedRuleOutcomeAsync(signal?: AbortSignal): Promise<CollectableStrategyRuleApplicationSummary> {
   const request = buildFrontierTreeRequest([]);
   const rule = editingRuleDraft.value;
   if (!request || !rule?.enabled) {
-    return {
-      openStates: [],
-      completeBranches: 0,
-      totalBranches: 0,
-      limited: false
-    };
+    return createEmptyAppliedRuleOutcome();
   }
 
+  const scheduler = createCooperativeScheduler({ signal, yieldEvery: 80 });
   const context = createFrontierCollectableContext(request);
   const frontierRule = toFrontierStrategyRule(rule);
-  const matchedStates = managedNodes.value
-    .map(frontierStateFromNode)
-    .filter((state): state is FrontierCollectableState => !!state);
-  const endpointStates = matchedStates.flatMap((state) => (
-    applyFrontierRuleUntilUnmanaged(state, frontierRule, context)
-  ));
+  const matchedStates: FrontierCollectableState[] = [];
+  const endpointStates: FrontierCollectableState[] = [];
+  let limited = false;
+
+  await scheduler.yieldNow();
+  for (const node of managedNodes.value) {
+    await scheduler.step();
+    const state = frontierStateFromNode(node);
+    if (state) matchedStates.push(state);
+  }
+
+  for (const state of matchedStates) {
+    await scheduler.step();
+    const result = await applyFrontierRuleUntilUnmanagedAsync(state, frontierRule, context, scheduler);
+    endpointStates.push(...result.states);
+    limited = limited || result.limited;
+    if (limited) break;
+  }
 
   return {
     openStates: uniqueFrontierStates(endpointStates.filter((state) => state.integrity > 0))
       .map((state) => toFrontierDisplayState(state) as any),
     completeBranches: endpointStates.filter((state) => state.integrity <= 0).length,
     totalBranches: endpointStates.length,
-    limited: false
+    limited
   };
 }
 
-function applyFrontierRuleUntilUnmanaged(
+async function applyFrontierRuleUntilUnmanagedAsync(
   state: FrontierCollectableState,
   rule: FrontierCollectableStrategyRule,
-  context: ReturnType<typeof createFrontierCollectableContext>
-): FrontierCollectableState[] {
+  context: ReturnType<typeof createFrontierCollectableContext>,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<{ states: FrontierCollectableState[]; limited: boolean }> {
   const endpoints: FrontierCollectableState[] = [];
+  const stack = [state];
+  const seen = new Set<string>();
+  let limited = false;
 
-  function walk(currentState: FrontierCollectableState) {
-    if (currentState.integrity <= 0 || !matchesFrontierCollectableStrategyRule(rule, currentState)) {
+  while (stack.length > 0) {
+    await scheduler.step();
+    const currentState = stack.pop()!;
+    const currentKey = frontierCollectableStateKey(currentState);
+    if (seen.has(currentKey)) continue;
+    seen.add(currentKey);
+
+    if (seen.size > appliedRulePreviewStateLimit) {
+      limited = true;
       endpoints.push(currentState);
-      return;
+      break;
     }
 
-    const nextStates = applyFrontierActionChain(currentState, rule.actions, context);
+    if (currentState.integrity <= 0 || !matchesFrontierCollectableStrategyRule(rule, currentState)) {
+      endpoints.push(currentState);
+      continue;
+    }
+
+    const nextStates = await applyFrontierActionChainAsync(currentState, rule.actions, context, scheduler);
     const didAdvance = nextStates.some((nextState) => (
       frontierCollectableStateKey(nextState) !== frontierCollectableStateKey(currentState)
     ));
     if (!didAdvance) {
       endpoints.push(currentState);
-      return;
+      continue;
     }
 
-    nextStates.forEach(walk);
+    stack.push(...nextStates);
   }
 
-  walk(state);
-  return endpoints;
+  return { states: endpoints, limited };
 }
 
-function applyFrontierActionChain(
+async function applyFrontierActionChainAsync(
   state: FrontierCollectableState,
   actions: FrontierCollectableStrategyRule['actions'],
-  context: ReturnType<typeof createFrontierCollectableContext>
-): FrontierCollectableState[] {
-  return actions.reduce<FrontierCollectableState[]>((states, action) => (
-    states.flatMap((currentState) => {
-      if (currentState.integrity <= 0) return [currentState];
-      if (!canUseFrontierCollectableAction(action, currentState, context)) return [currentState];
+  context: ReturnType<typeof createFrontierCollectableContext>,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<FrontierCollectableState[]> {
+  let states = [state];
 
-      return applyFrontierCollectableAction(action, currentState, context)
-        .map((transition) => transition.state);
-    })
-  ), [state]);
+  for (const action of actions) {
+    await scheduler.step();
+    const nextStates: FrontierCollectableState[] = [];
+    for (const currentState of states) {
+      await scheduler.step();
+      if (currentState.integrity <= 0) {
+        nextStates.push(currentState);
+        continue;
+      }
+      if (!canUseFrontierCollectableAction(action, currentState, context)) {
+        nextStates.push(currentState);
+        continue;
+      }
+
+      applyFrontierCollectableAction(action, currentState, context).forEach((transition) => {
+        nextStates.push(transition.state);
+      });
+    }
+    states = nextStates;
+  }
+
+  return states;
 }
 
 function frontierStateFromNode(node: CollectableStrategyNode): FrontierCollectableState | null {
@@ -2853,7 +2983,7 @@ function makeId() {
                   <span>{{ t('collectableStrategyLab.editor.effectPreview') }}</span>
                 </div>
                 <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.effectPreviewDescription') }}</p>
-                <p v-if="isEditorFrontierBuilding" class="effect-preview-empty">
+                <p v-if="isEditorFrontierBuilding || isEditorPreviewBuilding" class="effect-preview-empty">
                   <i class="pi pi-spinner pi-spin"></i>
                   {{ t('collectableStrategyLab.editor.calculatingNodes') }}
                 </p>
@@ -2895,7 +3025,7 @@ function makeId() {
                     <span>{{ t('collectableStrategyLab.editor.appliedStateRange') }}</span>
                   </span>
                   <span
-                    v-if="managedNodes.length > 0"
+                    v-if="managedNodes.length > 0 && !isEditorFrontierBuilding && !isEditorPreviewBuilding"
                     class="applied-branch-badge"
                     :class="{ 'is-complete': appliedRuleOutcome.openStates.length === 0 }"
                   >
@@ -2907,7 +3037,10 @@ function makeId() {
                   </span>
                 </div>
                 <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.appliedStateRangeDescription') }}</p>
-                <p v-if="isEditorFrontierBuilding" class="effect-preview-empty">
+                <p v-if="appliedRuleOutcome.limited" class="limit-warning compact">
+                  {{ t('collectableStrategyLab.editor.appliedStateRangeLimited') }}
+                </p>
+                <p v-if="isEditorFrontierBuilding || isEditorPreviewBuilding" class="effect-preview-empty">
                   <i class="pi pi-spinner pi-spin"></i>
                   {{ t('collectableStrategyLab.editor.calculatingNodes') }}
                 </p>

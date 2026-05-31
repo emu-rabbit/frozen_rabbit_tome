@@ -56,6 +56,8 @@ export interface CollectableStrategyRule {
 
 export type CollectableExperimentState = CollectableMechanicsState;
 
+const appliedRulePreviewStateLimit = 10000;
+
 export interface CollectableStrategyBranch {
   label: string;
   labelKeys: string[];
@@ -239,7 +241,7 @@ export function buildCollectableStrategyTree(request: CollectableStrategyBuildRe
   const context: BuildContext = {
     mechanics,
     rules: request.rules.filter((rule) => rule.enabled),
-    maxNodes: request.maxNodes ?? 1200,
+    maxNodes: request.maxNodes ?? Number.POSITIVE_INFINITY,
     nodeCache: new Map(),
     limited: false,
     uncoveredNodes: [],
@@ -314,7 +316,7 @@ export async function buildCollectableStrategyTreeAsync(
   const context: AsyncBuildContext = {
     mechanics,
     rules: request.rules.filter((rule) => rule.enabled),
-    maxNodes: request.maxNodes ?? 1200,
+    maxNodes: request.maxNodes ?? Number.POSITIVE_INFINITY,
     nodeCache: new Map(),
     limited: false,
     uncoveredNodes: [],
@@ -340,6 +342,50 @@ export async function buildCollectableStrategyTreeAsync(
     summary: context.summary,
     uncoveredNodes: context.uncoveredNodes,
     limited: context.limited
+  };
+}
+
+export async function summarizeAppliedRuleOutcomeAsync(
+  nodes: CollectableStrategyNode[],
+  rule: CollectableStrategyRule | null | undefined,
+  mechanics: CollectableMechanicsContext | null | undefined,
+  options: CooperativeSchedulerOptions = {}
+): Promise<CollectableStrategyRuleApplicationSummary> {
+  if (!rule?.enabled || !mechanics) {
+    return {
+      openStates: [],
+      completeBranches: 0,
+      totalBranches: 0,
+      limited: false
+    };
+  }
+
+  const scheduler = createCooperativeScheduler(options);
+  await scheduler.yieldNow();
+
+  const matchedNodes: CollectableStrategyNode[] = [];
+  for (const node of nodes) {
+    await scheduler.step();
+    if (node.status === 'uncovered' && matchesRule(rule, node.state)) {
+      matchedNodes.push(node);
+    }
+  }
+
+  const endpointStates: CollectableExperimentState[] = [];
+  let limited = false;
+  for (const node of matchedNodes) {
+    await scheduler.step();
+    const result = await applyRuleUntilUnmanagedAsync(node.state, rule, mechanics, scheduler);
+    endpointStates.push(...result.states);
+    limited = limited || result.limited;
+    if (limited) break;
+  }
+
+  return {
+    openStates: uniqueCollectableStates(endpointStates.filter((state) => state.integrity > 0)),
+    completeBranches: endpointStates.filter((state) => state.integrity <= 0).length,
+    totalBranches: endpointStates.length,
+    limited
   };
 }
 
@@ -623,6 +669,80 @@ function applyRuleUntilUnmanaged(
 
   walk(state);
   return endpoints;
+}
+
+async function applyRuleUntilUnmanagedAsync(
+  state: CollectableExperimentState,
+  rule: CollectableStrategyRule,
+  mechanics: CollectableMechanicsContext,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<{ states: CollectableExperimentState[]; limited: boolean }> {
+  const endpoints: CollectableExperimentState[] = [];
+  const stack = [state];
+  const seen = new Set<string>();
+  let limited = false;
+
+  while (stack.length > 0) {
+    await scheduler.step();
+    const currentState = stack.pop()!;
+    const currentKey = collectableStateKey(currentState);
+    if (seen.has(currentKey)) continue;
+    seen.add(currentKey);
+
+    if (seen.size > appliedRulePreviewStateLimit) {
+      limited = true;
+      endpoints.push(currentState);
+      break;
+    }
+
+    if (currentState.integrity <= 0 || !matchesRule(rule, currentState)) {
+      endpoints.push(currentState);
+      continue;
+    }
+
+    const nextStates = await applyRuleActionChainAsync(currentState, rule.actions, mechanics, scheduler);
+    const didAdvance = nextStates.some((nextState) => collectableStateKey(nextState) !== collectableStateKey(currentState));
+    if (!didAdvance) {
+      endpoints.push(currentState);
+      continue;
+    }
+
+    stack.push(...nextStates);
+  }
+
+  return { states: endpoints, limited };
+}
+
+async function applyRuleActionChainAsync(
+  state: CollectableExperimentState,
+  actions: CollectableActionKind[],
+  mechanics: CollectableMechanicsContext,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<CollectableExperimentState[]> {
+  let states = [state];
+
+  for (const action of actions) {
+    await scheduler.step();
+    const nextStates: CollectableExperimentState[] = [];
+    for (const currentState of states) {
+      await scheduler.step();
+      if (currentState.integrity <= 0) {
+        nextStates.push(currentState);
+        continue;
+      }
+      if (!canUseCollectableAction(action, currentState, mechanics)) {
+        nextStates.push(currentState);
+        continue;
+      }
+
+      applyCollectableAction(action, currentState, mechanics).forEach((transition) => {
+        nextStates.push(transition.state);
+      });
+    }
+    states = nextStates;
+  }
+
+  return states;
 }
 
 function uniqueCollectableStates(states: CollectableExperimentState[]): CollectableExperimentState[] {

@@ -27,8 +27,8 @@ describe('modelVersions', () => {
     expect(buildModelVersionsForScenario('experiment.collectable')).toEqual({
       exportSchema: 1,
       app: TOME_MODEL_VERSION_CATALOG.app.version,
-      collectableSimulator: 'collectable-simulator-v1',
-      collectableAnalyzer: 'collectable-analyzer-v1'
+      collectableSimulator: 'collectable-simulator-v2',
+      collectableAnalyzer: 'collectable-analyzer-v2'
     });
   });
 

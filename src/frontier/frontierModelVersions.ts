@@ -24,15 +24,15 @@ export const FRONTIER_MODEL_VERSION_CATALOG = {
   },
   frontierCollectableSimulator: {
     key: 'frontierCollectableSimulator',
-    version: 'frontier-collectable-simulator-v1'
+    version: 'frontier-collectable-simulator-v2'
   },
   frontierCollectableAnalyzer: {
     key: 'frontierCollectableAnalyzer',
-    version: 'frontier-collectable-analyzer-v1'
+    version: 'frontier-collectable-analyzer-v2'
   },
   frontierCollectableProbabilityProfile: {
     key: 'frontierCollectableProbabilityProfile',
-    version: 'frontier-collectable-probability-profile-v1'
+    version: 'frontier-collectable-probability-profile-v2'
   }
 } as const satisfies Record<FrontierModelVersionKey, { key: FrontierModelVersionKey; version: string | number }>;
 
