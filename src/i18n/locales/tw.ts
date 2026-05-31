@@ -180,7 +180,7 @@ export default {
       highStandardRate: '強化洞察觸發率',
       highStandardDescription: '輸入強化洞察在提煉後出現的假設機率。',
       brazenTitle: '大膽提煉分布',
-      brazenShortDescription: '選擇大膽提煉的機率分布曲線，系統會搭配精細程度換算成研究用機率資料。',
+      brazenShortDescription: '選擇大膽提煉的機率分布曲線。',
       brazenDescription: '用離散 bucket 描述大膽提煉倍率與機率。這是研究假設，不代表官方分布。',
       distribution: '分布',
       curveLabel: '機率分布曲線',

@@ -179,7 +179,7 @@ export default {
       highStandardRate: '强化洞察触发率',
       highStandardDescription: '输入强化洞察在提炼后出现的假设概率。',
       brazenTitle: '大胆提炼分布',
-      brazenShortDescription: '选择大胆提炼的概率分布曲线，系统会搭配精细程度换算成研究用概率数据。',
+      brazenShortDescription: '选择大胆提炼的概率分布曲线。',
       brazenDescription: '用离散 bucket 描述大胆提炼倍率与概率。这是研究假设，不代表官方分布。',
       distribution: '分布',
       curveLabel: '概率分布曲线',

@@ -179,7 +179,7 @@ export default {
       highStandardRate: 'High Standard proc rate',
       highStandardDescription: 'Set the assumed chance that High Standard appears after refining.',
       brazenTitle: 'Brazen Distribution',
-      brazenShortDescription: 'Choose the Brazen probability curve. The selected precision is used to generate the research probability data.',
+      brazenShortDescription: 'Choose the Brazen probability curve.',
       brazenDescription: 'Describe Brazen as discrete multiplier and probability buckets. This is a research assumption, not an official distribution.',
       distribution: 'Distribution',
       curveLabel: 'Probability curve',

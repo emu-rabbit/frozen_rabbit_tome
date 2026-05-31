@@ -179,7 +179,7 @@ export default {
       highStandardRate: '強化洞察発生率',
       highStandardDescription: '純化後に強化洞察が出る仮定確率を入力します。',
       brazenTitle: '大胆純化の分布',
-      brazenShortDescription: '大胆純化の確率分布曲線を選びます。選択中の精度と組み合わせて研究用の確率データを生成します。',
+      brazenShortDescription: '大胆純化の確率分布曲線を選びます。',
       brazenDescription: '大胆純化の倍率と確率を離散 bucket で表します。これは研究仮定であり、公式分布ではありません。',
       distribution: '分布',
       curveLabel: '確率分布曲線',
