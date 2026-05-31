@@ -64,7 +64,7 @@ Phase 1 與 Phase 2 的第一版 domain / engine 骨架已完成，尚未等於�
 
 已完成：
 
-- 新增獨立 Frontier model version catalog：`src/frontier/frontierModelVersions.ts`。
+- Frontier model version 第一版曾放在 `src/frontier/frontierModelVersions.ts`；2026-05-31 已改為併入 `src/config/modelVersions.ts` 的 scenario-aware catalog。
 - 新增開拓收藏品 domain 型別：`src/frontier/collectable/frontierCollectableTypes.ts`。
 - 新增 `probabilityProfile` helper 與驗證：`frontierCollectableProbabilityProfile.ts`。
 - 新增開拓專用 action definition：`frontierCollectableActions.ts`，包含 `brazen`，但不污染正式 `CollectableActionKind`。
@@ -88,7 +88,7 @@ Phase 2 engine 現況：
 
 測試 / 驗證：
 
-- `npm run test:unit -- src/frontier/frontierModelVersions.test.ts src/frontier/collectable/frontierCollectableProbabilityProfile.test.ts src/frontier/collectable/frontierCollectableSimulator.test.ts` 通過。
+- `npm run test:unit -- src/config/modelVersions.test.ts src/frontier/collectable/frontierCollectableProbabilityProfile.test.ts src/frontier/collectable/frontierCollectableSimulator.test.ts` 通過。
 - `npm run test:unit` 通過。
 - `npm run build` 通過。
 - 使用 Playwright 檢查本機 `/#/frontier`：設定開啟後可看到開拓頁與 bucket editor，5 個預設 bucket 產生 10 個數字輸入，總機率顯示 100%，頁面 body 未出現使用者要求避免的 `Frontier` 對外字樣。
@@ -97,7 +97,7 @@ Phase 2 engine 現況：
 
 - 目前開拓頁只接了 Brazen bucket editor，尚未接物品搜尋、模型選擇、策略編輯器、分析按鈕、結果圖表、保存 / 再開啟或完整匯入流程。
 - 若要把 `frontierCollectableSimulator.ts` 接進 UI，應先建立研究台 request 組裝層，從 item runtime data hydrate base values / reward table，而不是要求使用者手填 runtime 欄位。
-- 若新增或破壞 Frontier JSON / storage schema，必須更新 `frontierModelVersions.ts` 對應版本與測試。
+- 若新增或破壞 Frontier JSON / storage schema，必須更新 `src/config/modelVersions.ts` 中對應的開拓 scenario 版本與測試；storage schema 可維持 Frontier 研究案例內部版本，不作為對外 model version。
 - 若修改正式 collectable math / mechanics / solver 路徑，仍需依 `AGENTS.md` 同步檢查正式 scenario-aware model versions 與 TS/WASM 邊界。
 
 ## 目前已決策
@@ -141,7 +141,7 @@ Frontier 是研究沙盒。它延續已確認的收藏品採集邏輯，並讓�
 
 Frontier 第一階段的硬邊界不是「重寫一份完全不同的收藏品模型」，而是「不要把研究假設污染正式秘笈 / 實驗模型」。後續實作必須遵守：
 
-- Frontier 的 route、UI 入口、localStorage key、JSON scenario、schema 與 model version 應獨立於 `tome.collectable` 與 `experiment.collectable`。
+- Frontier 的 route、UI 入口、localStorage key、JSON scenario 與 engine 型別應獨立於 `tome.collectable` 與 `experiment.collectable`。JSON export schema 與 app version 共用正式 catalog 的 `exportSchema` / `app`；開拓模型版本則併入 `src/config/modelVersions.ts`，但使用自己的 runner-facing simulator / analyzer key。
 - Frontier engine request / result 型別應有自己的命名與 schema，不直接把正式 `CollectableSolverRequest`、`CollectableSolverResult`、`CollectableStrategyBuildRequest` 或現有儲存型別當成 Frontier 對外資料格式。
 - 已確認的收藏品公式與狀態轉移應盡量共用或抽出可共用 helper，確保 Frontier 與既有收藏品實驗在 `Brazen` / `High Standard` 以外的行為一致。
 - 若暫時需要複製既有公式或狀態邏輯，必須在 Frontier 檔案註明來源，並用 Frontier 專用測試與現有收藏品測試守住 parity；後續若正式模型修正同一段已知邏輯，也要同步檢查 Frontier。
@@ -152,7 +152,7 @@ Frontier 第一階段的硬邊界不是「重寫一份完全不同的收藏品�
 
 - `src/utils/collectableMath.ts` 的已確認公式可以直接共用，或先抽成更清楚的 shared helper。
 - `src/utils/collectableMechanics.ts`、`src/utils/collectableStrategyTree.ts`、`src/utils/collectableStrategyAnalysis.ts` 的行為可作為單點採集實驗 parity 來源；若直接共用內部 helper，必須先確認不會把 Frontier-only action / state 寫回正式模型路徑。
-- 現有收藏品 UI、策略台、JSON export / import、storage 與測試案例可作為實作參考，但 Frontier 的研究假設、版本與保存區域要獨立。
+- 現有收藏品 UI、策略台、JSON export / import、storage 與測試案例可作為實作參考，但 Frontier 的研究假設與保存區域要獨立；對外模型版本總覽仍由共用 catalog 呈現。
 
 ## 建議檔案架構
 
@@ -206,29 +206,23 @@ src/components/frontier/FrontierAnalysisPanel.vue
 
 ## Model version 與 schema
 
-Frontier 應新增獨立 model version catalog，不要讓 Frontier 直接塞進目前四個正式 scenario：
+Frontier model version 現行策略是併入 `src/config/modelVersions.ts` 的共用 scenario-aware catalog，不再另建 `src/frontier/frontierModelVersions.ts`。Frontier 匯出功能共用 `exportSchema` 與 `app`，開拓模型自身只維護 runner-facing 的模擬器與分析器版本。
 
-目前正式 scenario 是：
+目前正式與開拓 scenario 是：
 
 - `tome.regular`
 - `tome.collectable`
 - `experiment.regular`
 - `experiment.collectable`
-
-Frontier 建議新增：
-
 - `frontier.collectable`
-- `frontierCollectableSchema`
-- `frontierCollectableSimulator`
-- `frontierCollectableAnalyzer`
-- `frontierCollectableProbabilityProfile`
 
-實作方式可選：
+Frontier 第一個對外模型是：
 
-1. 擴充 `src/config/modelVersions.ts`，讓 `TomeModelScenario` 包含 `frontier.collectable`，但 Frontier keys 與正式 keys 清楚分離。
-2. 另建 `src/frontier/frontierModelVersions.ts`，由 Frontier export/storage 使用。
+- `黃金遺產收藏品模型`
+- `dawntrailCollectableSimulator`
+- `dawntrailCollectableAnalyzer`
 
-若採第 1 種，要同步檢查 stale-card 比較邏輯，避免正式 Tome Library / Experiment Database 因 Frontier 版本變動被誤判 stale。若採第 2 種，JSON export 仍應包含 app version、Frontier schema 與 Frontier model versions。
+不要再新增 `frontierCollectableSchema` 或 `frontierCollectableProbabilityProfile` 作為 model version。若將來開拓新增其他模型，即使同樣是收藏品相關，也應新增更明確的模型 key，而不是把所有收藏品研究塞回 generic `frontierCollectable*` 命名。
 
 ## Frontier 專用資料模型
 
@@ -585,4 +579,4 @@ manifest limitations 建議至少包含：
 
 若只新增文件，不需 bump `src/config/modelVersions.ts`。
 
-若新增 Frontier engine、分析模型、JSON schema 或 storage schema，需要新增或更新 Frontier 專用版本。若改到正式 solver / simulator / analyzer / collectable math / action model，才需要依 `AGENTS.md` 同步 bump 現有 scenario-aware model versions。
+若新增 Frontier engine、分析模型或會改變使用者可見分析結果的 schema，需要更新 `src/config/modelVersions.ts` 內對應的開拓 simulator / analyzer 版本。若只改 Frontier study storage shape，更新內部 storage schema 即可；若改到正式 solver / simulator / analyzer / collectable math / action model，才需要依 `AGENTS.md` 同步 bump 既有正式 scenario-aware model versions。

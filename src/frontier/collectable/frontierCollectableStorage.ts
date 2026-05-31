@@ -1,7 +1,6 @@
-import { FRONTIER_COLLECTABLE_SCHEMA_VERSION } from '../frontierModelVersions';
 import { computed, ref } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import type { FrontierCollectableStudy } from './frontierCollectableTypes';
+import { FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION, type FrontierCollectableStudy } from './frontierCollectableTypes';
 
 export const FRONTIER_COLLECTABLE_STUDIES_STORAGE_KEY = 'frozen-rabbit-tome-frontier-studies';
 const studies = useLocalStorage<FrontierCollectableStudy[]>(FRONTIER_COLLECTABLE_STUDIES_STORAGE_KEY, []);
@@ -17,7 +16,7 @@ export function normalizeFrontierCollectableStudy(study: FrontierCollectableStud
 
   return {
     ...study,
-    schemaVersion: FRONTIER_COLLECTABLE_SCHEMA_VERSION,
+    schemaVersion: FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION,
     kind: 'frontier.collectable',
     id: study.id || createFrontierCollectableStudyId(),
     createdAt: study.createdAt || now,
@@ -58,7 +57,7 @@ export function useFrontierCollectableStudies() {
     const now = new Date().toISOString();
     return saveStudy({
       ...payload,
-      schemaVersion: FRONTIER_COLLECTABLE_SCHEMA_VERSION,
+      schemaVersion: FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION,
       kind: 'frontier.collectable',
       id: payload.id || createFrontierCollectableStudyId(),
       createdAt: payload.createdAt || now,

@@ -53,4 +53,17 @@ describe('modelVersionStatus', () => {
       regularSimulator: 'regular-simulator-v1'
     })).toBe(true);
   });
+
+  it('checks Dawntrail collectable simulator and analyzer versions for Frontier snapshots', () => {
+    expect(isModelVersionSnapshotStale('frontier.collectable', {
+      ...buildModelVersionsForScenario('frontier.collectable'),
+      exportSchema: 0,
+      app: '0.9.1'
+    })).toBe(false);
+
+    expect(isModelVersionSnapshotStale('frontier.collectable', {
+      ...buildModelVersionsForScenario('frontier.collectable'),
+      dawntrailCollectableAnalyzer: 'dawntrail-collectable-analyzer-v1'
+    })).toBe(true);
+  });
 });

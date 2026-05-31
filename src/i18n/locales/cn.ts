@@ -573,7 +573,7 @@ export default {
     version: '版本 {v}',
     latest: '最新',
     currentModelVersionsTitle: '当前模型版本',
-    currentModelVersionsDescription: '目前秘籍与实验会写入结果、藏书库快照与 JSON 导出的版本来源。',
+    currentModelVersionsDescription: '目前秘籍、实验与已启用的开拓功能会写入结果、快照与 JSON 导出的版本来源。',
     currentModelVersionsSummary: '{count} 个版本',
     modelVersionsButton: '查看当前模型版本',
     modelVersionsClose: '关闭模型版本窗口',
@@ -583,6 +583,7 @@ export default {
       tomeSolver: '秘籍推荐求解器',
       experimentSimulator: '实验模拟器',
       experimentAnalyzer: '实验分析器',
+      frontierResearch: '开拓研究',
       strategyCodec: '决策树/策略表无损转换'
     },
     modelVersionKeys: {
@@ -594,7 +595,9 @@ export default {
       regularAnalyzer: '一般采集分析模型',
       collectableSimulator: '收藏品策略模拟模型',
       collectableAnalyzer: '收藏品策略分析模型',
-      collectableStrategyCodec: '收藏品策略 codec'
+      collectableStrategyCodec: '收藏品策略 codec',
+      dawntrailCollectableSimulator: '黄金遗产收藏品模型（模拟器）',
+      dawntrailCollectableAnalyzer: '黄金遗产收藏品模型（分析器）'
     }
   },
   solver: {

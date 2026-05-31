@@ -9,7 +9,8 @@ const STALE_COMPARISON_KEYS = {
   'tome.regular': ['regularSolver'],
   'tome.collectable': ['collectableSolver'],
   'experiment.regular': ['regularSimulator', 'regularAnalyzer'],
-  'experiment.collectable': ['collectableSimulator', 'collectableAnalyzer']
+  'experiment.collectable': ['collectableSimulator', 'collectableAnalyzer'],
+  'frontier.collectable': ['dawntrailCollectableSimulator', 'dawntrailCollectableAnalyzer']
 } as const satisfies Record<TomeModelScenario, readonly TomeModelVersionKey[]>;
 
 export function isModelVersionSnapshotStale(

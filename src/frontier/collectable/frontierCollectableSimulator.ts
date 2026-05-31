@@ -17,7 +17,7 @@ import {
 import { applyRelicToolValueIncreaseBonus } from '../../utils/collectableMath';
 import { gpPerCollect, MIN_COLLECTABLE_LEVEL } from '../../utils/collectableMechanics';
 import { isTierCountObjective } from '../../utils/collectableObjectivePresets';
-import { buildFrontierModelVersionsForScenario } from '../frontierModelVersions';
+import { buildModelVersionsForScenario } from '../../config/modelVersions';
 import { FRONTIER_COLLECTABLE_ACTION_DEFINITIONS } from './frontierCollectableActions';
 import {
   getFrontierStandardProcRatePercent,
@@ -111,7 +111,7 @@ export function analyzeFrontierCollectableStrategy(
   const maxScore = scores[scores.length - 1] ?? 0;
 
   return {
-    modelVersions: buildFrontierModelVersionsForScenario('frontier.collectable'),
+    modelVersions: buildModelVersionsForScenario('frontier.collectable'),
     expectedScore: roundScore(expectedScore(details)),
     minScore,
     maxScore,

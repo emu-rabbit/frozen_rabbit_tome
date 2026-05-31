@@ -573,7 +573,7 @@ export default {
     version: 'バージョン {v}',
     latest: '最新',
     currentModelVersionsTitle: '現在のモデルバージョン',
-    currentModelVersionsDescription: '秘伝書と実験の結果、ライブラリのスナップショット、JSON エクスポートに現在書き込まれるバージョン情報です。',
+    currentModelVersionsDescription: '秘伝書、実験、有効化された開拓機能の結果、スナップショット、JSON エクスポートに現在書き込まれるバージョン情報です。',
     currentModelVersionsSummary: '{count} 件',
     modelVersionsButton: '現在のモデルバージョンを表示',
     modelVersionsClose: 'モデルバージョンウィンドウを閉じる',
@@ -583,6 +583,7 @@ export default {
       tomeSolver: '秘伝書の推奨ソルバー',
       experimentSimulator: '実験シミュレーター',
       experimentAnalyzer: '実験アナライザー',
+      frontierResearch: '開拓研究',
       strategyCodec: '決定木/戦略表のロスレス変換'
     },
     modelVersionKeys: {
@@ -594,7 +595,9 @@ export default {
       regularAnalyzer: '通常採集の分析モデル',
       collectableSimulator: '収集品戦略のシミュレーションモデル',
       collectableAnalyzer: '収集品戦略の分析モデル',
-      collectableStrategyCodec: '収集品戦略 codec'
+      collectableStrategyCodec: '収集品戦略 codec',
+      dawntrailCollectableSimulator: '黄金のレガシー収集品モデル（シミュレーター）',
+      dawntrailCollectableAnalyzer: '黄金のレガシー収集品モデル（アナライザー）'
     }
   },
   solver: {

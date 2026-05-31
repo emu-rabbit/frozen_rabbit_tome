@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'Changelog' });
 
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   buildModelVersionCatalogForScenario,
@@ -9,17 +9,20 @@ import {
   type TomeModelScenario,
   type TomeModelVersionCatalogEntry
 } from '../config/modelVersions';
+import { useSettings } from '../composables/useSettings';
 import { changelogData } from '../data/changelog';
 import type { LocalizedString } from '../data/changelog';
 
 const { t, locale } = useI18n();
+const { frontierSettings } = useSettings();
 
-const modelVersionScenarios: TomeModelScenario[] = [
+const modelVersionScenarios = computed<TomeModelScenario[]>(() => [
   'tome.regular',
   'tome.collectable',
   'experiment.regular',
-  'experiment.collectable'
-];
+  'experiment.collectable',
+  ...(frontierSettings.value.enabled ? ['frontier.collectable' as const] : [])
+]);
 
 type ModelVersionGroupKey =
   | 'overall'
@@ -27,6 +30,7 @@ type ModelVersionGroupKey =
   | 'tomeSolver'
   | 'experimentSimulator'
   | 'experimentAnalyzer'
+  | 'frontierResearch'
   | 'strategyCodec';
 
 type CurrentModelVersionEntry = TomeModelVersionCatalogEntry;
@@ -58,12 +62,16 @@ const modelVersionGroups: { key: ModelVersionGroupKey; entries: TomeModelVersion
     entries: ['regularAnalyzer', 'collectableAnalyzer']
   },
   {
+    key: 'frontierResearch',
+    entries: ['dawntrailCollectableSimulator', 'dawntrailCollectableAnalyzer']
+  },
+  {
     key: 'strategyCodec',
     entries: ['collectableStrategyCodec']
   }
 ];
 
-const currentModelVersionEntries = modelVersionScenarios.reduce<CurrentModelVersionEntry[]>((entries, scenario) => {
+const currentModelVersionEntries = computed(() => modelVersionScenarios.value.reduce<CurrentModelVersionEntry[]>((entries, scenario) => {
   buildModelVersionCatalogForScenario(scenario).forEach((catalogEntry) => {
     const existingEntry = entries.find((entry) => entry.key === catalogEntry.key);
 
@@ -73,18 +81,18 @@ const currentModelVersionEntries = modelVersionScenarios.reduce<CurrentModelVers
   });
 
   return entries;
-}, []);
+}, []));
 
-const currentModelVersionGroups = modelVersionGroups
+const currentModelVersionGroups = computed(() => modelVersionGroups
   .map<CurrentModelVersionGroup>((group) => ({
     key: group.key,
     entries: group.entries
-      .map((entryKey) => currentModelVersionEntries.find((entry) => entry.key === entryKey))
+      .map((entryKey) => currentModelVersionEntries.value.find((entry) => entry.key === entryKey))
       .filter((entry): entry is CurrentModelVersionEntry => Boolean(entry))
   }))
-  .filter((group) => group.entries.length > 0);
+  .filter((group) => group.entries.length > 0));
 
-const currentModelVersionCount = currentModelVersionEntries.length;
+const currentModelVersionCount = computed(() => currentModelVersionEntries.value.length);
 const isModelVersionDialogOpen = ref(false);
 
 function getLocalized(text: string | LocalizedString) {

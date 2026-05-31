@@ -573,7 +573,7 @@ export default {
     version: 'Version {v}',
     latest: 'Latest',
     currentModelVersionsTitle: 'Current Model Versions',
-    currentModelVersionsDescription: 'The version sources currently written into Tome and Experiment results, library snapshots, and JSON exports.',
+    currentModelVersionsDescription: 'The version sources currently written into Tome, Experiment, and enabled Frontier results, snapshots, and JSON exports.',
     currentModelVersionsSummary: '{count} versions',
     modelVersionsButton: 'View current model versions',
     modelVersionsClose: 'Close model versions window',
@@ -583,6 +583,7 @@ export default {
       tomeSolver: 'Tome recommendation solvers',
       experimentSimulator: 'Experiment simulators',
       experimentAnalyzer: 'Experiment analyzers',
+      frontierResearch: 'Frontier Research',
       strategyCodec: 'Lossless decision tree / strategy table conversion'
     },
     modelVersionKeys: {
@@ -594,7 +595,9 @@ export default {
       regularAnalyzer: 'Regular gathering analysis model',
       collectableSimulator: 'Collectable strategy simulation model',
       collectableAnalyzer: 'Collectable strategy analysis model',
-      collectableStrategyCodec: 'Collectable strategy codec'
+      collectableStrategyCodec: 'Collectable strategy codec',
+      dawntrailCollectableSimulator: 'Dawntrail collectable model (simulator)',
+      dawntrailCollectableAnalyzer: 'Dawntrail collectable model (analyzer)'
     }
   },
   solver: {

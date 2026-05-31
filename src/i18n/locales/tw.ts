@@ -574,7 +574,7 @@ export default {
     version: '版本 {v}',
     latest: '最新',
     currentModelVersionsTitle: '現行模型版本',
-    currentModelVersionsDescription: '目前秘笈與實驗會寫入結果、藏書庫快照與 JSON 匯出的版本來源。',
+    currentModelVersionsDescription: '目前秘笈、實驗與已啟用的開拓功能會寫入結果、快照與 JSON 匯出的版本來源。',
     currentModelVersionsSummary: '{count} 個版本',
     modelVersionsButton: '查看現行模型版本',
     modelVersionsClose: '關閉模型版本視窗',
@@ -584,6 +584,7 @@ export default {
       tomeSolver: '秘笈推薦求解器',
       experimentSimulator: '實驗模擬器',
       experimentAnalyzer: '實驗分析器',
+      frontierResearch: '開拓研究',
       strategyCodec: '決策樹/策略表無損轉換'
     },
     modelVersionKeys: {
@@ -595,7 +596,9 @@ export default {
       regularAnalyzer: '一般採集分析模型',
       collectableSimulator: '收藏品策略模擬模型',
       collectableAnalyzer: '收藏品策略分析模型',
-      collectableStrategyCodec: '收藏品策略 codec'
+      collectableStrategyCodec: '收藏品策略 codec',
+      dawntrailCollectableSimulator: '黃金遺產收藏品模型（模擬器）',
+      dawntrailCollectableAnalyzer: '黃金遺產收藏品模型（分析器）'
     }
   },
   solver: {

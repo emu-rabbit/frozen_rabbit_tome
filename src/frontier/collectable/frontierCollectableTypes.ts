@@ -4,7 +4,9 @@ import type {
   CollectableTierCounts
 } from '../../types/collectable';
 import type { FoodSelection, GatherableItem, GatheringJob, NodeBonuses, PlayerStats } from '../../types/game';
-import type { FrontierModelVersions } from '../frontierModelVersions';
+import type { TomeModelVersions } from '../../config/modelVersions';
+
+export const FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION = 2;
 
 export type FrontierCollectableStandardMode = 'none' | 'standard' | 'highStandard';
 
@@ -138,7 +140,7 @@ export interface FrontierCollectableTerminalStateSummary {
 }
 
 export interface FrontierCollectableAnalysisResult {
-  modelVersions: FrontierModelVersions;
+  modelVersions: TomeModelVersions;
   expectedScore: number;
   minScore: number;
   maxScore: number;
@@ -155,7 +157,7 @@ export interface FrontierCollectableAnalysisResult {
 }
 
 export interface FrontierCollectableStudy {
-  schemaVersion: 2;
+  schemaVersion: typeof FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION;
   kind: 'frontier.collectable';
   id: string;
   name?: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFrontierModelVersionsForScenario } from '../frontierModelVersions';
+import { buildModelVersionsForScenario } from '../../config/modelVersions';
 import {
   FrontierCollectableJsonImportError,
   buildFrontierCollectableJsonExport,
@@ -66,7 +66,7 @@ const request: FrontierCollectableSimulationRequest = {
 };
 
 const analysis: FrontierCollectableAnalysisResult = {
-  modelVersions: buildFrontierModelVersionsForScenario('frontier.collectable'),
+  modelVersions: buildModelVersionsForScenario('frontier.collectable'),
   expectedScore: 10,
   minScore: 0,
   maxScore: 10,
@@ -97,6 +97,13 @@ describe('frontierCollectableExport', () => {
 
     const projection = parseFrontierCollectableJsonImport(JSON.stringify(payload));
 
+    expect(payload.manifest.schemaVersion).toBe(1);
+    expect(payload.modelVersions).toEqual({
+      exportSchema: 1,
+      app: analysis.modelVersions.app,
+      dawntrailCollectableSimulator: 'dawntrail-collectable-simulator-v2',
+      dawntrailCollectableAnalyzer: 'dawntrail-collectable-analyzer-v2'
+    });
     expect(projection.defaultName).toBe('測試收藏品 開拓研究');
     expect(projection.study.schemaVersion).toBe(2);
     expect(projection.study.itemId).toBe(123);

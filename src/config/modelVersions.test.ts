@@ -30,6 +30,12 @@ describe('modelVersions', () => {
       collectableSimulator: 'collectable-simulator-v2',
       collectableAnalyzer: 'collectable-analyzer-v2'
     });
+    expect(buildModelVersionsForScenario('frontier.collectable')).toEqual({
+      exportSchema: 1,
+      app: TOME_MODEL_VERSION_CATALOG.app.version,
+      dawntrailCollectableSimulator: 'dawntrail-collectable-simulator-v2',
+      dawntrailCollectableAnalyzer: 'dawntrail-collectable-analyzer-v2'
+    });
   });
 
   it('keeps category labels available for internal diagnostics', () => {

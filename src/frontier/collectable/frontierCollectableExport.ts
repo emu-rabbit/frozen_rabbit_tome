@@ -1,15 +1,16 @@
-import { FRONTIER_COLLECTABLE_SCHEMA_VERSION } from '../frontierModelVersions';
+import { TOME_EXPORT_SCHEMA_VERSION } from '../../config/modelVersions';
 import type {
   FrontierCollectableJsonExportInput,
   FrontierCollectableSimulationRequest,
   FrontierCollectableStudy
 } from './frontierCollectableTypes';
+import { FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION } from './frontierCollectableTypes';
 
 export function buildFrontierCollectableJsonExport(input: FrontierCollectableJsonExportInput) {
   return compactJson({
     manifest: {
       app: 'frozen_rabbit_tome',
-      schemaVersion: FRONTIER_COLLECTABLE_SCHEMA_VERSION,
+      schemaVersion: TOME_EXPORT_SCHEMA_VERSION,
       scenario: 'frontier.collectable',
       version: input.analysis.modelVersions.app ?? null,
       commit: input.commit ?? import.meta.env.VITE_APP_COMMIT ?? null,
@@ -102,7 +103,7 @@ export function parseFrontierCollectableJsonImport(raw: string): FrontierCollect
   return {
     defaultName,
     study: {
-      schemaVersion: FRONTIER_COLLECTABLE_SCHEMA_VERSION,
+      schemaVersion: FRONTIER_COLLECTABLE_STUDY_SCHEMA_VERSION,
       kind: 'frontier.collectable',
       id: '',
       name: defaultName,
