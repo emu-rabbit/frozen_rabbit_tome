@@ -142,8 +142,8 @@ export default {
       searchPlaceholder: '研究ケースを検索',
       updatedAt: '{time} 更新',
       rules: '戦略ルール',
-      open: '開く',
-      delete: '削除'
+      open: 'コピーを開く',
+      delete: '研究を削除'
     },
     create: {
       title: '研究アイテムを選択',

@@ -4,6 +4,7 @@ import { useTomeLibrary } from '../composables/useTomeLibrary';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useFavoriteItems } from '../composables/useFavoriteItems';
 import { useSettings } from '../composables/useSettings';
+import { useFrontierCollectableStudies } from '../frontier/collectable/frontierCollectableStorage';
 import packageJson from '../../package.json';
 
 const route = useRoute();
@@ -13,6 +14,7 @@ const { tomeCount } = useTomeLibrary();
 const { experimentCount } = useExperimentLibrary();
 const { favoriteCount } = useFavoriteItems();
 const { frontierSettings } = useSettings();
+const { studyCount } = useFrontierCollectableStudies();
 
 defineEmits(['close-mobile', 'open-sponsor']);
 </script>
@@ -108,6 +110,7 @@ defineEmits(['close-mobile', 'open-sponsor']);
       >
         <i class="pi pi-folder-open shrink-0"></i>
         <span class="leading-tight flex-1">{{ $t('nav.frontierStudies') }}</span>
+        <span class="ml-2 bg-soft-green-200 dark:bg-soft-green-900 text-soft-green-800 dark:text-soft-green-300 text-xs px-2 py-0.5 rounded-full shrink-0">{{ studyCount }}</span>
       </router-link>
 
       <router-link

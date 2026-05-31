@@ -143,8 +143,8 @@ export default {
       searchPlaceholder: '搜尋研究案例',
       updatedAt: '更新於 {time}',
       rules: '策略規則',
-      open: '開啟',
-      delete: '刪除'
+      open: '開啟副本',
+      delete: '刪除研究'
     },
     create: {
       title: '選擇研究物品',

@@ -142,8 +142,8 @@ export default {
       searchPlaceholder: 'Search studies',
       updatedAt: 'Updated {time}',
       rules: 'Strategy rules',
-      open: 'Open',
-      delete: 'Delete'
+      open: 'Open Copy',
+      delete: 'Delete Study'
     },
     create: {
       title: 'Choose a Research Item',
