@@ -52,8 +52,15 @@ const brazenBucketCountOptions = computed(() => FRONTIER_BRAZEN_BUCKET_COUNTS.ma
   label: t('frontier.profile.granularityOption', { count }),
   value: count
 })));
+const highStandardRateMax = computed(() => clampPercent(profile.value.standardProcRatePercent));
 
 applyBrazenOptions();
+
+watch(
+  highStandardRateMax,
+  () => clampCurrentHighStandardRate(),
+  { immediate: true }
+);
 
 watch(
   () => profile.value.brazenBuckets,
@@ -74,8 +81,25 @@ watch(
 function updateHighStandardRate(value: number | null) {
   profile.value = {
     ...profile.value,
-    highStandardProcRatePercent: value === null ? null : clampPercent(value)
+    highStandardProcRatePercent: value === null ? null : clampHighStandardRate(value)
   };
+}
+
+function clampCurrentHighStandardRate() {
+  const current = profile.value.highStandardProcRatePercent;
+  if (current === null) return;
+  const next = clampHighStandardRate(current);
+  if (next === current) return;
+
+  profile.value = {
+    ...profile.value,
+    highStandardProcRatePercent: next
+  };
+}
+
+function clampHighStandardRate(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(highStandardRateMax.value, Math.max(0, value));
 }
 
 function updateBrazenCurve(value: unknown) {
@@ -161,7 +185,7 @@ function isBrazenBucketCount(value: unknown): value is FrontierBrazenBucketCount
           </div>
         </div>
         <label class="assumption-card-control">
-          <InputNumber :model-value="profile.highStandardProcRatePercent" suffix="%" :min="0" :max="100" fluid @update:model-value="updateHighStandardRate" />
+          <InputNumber :model-value="profile.highStandardProcRatePercent" suffix="%" :min="0" :max="highStandardRateMax" fluid @update:model-value="updateHighStandardRate" />
         </label>
       </article>
 

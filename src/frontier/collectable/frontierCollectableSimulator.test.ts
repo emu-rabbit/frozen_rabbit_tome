@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultFrontierProbabilityProfile } from './frontierCollectableProbabilityProfile';
 import {
   analyzeFrontierCollectableStrategy,
+  applyFrontierCollectableAction,
   createFrontierCollectableContext,
   createInitialFrontierCollectableState,
   frontierCollectableStateKey,
   matchesFrontierCollectableStrategyRule
 } from './frontierCollectableSimulator';
+import { getFrontierMeticulousSaveRatePercent } from './frontierCollectableMechanics';
 import type {
   FrontierCollectableSimulationRequest,
   FrontierCollectableStrategyRule
@@ -124,6 +126,38 @@ describe('frontierCollectableSimulator', () => {
     expect(matchesFrontierCollectableStrategyRule(anyStandardRule, noStandardState)).toBe(false);
   });
 
+  it('splits regular Standard and High Standard from the same Intuition pool', () => {
+    const context = createFrontierCollectableContext({
+      ...request([]),
+      probabilityProfile: {
+        ...createDefaultFrontierProbabilityProfile(),
+        standardProcRatePercent: 24,
+        highStandardProcRatePercent: 10
+      }
+    });
+    const state = createInitialFrontierCollectableState(context, 930);
+    const transitions = applyFrontierCollectableAction('scour', state, context);
+    const probabilities = transitions.reduce((totals, transition) => {
+      totals[transition.state.standardMode] += transition.probability;
+      return totals;
+    }, { none: 0, standard: 0, highStandard: 0 });
+
+    expect(probabilities.highStandard * 100).toBeCloseTo(10);
+    expect(probabilities.standard * 100).toBeCloseTo(14);
+    expect(probabilities.none * 100).toBeCloseTo(76);
+  });
+
+  it('adds High Standard to Meticulous save rate after Priming Touch doubles the base rate', () => {
+    const context = createFrontierCollectableContext(request([]));
+    const baseState = createInitialFrontierCollectableState(context, 930);
+
+    expect(getFrontierMeticulousSaveRatePercent({
+      ...baseState,
+      primingTouchActive: true,
+      standardMode: 'highStandard'
+    }, context)).toBe(90);
+  });
+
   it('expands Brazen buckets with exact probabilities and scores collect results', () => {
     const result = analyzeFrontierCollectableStrategy({
       ...request([
@@ -178,7 +212,7 @@ describe('frontierCollectableSimulator', () => {
         brazenBuckets: [
           { id: '50', multiplierPercent: 50, probabilityPercent: 100 }
         ],
-        standardProcRatePercent: 0,
+        standardProcRatePercent: 100,
         highStandardProcRatePercent: 100
       }
     });

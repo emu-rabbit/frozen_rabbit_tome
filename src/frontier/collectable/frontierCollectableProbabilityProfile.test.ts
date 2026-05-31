@@ -6,6 +6,7 @@ import {
   normalizeFrontierBrazenBuckets,
   validateFrontierProbabilityProfile
 } from './frontierCollectableProbabilityProfile';
+import { getFrontierIntuitionRates } from './frontierCollectableMechanics';
 
 describe('frontierCollectableProbabilityProfile', () => {
   it('accepts the default discrete Brazen bucket profile', () => {
@@ -24,7 +25,7 @@ describe('frontierCollectableProbabilityProfile', () => {
         { id: 'low', multiplierPercent: 40, probabilityPercent: 60 },
         { id: 'high', multiplierPercent: 150, probabilityPercent: 20 }
       ],
-      standardProcRatePercent: 0,
+      standardProcRatePercent: 10,
       highStandardProcRatePercent: 101
     });
 
@@ -32,6 +33,33 @@ describe('frontierCollectableProbabilityProfile', () => {
     expect(result.errors).toContain('brazenBuckets.0.multiplierOutOfRange');
     expect(result.errors).toContain('brazenBuckets.totalProbabilityNot100');
     expect(result.errors).toContain('highStandardProcRatePercent.outOfRange');
+    expect(result.errors).toContain('highStandardProcRatePercent.exceedsStandardProcRate');
+  });
+
+  it('treats High Standard as a share of the same Intuition pool', () => {
+    const rates = getFrontierIntuitionRates({
+      brazenBuckets: createFrontierBrazenBuckets('uniform', 5),
+      standardProcRatePercent: 24,
+      highStandardProcRatePercent: 10
+    });
+
+    expect(rates).toEqual({
+      totalProcRatePercent: 24,
+      standardProcRatePercent: 14,
+      highStandardProcRatePercent: 10,
+      noProcRatePercent: 76
+    });
+  });
+
+  it('rejects a High Standard rate larger than the total Intuition pool', () => {
+    const result = validateFrontierProbabilityProfile({
+      brazenBuckets: createFrontierBrazenBuckets('uniform', 5),
+      standardProcRatePercent: 9,
+      highStandardProcRatePercent: 10
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('highStandardProcRatePercent.exceedsStandardProcRate');
   });
 
   it('normalizes bucket probabilities without changing multipliers', () => {

@@ -32,6 +32,7 @@ import {
   getFrontierCollectableActionIcon,
   getFrontierCollectableActionName
 } from '../frontier/collectable/frontierCollectableActions';
+import { getFrontierMeticulousSaveRatePercent } from '../frontier/collectable/frontierCollectableMechanics';
 import {
   buildCollectableStrategyTreeAsync,
   collectableStrategyActionKinds,
@@ -1681,7 +1682,7 @@ function createManagedOverviewMetrics(mechanics: CollectableMechanicsContext | n
       label: t('collectableStrategyLab.managedOverview.meticulousSaveRate'),
       icon: 'pi pi-lock-open',
       getValue: (node) => mechanics
-        ? (node.state.primingTouchActive ? mechanics.primedMeticulousRate : mechanics.meticulousRate)
+        ? getManagedMeticulousSaveRate(node, mechanics)
         : 0,
       formatRange: formatPercentRange,
       formatValue: formatPercentValue
@@ -1689,6 +1690,16 @@ function createManagedOverviewMetrics(mechanics: CollectableMechanicsContext | n
   ];
 
   return metrics;
+}
+
+function getManagedMeticulousSaveRate(
+  node: ManagedOverviewSource,
+  mechanics: CollectableMechanicsContext
+) {
+  const frontierState = frontierStateFromNode(node as CollectableStrategyNode);
+  if (frontierState) return getFrontierMeticulousSaveRatePercent(frontierState, mechanics);
+
+  return node.state.primingTouchActive ? mechanics.primedMeticulousRate : mechanics.meticulousRate;
 }
 
 function createEmptyAppliedRuleOutcome(): CollectableStrategyRuleApplicationSummary {
@@ -1956,12 +1967,19 @@ function buildFrontierEffectMetrics(
   }
 
   if (action === 'primingTouch') {
-    const primedMeticulousRate = Math.min(100, context.meticulousRate * 2);
+    const beforeRate = rangeFromFrontierStates(sourceStates, (state) => (
+      getFrontierMeticulousSaveRatePercent(state, context)
+    ));
+    const afterRate = rangeFromFrontierStates(sourceStates, (state) => (
+      getFrontierMeticulousSaveRatePercent({ ...state, primingTouchActive: true }, context)
+    ));
+    const from = beforeRate?.min ?? context.meticulousRate;
+    const to = afterRate?.max ?? Math.min(100, context.meticulousRate * 2);
     metrics.push({
       kind: 'meticulousSaveRate',
-      from: context.meticulousRate,
-      to: primedMeticulousRate,
-      delta: primedMeticulousRate - context.meticulousRate
+      from,
+      to,
+      delta: to - from
     });
   }
 

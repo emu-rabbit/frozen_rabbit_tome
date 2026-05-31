@@ -48,7 +48,7 @@ function request(strategy: FrontierCollectableStrategyRule[]): FrontierCollectab
     isTimedNode: false,
     probabilityProfile: {
       ...createDefaultFrontierProbabilityProfile(),
-      standardProcRatePercent: 0,
+      standardProcRatePercent: 100,
       highStandardProcRatePercent: 100
     },
     strategy

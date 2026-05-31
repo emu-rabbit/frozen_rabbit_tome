@@ -113,14 +113,14 @@ export const TOME_MODEL_VERSION_CATALOG = {
     key: 'dawntrailCollectableSimulator',
     category: 'simulator',
     label: 'Dawntrail collectable model simulator',
-    version: 'dawntrail-collectable-simulator-v2',
+    version: 'dawntrail-collectable-simulator-v3',
     visibility: ['external', 'internal']
   },
   dawntrailCollectableAnalyzer: {
     key: 'dawntrailCollectableAnalyzer',
     category: 'analyzer',
     label: 'Dawntrail collectable model analyzer',
-    version: 'dawntrail-collectable-analyzer-v2',
+    version: 'dawntrail-collectable-analyzer-v3',
     visibility: ['external', 'internal']
   }
 } as const satisfies Record<TomeModelVersionKey, TomeModelVersionCatalogEntry>;

@@ -20,9 +20,12 @@ import { isTierCountObjective } from '../../utils/collectableObjectivePresets';
 import { buildModelVersionsForScenario } from '../../config/modelVersions';
 import { FRONTIER_COLLECTABLE_ACTION_DEFINITIONS } from './frontierCollectableActions';
 import {
-  getFrontierStandardProcRatePercent,
   validateFrontierProbabilityProfile
 } from './frontierCollectableProbabilityProfile';
+import {
+  getFrontierIntuitionRates,
+  getFrontierMeticulousSaveRatePercent
+} from './frontierCollectableMechanics';
 import type {
   FrontierCollectableActionKind,
   FrontierCollectableAnalysisResult,
@@ -495,11 +498,7 @@ function buildDurabilityBranches(
     return [{ integrityCost: 1, probability: 1, labelKeys: ['collectableSolver.branches.integrityConsumed'] }];
   }
 
-  const baseRate = state.primingTouchActive
-    ? Math.min(100, context.meticulousRate * 2)
-    : context.meticulousRate;
-  const highStandardBonus = state.standardMode === 'highStandard' ? 40 : 0;
-  const saveRate = Math.min(100, baseRate + highStandardBonus) / 100;
+  const saveRate = getFrontierMeticulousSaveRatePercent(state, context) / 100;
 
   return [
     { integrityCost: 0, probability: saveRate, labelKeys: ['collectableSolver.branches.meticulousSaved'] },
@@ -512,8 +511,10 @@ function applyStandardProc(
   probability: number,
   context: FrontierCollectableContext
 ): FrontierTransition[] {
-  const highRate = (context.probabilityProfile.highStandardProcRatePercent ?? 0) / 100;
-  const standardRate = (1 - highRate) * (getFrontierStandardProcRatePercent() / 100);
+  const intuitionRates = getFrontierIntuitionRates(context.probabilityProfile);
+  const highRate = intuitionRates.highStandardProcRatePercent / 100;
+  const standardRate = intuitionRates.standardProcRatePercent / 100;
+  const noProcRate = intuitionRates.noProcRatePercent / 100;
   const canProc = state.integrity > 0
     && state.collectability < COLLECTABILITY_CAP
     && state.standardMode === 'none'
@@ -536,7 +537,7 @@ function applyStandardProc(
     },
     {
       state,
-      probability: probability * Math.max(0, 1 - highRate - standardRate),
+      probability: probability * noProcRate,
       labelKeys: ['collectableSolver.branches.standardNoProc'],
       label: contextBranchLabel('collectableSolver.branches.standardNoProc')
     }

@@ -101,8 +101,8 @@ describe('frontierCollectableExport', () => {
     expect(payload.modelVersions).toEqual({
       exportSchema: 1,
       app: analysis.modelVersions.app,
-      dawntrailCollectableSimulator: 'dawntrail-collectable-simulator-v2',
-      dawntrailCollectableAnalyzer: 'dawntrail-collectable-analyzer-v2'
+      dawntrailCollectableSimulator: 'dawntrail-collectable-simulator-v3',
+      dawntrailCollectableAnalyzer: 'dawntrail-collectable-analyzer-v3'
     });
     expect(projection.defaultName).toBe('測試收藏品');
     expect(projection.sourceScenario).toBe('frontier.collectable');

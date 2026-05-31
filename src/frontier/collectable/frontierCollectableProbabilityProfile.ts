@@ -94,9 +94,17 @@ export function validateFrontierProbabilityProfile(
     errors.push('brazenBuckets.totalProbabilityNot100');
   }
 
+  const standardProcRate = profile.standardProcRatePercent;
+  if (!Number.isFinite(standardProcRate) || standardProcRate < 0 || standardProcRate > 100) {
+    errors.push('standardProcRatePercent.outOfRange');
+  }
+
   const highStandardProcRate = profile.highStandardProcRatePercent ?? 0;
   if (!Number.isFinite(highStandardProcRate) || highStandardProcRate < 0 || highStandardProcRate > 100) {
     errors.push('highStandardProcRatePercent.outOfRange');
+  }
+  if (Number.isFinite(highStandardProcRate) && Number.isFinite(standardProcRate) && highStandardProcRate > standardProcRate) {
+    errors.push('highStandardProcRatePercent.exceedsStandardProcRate');
   }
 
   return {
