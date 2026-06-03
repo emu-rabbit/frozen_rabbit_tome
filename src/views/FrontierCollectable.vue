@@ -402,6 +402,7 @@ function getUiState() {
           <CollectableStrategyLab
             v-if="activeItem"
             :active-item="activeItem"
+            :base-stats="simStats"
             :effective-stats="effectiveStats"
             :base-values="baseValues"
             :item-real-level="itemRealLevel"

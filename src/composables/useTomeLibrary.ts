@@ -15,6 +15,7 @@ import type {
 import type { CollectableSolverResult } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
 import type { ImportedTomeDraft } from '../utils/tomeJsonImport';
+import { trackTomeLibraryEntryAdded } from '../services/analytics';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-library';
 const STORAGE_SCHEMA_VERSION = 2;
@@ -260,6 +261,11 @@ export function useTomeLibrary() {
     };
 
     tomes.value = [tome, ...tomes.value];
+    trackTomeLibraryEntryAdded({
+      itemId: tome.itemId,
+      kind: tome.kind,
+      source: 'solver'
+    });
     return tome;
   };
 
@@ -282,6 +288,11 @@ export function useTomeLibrary() {
     };
 
     tomes.value = [tome, ...tomes.value];
+    trackTomeLibraryEntryAdded({
+      itemId: tome.itemId,
+      kind: tome.kind,
+      source: 'import'
+    });
     return tome;
   };
 

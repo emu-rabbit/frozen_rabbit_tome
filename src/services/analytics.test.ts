@@ -58,6 +58,17 @@ describe('analytics consent mode', () => {
     expect(calls.some(([command, eventName]) => command === 'event' && eventName === 'analytics_ready')).toBe(true);
   });
 
+  it('does not duplicate the initial page view when analytics is initialized again after opt-in', async () => {
+    const { initializeAnalytics, setAnalyticsConsent } = await import('./analytics');
+
+    initializeAnalytics();
+    setAnalyticsConsent('granted');
+    initializeAnalytics();
+
+    const calls = getGtagCalls();
+    expect(calls.filter(([command, eventName]) => command === 'event' && eventName === 'page_view')).toHaveLength(1);
+  });
+
   it('sends app language and theme mode as user properties and event params after opt-in', async () => {
     const {
       initializeAnalytics,
@@ -91,6 +102,59 @@ describe('analytics consent mode', () => {
         route_name: 'settings',
       }),
     ]);
+  });
+
+  it('sends route names and Tome settings with page views', async () => {
+    const {
+      getRouteNameFromPagePath,
+      initializeAnalytics,
+      setAnalyticsConsent,
+      setAnalyticsTomeSettings,
+      trackPageView,
+    } = await import('./analytics');
+
+    expect(getRouteNameFromPagePath('/frozen_rabbit_tome/#/settings?tab=gear')).toBe('Settings');
+    expect(getRouteNameFromPagePath('/frozen_rabbit_tome/#/')).toBe('CreateGuide');
+
+    setAnalyticsTomeSettings({
+      objectiveMode: 'expected',
+      gearProfileCount: 3,
+      macroSecondsPerGather: 4,
+      macroBufferSeconds: 2,
+      frontierEnabled: true,
+    });
+    initializeAnalytics();
+    setAnalyticsConsent('granted');
+    trackPageView('/frozen_rabbit_tome/#/settings');
+
+    const calls = getGtagCalls();
+    expect(calls).toContainEqual([
+      'event',
+      'page_view',
+      expect.objectContaining({
+        route_name: 'Settings',
+        solver_objective_mode: 'expected',
+        gear_profile_count: 3,
+        macro_seconds_setting: '4+2',
+        frontier_settings_enabled: true,
+      }),
+    ]);
+  });
+
+  it('formats analytics buckets for solver and analyzer dimensions', async () => {
+    const {
+      getDurationBucket,
+      getFixedWidthBucket,
+      getPercentageBucket,
+    } = await import('./analytics');
+
+    expect(getFixedWidthBucket(91, 10)).toBe('91~100');
+    expect(getFixedWidthBucket(5345, 1000)).toBe('5001~6000');
+    expect(getFixedWidthBucket(930, 100)).toBe('901~1000');
+    expect(getDurationBucket(9)).toBe('< 10 ms');
+    expect(getDurationBucket(700)).toBe('101 ms-1 s');
+    expect(getDurationBucket(45000)).toBe('30-60 s');
+    expect(getPercentageBucket(73)).toBe('70-80%');
   });
 
   it('emits language and theme context update events when preferences change after opt-in', async () => {

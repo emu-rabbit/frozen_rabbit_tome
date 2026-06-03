@@ -7,14 +7,16 @@ import LanguageModal from './components/LanguageModal.vue';
 import SponsorModal from './components/SponsorModal.vue';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner.vue';
 import { useSettings } from './composables/useSettings';
+import { useGearProfiles } from './composables/useGearProfiles';
 import { loadGameData } from './services/gameData';
-import { initializeAnalytics, setAnalyticsLanguage, setAnalyticsThemeMode, trackRouteChange } from './services/analytics';
+import { initializeAnalytics, setAnalyticsLanguage, setAnalyticsThemeMode, setAnalyticsTomeSettings, trackRouteChange } from './services/analytics';
 
 const { locale, t } = useI18n();
 const route = useRoute();
 const isMobileMenuOpen = ref(false);
 const isSponsorModalOpen = ref(false);
-const { isDarkMode, language, initialized } = useSettings();
+const { isDarkMode, language, initialized, solverSettings, macroSettings, frontierSettings } = useSettings();
+const { orderedProfiles } = useGearProfiles();
 const isLanguageModalOpen = ref(!initialized.value);
 
 // 同步語系
@@ -39,6 +41,22 @@ watch(isDarkMode, (newVal) => {
     document.documentElement.classList.remove('dark');
   }
   setAnalyticsThemeMode(newVal);
+}, { immediate: true });
+
+watch([
+  () => solverSettings.value.objectiveMode,
+  () => orderedProfiles.value.length,
+  () => macroSettings.value.secondsPerGather,
+  () => macroSettings.value.bufferSeconds,
+  () => frontierSettings.value.enabled
+], () => {
+  setAnalyticsTomeSettings({
+    objectiveMode: solverSettings.value.objectiveMode,
+    gearProfileCount: orderedProfiles.value.length,
+    macroSecondsPerGather: macroSettings.value.secondsPerGather,
+    macroBufferSeconds: macroSettings.value.bufferSeconds,
+    frontierEnabled: frontierSettings.value.enabled
+  });
 }, { immediate: true });
 
 // 更新網頁標題

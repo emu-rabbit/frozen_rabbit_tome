@@ -14,6 +14,7 @@ import {
   type CollectableGuidedQuestionLabels,
   type CollectableGuidedSelections
 } from './collectablePolicyInteraction';
+import { trackDecisionTreeHtmlExported } from '../services/analytics';
 
 export interface CollectableDecisionTreeActionExport {
   kind: CollectableActionKind;
@@ -314,16 +315,18 @@ ${standaloneScript()}
 }
 
 export function downloadHtmlFile(html: string, fileName: string) {
+  const sanitizedFileName = sanitizeHtmlFileName(fileName);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
 
   link.href = url;
-  link.download = sanitizeHtmlFileName(fileName);
+  link.download = sanitizedFileName;
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  trackDecisionTreeHtmlExported({ fileName: sanitizedFileName });
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 

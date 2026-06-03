@@ -38,6 +38,7 @@ import {
   buildRegularExperimentJsonExport,
   downloadJsonFile
 } from '../utils/tomeJsonExport';
+import { trackRegularAnalyzerCompleted } from '../services/analytics';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -217,11 +218,24 @@ function runSimulation() {
   const request = buildRequest();
   if (!request || !canRunSimulation.value) return;
 
+  const startedAt = performance.now();
   analysis.value = simulateGatheringRotation({
     ...request,
     includeRevisit: !hideRevisitExperimentFeatures,
     primaryRotation: primaryRotation.value,
     revisitRotation: hideRevisitExperimentFeatures ? [] : revisitRotation.value
+  });
+  trackRegularAnalyzerCompleted({
+    input: {
+      item: activeItem.value,
+      stats: { ...solverStats.value },
+      maxGp: effectiveStats.value.gp,
+      temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
+      selectedFood: { ...selectedFood.value },
+      nodeBonuses: { ...nodeBonuses.value }
+    },
+    actionCount: primaryRotation.value.length + (hideRevisitExperimentFeatures ? 0 : revisitRotation.value.length),
+    calculationTime: Math.floor(performance.now() - startedAt)
   });
 }
 
@@ -560,6 +574,7 @@ function progressPercent(range: number[], maxValue: number) {
       <CollectableStrategyLab
         v-if="activeItem.isCollectable"
         :active-item="activeItem"
+        :base-stats="solverStats"
         :effective-stats="effectiveStats"
         :base-values="baseValues"
         :item-real-level="itemRealLevel"

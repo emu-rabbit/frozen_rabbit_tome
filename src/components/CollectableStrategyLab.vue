@@ -95,6 +95,7 @@ import {
   type CollectableDecisionTreeHtmlDocument,
   type CollectableDecisionTreeHtmlRow
 } from '../utils/collectableDecisionTreeHtmlExport';
+import { trackCollectableAnalyzerCompleted } from '../services/analytics';
 import type {
   FrontierCollectableAnalysisResult,
   FrontierCollectableProbabilityProfile,
@@ -123,6 +124,7 @@ type ManagedOverviewMetricKey =
 
 const props = defineProps<{
   activeItem: GatherableItem;
+  baseStats?: PlayerStats;
   effectiveStats: PlayerStats;
   baseValues: { Gathering: number; Perception: number } | null;
   itemRealLevel: number;
@@ -612,6 +614,7 @@ async function runAnalysis() {
   analysis.value = null;
   isSaved.value = false;
   isAnalysisRunning.value = true;
+  const startedAt = performance.now();
 
   try {
     await nextTick();
@@ -629,6 +632,21 @@ async function runAnalysis() {
       );
     if (sequence === analysisSequence && !controller.signal.aborted) {
       analysis.value = result;
+      trackCollectableAnalyzerCompleted({
+        input: {
+          item: props.activeItem,
+          stats: { ...(props.baseStats ?? props.effectiveStats) },
+          maxGp: props.effectiveStats.gp,
+          temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
+          selectedFood: { ...props.selectedFood },
+          nodeBonuses: { ...props.nodeBonuses },
+          hasRelicToolBonus: props.hasRelicToolBonus
+        },
+        treeRoot: treeResult.value.root,
+        strategyCount: rules.value.length,
+        calculationTime: Math.floor(performance.now() - startedAt),
+        isFrontierMode: isFrontierMode.value
+      });
     }
   } catch (error) {
     if (!isCooperativeAbort(error)) {
