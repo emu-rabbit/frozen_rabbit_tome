@@ -157,6 +157,37 @@ describe('analytics consent mode', () => {
     expect(getPercentageBucket(73)).toBe('70-80%');
   });
 
+  it('sends food selection with uppercase quality prefix and display fallback', async () => {
+    const {
+      initializeAnalytics,
+      setAnalyticsConsent,
+      trackRegularAnalyzerCompleted,
+    } = await import('./analytics');
+
+    initializeAnalytics();
+    setAnalyticsConsent('granted');
+    trackRegularAnalyzerCompleted({
+      input: {
+        stats: { level: 100, gathering: 5000, perception: 5000, gp: 930 },
+        temporaryGp: 930,
+        selectedFood: { foodId: 46254, quality: 'hq' },
+      },
+      actionCount: 3,
+      calculationTime: 25,
+    });
+
+    const calls = getGtagCalls();
+    expect(calls).toContainEqual([
+      'event',
+      'regular_analyzer_completed',
+      expect.objectContaining({
+        food_selection: 'HQ Item #46254',
+        food_id: 46254,
+        food_quality: 'hq',
+      }),
+    ]);
+  });
+
   it('emits language and theme context update events when preferences change after opt-in', async () => {
     const {
       initializeAnalytics,

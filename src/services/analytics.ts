@@ -12,6 +12,7 @@ import type {
   CollectableWorkerErrorResponse
 } from '../types/collectable';
 import type { CollectableStrategyNode } from '../utils/collectableStrategyTree';
+import { getItemTraditionalName } from './gameData';
 
 const CONSENT_KEY = 'frozen-rabbit-tome-analytics-consent';
 const DEFAULT_MEASUREMENT_ID = 'G-MG8G7L1DNT';
@@ -468,6 +469,7 @@ function buildGatheringRunParams(input: GatheringRunAnalyticsInput): AnalyticsEv
   const currentGp = normalizeNumber(input.temporaryGp);
   const food = input.selectedFood ?? undefined;
   const foodId = food?.foodId ?? null;
+  const foodQuality = foodId ? food?.quality ?? 'hq' : 'none';
 
   return {
     item_id: item?.itemId,
@@ -481,15 +483,21 @@ function buildGatheringRunParams(input: GatheringRunAnalyticsInput): AnalyticsEv
     current_gp: currentGp,
     current_gp_bucket: currentGp !== undefined ? getFixedWidthBucket(currentGp, 100) : undefined,
     is_full_gp: currentGp !== undefined && maxGp !== undefined ? currentGp >= maxGp : undefined,
-    food_selection: foodId ? `${foodId}:${food?.quality ?? 'hq'}` : 'none',
+    food_selection: formatFoodSelection(foodId, foodQuality),
     food_id: foodId ?? undefined,
-    food_quality: foodId ? food?.quality ?? 'hq' : 'none',
+    food_quality: foodQuality,
     node_base_integrity: nodeBonuses?.baseIntegrity,
     node_gathering_count_bonus: nodeBonuses?.gatheringCount,
     node_yield_count_bonus: nodeBonuses?.yieldCount,
     node_extra_rate_bonus: nodeBonuses?.extraRate,
     has_relic_tool_bonus: input.hasRelicToolBonus ?? undefined,
   };
+}
+
+function formatFoodSelection(foodId: number | null, quality: string) {
+  if (!foodId) return 'none';
+
+  return `${quality.toUpperCase()} ${getItemTraditionalName(foodId)}`;
 }
 
 function buildSearchParams(

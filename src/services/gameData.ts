@@ -37,6 +37,7 @@ const ACTION_DICT_URLS: Record<string, string> = {
 // ─── Module-level Singleton Cache ──────────────────────────────────────────
 
 let rawEnglishNames: Record<string, any> = {};
+let rawTraditionalNames: Record<string, any> = {};
 let rawTargetNames: Record<string, any> = {};
 let rawEnglishActionNames: Record<string, any> = {};
 let rawTargetActionNames: Record<string, any> = {};
@@ -71,6 +72,7 @@ export const currentLanguage = ref('');
 let staticDataLoaded = false;
 let staticLoadPromise: Promise<void> | null = null;
 let langLoadPromise: Promise<void> | null = null;
+let traditionalNamesLoadPromise: Promise<void> | null = null;
 export const isGameDataLoading = ref(false);
 
 const SOLVER_ACTION_IDS = new Set([
@@ -381,6 +383,7 @@ async function loadLangData(lang: string): Promise<void> {
         ...(needsEnglishActions ? [fetch(ACTIONS_URL)] : [])
       ]);
       if (results[0].ok) rawTargetNames = await results[0].json();
+      if (lang === 'tw') rawTraditionalNames = rawTargetNames;
       if (results[1].ok) rawTargetActionNames = pickActionEntries(await results[1].json());
       const englishResultIndex = 2;
       const englishActionsResultIndex = englishResultIndex + (needsEnglish ? 1 : 0);
@@ -398,12 +401,30 @@ async function loadLangData(lang: string): Promise<void> {
   return langLoadPromise;
 }
 
+async function loadTraditionalNames(): Promise<void> {
+  if (Object.keys(rawTraditionalNames).length > 0) return;
+  if (traditionalNamesLoadPromise) return traditionalNamesLoadPromise;
+
+  traditionalNamesLoadPromise = (async () => {
+    try {
+      const result = await fetch(DICT_URLS.tw);
+      if (result.ok) rawTraditionalNames = await result.json();
+    } catch (error) {
+      console.warn('[GameData] Traditional Chinese item names failed to load:', error);
+    } finally {
+      traditionalNamesLoadPromise = null;
+    }
+  })();
+
+  return traditionalNamesLoadPromise;
+}
+
 // ─── 公開 API ────────────────────────────────────────────────────────────────
 
 export async function loadGameData(lang: string): Promise<void> {
   isGameDataLoading.value = true;
   try {
-    await Promise.all([loadStaticData(), loadLangData(lang)]);
+    await Promise.all([loadStaticData(), loadLangData(lang), loadTraditionalNames()]);
   } finally {
     isGameDataLoading.value = false;
   }
@@ -443,6 +464,11 @@ export async function searchGatherables(query: string): Promise<GatherableItem[]
 export function getItemName(itemId: number): string {
   const idStr = itemId.toString();
   return extractName(rawTargetNames[idStr], currentLanguage.value) || extractName(rawEnglishNames[idStr], 'en') || `Item #${itemId}`;
+}
+
+export function getItemTraditionalName(itemId: number): string {
+  const idStr = itemId.toString();
+  return extractName(rawTraditionalNames[idStr], 'tw') || extractName(rawEnglishNames[idStr], 'en') || `Item #${itemId}`;
 }
 
 export function getItemEnglishName(itemId: number): string {
