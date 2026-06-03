@@ -18,7 +18,6 @@ const CONSENT_KEY = 'frozen-rabbit-tome-analytics-consent';
 const DEFAULT_MEASUREMENT_ID = 'G-MG8G7L1DNT';
 const MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || DEFAULT_MEASUREMENT_ID;
 const SCRIPT_ID = 'frozen-rabbit-tome-google-analytics';
-const GA_ORIGIN = window.location.origin;
 
 let hasTrackedAnalyticsReady = false;
 let hasDeniedAnalyticsThisSession = false;
@@ -85,9 +84,33 @@ declare global {
   }
 }
 
-export const isAnalyticsAvailable = () => Boolean(import.meta.env.PROD && MEASUREMENT_ID);
+const isBrowserEnvironment = () => typeof window !== 'undefined' && typeof document !== 'undefined';
+
+const getCurrentPagePath = () => {
+  if (!isBrowserEnvironment()) return '';
+
+  return window.location.pathname + window.location.hash;
+};
+
+const getCurrentPageLocation = () => {
+  if (!isBrowserEnvironment()) return '';
+
+  return window.location.href;
+};
+
+const getPageOrigin = () => {
+  if (!isBrowserEnvironment()) return '';
+
+  return window.location.origin;
+};
+
+export const isAnalyticsAvailable = () => Boolean(isBrowserEnvironment() && import.meta.env.PROD && MEASUREMENT_ID);
 
 export const getAnalyticsConsent = (): AnalyticsConsent | null => {
+  if (!isBrowserEnvironment()) {
+    return hasDeniedAnalyticsThisSession ? 'denied' : null;
+  }
+
   const stored = window.localStorage.getItem(CONSENT_KEY);
   if (stored === 'granted') return 'granted';
 
@@ -99,6 +122,11 @@ export const getAnalyticsConsent = (): AnalyticsConsent | null => {
 };
 
 export const setAnalyticsConsent = (consent: AnalyticsConsent) => {
+  if (!isBrowserEnvironment()) {
+    hasDeniedAnalyticsThisSession = consent === 'denied';
+    return;
+  }
+
   loadGoogleAnalytics();
 
   if (consent === 'granted') {
@@ -117,6 +145,8 @@ export const setAnalyticsConsent = (consent: AnalyticsConsent) => {
 };
 
 export const initializeAnalytics = () => {
+  if (!isBrowserEnvironment()) return;
+
   loadGoogleAnalytics();
 
   if (getAnalyticsConsent() === 'granted') {
@@ -127,10 +157,15 @@ export const initializeAnalytics = () => {
 };
 
 export const setAnalyticsLanguage = (appLanguage: string) => {
+  const browserLanguage = isBrowserEnvironment() ? window.navigator.language : undefined;
+  const browserLanguages = isBrowserEnvironment()
+    ? window.navigator.languages?.join(',') || window.navigator.language
+    : undefined;
+
   languageContext = {
     app_language: appLanguage,
-    browser_language: window.navigator.language,
-    browser_languages: window.navigator.languages?.join(',') || window.navigator.language,
+    browser_language: browserLanguage,
+    browser_languages: browserLanguages,
   };
 
   if (!isAnalyticsAvailable() || getAnalyticsConsent() !== 'granted' || !window.gtag) return;
@@ -193,7 +228,7 @@ export const getRouteNameFromPagePath = (pagePath: string) => {
 };
 
 export const trackPageView = (
-  pagePath = window.location.pathname + window.location.hash,
+  pagePath = getCurrentPagePath(),
   routeName = getRouteNameFromPagePath(pagePath)
 ) => {
   if (!isAnalyticsAvailable() || getAnalyticsConsent() !== 'granted' || !window.gtag) return;
@@ -203,7 +238,7 @@ export const trackPageView = (
     ...getCommonEventParams(),
     route_name: routeName,
     page_title: document.title,
-    page_location: `${GA_ORIGIN}${pagePath}`,
+    page_location: `${getPageOrigin()}${pagePath}`,
     page_path: pagePath,
   });
 };
@@ -222,24 +257,24 @@ export const trackAnalyticsReady = () => {
   window.gtag('event', 'analytics_ready', {
     send_to: MEASUREMENT_ID,
     ...getCommonEventParams(),
-    route_name: getRouteNameFromPagePath(window.location.pathname + window.location.hash),
+    route_name: getRouteNameFromPagePath(getCurrentPagePath()),
     page_title: document.title,
-    page_location: window.location.href,
-    page_path: window.location.pathname + window.location.hash,
+    page_location: getCurrentPageLocation(),
+    page_path: getCurrentPagePath(),
   });
 };
 
 export const trackRouteChange = (routeName: string) => {
   if (!isAnalyticsAvailable() || getAnalyticsConsent() !== 'granted' || !window.gtag) return;
 
-  const pagePath = window.location.pathname + window.location.hash;
+  const pagePath = getCurrentPagePath();
   trackPageView(pagePath, routeName);
   window.gtag('event', 'route_change', {
     send_to: MEASUREMENT_ID,
     ...getCommonEventParams(),
     route_name: routeName,
     page_title: document.title,
-    page_location: `${GA_ORIGIN}${pagePath}`,
+    page_location: `${getPageOrigin()}${pagePath}`,
     page_path: pagePath,
   });
 };
