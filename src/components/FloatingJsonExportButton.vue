@@ -14,17 +14,19 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <button
-    type="button"
-    class="floating-json-export-button"
-    :class="{ 'is-exported': exported }"
-    :aria-label="busy ? busyLabel || label : exported ? exportedLabel : label"
-    :title="busy ? busyLabel || label : exported ? exportedLabel : label"
-    :disabled="disabled || busy || exported"
-    @click="emit('click')"
-  >
-    <i :class="busy ? 'pi pi-spin pi-spinner' : exported ? 'pi pi-check' : 'pi pi-download'" aria-hidden="true"></i>
-  </button>
+  <Teleport to="body">
+    <button
+      type="button"
+      class="floating-json-export-button"
+      :class="{ 'is-exported': exported }"
+      :aria-label="busy ? busyLabel || label : exported ? exportedLabel : label"
+      :title="busy ? busyLabel || label : exported ? exportedLabel : label"
+      :disabled="disabled || busy || exported"
+      @click="emit('click')"
+    >
+      <i :class="busy ? 'pi pi-spin pi-spinner' : exported ? 'pi pi-check' : 'pi pi-download'" aria-hidden="true"></i>
+    </button>
+  </Teleport>
 </template>
 
 <style scoped>

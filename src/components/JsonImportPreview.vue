@@ -9,9 +9,16 @@ import type { StoredCollectableStrategyRule, StoredTomeRotationStep } from '../t
 import type { CollectableActionKind, CollectableObjective } from '../types/collectable';
 import { isCustomTierObjective, isTierCountObjective } from '../utils/collectableObjectivePresets';
 import type { TomeJsonImportProjection } from '../utils/tomeJsonImport';
+import { getFrontierCollectableActionIcon, getFrontierCollectableActionName } from '../frontier/collectable/frontierCollectableActions';
+import type {
+  FrontierCollectableJsonImportProjection
+} from '../frontier/collectable/frontierCollectableExport';
+import type { FrontierCollectableActionKind } from '../frontier/collectable/frontierCollectableTypes';
+
+type JsonImportProjection = TomeJsonImportProjection | FrontierCollectableJsonImportProjection;
 
 const props = defineProps<{
-  projection: TomeJsonImportProjection;
+  projection: JsonImportProjection;
 }>();
 
 const { t } = useI18n();
@@ -21,43 +28,61 @@ const itemName = computed(() => {
   return props.projection.item.nameLocale || getItemName(itemId) || props.projection.item.nameEn || `Item ${itemId}`;
 });
 
-const isTomeImport = computed(() => props.projection.sourceType === 'tome');
+const isTomeImport = computed(() => !isFrontierProjection(props.projection) && props.projection.sourceType === 'tome');
 const isCollectable = computed(() => (
-  isTomeImport.value
+  isFrontierProjection(props.projection)
+    ? true
+    : isTomeImport.value
     ? props.projection.tome.kind === 'collectable'
     : props.projection.experiment.kind === 'collectable'
 ));
 
-const input = computed(() => isTomeImport.value ? props.projection.tome.input : props.projection.experiment.input);
+const rows = computed(() => {
+  const input = isFrontierProjection(props.projection)
+    ? props.projection.study.input
+    : isTomeImport.value
+      ? props.projection.tome.input
+      : props.projection.experiment.input;
 
-const rows = computed(() => [
-  {
-    label: t('tomeLibrary.rows.playerStats'),
-    value: `${input.value.stats.level}/${input.value.stats.gathering}/${input.value.stats.perception}`
-  },
-  {
-    label: t('tomeLibrary.rows.gpState'),
-    value: `${input.value.temporaryGp}/${input.value.stats.gp}`
-  },
-  {
-    label: t('tomeLibrary.rows.food'),
-    value: input.value.food.foodId
-      ? `${getItemName(input.value.food.foodId)} ${t(`solver.food.${input.value.food.quality}`)}`
-      : t('tomeLibrary.noFood')
-  },
-  {
-    label: t('tomeLibrary.rows.nodeBonuses'),
-    value: isCollectable.value
-      ? t('tomeLibrary.nodeState.collectable', { gathering: input.value.nodeBonuses.gatheringCount })
-      : t('tomeLibrary.nodeState.regular', {
-          gathering: input.value.nodeBonuses.gatheringCount,
-          yield: input.value.nodeBonuses.yieldCount,
-          extra: input.value.nodeBonuses.extraRate
-        })
-  }
-]);
+  return [
+    {
+      label: t('tomeLibrary.rows.playerStats'),
+      value: `${input.stats.level}/${input.stats.gathering}/${input.stats.perception}`
+    },
+    {
+      label: t('tomeLibrary.rows.gpState'),
+      value: `${input.temporaryGp}/${input.stats.gp}`
+    },
+    {
+      label: t('tomeLibrary.rows.food'),
+      value: input.food?.foodId
+        ? `${getItemName(input.food.foodId)} ${t(`solver.food.${input.food.quality}`)}`
+        : t('tomeLibrary.noFood')
+    },
+    {
+      label: t('tomeLibrary.rows.nodeBonuses'),
+      value: isCollectable.value
+        ? t('tomeLibrary.nodeState.collectable', { gathering: input.nodeBonuses.gatheringCount })
+        : t('tomeLibrary.nodeState.regular', {
+            gathering: input.nodeBonuses.gatheringCount,
+            yield: input.nodeBonuses.yieldCount,
+            extra: input.nodeBonuses.extraRate
+          })
+    }
+  ];
+});
 
 const metrics = computed(() => {
+  if (isFrontierProjection(props.projection)) {
+    const snapshot = props.projection.study.lastAnalysisSnapshot;
+    if (!snapshot) return [];
+    return [
+      { label: t('frontier.analysis.expectedScore'), value: formatNumber(snapshot.expectedScore) },
+      { label: t('frontier.analysis.maxScore'), value: formatNumber(snapshot.maxScore) },
+      { label: t('frontier.analysis.minScore'), value: formatNumber(snapshot.minScore) }
+    ];
+  }
+
   if (isTomeImport.value) {
     const snapshot = props.projection.tome.lastSolvedSnapshot;
     if (!snapshot) return [];
@@ -100,7 +125,9 @@ const metrics = computed(() => {
 });
 
 const regularRotation = computed(() => {
-  if (isTomeImport.value) {
+  if (isFrontierProjection(props.projection)) return [];
+
+  if (props.projection.sourceType === 'tome') {
     const snapshot = props.projection.tome.lastSolvedSnapshot;
     return snapshot?.kind === 'regular' ? snapshot.rotation : [];
   }
@@ -110,6 +137,13 @@ const regularRotation = computed(() => {
 });
 
 const collectableActions = computed(() => {
+  if (isFrontierProjection(props.projection)) {
+    return props.projection.study.strategy
+      .filter((rule) => rule.enabled)
+      .slice(0, 3)
+      .flatMap((rule) => rule.actions.slice(0, 4));
+  }
+
   if (isTomeImport.value) {
     const snapshot = props.projection.tome.lastSolvedSnapshot;
     return snapshot?.kind === 'collectable' && snapshot.rootAction ? [snapshot.rootAction.kind] : [];
@@ -129,6 +163,8 @@ function itemJobs() {
 }
 
 function scenarioLabel() {
+  if (isFrontierProjection(props.projection)) return t('frontier.json.scenario');
+
   const key = props.projection.sourceScenario.replace('.', '');
   if (key === 'tomeregular') return t('jsonExport.scenarios.tomeRegular');
   if (key === 'tomecollectable') return t('jsonExport.scenarios.tomeCollectable');
@@ -141,12 +177,24 @@ function rotationIcon(step: StoredTomeRotationStep) {
   return getRotationActionIconById(step.actionId);
 }
 
-function collectableIcon(action: CollectableActionKind) {
-  return getCollectableActionIcon(action, props.projection.item.jobType ?? 'miner');
+function collectableIcon(action: CollectableActionKind | FrontierCollectableActionKind) {
+  if (isFrontierProjection(props.projection)) {
+    return getFrontierCollectableActionIcon(action as FrontierCollectableActionKind, props.projection.item.jobType ?? 'miner');
+  }
+
+  return getCollectableActionIcon(action as CollectableActionKind, props.projection.item.jobType ?? 'miner');
 }
 
-function collectableLabel(action: CollectableActionKind) {
-  return getCollectableActionName(action, props.projection.item.jobType ?? 'miner');
+function collectableLabel(action: CollectableActionKind | FrontierCollectableActionKind) {
+  if (isFrontierProjection(props.projection)) {
+    return getFrontierCollectableActionName(action as FrontierCollectableActionKind, props.projection.item.jobType ?? 'miner');
+  }
+
+  return getCollectableActionName(action as CollectableActionKind, props.projection.item.jobType ?? 'miner');
+}
+
+function isFrontierProjection(projection: JsonImportProjection): projection is FrontierCollectableJsonImportProjection {
+  return projection.sourceScenario === 'frontier.collectable';
 }
 
 function collectableMetricUnit(objective?: CollectableObjective, rewardItemId?: number) {

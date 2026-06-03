@@ -4,7 +4,8 @@ export type TomeModelScenario =
   | 'tome.regular'
   | 'tome.collectable'
   | 'experiment.regular'
-  | 'experiment.collectable';
+  | 'experiment.collectable'
+  | 'frontier.collectable';
 
 export type TomeModelVersionKey =
   | 'exportSchema'
@@ -15,7 +16,9 @@ export type TomeModelVersionKey =
   | 'regularAnalyzer'
   | 'collectableSimulator'
   | 'collectableAnalyzer'
-  | 'collectableStrategyCodec';
+  | 'collectableStrategyCodec'
+  | 'dawntrailCollectableSimulator'
+  | 'dawntrailCollectableAnalyzer';
 
 export type TomeModelCategory =
   | 'schema'
@@ -89,14 +92,14 @@ export const TOME_MODEL_VERSION_CATALOG = {
     key: 'collectableSimulator',
     category: 'simulator',
     label: 'Collectable strategy simulation model',
-    version: 'collectable-simulator-v1',
+    version: 'collectable-simulator-v2',
     visibility: ['external', 'internal']
   },
   collectableAnalyzer: {
     key: 'collectableAnalyzer',
     category: 'analyzer',
     label: 'Collectable strategy analysis model',
-    version: 'collectable-analyzer-v1',
+    version: 'collectable-analyzer-v2',
     visibility: ['external', 'internal']
   },
   collectableStrategyCodec: {
@@ -105,6 +108,20 @@ export const TOME_MODEL_VERSION_CATALOG = {
     label: 'Collectable policy strategy codec',
     version: COLLECTABLE_POLICY_STRATEGY_CODEC_VERSION,
     visibility: ['external', 'internal']
+  },
+  dawntrailCollectableSimulator: {
+    key: 'dawntrailCollectableSimulator',
+    category: 'simulator',
+    label: 'Dawntrail collectable model simulator',
+    version: 'dawntrail-collectable-simulator-v3',
+    visibility: ['external', 'internal']
+  },
+  dawntrailCollectableAnalyzer: {
+    key: 'dawntrailCollectableAnalyzer',
+    category: 'analyzer',
+    label: 'Dawntrail collectable model analyzer',
+    version: 'dawntrail-collectable-analyzer-v3',
+    visibility: ['external', 'internal']
   }
 } as const satisfies Record<TomeModelVersionKey, TomeModelVersionCatalogEntry>;
 
@@ -112,7 +129,8 @@ const SCENARIO_MODEL_VERSION_KEYS = {
   'tome.regular': ['exportSchema', 'app', 'regularSolver'],
   'tome.collectable': ['exportSchema', 'app', 'collectableSolver', 'collectableStrategyCodec'],
   'experiment.regular': ['exportSchema', 'app', 'regularSimulator', 'regularAnalyzer'],
-  'experiment.collectable': ['exportSchema', 'app', 'collectableSimulator', 'collectableAnalyzer']
+  'experiment.collectable': ['exportSchema', 'app', 'collectableSimulator', 'collectableAnalyzer'],
+  'frontier.collectable': ['exportSchema', 'app', 'dawntrailCollectableSimulator', 'dawntrailCollectableAnalyzer']
 } as const satisfies Record<TomeModelScenario, readonly TomeModelVersionKey[]>;
 
 export function buildModelVersionsForScenario(scenario: TomeModelScenario): TomeModelVersions {

@@ -1,6 +1,6 @@
 import { useLocalStorage } from '@vueuse/core';
 import { computed } from 'vue';
-import type { DebugSettings, MacroSettings, SolverSettings, UserStats } from '../types/game';
+import type { DebugSettings, FrontierSettings, MacroSettings, SolverSettings, UserStats } from '../types/game';
 import { profileToStats, useGearProfiles } from './useGearProfiles';
 
 export type Language = 'tw' | 'en' | 'ja' | 'cn';
@@ -27,6 +27,18 @@ const debugSettings = useLocalStorage<DebugSettings>('frozen-rabbit-tome-debug-s
 });
 if (debugSettings.value.solverDebugMode !== true) {
   debugSettings.value.solverDebugMode = true;
+}
+
+const frontierSettings = useLocalStorage<FrontierSettings & { collectableEnabled?: boolean }>('frozen-rabbit-tome-frontier-settings', {
+  enabled: false
+});
+if (typeof frontierSettings.value.enabled !== 'boolean') {
+  frontierSettings.value.enabled = typeof frontierSettings.value.collectableEnabled === 'boolean'
+    ? frontierSettings.value.collectableEnabled
+    : false;
+}
+if ('collectableEnabled' in frontierSettings.value) {
+  delete frontierSettings.value.collectableEnabled;
 }
 
 export function useSettings() {
@@ -61,6 +73,7 @@ export function useSettings() {
     userStats,
     macroSettings,
     solverSettings,
-    debugSettings
+    debugSettings,
+    frontierSettings
   };
 }

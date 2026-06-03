@@ -23,6 +23,8 @@ const ACTIONS_URL = `${BASE_URL}/actions.json`;
 const ACTION_ICONS_URL = `${BASE_URL}/action-icons.json`;
 const XIVAPI_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringItem.csv';
 const XIVAPI_V2_ITEM_SHEET_URL = 'https://v2.xivapi.com/api/sheet/Item';
+const XIVAPI_LEGACY_BASE_URL = 'https://xivapi.com';
+const XIVAPI_V2_BASE_URL = 'https://v2.xivapi.com';
 const GATHERING_POINT_BASE_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPointBase.csv';
 const GATHERING_POINT_CSV_URL = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/GatheringPoint.csv';
 const GATHERABLE_SEARCH_RESULT_LIMIT = 50;
@@ -37,6 +39,7 @@ const ACTION_DICT_URLS: Record<string, string> = {
 // ─── Module-level Singleton Cache ──────────────────────────────────────────
 
 let rawEnglishNames: Record<string, any> = {};
+let rawTraditionalNames: Record<string, any> = {};
 let rawTargetNames: Record<string, any> = {};
 let rawEnglishActionNames: Record<string, any> = {};
 let rawTargetActionNames: Record<string, any> = {};
@@ -71,12 +74,13 @@ export const currentLanguage = ref('');
 let staticDataLoaded = false;
 let staticLoadPromise: Promise<void> | null = null;
 let langLoadPromise: Promise<void> | null = null;
+let traditionalNamesLoadPromise: Promise<void> | null = null;
 export const isGameDataLoading = ref(false);
 
 const SOLVER_ACTION_IDS = new Set([
   215, 218, 220, 222, 224, 232, 235, 237, 239, 241, 272, 273, 294, 295, 4072, 4073, 4086, 4087,
   21177, 21178, 21203, 21204, 25589, 25590, 26521,
-  240, 22182, 22184, 22185, 22188, 22189, 21205, 34871
+  240, 22182, 22183, 22184, 22185, 22187, 22188, 22189, 21205, 34871
 ]);
 
 // ─── 輔助解析函數 ────────────────────────────────────────────────────────────
@@ -107,19 +111,30 @@ function pickActionEntries(actions: Record<string, any>): Record<string, any> {
   );
 }
 
-function iconIdToPath(iconId: number): string {
+function iconIdToAssetPath(iconId: number): string {
   const filename = iconId.toString().padStart(6, '0');
   const folder = `${filename.slice(0, 3)}000`;
-  return `/i/${folder}/${filename}.png`;
+  return `/api/asset?path=ui/icon/${folder}/${filename}_hr1.tex&format=png`;
 }
 
-function resolveIconPath(icon: string | number | { icon?: string | number; Icon?: string | number } | undefined): string {
+function resolveXivapiIconUrl(icon: string | number | { icon?: string | number; Icon?: string | number } | undefined): string {
   const iconValue = typeof icon === 'object' ? icon.icon ?? icon.Icon : icon;
-  if (typeof iconValue === 'number') return iconIdToPath(iconValue);
+  if (typeof iconValue === 'number') return normalizeXivapiIconUrl(iconIdToAssetPath(iconValue));
   if (typeof iconValue !== 'string') return '';
-  if (iconValue.startsWith('/i/')) return iconValue;
+  if (iconValue.startsWith('/i/')) return normalizeXivapiIconUrl(iconValue);
   const iconId = Number(iconValue);
-  return Number.isFinite(iconId) ? iconIdToPath(iconId) : iconValue;
+  return Number.isFinite(iconId) ? normalizeXivapiIconUrl(iconIdToAssetPath(iconId)) : normalizeXivapiIconUrl(iconValue);
+}
+
+function normalizeXivapiIconUrl(pathOrUrl: string): string {
+  const value = pathOrUrl.trim();
+  if (!value) return '';
+  if (value.startsWith(`${XIVAPI_LEGACY_BASE_URL}/api/asset`)) {
+    return `${XIVAPI_V2_BASE_URL}${value.slice(XIVAPI_LEGACY_BASE_URL.length)}`;
+  }
+  if (value.startsWith('/api/asset')) return `${XIVAPI_V2_BASE_URL}${value}`;
+  if (value.startsWith('/i/')) return `${XIVAPI_LEGACY_BASE_URL}${value}`;
+  return value;
 }
 
 function isCollectableFlag(value: unknown): boolean {
@@ -381,6 +396,7 @@ async function loadLangData(lang: string): Promise<void> {
         ...(needsEnglishActions ? [fetch(ACTIONS_URL)] : [])
       ]);
       if (results[0].ok) rawTargetNames = await results[0].json();
+      if (lang === 'tw') rawTraditionalNames = rawTargetNames;
       if (results[1].ok) rawTargetActionNames = pickActionEntries(await results[1].json());
       const englishResultIndex = 2;
       const englishActionsResultIndex = englishResultIndex + (needsEnglish ? 1 : 0);
@@ -398,12 +414,30 @@ async function loadLangData(lang: string): Promise<void> {
   return langLoadPromise;
 }
 
+async function loadTraditionalNames(): Promise<void> {
+  if (Object.keys(rawTraditionalNames).length > 0) return;
+  if (traditionalNamesLoadPromise) return traditionalNamesLoadPromise;
+
+  traditionalNamesLoadPromise = (async () => {
+    try {
+      const result = await fetch(DICT_URLS.tw);
+      if (result.ok) rawTraditionalNames = await result.json();
+    } catch (error) {
+      console.warn('[GameData] Traditional Chinese item names failed to load:', error);
+    } finally {
+      traditionalNamesLoadPromise = null;
+    }
+  })();
+
+  return traditionalNamesLoadPromise;
+}
+
 // ─── 公開 API ────────────────────────────────────────────────────────────────
 
 export async function loadGameData(lang: string): Promise<void> {
   isGameDataLoading.value = true;
   try {
-    await Promise.all([loadStaticData(), loadLangData(lang)]);
+    await Promise.all([loadStaticData(), loadLangData(lang), loadTraditionalNames()]);
   } finally {
     isGameDataLoading.value = false;
   }
@@ -445,13 +479,18 @@ export function getItemName(itemId: number): string {
   return extractName(rawTargetNames[idStr], currentLanguage.value) || extractName(rawEnglishNames[idStr], 'en') || `Item #${itemId}`;
 }
 
+export function getItemTraditionalName(itemId: number): string {
+  const idStr = itemId.toString();
+  return extractName(rawTraditionalNames[idStr], 'tw') || extractName(rawEnglishNames[idStr], 'en') || `Item #${itemId}`;
+}
+
 export function getItemEnglishName(itemId: number): string {
   return extractName(rawEnglishNames[itemId.toString()], 'en') || '';
 }
 
 export function getItemIcon(itemId: number): string {
   const path = rawIcons[itemId.toString()];
-  return path ? `https://xivapi.com${path}` : '';
+  return path ? resolveXivapiIconUrl(path) : '';
 }
 
 export function getGatherableItemById(itemId: number): GatherableItem | null {
@@ -464,8 +503,7 @@ export function getGatherableItemById(itemId: number): GatherableItem | null {
 }
 
 export function getActionIcon(actionId: number): string {
-  const path = resolveIconPath(rawActionIcons[actionId.toString()]);
-  return path ? `https://xivapi.com${path}` : '';
+  return resolveXivapiIconUrl(rawActionIcons[actionId.toString()]);
 }
 
 export function getActionName(actionId: number): string {
@@ -486,4 +524,8 @@ export function getItemBaseIntegrity(gatheringItemId: number): number {
 
 export function __parseXivapiV2CollectableRowsForTest(data: unknown) {
   return parseXivapiV2CollectableRows(data);
+}
+
+export function __resolveXivapiIconUrlForTest(icon: string | number | { icon?: string | number; Icon?: string | number } | undefined) {
+  return resolveXivapiIconUrl(icon);
 }

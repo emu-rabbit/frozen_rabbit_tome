@@ -5,19 +5,18 @@ import { computed, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'v
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
-import InputNumber from 'primevue/inputnumber';
-import Select from 'primevue/select';
 import { useSimulatorStats } from '../composables/useSimulatorStats';
 import { useExperimentLibrary } from '../composables/useExperimentLibrary';
 import { useSimulator } from '../composables/useSimulator';
 import { useSettings } from '../composables/useSettings';
 import PendingFeature from '../components/PendingFeature.vue';
 import CollectableStrategyLab from '../components/CollectableStrategyLab.vue';
+import CollectableItemSummaryPanel from '../components/collectable/CollectableItemSummaryPanel.vue';
+import CollectableStatsPanel from '../components/collectable/CollectableStatsPanel.vue';
 import FloatingJsonExportButton from '../components/FloatingJsonExportButton.vue';
 import MacroPreviewDialog from '../components/MacroPreviewDialog.vue';
 import SaveEntryDialog from '../components/SaveEntryDialog.vue';
 import GearProfilePickerDialog from '../components/GearProfilePickerDialog.vue';
-import FoodAutoComplete from '../components/FoodAutoComplete.vue';
 import { getActionName, getGatherableItemById, getItemName, getItemBaseIntegrity } from '../services/gameData';
 import { getRotationActionIcon, getRotationActionName } from '../services/actionIcons';
 import { simulateGatheringRotation, getSimulatorActions, previewRotationState, canUseSimulatorAction, validateSimulatorRotation } from '../utils/rotationSimulator';
@@ -29,7 +28,6 @@ import type { GearStatProfile, SimulationResponse, StoredExperiment } from '../t
 import { gatherableItemJobs } from '../utils/gatherableItemJobs';
 import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
 import {
-  NODE_BONUS_INPUT_LIMITS,
   PLAYER_INPUT_LIMITS,
   clampIntegerInput,
   normalizeNodeBonuses,
@@ -40,11 +38,7 @@ import {
   buildRegularExperimentJsonExport,
   downloadJsonFile
 } from '../utils/tomeJsonExport';
-
-type RelicToolOption = {
-  label: string;
-  value: boolean;
-};
+import { trackRegularAnalyzerCompleted } from '../services/analytics';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -160,10 +154,6 @@ const collectableRelicToolBonusModel = computed<boolean>({
     solverSettings.value.collectableRelicToolBonus = value;
   }
 });
-const collectableRelicToolBonusOptions = computed<RelicToolOption[]>(() => [
-  { label: t('solver.nodeBonuses.enabled'), value: true },
-  { label: t('solver.nodeBonuses.disabled'), value: false }
-]);
 
 onMounted(() => {
   fetchItemLevelData();
@@ -228,11 +218,24 @@ function runSimulation() {
   const request = buildRequest();
   if (!request || !canRunSimulation.value) return;
 
+  const startedAt = performance.now();
   analysis.value = simulateGatheringRotation({
     ...request,
     includeRevisit: !hideRevisitExperimentFeatures,
     primaryRotation: primaryRotation.value,
     revisitRotation: hideRevisitExperimentFeatures ? [] : revisitRotation.value
+  });
+  trackRegularAnalyzerCompleted({
+    input: {
+      item: activeItem.value,
+      stats: { ...solverStats.value },
+      maxGp: effectiveStats.value.gp,
+      temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
+      selectedFood: { ...selectedFood.value },
+      nodeBonuses: { ...nodeBonuses.value }
+    },
+    actionCount: primaryRotation.value.length + (hideRevisitExperimentFeatures ? 0 : revisitRotation.value.length),
+    calculationTime: Math.floor(performance.now() - startedAt)
   });
 }
 
@@ -544,83 +547,34 @@ function progressPercent(range: number[], maxValue: number) {
     />
 
     <div v-else class="space-y-6">
-      <section class="panel item-panel">
-        <div class="item-heading">
-          <div class="item-icon-wrap">
-            <img v-if="activeItem.iconUrl" :src="activeItem.iconUrl" class="item-icon" alt="" />
-            <i v-else class="pi pi-box text-slate-400"></i>
-          </div>
-          <div class="min-w-0">
-            <div class="item-badges">
-              <span v-for="job in activeItemJobs" :key="job">{{ t(`game.jobs.${job}`) }}</span>
-              <span>{{ t('createGuide.glv') }} {{ activeItem.glv }}</span>
-              <span>Lv {{ itemRealLevel || '-' }}</span>
-            </div>
-            <h1>{{ displayName }}</h1>
-          </div>
-        </div>
-        <div class="rate-grid">
-          <div><span>{{ t('simulator.rates.success') }}</span><strong>{{ successRate }}%</strong></div>
-          <div v-if="!activeItem.isCollectable"><span>{{ t('simulator.rates.boon') }}</span><strong>{{ boonChance }}%</strong></div>
-          <div v-else><span>{{ t('collectableSolver.stats.scourValue') }}</span><strong>{{ collectableScourValue ?? '-' }}</strong></div>
-        </div>
-      </section>
+      <CollectableItemSummaryPanel
+        :item="activeItem"
+        :item-name="displayName"
+        :jobs="activeItemJobs"
+        :item-real-level="itemRealLevel"
+        :success-rate="successRate"
+        :boon-chance="boonChance"
+        :collectable-scour-value="collectableScourValue"
+      />
 
-      <section class="panel">
-        <div class="section-title stats-section-title">
-          <span>
-            <i class="pi pi-sliders-h text-soft-green-500"></i>
-            <h2>{{ t('simulator.statsTitle') }}</h2>
-          </span>
-          <Button
-            icon="pi pi-download"
-            :label="t('gearProfiles.loadProfile')"
-            class="p-button-text p-button-sm"
-            @click="isGearProfilePickerOpen = true"
-          />
-        </div>
-        <div class="input-grid stats-input-grid" :class="{ 'is-collectable': activeItem.isCollectable }">
-          <label class="field-level"><span>{{ t('game.stats.level') }}</span><InputNumber v-model="solverStats.level" :min="PLAYER_INPUT_LIMITS.level.min" :max="PLAYER_INPUT_LIMITS.level.max" fluid /></label>
-          <label class="field-gathering"><span>{{ t('game.stats.gathering') }}</span><InputNumber v-model="solverStats.gathering" :min="PLAYER_INPUT_LIMITS.gathering.min" :max="PLAYER_INPUT_LIMITS.gathering.max" fluid /></label>
-          <label class="field-perception"><span>{{ t('game.stats.perception') }}</span><InputNumber v-model="solverStats.perception" :min="PLAYER_INPUT_LIMITS.perception.min" :max="PLAYER_INPUT_LIMITS.perception.max" fluid /></label>
-          <label class="field-food">
-            <span>{{ t('solver.food.label') }}</span>
-            <FoodAutoComplete
-              v-model="selectedFoodModel"
-              :placeholder="t('solver.food.placeholder')"
-              forceSelection
-              dropdown
-              showClear
-              fluid
-            />
-          </label>
-          <span v-if="!activeItem.isCollectable" class="stats-grid-spacer" aria-hidden="true"></span>
-          <label class="field-current-gp"><span>{{ t('solver.currentGp') }}</span><InputNumber v-model="temporaryGp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="effectiveStats.gp" fluid /></label>
-          <label class="field-max-gp"><span>{{ t('solver.maxGp') }}</span><InputNumber v-model="solverStats.gp" :min="PLAYER_INPUT_LIMITS.gp.min" :max="PLAYER_INPUT_LIMITS.gp.max" fluid /></label>
-          <label class="field-gathering-count"><span>{{ t('solver.nodeBonuses.gatheringCount') }}</span><InputNumber v-model="nodeBonuses.gatheringCount" :min="NODE_BONUS_INPUT_LIMITS.gatheringCount.min" :max="gatheringCountMax" fluid /></label>
-          <template v-if="!activeItem.isCollectable">
-            <label class="field-yield-count"><span>{{ t('solver.nodeBonuses.yieldCount') }}</span><InputNumber v-model="nodeBonuses.yieldCount" :min="NODE_BONUS_INPUT_LIMITS.yieldCount.min" :max="NODE_BONUS_INPUT_LIMITS.yieldCount.max" fluid /></label>
-            <label class="field-extra-rate"><span>{{ t('solver.nodeBonuses.extraRate') }}</span><InputNumber v-model="nodeBonuses.extraRate" :min="NODE_BONUS_INPUT_LIMITS.extraRate.min" :max="NODE_BONUS_INPUT_LIMITS.extraRate.max" fluid /></label>
-          </template>
-          <template v-if="activeItem.isCollectable">
-            <label class="field-relic-tool">
-              <span>{{ t('solver.nodeBonuses.collectableRelicToolBonus') }}</span>
-              <Select
-                v-model="collectableRelicToolBonusModel"
-                :options="collectableRelicToolBonusOptions"
-                optionLabel="label"
-                optionValue="value"
-                fluid
-              />
-            </label>
-          </template>
-        </div>
-        <p v-if="!isPerceptionMet" class="warning">{{ t('simulator.perceptionWarning') }}</p>
-      </section>
+      <CollectableStatsPanel
+        v-model:stats="solverStats"
+        v-model:selected-food="selectedFoodModel"
+        v-model:temporary-gp="temporaryGp"
+        v-model:node-bonuses="nodeBonuses"
+        v-model:relic-tool-bonus="collectableRelicToolBonusModel"
+        :is-collectable="activeItem.isCollectable"
+        :effective-gp="effectiveStats.gp"
+        :gathering-count-max="gatheringCountMax"
+        :show-perception-warning="!isPerceptionMet"
+        show-gear-profile-button
+        @load-profile="isGearProfilePickerOpen = true"
+      />
 
       <CollectableStrategyLab
         v-if="activeItem.isCollectable"
         :active-item="activeItem"
+        :base-stats="solverStats"
         :effective-stats="effectiveStats"
         :base-values="baseValues"
         :item-real-level="itemRealLevel"

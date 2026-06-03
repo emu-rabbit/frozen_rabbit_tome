@@ -9,6 +9,10 @@ import { applyFoodBonus, calculateFoodBonus, getGatheringFood } from '../service
 import { calculateSuccessRate, calculateBoonChance } from '../utils/gatheringMath';
 import type { SolverRequest, SolverResponse, SolverWorkerErrorResponse, SolverWorkerErrorType, SolverWorkerResponse } from '../types/game';
 import {
+  trackRegularSolverCompleted,
+  trackRegularSolverFailed
+} from '../services/analytics';
+import {
   DEFAULT_NODE_BONUSES,
   clampIntegerInput,
   maxGatheringCountForBaseIntegrity,
@@ -403,6 +407,14 @@ export function useSolver() {
       solverErrorDetail.value = null;
       isSolving.value = true;
       const currentSolveVersion = solveVersion;
+      const analyticsInput = {
+        item: activeItem.value,
+        stats: { ...solverStats.value },
+        maxGp: effectiveStats.value.gp,
+        temporaryGp: Math.min(temporaryGp.value, effectiveStats.value.gp),
+        selectedFood: { ...selectedFood.value },
+        nodeBonuses: { ...nodeBonuses.value }
+      };
       
       let worker: Worker;
       try {
@@ -411,6 +423,10 @@ export function useSolver() {
         console.error('Worker creation failed:', err);
         isSolving.value = false;
         requestWorkerReload();
+        trackRegularSolverFailed({
+          input: analyticsInput,
+          error: { errorType: typeof window === 'undefined' ? 'workerFailed' : 'workerStale' }
+        });
         return;
       }
 
@@ -443,6 +459,10 @@ export function useSolver() {
         isSolving.value = false;
         solverError.value = 'workerFailed';
         solverErrorDetail.value = null;
+        trackRegularSolverFailed({
+          input: analyticsInput,
+          error: { errorType: 'workerFailed' }
+        });
         return;
       }
       
@@ -459,6 +479,10 @@ export function useSolver() {
           isSolving.value = false;
           activeWorker = null;
           worker.terminate();
+          trackRegularSolverFailed({
+            input: analyticsInput,
+            error: e.data
+          });
           return;
         }
 
@@ -468,6 +492,10 @@ export function useSolver() {
         isSolving.value = false;
         activeWorker = null;
         worker.terminate();
+        trackRegularSolverCompleted({
+          input: analyticsInput,
+          result: e.data
+        });
       };
 
       worker.onerror = (err) => {
@@ -481,6 +509,10 @@ export function useSolver() {
         activeWorker = null;
         worker.terminate();
         requestWorkerReload();
+        trackRegularSolverFailed({
+          input: analyticsInput,
+          error: { errorType: typeof window === 'undefined' ? 'workerFailed' : 'workerStale' }
+        });
       };
     }
 }

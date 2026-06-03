@@ -149,6 +149,7 @@ async function runCollectableSolve(manualMemoCapacityPower?: number) {
 
   await solveCollectable({
     activeItem: props.activeItem,
+    baseStats: { ...props.baseStats },
     stats: { ...props.effectiveStats },
     baseValues: {
       Gathering: props.baseValues.Gathering,
@@ -157,6 +158,7 @@ async function runCollectableSolve(manualMemoCapacityPower?: number) {
     itemLevel: props.itemRealLevel,
     nodeBonuses: { ...props.nodeBonuses },
     temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
+    selectedFood: { ...props.selectedFood },
     debugMode: props.debugMode,
     objective: collectableObjective.value,
     manualMemoCapacityPower

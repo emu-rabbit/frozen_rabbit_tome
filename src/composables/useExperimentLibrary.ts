@@ -16,6 +16,7 @@ import type {
 import type { CollectableObjective, CollectableRewardTableSummary } from '../types/collectable';
 import { getRotationActionId } from '../services/actionIcons';
 import type { ImportedExperimentDraft } from '../utils/tomeJsonImport';
+import { trackExperimentDatabaseEntryAdded } from '../services/analytics';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-experiments';
 const STORAGE_SCHEMA_VERSION = 2;
@@ -235,6 +236,11 @@ export function useExperimentLibrary() {
     };
 
     experiments.value = [experiment, ...experiments.value];
+    trackExperimentDatabaseEntryAdded({
+      itemId: experiment.itemId,
+      kind: experiment.kind,
+      source: 'analysis'
+    });
 
     return experiment;
   };
@@ -278,6 +284,11 @@ export function useExperimentLibrary() {
     };
 
     experiments.value = [experiment, ...experiments.value];
+    trackExperimentDatabaseEntryAdded({
+      itemId: experiment.itemId,
+      kind: experiment.kind,
+      source: 'analysis'
+    });
 
     return experiment;
   };
@@ -302,6 +313,11 @@ export function useExperimentLibrary() {
     };
 
     experiments.value = [experiment, ...experiments.value];
+    trackExperimentDatabaseEntryAdded({
+      itemId: experiment.itemId,
+      kind: experiment.kind,
+      source: 'import'
+    });
     return experiment;
   };
 

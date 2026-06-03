@@ -13,6 +13,30 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: '1.1.0',
+    date: '2026-06-03',
+    changes: [
+      {
+        tw: '新增開拓研究模式。',
+        cn: '新增开拓研究模式。',
+        en: 'Added Frontier Research mode.',
+        ja: '開拓研究モードを追加しました。',
+      },
+      {
+        tw: '修正藏書庫與資料庫的模型過期判定。',
+        cn: '修正藏书库与数据库的模型过期判定。',
+        en: 'Fixed model staleness checks in the Tome Library and databases.',
+        ja: '蔵書庫とデータベースのモデル期限切れ判定を修正しました。',
+      },
+      {
+        tw: '放鬆分析器的節點上限限制。',
+        cn: '放宽分析器的节点上限限制。',
+        en: 'Relaxed analyzer node limit constraints.',
+        ja: 'アナライザーのノード上限制限を緩和しました。',
+      },
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-05-27',
     changes: [

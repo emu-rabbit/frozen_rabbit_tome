@@ -12,6 +12,28 @@ import { getCollectableScripRewardMeta } from '../services/collectableScripRewar
 import { getItemName } from '../services/gameData';
 import { analyzeCollectableStrategyTreeAsync, type CollectableStrategyAnalysis } from '../utils/collectableStrategyAnalysis';
 import {
+  analyzeFrontierCollectableStrategy,
+  applyFrontierCollectableAction,
+  canUseFrontierCollectableAction,
+  createFrontierCollectableContext,
+  frontierCollectableStateKey,
+  matchesFrontierCollectableStrategyRule
+} from '../frontier/collectable/frontierCollectableSimulator';
+import { buildFrontierCollectableJsonExport } from '../frontier/collectable/frontierCollectableExport';
+import { useFrontierCollectableStudies } from '../frontier/collectable/frontierCollectableStorage';
+import {
+  buildFrontierCollectableStrategyTreeAsync,
+  toDisplayState as toFrontierDisplayState,
+  type FrontierCollectableStrategyTreeRequest
+} from '../frontier/collectable/frontierCollectableStrategyTree';
+import {
+  FRONTIER_COLLECTABLE_ACTION_DEFINITIONS,
+  frontierCollectableActionKinds,
+  getFrontierCollectableActionIcon,
+  getFrontierCollectableActionName
+} from '../frontier/collectable/frontierCollectableActions';
+import { getFrontierMeticulousSaveRatePercent } from '../frontier/collectable/frontierCollectableMechanics';
+import {
   buildCollectableStrategyTreeAsync,
   collectableStrategyActionKinds,
   collectableStrategyFields,
@@ -19,13 +41,14 @@ import {
   createDefaultCollectableStrategyRules,
   createSimpleCollectableStrategyRules,
   isNumericStrategyField,
-  summarizeAppliedRuleOutcome,
+  summarizeAppliedRuleOutcomeAsync,
   type CollectableStrategyCondition,
   type CollectableStrategyComparator,
   type CollectableStrategyField,
   type CollectableStrategyNumericField,
   type CollectableStrategyBuildRequest,
   type CollectableStrategyNode,
+  type CollectableStrategyRuleApplicationSummary,
   type CollectableStrategyTreeResult,
   type CollectableStrategyRule
 } from '../utils/collectableStrategyTree';
@@ -45,7 +68,8 @@ import {
   isTierCountObjective
 } from '../utils/collectableObjectivePresets';
 import {
-  buildCollectableActionEffectPreviews,
+  buildCollectableActionEffectPreviewsAsync,
+  type CollectableActionEffectPreview,
   type CollectableEffectMetric
 } from '../utils/collectableActionEffectPreview';
 import { createCollectableMechanicsContext, MIN_COLLECTABLE_LEVEL, type CollectableMechanicsContext } from '../utils/collectableMechanics';
@@ -56,11 +80,12 @@ import {
   clampIntegerInput,
   normalizeCollectableObjective
 } from '../config/inputLimits';
-import { isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeScheduler';
+import { createCooperativeScheduler, isCooperativeAbort, yieldToEventQueue } from '../utils/cooperativeScheduler';
 import {
   buildCollectableExperimentJsonExport,
   buildJsonExportFileName,
-  downloadJsonFile
+  downloadJsonFile,
+  sanitizeJsonFileName
 } from '../utils/tomeJsonExport';
 import {
   buildCollectableDecisionTreeHtml,
@@ -70,13 +95,25 @@ import {
   type CollectableDecisionTreeHtmlDocument,
   type CollectableDecisionTreeHtmlRow
 } from '../utils/collectableDecisionTreeHtmlExport';
+import { trackCollectableAnalyzerCompleted } from '../services/analytics';
+import type {
+  FrontierCollectableAnalysisResult,
+  FrontierCollectableProbabilityProfile,
+  FrontierCollectableSimulationRequest,
+  FrontierCollectableState,
+  FrontierCollectableStudy,
+  FrontierCollectableStrategyCondition,
+  FrontierCollectableStrategyRule
+} from '../frontier/collectable/frontierCollectableTypes';
 
 const { t, locale } = useI18n();
 const { saveCollectableExperiment } = useExperimentLibrary();
+const { createStudy } = useFrontierCollectableStudies();
 const { isDarkMode } = useSettings();
 
 type RuleEditorView = 'main' | 'managedNodes' | 'actions';
 type ManagedNodesView = 'summary' | 'individual';
+type StrategyLabActionKind = CollectableActionKind | FrontierCollectableStrategyRule['actions'][number];
 type ManagedNodeMeterKey = 'gp' | 'integrity' | 'collectability';
 type ManagedOverviewSource = Pick<CollectableStrategyNode, 'state'>;
 type ManagedOverviewMetricKey =
@@ -87,6 +124,7 @@ type ManagedOverviewMetricKey =
 
 const props = defineProps<{
   activeItem: GatherableItem;
+  baseStats?: PlayerStats;
   effectiveStats: PlayerStats;
   baseValues: { Gathering: number; Perception: number } | null;
   itemRealLevel: number;
@@ -95,6 +133,9 @@ const props = defineProps<{
   selectedFood: FoodSelection;
   hasRelicToolBonus?: boolean;
   loadedExperiment?: StoredExperiment | null;
+  frontierProbabilityProfile?: FrontierCollectableProbabilityProfile | null;
+  frontierStudyId?: string | null;
+  frontierLoadedStudy?: FrontierCollectableStudy | null;
 }>();
 
 const rules = ref<CollectableStrategyRule[]>(createDefaultCollectableStrategyRules());
@@ -104,6 +145,7 @@ const ruleEditorView = ref<RuleEditorView>('main');
 const managedNodesView = ref<ManagedNodesView>('summary');
 const managedNodeIndex = ref(0);
 const analysis = ref<CollectableStrategyAnalysis | null>(null);
+const frontierAnalysis = ref<FrontierCollectableAnalysisResult | null>(null);
 const rewardTable = ref<CollectableRewardTable | null>(null);
 const rewardError = ref(false);
 const isObjectiveDialogOpen = ref(false);
@@ -114,11 +156,14 @@ const isDecisionTreeExported = ref(false);
 const isDecisionTreeExporting = ref(false);
 const treeResult = ref<CollectableStrategyTreeResult | null>(null);
 const editorFrontierTreeResult = ref<CollectableStrategyTreeResult | null>(null);
+const actionEffectPreviews = ref<CollectableActionEffectPreview[]>([]);
+const appliedRuleOutcome = ref<CollectableStrategyRuleApplicationSummary>(createEmptyAppliedRuleOutcome());
 const isTreeBuilding = ref(false);
 const isEditorFrontierBuilding = ref(false);
+const isEditorPreviewBuilding = ref(false);
 const isAnalysisRunning = ref(false);
-const internalMaxNodes = 1200;
 const tierCountVisibilityEpsilon = 0.000001;
+const appliedRulePreviewStateLimit = 10000;
 const compactPathHiddenBranchKeys = new Set([
   'collectableSolver.branches.standardProc',
   'collectableSolver.branches.standardNoProc',
@@ -126,14 +171,20 @@ const compactPathHiddenBranchKeys = new Set([
   'collectableSolver.branches.wiseNoProc'
 ]);
 const { collectableObjective } = useCollectableSolver();
+const isFrontierMode = computed(() => !!props.frontierProbabilityProfile);
+const strategyActionKinds = computed<StrategyLabActionKind[]>(() => (
+  isFrontierMode.value ? frontierCollectableActionKinds : collectableStrategyActionKinds
+));
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null;
 let jsonExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let decisionTreeExportTimer: ReturnType<typeof window.setTimeout> | null = null;
 let treeBuildAbort: AbortController | null = null;
 let editorBuildAbort: AbortController | null = null;
+let editorPreviewAbort: AbortController | null = null;
 let analysisAbort: AbortController | null = null;
 let treeBuildSequence = 0;
 let editorBuildSequence = 0;
+let editorPreviewSequence = 0;
 let analysisSequence = 0;
 const strategyConditionValueLimits: Record<CollectableStrategyNumericField, { min: number; max: number }> = {
   gp: PLAYER_INPUT_LIMITS.gp,
@@ -159,7 +210,6 @@ function buildStrategyTreeRequest(strategyRules: CollectableStrategyRule[]): Col
     isTimedNode: props.activeItem.isTimedNode ?? false,
     hasRelicToolBonus: props.hasRelicToolBonus,
     rules: strategyRules,
-    maxNodes: internalMaxNodes,
     formatActionLabel: actionName,
     formatBranchLabel: (labelKeys) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
     formatPathStep: ({ ruleName, actionLabel, branchLabel, branchLabelKeys }) => formatCompactPathStep({
@@ -184,7 +234,11 @@ const editorFrontierRules = computed(() => {
   const index = rules.value.findIndex((rule) => rule.id === editingRuleId.value);
   return index < 0 ? rules.value : rules.value.slice(0, index);
 });
-const managedNodes = computed(() => collectMatchingUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value));
+const managedNodes = computed(() => (
+  isFrontierMode.value
+    ? collectMatchingFrontierUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value)
+    : collectMatchingUncoveredStrategyNodes(editorFrontierTreeResult.value?.uncoveredNodes ?? [], editingRuleDraft.value)
+));
 const collectableMechanicsContext = computed(() => {
   if (!props.baseValues || isCollectableLevelLocked.value) return null;
 
@@ -205,16 +259,6 @@ const editorCoverageText = computed(() => (
     : t('collectableStrategyLab.coverageNodes', { count: managedNodes.value.length })
 ));
 const ruleActionPreview = computed(() => editingRuleDraft.value?.actions.slice(0, 6) ?? []);
-const actionEffectPreviews = computed(() => buildCollectableActionEffectPreviews({
-  actions: editingRuleDraft.value?.actions ?? [],
-  states: managedNodes.value.map((node) => node.state),
-  mechanics: collectableMechanicsContext.value
-}));
-const appliedRuleOutcome = computed(() => summarizeAppliedRuleOutcome(
-  editorFrontierTreeResult.value?.uncoveredNodes ?? [],
-  editingRuleDraft.value,
-  collectableMechanicsContext.value
-));
 const appliedRuleOpenStateSources = computed<ManagedOverviewSource[]>(() => (
   appliedRuleOutcome.value.openStates.map((state) => ({ state }))
 ));
@@ -222,13 +266,32 @@ const appliedRuleOverview = computed(() => buildManagedNodeOverview(
   appliedRuleOpenStateSources.value,
   collectableMechanicsContext.value
 ));
-const stateFieldOptions = computed(() => [
-  ...collectableStrategyFields.map((field) => ({
-    field,
-    label: fieldLabel(field),
-    type: isNumericStrategyField(field) ? 'number' : 'boolean'
-  }))
-]);
+const stateFieldOptions = computed(() => (
+  collectableStrategyFields.flatMap((field) => {
+    const options = [{
+      field,
+      label: fieldLabel(field),
+      type: isNumericStrategyField(field) ? 'number' : 'boolean'
+    }];
+
+    if (isFrontierMode.value && field === 'standardActive') {
+      options.push(
+        {
+          field: 'highStandardActive' as CollectableStrategyField,
+          label: fieldLabel('highStandardActive'),
+          type: 'boolean'
+        },
+        {
+          field: 'anyStandardActive' as CollectableStrategyField,
+          label: fieldLabel('anyStandardActive'),
+          type: 'boolean'
+        }
+      );
+    }
+
+    return options;
+  })
+));
 const analysisUnit = computed(() => t(getCollectableScripRewardMeta(rewardTable.value?.rewardItemId).labelKey));
 const selectedObjectiveLabel = computed(() => {
   if (!rewardTable.value) return t('collectableObjective.title');
@@ -288,13 +351,21 @@ watch([
 }, { immediate: true });
 
 watch([
+  () => props.frontierLoadedStudy,
+  () => props.activeItem.itemId
+], () => {
+  loadFrontierStudy();
+}, { immediate: true });
+
+watch([
   rules,
   () => props.effectiveStats,
   () => props.baseValues,
   () => props.itemRealLevel,
   () => props.nodeBonuses,
   () => props.temporaryGp,
-  () => props.hasRelicToolBonus
+  () => props.hasRelicToolBonus,
+  () => props.frontierProbabilityProfile
 ], () => {
   rebuildStrategyTree();
 }, { deep: true, immediate: true });
@@ -308,7 +379,8 @@ watch([
   () => props.itemRealLevel,
   () => props.nodeBonuses,
   () => props.temporaryGp,
-  () => props.hasRelicToolBonus
+  () => props.hasRelicToolBonus,
+  () => props.frontierProbabilityProfile
 ], () => {
   rebuildEditorFrontierTree();
 }, { deep: true, immediate: true });
@@ -321,10 +393,12 @@ watch([
   () => props.nodeBonuses,
   () => props.temporaryGp,
   () => props.hasRelicToolBonus,
+  () => props.frontierProbabilityProfile,
   collectableObjective
 ], () => {
   analysisAbort?.abort();
   analysis.value = null;
+  frontierAnalysis.value = null;
   isSaved.value = false;
   isDecisionTreeExported.value = false;
 }, { deep: true });
@@ -341,12 +415,25 @@ watch(() => managedNodes.value.length, (length) => {
   if (managedNodeIndex.value >= length) managedNodeIndex.value = length - 1;
 });
 
+watch([
+  managedNodes,
+  editingRuleDraft,
+  () => isEditorFrontierBuilding.value,
+  () => ruleEditorView.value,
+  () => isFrontierMode.value,
+  () => props.frontierProbabilityProfile,
+  collectableMechanicsContext
+], () => {
+  rebuildEditorPreviews();
+}, { deep: true, immediate: true });
+
 onUnmounted(() => {
   if (saveTimer) window.clearTimeout(saveTimer);
   if (jsonExportTimer) window.clearTimeout(jsonExportTimer);
   if (decisionTreeExportTimer) window.clearTimeout(decisionTreeExportTimer);
   treeBuildAbort?.abort();
   editorBuildAbort?.abort();
+  editorPreviewAbort?.abort();
   analysisAbort?.abort();
 });
 
@@ -354,12 +441,14 @@ async function rebuildStrategyTree() {
   treeBuildAbort?.abort();
   analysisAbort?.abort();
   const sequence = treeBuildSequence += 1;
-  const request = buildStrategyTreeRequest(clonePlain(rules.value));
+  const formalRequest = isFrontierMode.value ? null : buildStrategyTreeRequest(toFormalStrategyRules(clonePlain(rules.value)));
+  const frontierRequest = isFrontierMode.value ? buildFrontierTreeRequest(clonePlain(rules.value)) : null;
 
-  if (!request) {
+  if (!formalRequest && !frontierRequest) {
     treeResult.value = null;
     isTreeBuilding.value = false;
     analysis.value = null;
+    frontierAnalysis.value = null;
     return;
   }
 
@@ -367,16 +456,22 @@ async function rebuildStrategyTree() {
   treeBuildAbort = controller;
   treeResult.value = null;
   analysis.value = null;
+  frontierAnalysis.value = null;
   isSaved.value = false;
   isTreeBuilding.value = true;
 
   try {
     await nextTick();
     await yieldToEventQueue();
-    const result = await buildCollectableStrategyTreeAsync(request, {
-      signal: controller.signal,
-      yieldEvery: 60
-    });
+    const result = frontierRequest
+      ? await buildFrontierCollectableStrategyTreeAsync(frontierRequest, {
+        signal: controller.signal,
+        yieldEvery: 60
+      })
+      : await buildCollectableStrategyTreeAsync(formalRequest!, {
+        signal: controller.signal,
+        yieldEvery: 60
+      });
     if (sequence === treeBuildSequence && !controller.signal.aborted) {
       treeResult.value = result;
     }
@@ -401,8 +496,9 @@ async function rebuildEditorFrontierTree() {
     return;
   }
 
-  const request = buildStrategyTreeRequest(clonePlain(editorFrontierRules.value));
-  if (!request) {
+  const formalRequest = isFrontierMode.value ? null : buildStrategyTreeRequest(toFormalStrategyRules(clonePlain(editorFrontierRules.value)));
+  const frontierRequest = isFrontierMode.value ? buildFrontierTreeRequest(clonePlain(editorFrontierRules.value)) : null;
+  if (!formalRequest && !frontierRequest) {
     editorFrontierTreeResult.value = null;
     isEditorFrontierBuilding.value = false;
     return;
@@ -416,10 +512,15 @@ async function rebuildEditorFrontierTree() {
   try {
     await nextTick();
     await yieldToEventQueue();
-    const result = await buildCollectableStrategyTreeAsync(request, {
-      signal: controller.signal,
-      yieldEvery: 60
-    });
+    const result = frontierRequest
+      ? await buildFrontierCollectableStrategyTreeAsync(frontierRequest, {
+        signal: controller.signal,
+        yieldEvery: 60
+      })
+      : await buildCollectableStrategyTreeAsync(formalRequest!, {
+        signal: controller.signal,
+        yieldEvery: 60
+      });
     if (sequence === editorBuildSequence && !controller.signal.aborted) {
       editorFrontierTreeResult.value = result;
     }
@@ -434,6 +535,75 @@ async function rebuildEditorFrontierTree() {
   }
 }
 
+async function rebuildEditorPreviews() {
+  editorPreviewAbort?.abort();
+  const sequence = editorPreviewSequence += 1;
+  const rule = editingRuleDraft.value;
+
+  if (!rule || ruleEditorView.value !== 'actions' || isEditorFrontierBuilding.value) {
+    actionEffectPreviews.value = [];
+    appliedRuleOutcome.value = createEmptyAppliedRuleOutcome();
+    isEditorPreviewBuilding.value = false;
+    return;
+  }
+
+  const nodes = managedNodes.value;
+  if (nodes.length === 0) {
+    actionEffectPreviews.value = [];
+    appliedRuleOutcome.value = createEmptyAppliedRuleOutcome();
+    isEditorPreviewBuilding.value = false;
+    return;
+  }
+
+  const controller = new AbortController();
+  editorPreviewAbort = controller;
+  actionEffectPreviews.value = [];
+  appliedRuleOutcome.value = createEmptyAppliedRuleOutcome();
+  isEditorPreviewBuilding.value = true;
+
+  try {
+    await nextTick();
+    await yieldToEventQueue();
+    const [effectPreviews, ruleOutcome] = isFrontierMode.value
+      ? await Promise.all([
+        buildFrontierActionEffectPreviewsAsync(controller.signal),
+        summarizeFrontierAppliedRuleOutcomeAsync(controller.signal)
+      ])
+      : await Promise.all([
+        buildCollectableActionEffectPreviewsAsync({
+          actions: (rule.actions ?? []).filter(isFormalCollectableAction),
+          states: nodes.map((node) => node.state),
+          mechanics: collectableMechanicsContext.value
+        }, {
+          signal: controller.signal,
+          yieldEvery: 80
+        }),
+        summarizeAppliedRuleOutcomeAsync(
+          editorFrontierTreeResult.value?.uncoveredNodes ?? [],
+          rule,
+          collectableMechanicsContext.value,
+          {
+            signal: controller.signal,
+            yieldEvery: 80
+          }
+        )
+      ]);
+
+    if (sequence === editorPreviewSequence && !controller.signal.aborted) {
+      actionEffectPreviews.value = effectPreviews;
+      appliedRuleOutcome.value = ruleOutcome;
+    }
+  } catch (error) {
+    if (!isCooperativeAbort(error)) {
+      console.error('Collectable editor preview build failed:', error);
+    }
+  } finally {
+    if (sequence === editorPreviewSequence) {
+      isEditorPreviewBuilding.value = false;
+    }
+  }
+}
+
 async function runAnalysis() {
   if (!canRunAnalysis.value || !treeResult.value?.root || !rewardTable.value) return;
 
@@ -444,21 +614,39 @@ async function runAnalysis() {
   analysis.value = null;
   isSaved.value = false;
   isAnalysisRunning.value = true;
+  const startedAt = performance.now();
 
   try {
     await nextTick();
     await yieldToEventQueue();
-    const result = await analyzeCollectableStrategyTreeAsync(
-      treeResult.value.root,
-      rewardTable.value,
-      clonePlain(collectableObjective.value),
-      {
-        signal: controller.signal,
-        yieldEvery: 80
-      }
-    );
+    const result = isFrontierMode.value
+      ? runFrontierAnalysis()
+      : await analyzeCollectableStrategyTreeAsync(
+        treeResult.value.root,
+        rewardTable.value,
+        clonePlain(collectableObjective.value),
+        {
+          signal: controller.signal,
+          yieldEvery: 80
+        }
+      );
     if (sequence === analysisSequence && !controller.signal.aborted) {
       analysis.value = result;
+      trackCollectableAnalyzerCompleted({
+        input: {
+          item: props.activeItem,
+          stats: { ...(props.baseStats ?? props.effectiveStats) },
+          maxGp: props.effectiveStats.gp,
+          temporaryGp: Math.min(props.temporaryGp, props.effectiveStats.gp),
+          selectedFood: { ...props.selectedFood },
+          nodeBonuses: { ...props.nodeBonuses },
+          hasRelicToolBonus: props.hasRelicToolBonus
+        },
+        treeRoot: treeResult.value.root,
+        strategyCount: rules.value.length,
+        calculationTime: Math.floor(performance.now() - startedAt),
+        isFrontierMode: isFrontierMode.value
+      });
     }
   } catch (error) {
     if (!isCooperativeAbort(error)) {
@@ -469,6 +657,136 @@ async function runAnalysis() {
       isAnalysisRunning.value = false;
     }
   }
+}
+
+function runFrontierAnalysis(): CollectableStrategyAnalysis {
+  const request = buildFrontierRequest();
+  if (!request) throw new Error('Frontier analysis request is not ready.');
+  const result = analyzeFrontierCollectableStrategy(request);
+  frontierAnalysis.value = result;
+  return adaptFrontierAnalysis(result);
+}
+
+function buildFrontierRequest(): FrontierCollectableSimulationRequest | null {
+  if (!props.baseValues || !rewardTable.value || !props.frontierProbabilityProfile) return null;
+
+  return {
+    itemId: props.activeItem.itemId,
+    stats: { ...props.effectiveStats },
+    baseValues: { ...props.baseValues },
+    itemLevel: props.itemRealLevel,
+    nodeBonuses: { ...props.nodeBonuses },
+    temporaryGp: props.temporaryGp,
+    jobType: props.activeItem.jobType ?? 'miner',
+    isTimedNode: props.activeItem.isTimedNode ?? false,
+    hasRelicToolBonus: props.hasRelicToolBonus,
+    rewardTable: rewardTable.value,
+    objective: clonePlain(collectableObjective.value),
+    probabilityProfile: clonePlain(props.frontierProbabilityProfile),
+    strategy: rules.value.map(toFrontierStrategyRule)
+  };
+}
+
+function buildFrontierTreeRequest(strategyRules: CollectableStrategyRule[]): FrontierCollectableStrategyTreeRequest | null {
+  if (!props.baseValues || !props.frontierProbabilityProfile) return null;
+
+  return {
+    itemId: props.activeItem.itemId,
+    stats: { ...props.effectiveStats },
+    baseValues: { ...props.baseValues },
+    itemLevel: props.itemRealLevel,
+    nodeBonuses: { ...props.nodeBonuses },
+    temporaryGp: props.temporaryGp,
+    jobType: props.activeItem.jobType ?? 'miner',
+    isTimedNode: props.activeItem.isTimedNode ?? false,
+    hasRelicToolBonus: props.hasRelicToolBonus,
+    probabilityProfile: clonePlain(props.frontierProbabilityProfile),
+    strategy: strategyRules.map(toFrontierStrategyRule),
+    formatActionLabel: actionName as any,
+    formatBranchLabel: (labelKeys: string[]) => labelKeys.map((key) => t(key)).join(t('collectableStrategyLab.branchJoiner')),
+    formatPathStep: ({ ruleName, actionLabel, branchLabel, branchLabelKeys }: { ruleName?: string; actionLabel: string; branchLabel: string; branchLabelKeys: string[] }) => formatCompactPathStep({
+      ruleName,
+      actionLabel,
+      branchLabel,
+      branchLabelKeys
+    })
+  } as any;
+}
+
+function toFrontierStrategyRule(rule: CollectableStrategyRule): FrontierCollectableStrategyRule {
+  return {
+    id: rule.id,
+    name: rule.name,
+    mode: rule.mode,
+    enabled: rule.enabled,
+    conditions: rule.conditions.map((condition) => {
+      if (condition.field === 'standardActive') {
+        return {
+          id: condition.id,
+          field: 'standardMode',
+          comparator: condition.value ? '=' : '!=',
+          value: 'standard'
+        };
+      }
+      if (condition.field === 'highStandardActive') {
+        return {
+          id: condition.id,
+          field: 'standardMode',
+          comparator: condition.value ? '=' : '!=',
+          value: 'highStandard'
+        };
+      }
+      if (condition.field === 'anyStandardActive') {
+        return {
+          id: condition.id,
+          field: 'standardMode',
+          comparator: condition.value ? '!=' : '=',
+          value: 'none'
+        };
+      }
+      if (condition.field === 'successIActive' || condition.field === 'successIIActive' || condition.field === 'successIIIActive') {
+        return {
+          id: condition.id,
+          field: 'successBonus',
+          comparator: condition.value ? '>' : '=',
+          value: 0
+        };
+      }
+      return {
+        id: condition.id,
+        field: condition.field,
+        comparator: condition.comparator,
+        value: condition.value
+      };
+    }) as FrontierCollectableStrategyRule['conditions'],
+    actions: rule.actions
+      .map(toFrontierAction)
+      .filter((action): action is NonNullable<ReturnType<typeof toFrontierAction>> => action !== null)
+  };
+}
+
+function toFrontierAction(action: StrategyLabActionKind) {
+  if (action === 'revisitCheck') return null;
+  return action as FrontierCollectableStrategyRule['actions'][number];
+}
+
+function adaptFrontierAnalysis(result: FrontierCollectableAnalysisResult): CollectableStrategyAnalysis {
+  return {
+    modelVersions: result.modelVersions,
+    expectedScore: result.expectedScore,
+    minScore: result.minScore,
+    maxScore: result.maxScore,
+    minScoreChance: result.minScoreChance,
+    maxScoreChance: result.maxScoreChance,
+    expectedTierCounts: result.expectedTierCounts,
+    minScoreTierCounts: result.outcomeDistribution.find((entry) => entry.score === result.minScore)?.tierCounts ?? createEmptyTierCounts(),
+    maxScoreTierCounts: result.outcomeDistribution.find((entry) => entry.score === result.maxScore)?.tierCounts ?? createEmptyTierCounts(),
+    outcomeDistribution: result.outcomeDistribution
+  };
+}
+
+function createEmptyTierCounts(): CollectableTierCounts {
+  return { none: 0, low: 0, mid: 0, high: 0 };
 }
 
 function defaultExperimentName() {
@@ -508,6 +826,31 @@ function saveCurrentExperiment() {
 function confirmSaveExperiment(name: string) {
   if (!analysis.value) return;
 
+  if (isFrontierMode.value && props.frontierProbabilityProfile) {
+    createStudy({
+      id: props.frontierStudyId ?? undefined,
+      name,
+      itemId: props.activeItem.itemId,
+      input: {
+        stats: { ...props.effectiveStats },
+        temporaryGp: props.temporaryGp,
+        food: { ...props.selectedFood },
+        nodeBonuses: { ...props.nodeBonuses },
+        hasRelicToolBonus: props.hasRelicToolBonus
+      },
+      probabilityProfile: clonePlain(props.frontierProbabilityProfile),
+      strategy: rules.value.map(toFrontierStrategyRule),
+      lastAnalysisSnapshot: frontierAnalysis.value ?? undefined
+    });
+    isSaved.value = true;
+    if (saveTimer) window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      isSaved.value = false;
+      saveTimer = null;
+    }, 1600);
+    return;
+  }
+
   saveCollectableExperiment({
     name,
     itemId: props.activeItem.itemId,
@@ -532,6 +875,26 @@ function confirmSaveExperiment(name: string) {
 
 function handleExportCollectableExperimentJson() {
   if (!analysis.value || !props.baseValues) return;
+
+  if (isFrontierMode.value && frontierAnalysis.value) {
+    const request = buildFrontierRequest();
+    if (!request) return;
+    downloadJsonFile(
+      buildFrontierCollectableJsonExport({
+        item: props.activeItem,
+        request,
+        analysis: frontierAnalysis.value,
+        food: {
+          selection: { ...props.selectedFood },
+          baseStats: { ...props.effectiveStats }
+        },
+        locale: locale.value
+      }),
+      sanitizeJsonFileName(`${getItemName(props.activeItem.itemId)} - ${t('frontier.json.scenario')} - ${new Date().toISOString().slice(0, 10)}.json`)
+    );
+    markJsonExported();
+    return;
+  }
 
   const payload = buildCollectableExperimentJsonExport({
     meta: {},
@@ -851,6 +1214,77 @@ function loadCollectableExperiment() {
   isSaved.value = false;
 }
 
+function loadFrontierStudy() {
+  const study = props.frontierLoadedStudy;
+  if (!isFrontierMode.value || !study || study.itemId !== props.activeItem.itemId) return;
+
+  rules.value = study.strategy.map(toCollectableStrategyRule).filter((rule) => rule.actions.length > 0);
+  editingRuleId.value = '';
+  editingRuleDraft.value = null;
+  resetRuleEditorView();
+  analysis.value = study.lastAnalysisSnapshot ? adaptFrontierAnalysis(study.lastAnalysisSnapshot) : null;
+  frontierAnalysis.value = study.lastAnalysisSnapshot ?? null;
+  isSaved.value = false;
+}
+
+function toCollectableStrategyRule(rule: FrontierCollectableStrategyRule): CollectableStrategyRule {
+  return {
+    id: rule.id,
+    name: rule.name,
+    mode: rule.mode,
+    enabled: rule.enabled,
+    conditions: rule.conditions.map(toCollectableStrategyCondition).filter((condition): condition is CollectableStrategyCondition => condition !== null),
+    actions: rule.actions.map(toCollectableAction).filter((action): action is StrategyLabActionKind => action !== null) as CollectableActionKind[]
+  };
+}
+
+function toCollectableStrategyCondition(condition: FrontierCollectableStrategyCondition): CollectableStrategyCondition | null {
+  if (condition.field === 'standardMode') {
+    if (condition.value === 'highStandard') {
+      return {
+        id: condition.id,
+        field: 'highStandardActive',
+        comparator: '=',
+        value: condition.comparator !== '!='
+      };
+    }
+    if (condition.value === 'none') {
+      return {
+        id: condition.id,
+        field: 'anyStandardActive',
+        comparator: '=',
+        value: condition.comparator === '!='
+      };
+    }
+    return {
+      id: condition.id,
+      field: 'standardActive',
+      comparator: '=',
+      value: condition.comparator === '!=' ? condition.value !== 'standard' : condition.value === 'standard'
+    };
+  }
+
+  if (condition.field === 'successBonus' || condition.field === 'nextCollectSuccessBonus') {
+    return {
+      id: condition.id,
+      field: condition.field,
+      comparator: condition.comparator as CollectableStrategyComparator,
+      value: Number(condition.value)
+    };
+  }
+
+  return {
+    id: condition.id,
+    field: condition.field,
+    comparator: condition.comparator as CollectableStrategyComparator,
+    value: condition.value as number | boolean
+  };
+}
+
+function toCollectableAction(action: FrontierCollectableStrategyRule['actions'][number]): StrategyLabActionKind | null {
+  return action as StrategyLabActionKind;
+}
+
 function clonePlain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -1106,6 +1540,20 @@ function sanitizeRule(rule: CollectableStrategyRule) {
   for (const condition of rule.conditions) clampConditionValue(condition);
 }
 
+function toFormalStrategyRules(strategyRules: CollectableStrategyRule[]): CollectableStrategyRule[] {
+  return strategyRules.map((rule) => ({
+    ...rule,
+    conditions: rule.conditions.filter((condition) => (
+      condition.field !== 'highStandardActive' && condition.field !== 'anyStandardActive'
+    )),
+    actions: rule.actions.filter(isFormalCollectableAction)
+  }));
+}
+
+function isFormalCollectableAction(action: StrategyLabActionKind): action is CollectableActionKind {
+  return collectableStrategyActionKinds.includes(action as CollectableActionKind);
+}
+
 function addAction(rule: CollectableStrategyRule) {
   rule.actions.push('collect');
 }
@@ -1115,30 +1563,38 @@ function removeLastAction(rule: CollectableStrategyRule) {
   rule.actions.pop();
 }
 
-function setAction(rule: CollectableStrategyRule, actionIndex: number, action: CollectableActionKind) {
+function setAction(rule: CollectableStrategyRule, actionIndex: number, action: StrategyLabActionKind) {
   if (isActionLevelLocked(action)) return;
-  rule.actions[actionIndex] = action;
+  rule.actions[actionIndex] = action as CollectableActionKind;
 }
 
-function actionName(action: CollectableActionKind) {
-  return getCollectableActionName(action, jobType.value);
+function actionName(action: StrategyLabActionKind) {
+  if (isFrontierMode.value) return getFrontierCollectableActionName(action as FrontierCollectableStrategyRule['actions'][number], jobType.value);
+  return getCollectableActionName(action as CollectableActionKind, jobType.value);
 }
 
-function actionIcon(action: CollectableActionKind) {
-  return getCollectableActionIcon(action, jobType.value);
+function actionIcon(action: StrategyLabActionKind) {
+  if (isFrontierMode.value) return getFrontierCollectableActionIcon(action as FrontierCollectableStrategyRule['actions'][number], jobType.value);
+  return getCollectableActionIcon(action as CollectableActionKind, jobType.value);
 }
 
-function isActionLevelLocked(action: CollectableActionKind) {
-  return props.effectiveStats.level < getCollectableActionMinLevel(action);
+function isActionLevelLocked(action: StrategyLabActionKind) {
+  if (isFrontierMode.value) {
+    return props.effectiveStats.level < FRONTIER_COLLECTABLE_ACTION_DEFINITIONS[action as FrontierCollectableStrategyRule['actions'][number]].minLevel;
+  }
+  return props.effectiveStats.level < getCollectableActionMinLevel(action as CollectableActionKind);
 }
 
 function hasRuleLevelIssue(rule: CollectableStrategyRule) {
   return rule.enabled && rule.actions.some(isActionLevelLocked);
 }
 
-function actionLevelRequirement(action: CollectableActionKind) {
+function actionLevelRequirement(action: StrategyLabActionKind) {
+  const level = isFrontierMode.value
+    ? FRONTIER_COLLECTABLE_ACTION_DEFINITIONS[action as FrontierCollectableStrategyRule['actions'][number]].minLevel
+    : getCollectableActionMinLevel(action as CollectableActionKind);
   return t('collectableStrategyLab.actionLevelRequirement', {
-    level: getCollectableActionMinLevel(action)
+    level
   });
 }
 
@@ -1244,7 +1700,7 @@ function createManagedOverviewMetrics(mechanics: CollectableMechanicsContext | n
       label: t('collectableStrategyLab.managedOverview.meticulousSaveRate'),
       icon: 'pi pi-lock-open',
       getValue: (node) => mechanics
-        ? (node.state.primingTouchActive ? mechanics.primedMeticulousRate : mechanics.meticulousRate)
+        ? getManagedMeticulousSaveRate(node, mechanics)
         : 0,
       formatRange: formatPercentRange,
       formatValue: formatPercentValue
@@ -1252,6 +1708,25 @@ function createManagedOverviewMetrics(mechanics: CollectableMechanicsContext | n
   ];
 
   return metrics;
+}
+
+function getManagedMeticulousSaveRate(
+  node: ManagedOverviewSource,
+  mechanics: CollectableMechanicsContext
+) {
+  const frontierState = frontierStateFromNode(node as CollectableStrategyNode);
+  if (frontierState) return getFrontierMeticulousSaveRatePercent(frontierState, mechanics);
+
+  return node.state.primingTouchActive ? mechanics.primedMeticulousRate : mechanics.meticulousRate;
+}
+
+function createEmptyAppliedRuleOutcome(): CollectableStrategyRuleApplicationSummary {
+  return {
+    openStates: [],
+    completeBranches: 0,
+    totalBranches: 0,
+    limited: false
+  };
 }
 
 function buildUncoveredStateGroups(nodes: CollectableStrategyNode[], mechanics: CollectableMechanicsContext | null) {
@@ -1307,7 +1782,8 @@ function buildManagedBuffChips(nodes: ManagedOverviewSource[]) {
     { key: 'scrutinyActive', label: fieldLabel('scrutinyActive'), hasBuff: (node) => node.state.scrutinyActive },
     { key: 'collectorsFocusActive', label: fieldLabel('collectorsFocusActive'), hasBuff: (node) => node.state.collectorsFocusActive },
     { key: 'primingTouchActive', label: fieldLabel('primingTouchActive'), hasBuff: (node) => node.state.primingTouchActive },
-    { key: 'standardActive', label: fieldLabel('standardActive'), hasBuff: (node) => node.state.standardActive },
+    { key: 'highStandard', label: t('frontier.strategy.standardModes.highStandard'), hasBuff: (node) => (node.state as any).frontierStandardMode === 'highStandard' },
+    { key: 'standardActive', label: fieldLabel('standardActive'), hasBuff: (node) => node.state.standardActive && (node.state as any).frontierStandardMode !== 'highStandard' },
     { key: 'wiseToTheWorldActive', label: fieldLabel('wiseToTheWorldActive'), hasBuff: (node) => node.state.wiseToTheWorldActive },
     { key: 'successIActive', label: fieldLabel('successIActive'), hasBuff: (node) => node.state.successIActive },
     { key: 'successIIActive', label: fieldLabel('successIIActive'), hasBuff: (node) => node.state.successIIActive },
@@ -1316,7 +1792,21 @@ function buildManagedBuffChips(nodes: ManagedOverviewSource[]) {
     { key: 'nextCollectSuccessBonus', label: fieldLabel('nextCollectSuccessBonus'), hasBuff: (node) => node.state.nextCollectSuccessBonus > 0 }
   ];
 
-  const chips = buffStates.flatMap((buff) => {
+  const chips = buildPositiveBuffChips(nodes, buffStates);
+
+  if (chips.length > 0) return chips;
+
+  return [{
+    key: 'noBuff',
+    label: t('collectableStrategyLab.noBuff')
+  }];
+}
+
+function buildPositiveBuffChips(
+  nodes: ManagedOverviewSource[],
+  buffStates: Array<{ key: string; label: string; hasBuff: (node: ManagedOverviewSource) => boolean }>
+) {
+  return buffStates.flatMap((buff) => {
     const count = nodes.filter(buff.hasBuff).length;
     if (count === 0) return [];
 
@@ -1330,13 +1820,6 @@ function buildManagedBuffChips(nodes: ManagedOverviewSource[]) {
       )
     }];
   });
-
-  if (chips.length > 0) return chips;
-
-  return [{
-    key: 'noBuff',
-    label: t('collectableStrategyLab.noBuff')
-  }];
 }
 
 function formatStateRange(min: number, max: number) {
@@ -1415,6 +1898,300 @@ function formatEffectMetric(action: CollectableActionKind, metric: CollectableEf
   return '';
 }
 
+async function buildFrontierActionEffectPreviewsAsync(signal?: AbortSignal): Promise<CollectableActionEffectPreview[]> {
+  const request = buildFrontierTreeRequest([]);
+  if (!request) return [];
+
+  const scheduler = createCooperativeScheduler({ signal, yieldEvery: 80 });
+  const context = createFrontierCollectableContext(request);
+  let currentStates = uniqueFrontierStates(
+    managedNodes.value
+      .map(frontierStateFromNode)
+      .filter((state): state is FrontierCollectableState => !!state)
+  );
+  const previews: CollectableActionEffectPreview[] = [];
+
+  await scheduler.yieldNow();
+  for (const action of editingRuleDraft.value?.actions ?? []) {
+    await scheduler.step();
+    const frontierAction = action as FrontierCollectableStrategyRule['actions'][number];
+    const castableStates: FrontierCollectableState[] = [];
+    for (const state of currentStates) {
+      await scheduler.step();
+      if (canUseFrontierCollectableAction(frontierAction, state, context)) {
+        castableStates.push(state);
+      }
+    }
+
+    const transitions: Array<{ before: FrontierCollectableState; after: FrontierCollectableState }> = [];
+    for (const state of castableStates) {
+      await scheduler.step();
+      applyFrontierCollectableAction(frontierAction, state, context).forEach((transition) => {
+        transitions.push({
+          before: state,
+          after: transition.state
+        });
+      });
+    }
+
+    previews.push({
+      action: frontierAction as CollectableActionKind,
+      sourceStateCount: currentStates.length,
+      castableStateCount: castableStates.length,
+      metrics: buildFrontierEffectMetrics(frontierAction, castableStates, transitions, context)
+    });
+
+    currentStates = uniqueFrontierStates(transitions.map((transition) => transition.after));
+  }
+
+  return previews;
+}
+
+function buildFrontierEffectMetrics(
+  action: FrontierCollectableStrategyRule['actions'][number],
+  sourceStates: FrontierCollectableState[],
+  transitions: Array<{ before: FrontierCollectableState; after: FrontierCollectableState }>,
+  context: ReturnType<typeof createFrontierCollectableContext>
+): CollectableEffectMetric[] {
+  if (sourceStates.length === 0) return [];
+
+  const metrics: CollectableEffectMetric[] = [];
+
+  if (action === 'scour' || action === 'brazen' || action === 'meticulous') {
+    const gainRange = rangeFromFrontierTransitions(transitions, (transition) => (
+      transition.after.collectability - transition.before.collectability
+    ));
+    const integrityRange = rangeFromFrontierTransitions(transitions, (transition) => (
+      transition.after.integrity - transition.before.integrity
+    ));
+    if (gainRange) metrics.push({ kind: 'collectabilityGain', range: gainRange });
+    if (integrityRange) metrics.push({ kind: 'integrityDelta', range: integrityRange });
+  }
+
+  if (action === 'scrutiny') {
+    metrics.push({
+      kind: 'scrutinyBonus',
+      value: Math.floor(context.scourValue * context.scrutinyMultiplier / 100)
+    });
+  }
+
+  if (action === 'collectorsFocus') {
+    metrics.push({
+      kind: 'valueIncreaseRate',
+      from: context.valueIncreaseRate,
+      to: context.focusedValueIncreaseRate,
+      delta: context.focusedValueIncreaseRate - context.valueIncreaseRate
+    });
+  }
+
+  if (action === 'primingTouch') {
+    const beforeRate = rangeFromFrontierStates(sourceStates, (state) => (
+      getFrontierMeticulousSaveRatePercent(state, context)
+    ));
+    const afterRate = rangeFromFrontierStates(sourceStates, (state) => (
+      getFrontierMeticulousSaveRatePercent({ ...state, primingTouchActive: true }, context)
+    ));
+    const from = beforeRate?.min ?? context.meticulousRate;
+    const to = afterRate?.max ?? Math.min(100, context.meticulousRate * 2);
+    metrics.push({
+      kind: 'meticulousSaveRate',
+      from,
+      to,
+      delta: to - from
+    });
+  }
+
+  if (action === 'successI') metrics.push({ kind: 'collectSuccessBonus', value: 5 });
+  if (action === 'successII') metrics.push({ kind: 'collectSuccessBonus', value: 15 });
+  if (action === 'successIII') metrics.push({ kind: 'collectSuccessBonus', value: 50 });
+  if (action === 'nextCollectSuccess') metrics.push({ kind: 'nextCollectSuccessBonus', value: 15 });
+
+  if (action === 'restoreIntegrity' || action === 'wiseToTheWorld') {
+    const integrityRange = rangeFromFrontierTransitions(transitions, (transition) => (
+      transition.after.integrity - transition.before.integrity
+    ));
+    if (integrityRange) metrics.push({ kind: 'integrityDelta', range: integrityRange });
+  }
+
+  if (action === 'collect') {
+    const successRate = rangeFromFrontierStates(sourceStates, (state) => (
+      clampPercent(context.baseSuccessRate + state.successBonus + state.nextCollectSuccessBonus)
+    ));
+    const gpRange = rangeFromFrontierTransitions(transitions, (transition) => (
+      transition.after.gp - transition.before.gp
+    ));
+    if (successRate) metrics.push({ kind: 'collectSuccessRate', range: successRate });
+    metrics.push({ kind: 'integrityDelta', range: { min: -1, max: -1 } });
+    if (gpRange) metrics.push({ kind: 'collectSuccessGp', range: { min: Math.max(0, gpRange.min), max: Math.max(0, gpRange.max) } });
+  }
+
+  return metrics;
+}
+
+function collectMatchingFrontierUncoveredStrategyNodes(
+  nodes: CollectableStrategyNode[],
+  rule: CollectableStrategyRule | null | undefined
+) {
+  if (!rule?.enabled) return [];
+  const frontierRule = toFrontierStrategyRule(rule);
+
+  return nodes.filter((node) => {
+    if (node.status !== 'uncovered') return false;
+    const state = frontierStateFromNode(node);
+    return !!state && matchesFrontierCollectableStrategyRule(frontierRule, state);
+  });
+}
+
+async function summarizeFrontierAppliedRuleOutcomeAsync(signal?: AbortSignal): Promise<CollectableStrategyRuleApplicationSummary> {
+  const request = buildFrontierTreeRequest([]);
+  const rule = editingRuleDraft.value;
+  if (!request || !rule?.enabled) {
+    return createEmptyAppliedRuleOutcome();
+  }
+
+  const scheduler = createCooperativeScheduler({ signal, yieldEvery: 80 });
+  const context = createFrontierCollectableContext(request);
+  const frontierRule = toFrontierStrategyRule(rule);
+  const matchedStates: FrontierCollectableState[] = [];
+  const endpointStates: FrontierCollectableState[] = [];
+  let limited = false;
+
+  await scheduler.yieldNow();
+  for (const node of managedNodes.value) {
+    await scheduler.step();
+    const state = frontierStateFromNode(node);
+    if (state) matchedStates.push(state);
+  }
+
+  for (const state of matchedStates) {
+    await scheduler.step();
+    const result = await applyFrontierRuleUntilUnmanagedAsync(state, frontierRule, context, scheduler);
+    endpointStates.push(...result.states);
+    limited = limited || result.limited;
+    if (limited) break;
+  }
+
+  return {
+    openStates: uniqueFrontierStates(endpointStates.filter((state) => state.integrity > 0))
+      .map((state) => toFrontierDisplayState(state) as any),
+    completeBranches: endpointStates.filter((state) => state.integrity <= 0).length,
+    totalBranches: endpointStates.length,
+    limited
+  };
+}
+
+async function applyFrontierRuleUntilUnmanagedAsync(
+  state: FrontierCollectableState,
+  rule: FrontierCollectableStrategyRule,
+  context: ReturnType<typeof createFrontierCollectableContext>,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<{ states: FrontierCollectableState[]; limited: boolean }> {
+  const endpoints: FrontierCollectableState[] = [];
+  const stack = [state];
+  const seen = new Set<string>();
+  let limited = false;
+
+  while (stack.length > 0) {
+    await scheduler.step();
+    const currentState = stack.pop()!;
+    const currentKey = frontierCollectableStateKey(currentState);
+    if (seen.has(currentKey)) continue;
+    seen.add(currentKey);
+
+    if (seen.size > appliedRulePreviewStateLimit) {
+      limited = true;
+      endpoints.push(currentState);
+      break;
+    }
+
+    if (currentState.integrity <= 0 || !matchesFrontierCollectableStrategyRule(rule, currentState)) {
+      endpoints.push(currentState);
+      continue;
+    }
+
+    const nextStates = await applyFrontierActionChainAsync(currentState, rule.actions, context, scheduler);
+    const didAdvance = nextStates.some((nextState) => (
+      frontierCollectableStateKey(nextState) !== frontierCollectableStateKey(currentState)
+    ));
+    if (!didAdvance) {
+      endpoints.push(currentState);
+      continue;
+    }
+
+    stack.push(...nextStates);
+  }
+
+  return { states: endpoints, limited };
+}
+
+async function applyFrontierActionChainAsync(
+  state: FrontierCollectableState,
+  actions: FrontierCollectableStrategyRule['actions'],
+  context: ReturnType<typeof createFrontierCollectableContext>,
+  scheduler: ReturnType<typeof createCooperativeScheduler>
+): Promise<FrontierCollectableState[]> {
+  let states = [state];
+
+  for (const action of actions) {
+    await scheduler.step();
+    const nextStates: FrontierCollectableState[] = [];
+    for (const currentState of states) {
+      await scheduler.step();
+      if (currentState.integrity <= 0) {
+        nextStates.push(currentState);
+        continue;
+      }
+      if (!canUseFrontierCollectableAction(action, currentState, context)) {
+        nextStates.push(currentState);
+        continue;
+      }
+
+      applyFrontierCollectableAction(action, currentState, context).forEach((transition) => {
+        nextStates.push(transition.state);
+      });
+    }
+    states = nextStates;
+  }
+
+  return states;
+}
+
+function frontierStateFromNode(node: CollectableStrategyNode): FrontierCollectableState | null {
+  return (node.state as any).frontierState ?? null;
+}
+
+function rangeFromFrontierTransitions(
+  transitions: Array<{ before: FrontierCollectableState; after: FrontierCollectableState }>,
+  getValue: (transition: { before: FrontierCollectableState; after: FrontierCollectableState }) => number
+) {
+  if (transitions.length === 0) return null;
+  const values = transitions.map(getValue);
+  return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+function rangeFromFrontierStates(
+  states: FrontierCollectableState[],
+  getValue: (state: FrontierCollectableState) => number
+) {
+  if (states.length === 0) return null;
+  const values = states.map(getValue);
+  return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+function uniqueFrontierStates(states: FrontierCollectableState[]) {
+  const seen = new Set<string>();
+  const unique: FrontierCollectableState[] = [];
+
+  states.forEach((state) => {
+    const key = JSON.stringify(state);
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push(state);
+  });
+
+  return unique;
+}
+
 function formatPositiveRange(min: number, max: number) {
   return min === max ? formatSignedValue(min) : `${formatSignedValue(min)}~${formatSignedValue(max)}`;
 }
@@ -1475,7 +2252,11 @@ function stateChips(node: CollectableStrategyNode) {
   if (node.state.scrutinyActive) chips.push(t('collectableStrategyLab.chips.scrutinyActive'));
   if (node.state.collectorsFocusActive) chips.push(t('collectableStrategyLab.chips.collectorsFocusActive'));
   if (node.state.primingTouchActive) chips.push(t('collectableStrategyLab.chips.primingTouchActive'));
-  if (node.state.standardActive) chips.push(t('collectableStrategyLab.chips.standardActive'));
+  if ((node.state as any).frontierStandardMode === 'highStandard') {
+    chips.push(t('frontier.strategy.standardModes.highStandard'));
+  } else if (node.state.standardActive) {
+    chips.push(t('collectableStrategyLab.chips.standardActive'));
+  }
   if (node.state.wiseToTheWorldActive) chips.push(t('collectableStrategyLab.chips.wiseToTheWorldActive'));
   if (node.state.successBonus > 0) chips.push(t('collectableStrategyLab.chips.successBonus', { value: node.state.successBonus }));
   if (node.state.nextCollectSuccessBonus > 0) chips.push(t('collectableStrategyLab.chips.nextCollectSuccessBonus', { value: node.state.nextCollectSuccessBonus }));
@@ -1874,11 +2655,11 @@ function makeId() {
 
     <SaveEntryDialog
       v-model="isSaveExperimentDialogOpen"
-      :title="t('saveEntry.experiment.title')"
-      :description="t('saveEntry.experiment.description')"
+      :title="t(isFrontierMode ? 'frontier.save.title' : 'saveEntry.experiment.title')"
+      :description="t(isFrontierMode ? 'frontier.save.description' : 'saveEntry.experiment.description')"
       :name-label="t('saveEntry.nameLabel')"
       :default-name="defaultExperimentName()"
-      :confirm-label="t('saveEntry.experiment.confirm')"
+      :confirm-label="t(isFrontierMode ? 'frontier.save.confirm' : 'saveEntry.experiment.confirm')"
       :cancel-label="t('saveEntry.cancel')"
       @confirm="confirmSaveExperiment"
     >
@@ -2201,10 +2982,10 @@ function makeId() {
                     </span>
                     <select
                       :value="action"
-                      @change="setAction(editingRule, actionIndex, ($event.target as HTMLSelectElement).value as CollectableActionKind)"
+                      @change="setAction(editingRule, actionIndex, ($event.target as HTMLSelectElement).value as StrategyLabActionKind)"
                     >
                       <option
-                        v-for="option in collectableStrategyActionKinds"
+                        v-for="option in strategyActionKinds"
                         :key="option"
                         :value="option"
                         :disabled="isActionLevelLocked(option)"
@@ -2238,7 +3019,7 @@ function makeId() {
                   <span>{{ t('collectableStrategyLab.editor.effectPreview') }}</span>
                 </div>
                 <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.effectPreviewDescription') }}</p>
-                <p v-if="isEditorFrontierBuilding" class="effect-preview-empty">
+                <p v-if="isEditorFrontierBuilding || isEditorPreviewBuilding" class="effect-preview-empty">
                   <i class="pi pi-spinner pi-spin"></i>
                   {{ t('collectableStrategyLab.editor.calculatingNodes') }}
                 </p>
@@ -2280,7 +3061,7 @@ function makeId() {
                     <span>{{ t('collectableStrategyLab.editor.appliedStateRange') }}</span>
                   </span>
                   <span
-                    v-if="managedNodes.length > 0"
+                    v-if="managedNodes.length > 0 && !isEditorFrontierBuilding && !isEditorPreviewBuilding"
                     class="applied-branch-badge"
                     :class="{ 'is-complete': appliedRuleOutcome.openStates.length === 0 }"
                   >
@@ -2292,7 +3073,10 @@ function makeId() {
                   </span>
                 </div>
                 <p class="editor-placeholder">{{ t('collectableStrategyLab.editor.appliedStateRangeDescription') }}</p>
-                <p v-if="isEditorFrontierBuilding" class="effect-preview-empty">
+                <p v-if="appliedRuleOutcome.limited" class="limit-warning compact">
+                  {{ t('collectableStrategyLab.editor.appliedStateRangeLimited') }}
+                </p>
+                <p v-if="isEditorFrontierBuilding || isEditorPreviewBuilding" class="effect-preview-empty">
                   <i class="pi pi-spinner pi-spin"></i>
                   {{ t('collectableStrategyLab.editor.calculatingNodes') }}
                 </p>

@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { shouldHideCrystalGatheringItem } from '../config/crystalGathering';
 import type { GatherableItem, StoredFavoriteItem } from '../types/game';
+import { trackFavoriteItemAdded } from '../services/analytics';
 
 const STORAGE_KEY = 'frozen-rabbit-tome-favorite-items';
 const favoriteItems = useLocalStorage<StoredFavoriteItem[]>(STORAGE_KEY, []);
@@ -26,6 +27,7 @@ export function useFavoriteItems() {
       },
       ...favoriteItems.value
     ];
+    trackFavoriteItemAdded(item);
   };
 
   const removeFavorite = (itemId: number) => {

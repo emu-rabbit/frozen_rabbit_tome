@@ -6,6 +6,8 @@ export default {
   },
   common: {
     cancel: 'キャンセル',
+    close: '閉じる',
+    done: '完了',
     backToSelection: 'アイテム選択に戻る',
     exportJson: 'JSONを書き出す',
     exportingJson: 'JSONを書き出し中',
@@ -108,13 +110,202 @@ export default {
     createGuide: '新しい秘伝書を作成',
     solver: '秘伝書ソルバー',
     createExperiment: '新しい実験を作成',
+    frontierCollectable: '開拓研究を作成',
     favoriteItems: 'お気に入りアイテム',
     tomeLibrary: '秘伝書庫',
     experimentDatabase: '実験データベース',
+    frontierStudies: '開拓研究庫',
     faq: 'よくある質問',
     settings: '設定ページ',
     github: 'GitHub プロジェクト',
     sponsor: '電気代を支援する'
+  },
+  frontier: {
+    disabled: {
+      title: '開拓研究モードはまだ有効ではありません',
+      description: '開拓は上級者向けの研究エリアです。入力した確率仮定に基づいて戦略を分析し、結果は研究用の参考として扱います。',
+      action: '設定で有効化'
+    },
+    collectable: {
+      title: '開拓研究',
+      description: 'カスタム確率仮定で上級採集戦略を分析します。大胆選別や強化洞察など、実証待ちの採集条件を研究するための場所です。',
+      emptyTitle: '研究を始める準備',
+      emptyDescription: '研究条件を選ぶと、戦略の仮定や結果分布を整理し、後から見返せる形で残せます。'
+    },
+    studies: {
+      title: '研究ケース',
+      description: '開拓研究ケースを保存し、同じ仮定と戦略を後から見返せる場所です。',
+      emptyTitle: '保存された研究ケースはまだありません',
+      emptyDescription: '保存した研究ケースはここにまとまり、後から振り返りや比較に使えます。',
+      emptySearchTitle: '一致する研究ケースがありません',
+      emptySearchDescription: '別の名前やアイテム名で試してください。',
+      searchPlaceholder: '研究ケースを検索',
+      updatedAt: '{time} 更新',
+      rules: '戦略ルール',
+      open: 'コピーを開く',
+      delete: '研究を削除'
+    },
+    create: {
+      title: '研究アイテムを選択',
+      description: '採集アイテムを選ぶと、利用できる開拓モデルを確認します。',
+      searchPlaceholder: '採集アイテムを検索',
+      modelResult: 'モデル検索結果',
+      dawntrailCollectableModel: '黄金のレガシー収集品モデル',
+      modelDescription: '入力した確率仮定で収集品戦略を分析するモデルです。',
+      noModelTitle: '一致するモデルがありません',
+      noModelDescription: '現在の開拓研究は収集品モデルのみ対応しています。通常採集品は既存の秘伝書または実験を利用してください。',
+      startModel: 'このモデルを使う',
+      states: {
+        loading: '採集アイテムを検索しています...',
+        idle: 'アイテム名を入力して検索します。',
+        empty: '一致するアイテムがありません。',
+        error: '検索に失敗しました。後でもう一度試してください。',
+        results: '検索結果'
+      }
+    },
+    workspace: {
+      assumptionNote: 'この研究は入力した確率仮定のみを表し、公式のゲーム期待値ではありません。',
+      changeItem: 'アイテム変更',
+      inputs: '研究条件',
+      inputsDesc: 'プレイヤー数値と採集場所状態をアイテムデータと組み合わせて、この研究を分析します。',
+      relicBonus: '収集品レリック道具効果を適用',
+      effectiveStats: '食事後の数値'
+    },
+    profile: {
+      title: '研究仮定',
+      description: '大胆純化の分布と強化洞察の発生率を設定します。通常の洞察は確認済みデータを使います。',
+      standardRate: '洞察発生率',
+      standardFixed: '洞察発生率（固定）',
+      highStandardRate: '強化洞察発生率',
+      highStandardDescription: '純化後に強化洞察が出る仮定確率を入力します。',
+      brazenTitle: '大胆純化の分布',
+      brazenShortDescription: '大胆純化の確率分布曲線を選びます。',
+      brazenDescription: '大胆純化の倍率と確率を離散 bucket で表します。これは研究仮定であり、公式分布ではありません。',
+      distribution: '分布',
+      curveLabel: '確率分布曲線',
+      granularityLabel: '大胆純化の精度',
+      granularityOption: '{count} 段階',
+      granularityHint: '精度を上げるほど、分析時の大胆純化分岐が増えます。',
+      curves: {
+        uniform: {
+          label: '均等分布',
+          description: '各倍率が同じ確率です。'
+        },
+        triangular: {
+          label: '三角分布',
+          description: '中央が多く、両端が少なめです。'
+        },
+        normal: {
+          label: '正規分布',
+          description: 'ベルカーブの近似です。'
+        },
+        skewLow: {
+          label: '低め偏り',
+          description: '低い倍率が出やすい仮定です。'
+        },
+        skewHigh: {
+          label: '高め偏り',
+          description: '高い倍率が出やすい仮定です。'
+        },
+        uShape: {
+          label: 'U 字分布',
+          description: '両端が多く、中央が少なめです。'
+        }
+      },
+      editBrazen: '分布を編集',
+      bucketCount: '段階数',
+      totalRate: '合計確率',
+      average: '平均',
+      addBucket: '追加',
+      applyTemplate: 'テンプレート',
+      normalize: '正規化',
+      clear: 'クリア',
+      invalidTotal: '大胆純化の確率合計は 100% にしてください。',
+      multiplier: '倍率 %',
+      probability: '確率 %',
+      removeBucket: 'bucket を削除'
+    },
+    branches: {
+      highStandardProc: '強化洞察発生'
+    },
+    strategy: {
+      title: '戦略ルール',
+      description: 'ルールを上から順に確認し、条件一致後にアクション列を実行します。対応するルールがない状態はそこで終了します。',
+      addRule: 'ルール追加',
+      newRule: '新規ルール',
+      ruleName: 'ルール名',
+      enabled: '有効',
+      removeRule: 'ルール削除',
+      conditions: '条件',
+      actions: 'アクション',
+      all: 'すべて',
+      any: 'いずれか',
+      addCondition: '条件追加',
+      removeCondition: '条件削除',
+      addAction: 'アクション追加',
+      noActions: 'アクション未設定',
+      ruleOrder: '{index} 番目のルールとして確認されます。',
+      boolean: {
+        true: 'はい',
+        false: 'いいえ'
+      },
+      standardModes: {
+        none: '洞察なし',
+        standard: '洞察',
+        highStandard: '強化洞察'
+      },
+      fields: {
+        gp: 'GP',
+        integrity: '耐久',
+        collectability: '収集価値',
+        scrutinyActive: '集中検分',
+        collectorsFocusActive: '価値注視',
+        primingTouchActive: '下準備',
+        standardMode: '洞察状態',
+        wiseToTheWorldActive: '理智興起準備',
+        successBonus: '採集成功率補正',
+        nextCollectSuccessBonus: '次回採集成功補正',
+        hasUsedCollectableAction: '収集品アクション使用済み',
+        hasCollected: '採集済み'
+      }
+    },
+    analysis: {
+      title: '分析結果',
+      description: '現在の戦略を結果分布として展開し、各到達結果を確認しやすくします。',
+      run: '分析',
+      save: '保存',
+      invalidProfile: '先に確率設定を有効にしてください。',
+      noRewardTable: 'このアイテムの収集品報酬データが見つかりません。',
+      expectedScore: '期待スコア',
+      minScore: '最低スコア',
+      maxScore: '最高スコア',
+      states: '状態 / 遷移',
+      scoreDistribution: 'スコア分布',
+      limited: '状態上限に達したため、結果は制限付きの概要です。'
+    },
+    save: {
+      title: '開拓研究を保存',
+      description: '後で研究庫から見つけやすい名前を付けます。',
+      defaultName: '開拓研究',
+      confirm: '研究を保存'
+    },
+    json: {
+      scenario: '開拓研究',
+      export: '開拓 JSON を出力',
+      exported: '出力済み',
+      import: '開拓 JSON を取り込み',
+      importTitle: '開拓研究を取り込み',
+      importDescription: 'JSON の研究仮定と戦略を確認して、開拓研究庫に保存できます。',
+      importConfirm: '研究を保存',
+      errors: {
+        title: '開拓 JSON を取り込めません',
+        invalidJson: '解析できる JSON ファイルではありません。',
+        unsupportedScenario: 'この JSON は開拓研究のものではありません。',
+        missingItem: 'この JSON にはアイテム情報がありません。',
+        invalidContent: 'この JSON には必要な研究内容がありません。',
+        unknown: '取り込み時に予期しないエラーが発生しました。'
+      }
+    }
   },
   faq: {
     title: 'よくある質問',
@@ -367,6 +558,10 @@ export default {
       max: '到達可能な最大獲得数だけで評価します。確率は評価に入りません。',
       min: '最悪時の最小獲得数だけで評価します。堅実な採集計画向けです。'
     },
+    frontierTitle: '開拓研究モード',
+    frontierDesc: '有効にすると上級研究用の入口を表示します。このモードは入力した確率仮定で戦略を分析し、結果は研究用の参考として扱います。',
+    frontierCollectable: '開拓研究を表示',
+    frontierCollectableDesc: 'サイドバーに開拓研究と開拓研究庫の入口を表示します。',
     debugTitle: '専門家向けチェックモード',
     debugDesc: '有効にすると、計算結果に数式、確率分布、探索統計を表示します。',
     solverDebugMode: 'ソルバーのチェック情報を表示',
@@ -378,7 +573,7 @@ export default {
     version: 'バージョン {v}',
     latest: '最新',
     currentModelVersionsTitle: '現在のモデルバージョン',
-    currentModelVersionsDescription: '秘伝書と実験の結果、ライブラリのスナップショット、JSON エクスポートに現在書き込まれるバージョン情報です。',
+    currentModelVersionsDescription: '秘伝書、実験、有効化された開拓機能の結果、スナップショット、JSON エクスポートに現在書き込まれるバージョン情報です。',
     currentModelVersionsSummary: '{count} 件',
     modelVersionsButton: '現在のモデルバージョンを表示',
     modelVersionsClose: 'モデルバージョンウィンドウを閉じる',
@@ -388,6 +583,7 @@ export default {
       tomeSolver: '秘伝書の推奨ソルバー',
       experimentSimulator: '実験シミュレーター',
       experimentAnalyzer: '実験アナライザー',
+      frontierResearch: '開拓研究',
       strategyCodec: '決定木/戦略表のロスレス変換'
     },
     modelVersionKeys: {
@@ -399,7 +595,9 @@ export default {
       regularAnalyzer: '通常採集の分析モデル',
       collectableSimulator: '収集品戦略のシミュレーションモデル',
       collectableAnalyzer: '収集品戦略の分析モデル',
-      collectableStrategyCodec: '収集品戦略 codec'
+      collectableStrategyCodec: '収集品戦略 codec',
+      dawntrailCollectableSimulator: '黄金のレガシー収集品モデル（シミュレーター）',
+      dawntrailCollectableAnalyzer: '黄金のレガシー収集品モデル（アナライザー）'
     }
   },
   solver: {
@@ -908,7 +1106,7 @@ export default {
     treeKicker: '決定木カバー率',
     treeTitle: '現在の展開状態',
     loadingBaseValues: '収集品の基礎値を読み込み中です。',
-    calculatingTree: '方針ツリーを展開中です。画面は操作できます。',
+    calculatingTree: '方針ツリーを展開中です。しばらくお待ちください。',
     collectableLevelLockedTitle: '収集品採集はまだ開放されていません',
     collectableLevelLockedDesc: '収集品採集にはレベル {level} が必要です。それまでは、実験で決定木の展開や分析を実行しません。',
     actionLevelRequirement: 'レベル {level} が必要',
@@ -933,6 +1131,7 @@ export default {
       collectSuccessRate: '採集成功率',
       valueIncreaseRate: '価値上昇率',
       meticulousSaveRate: '慎重純化の耐久保存率',
+      noneHasBuff: '{buff} なし',
       someHasBuff: '一部に {buff}',
       allHasBuff: 'すべてに {buff}'
     },
@@ -1025,6 +1224,7 @@ export default {
       effectPreviewUnavailable: '現在展開されているノードでは、このアクションは実行されません。',
       appliedStateRange: '適用後ノード状態範囲',
       appliedStateRangeDescription: 'この方針が現在管理しているノードだけを集計し、管理外または終端になるまでこの方針を繰り返し適用します。',
+      appliedStateRangeLimited: 'この方針は分岐が多いため、ここでは現在整理できる状態範囲を表示します。',
       appliedCompleteBranches: 'Complete：{complete}/{total} 分岐',
       appliedAllComplete: 'すべての分岐が終了しました。',
       effectMetrics: {
@@ -1056,6 +1256,8 @@ export default {
       collectorsFocusActive: 'バリューフォーカス',
       primingTouchActive: 'プライミングタッチ',
       standardActive: '活眼',
+      highStandardActive: '強化洞察',
+      anyStandardActive: '活眼または強化洞察',
       hasUsedCollectableAction: '収集品アクション使用済み',
       hasCollected: '採集済み',
       successBonus: '採集成功率ボーナス',
@@ -1073,6 +1275,8 @@ export default {
       collectorsFocusActive: 'バリューフォーカスが有効かどうかです。次の純化系アクションの価値上昇率を上げ、その後消費されます。',
       primingTouchActive: 'プライミングタッチが有効かどうかです。次の慎重純化の耐久消費なし確率だけに影響します。',
       standardActive: '活眼が発動しているかどうかです。活眼ありの分岐を慎重純化など高価値の判断へ分ける時に使います。',
+      highStandardActive: '強化洞察が発動しているかどうかです。強化洞察分岐を大胆純化など高倍率の判断へ分ける時に使います。',
+      anyStandardActive: '活眼または強化洞察が発動しているかどうかです。どちらの洞察状態も同じ戦略に流す時に使います。',
       wiseToTheWorldActive: '理知興起が使用可能かどうかです。発動後にすぐ無料で耐久を 1 回復する判断によく使います。',
       successIActive: '採集成功率 I が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',
       successIIActive: '採集成功率 II が適用済みかどうかです。同じ段階の成功率補強を重複使用しないために使います。',

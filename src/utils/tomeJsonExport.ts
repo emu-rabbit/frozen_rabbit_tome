@@ -37,6 +37,7 @@ import type { SimulationRequest } from './rotationSimulator';
 import { getSimulatorActions } from './rotationSimulator';
 import type { RegularGatheringActionKind } from './regularGatheringMechanics';
 import { getRotationActionId } from '../services/actionIcons';
+import { trackJsonDownloaded } from '../services/analytics';
 
 export type TomeJsonExportScenario = TomeModelScenario;
 
@@ -283,17 +284,28 @@ export function buildCollectableExperimentJsonExport(input: CollectableExperimen
 }
 
 export function downloadJsonFile(payload: unknown, fileName: string) {
+  const sanitizedFileName = sanitizeJsonFileName(fileName);
   const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
 
   link.href = url;
-  link.download = sanitizeJsonFileName(fileName);
+  link.download = sanitizedFileName;
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  trackJsonDownloaded({
+    scenario: getExportScenario(payload),
+    fileName: sanitizedFileName
+  });
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function getExportScenario(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const manifest = (payload as { manifest?: { scenario?: unknown } }).manifest;
+  return typeof manifest?.scenario === 'string' ? manifest.scenario : undefined;
 }
 
 export function buildJsonExportFileName(payload: {

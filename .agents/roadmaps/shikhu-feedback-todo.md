@@ -9,7 +9,9 @@
 1. **Frontier 實驗區**
    - 用於尚未完全確認資料的機制，例如 Brazen probability distribution 與 Collector's High Standard proc rate。
    - 允許使用者手動輸入未知參數，以便實驗接近 endgame rotation 的模型。
-   - 2026-05-29 已由使用者遊戲畫面確認 High Standard 的效果模型；仍未知的是觸發率，以及 Brazen bucket 分布。
+   - 2026-05-29 已由使用者遊戲畫面確認 High Standard 的效果模型；後續又確認 Brazen 最後再 `floor`，且 `Collect` 會消耗洞察 / 強化洞察。仍未知的是 High Standard 觸發率，以及 Brazen bucket 分布。
+   - 2026-05-31 已修正 Shikhu 回饋的三個 Frontier 缺口（commit `6bb8551`）：High Standard 從同一個 `Collector's Standard` / 洞察 proc pool 扣除、High Standard 輸入框上限限制為總洞察池、策略 UI 的 `Meticulous` 不耗耐久率摘要使用共用 Frontier mechanics、英文 UI 改用 `Collector's Intuition` / `Intuition rate`。
+   - Frontier 模型版本已同步 bump：`dawntrailCollectableSimulator` / `dawntrailCollectableAnalyzer` 由 `v2` 到 `v3`。
    - 已收斂的第一階段實作計畫見 `.agents/roadmaps/frontier-collectable-implementation-plan.md`。
 
 2. **報表比較功能**
@@ -58,25 +60,46 @@
 
 ### 背景
 
-目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是 Brazen 分布與 High Standard 觸發率尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制；2026-05-29 使用者提供遊戲畫面確認 `Brazen under Collector's High Standard` 為 guaranteed `Scour * 150%`，最大值 case 顯示為 `300`。
+目前正式收藏品求解器排除 `Brazen` 與 `Collector's High Standard`，原因是 Brazen 分布與 High Standard 觸發率尚未完全確認。Shikhu 表示 endgame 現行 rotation 會用到這些機制；2026-05-29 使用者提供遊戲畫面確認 `Brazen under Collector's High Standard` 為 guaranteed `Scour * 150%`，最大值 case 顯示為 `300`。後續使用者確認 Brazen 取整順序為最後再 `floor`，且 `Collect / 收藏品採集` 會消耗洞察 / 強化洞察。
+
+2026-05-31 狀態更新：本段早期只寫「High Standard 觸發率未知」已不足以描述目前 Frontier 需要修正的狀態。High Standard 的實際觸發率仍待實證或由使用者假設輸入，但 Shikhu 回饋指出它不是獨立追加 proc，而是從一般 `Collector's Standard` / 洞察 proc pool 中分出去。此修正已於 commit `6bb8551` 落地：`probabilityProfile.standardProcRatePercent` 代表總洞察池，`highStandardProcRatePercent` 代表其中屬於 High Standard 的 percentage points，最後一般 Standard 機率為 `max(0, standardProcRatePercent - highStandardProcRatePercent)`；High Standard 輸入框上限也會限制在目前總洞察池內。因使用者可見分析結果可能改變，`src/config/modelVersions.ts` 的 `dawntrailCollectableSimulator` / `dawntrailCollectableAnalyzer` 已 bump 到 `v3`。
 
 ### User Story
 
-作為高階玩家或研究者，我希望能手動輸入尚未確認的 proc rate 或分布，並在隔離的實驗區測試接近 endgame 實際手法的模型，而不是等待所有資料完全確認。
+作為高階玩家或研究者，我希望能手動輸入尚未確認的 proc rate 或分布，並在 Frontier 區測試接近 endgame 實際手法的模型，而不是等待所有資料完全確認。Frontier 應延續既有收藏品實驗模型，只在 `Brazen` 與 `Collector's High Standard` 這兩個差異點上加入研究假設。
 
 ### 初步範圍
 
 - Brazen probability distribution。
-- Collector's High Standard proc rate。
-- Brazen bucket 的取整順序若無法由分布樣本推得，仍需另行確認。
-- 可能允許使用者選擇節點類型或手動覆蓋 proc rate。
+- Collector's High Standard proc rate。2026-05-31 補充已落地：High Standard rate 會從一般 Standard proc pool 扣除，不可當成額外機率。
+- 已確認 Brazen 取整順序為最後再 `floor`。
+- 已確認 `Collect / 收藏品採集` 會消耗洞察 / 強化洞察。
+- 策略 UI 的狀態摘要已反映 Frontier-only 狀態：High Standard active 時，`Meticulous` 不耗耐久率使用共用 helper 套用額外 +40 percentage points；混合狀態會自然顯示區間。
+- 英文 UI 術語已改用官方 `Collector's Intuition` / `Intuition rate`，避免再以 `value increase` 或 `collectability increase` 作為使用者可見英文名稱。內部函式或 legacy key 可暫留。
+- 第一版不納入 `Revisit`，只做單點採集分析。
+- Frontier study 使用獨立 Frontier Studies，不進 Experiment Database。
+- UI 完整度比照現有實驗台：建立、分析、儲存、再次開啟、JSON 匯出 / 匯入。
+- 可能允許使用者選擇節點類型或手動覆蓋 proc rate；若實作時發現其他缺資料的收藏品機制，需先詢問使用者。
 
 ### 已討論取捨
 
 - Frontier 區不能把未確認資料包裝成正式求解器結果。
 - UI 必須明確標示「研究 / 實驗 / 未確認」。
 - 正式秘笈仍應保守，不納入缺乏機率的機制。
+- Frontier 的產品入口、schema、版本與儲存區應獨立；但 `Brazen` / `High Standard` 以外的已知收藏品邏輯應沿用既有模型，避免平行實作漂移。
 - 這對 Evercold 之後也可能有價值，因為新資料收集需要時間。
+
+### 2026-05-31 維護結論：Frontier mechanics 不應多套手刻
+
+本次 Shikhu 回饋暴露一個維護風險：Frontier engine、strategy tree、策略 UI summary / applied preview 若各自重算機率或狀態效果，容易出現「engine 行為正確，但 UI 卡片摘要錯誤」的漂移。例如修正前 engine 已在 `High Standard + Meticulous` 時套用不耗耐久率 `+40 percentage points`，但策略 UI 的狀態範圍卡只看 `Priming Touch` 與基礎 `Meticulous` rate，因此混有 High Standard 節點時仍可能只顯示 25%。
+
+已於 commit `6bb8551` 抽出小型純函式 mechanics layer，讓 engine 與 UI summary 呼叫同一份邏輯；後續若繼續擴充 Frontier，仍應避免在 Vue summary 或 tree adapter 裡重新手刻公式。現行優先 helper：
+
+- `getFrontierIntuitionRates(profile)`：統一 Standard / High Standard proc pool 與一般 Standard 剩餘機率。
+- `getFrontierMeticulousSaveRatePercent(state, context)`：統一基礎 rate、`Priming Touch`、`High Standard +40` 與 clamp。
+- 未來仍可視需要新增 `getFrontierRefineGainBranches(action, state, context)` 或等價 helper，統一 `Scour`、`Meticulous`、`Brazen`、`Scrutiny` 與 `Intuition` 分支描述。
+
+UI summary 的職責應是對目前節點集合呼叫共用 helper 後聚合成範圍或標籤，例如 `25%~65%`；不應自行判斷 High Standard、Priming Touch 或未來 Frontier-only 狀態。正式收藏品與 Frontier 可共用已確認公式與狀態轉移 helper，Frontier 只保留 `Brazen` 分布、High Standard 假設與使用者輸入 probability profile 這些差異層。
 
 ## 次要待辦 A：新增兩個報表比較功能
 

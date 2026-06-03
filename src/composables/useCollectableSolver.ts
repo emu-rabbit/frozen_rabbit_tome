@@ -12,6 +12,11 @@ import { getCollectableRewardTable } from '../services/collectableRewards';
 import { MIN_COLLECTABLE_LEVEL } from '../utils/collectableMechanics';
 import { useSettings } from './useSettings';
 import { normalizeCollectableObjective } from '../config/inputLimits';
+import {
+  trackCollectableSolverCompleted,
+  trackCollectableSolverFailed
+} from '../services/analytics';
+import type { FoodSelection } from '../types/game';
 
 const collectableResult = ref<CollectableSolverResult | null>(null);
 const isCollectableSolving = ref(false);
@@ -40,11 +45,13 @@ export function useCollectableSolver() {
 
   const solveCollectable = async (payload: {
     activeItem: GatherableItem;
+    baseStats?: PlayerStats;
     stats: PlayerStats;
     baseValues: { Gathering: number; Perception: number };
     itemLevel: number;
     nodeBonuses: NodeBonuses;
     temporaryGp: number;
+    selectedFood?: FoodSelection;
     debugMode: boolean;
     objective?: CollectableObjective;
     manualMemoCapacityPower?: number;
@@ -53,11 +60,24 @@ export function useCollectableSolver() {
     collectableResult.value = null;
     collectableError.value = null;
     collectableErrorDetail.value = null;
+    const analyticsInput = {
+      item: payload.activeItem,
+      stats: { ...(payload.baseStats ?? payload.stats) },
+      maxGp: payload.stats.gp,
+      temporaryGp: Math.min(payload.temporaryGp, payload.stats.gp),
+      selectedFood: payload.selectedFood ? { ...payload.selectedFood } : undefined,
+      nodeBonuses: { ...payload.nodeBonuses },
+      hasRelicToolBonus: solverSettings.value.collectableRelicToolBonus
+    };
 
     if (payload.stats.level < MIN_COLLECTABLE_LEVEL) {
       collectableError.value = 'unsupportedLevel';
       collectableErrorDetail.value = null;
       isCollectableSolving.value = false;
+      trackCollectableSolverFailed({
+        input: analyticsInput,
+        error: { errorType: 'unsupportedLevel' }
+      });
       return;
     }
 
@@ -72,6 +92,10 @@ export function useCollectableSolver() {
       isCollectableSolving.value = false;
       collectableError.value = 'unsupportedReward';
       collectableErrorDetail.value = null;
+      trackCollectableSolverFailed({
+        input: analyticsInput,
+        error: { errorType: 'unsupportedReward' }
+      });
       return;
     }
 
@@ -79,6 +103,10 @@ export function useCollectableSolver() {
       isCollectableSolving.value = false;
       collectableError.value = 'unsupportedReward';
       collectableErrorDetail.value = null;
+      trackCollectableSolverFailed({
+        input: analyticsInput,
+        error: { errorType: 'unsupportedReward' }
+      });
       return;
     }
 
@@ -88,8 +116,13 @@ export function useCollectableSolver() {
     } catch (error) {
       console.error('Collectable worker creation failed:', error);
       isCollectableSolving.value = false;
-      collectableError.value = typeof window === 'undefined' ? 'workerFailed' : 'workerStale';
+      const errorType = typeof window === 'undefined' ? 'workerFailed' : 'workerStale';
+      collectableError.value = errorType;
       collectableErrorDetail.value = null;
+      trackCollectableSolverFailed({
+        input: analyticsInput,
+        error: { errorType }
+      });
       return;
     }
 
@@ -119,6 +152,10 @@ export function useCollectableSolver() {
       isCollectableSolving.value = false;
       collectableError.value = 'workerFailed';
       collectableErrorDetail.value = null;
+      trackCollectableSolverFailed({
+        input: analyticsInput,
+        error: { errorType: 'workerFailed' }
+      });
       return;
     }
     worker.onmessage = (event: MessageEvent<CollectableWorkerResponse>) => {
@@ -134,6 +171,10 @@ export function useCollectableSolver() {
         isCollectableSolving.value = false;
         activeCollectableWorker = null;
         worker.terminate();
+        trackCollectableSolverFailed({
+          input: analyticsInput,
+          error: event.data
+        });
         return;
       }
 
@@ -143,6 +184,10 @@ export function useCollectableSolver() {
       isCollectableSolving.value = false;
       activeCollectableWorker = null;
       worker.terminate();
+      trackCollectableSolverCompleted({
+        input: analyticsInput,
+        result: event.data
+      });
     };
 
     worker.onerror = (error) => {
@@ -157,6 +202,10 @@ export function useCollectableSolver() {
       worker.terminate();
       collectableError.value = 'workerFailed';
       collectableErrorDetail.value = null;
+      trackCollectableSolverFailed({
+        input: analyticsInput,
+        error: { errorType: 'workerFailed' }
+      });
     };
   };
 

@@ -8,6 +8,8 @@ import FavoriteItems from '../views/FavoriteItems.vue';
 import CreateExperiment from '../views/CreateExperiment.vue';
 import Simulator from '../views/Simulator.vue';
 import ExperimentDatabase from '../views/ExperimentDatabase.vue';
+import FrontierCollectable from '../views/FrontierCollectable.vue';
+import FrontierStudies from '../views/FrontierStudies.vue';
 import FAQ from '../views/FAQ.vue';
 import Changelog from '../views/Changelog.vue';
 
@@ -46,6 +48,20 @@ const routes = [
     path: '/experiment-database',
     name: 'ExperimentDatabase',
     component: ExperimentDatabase,
+  },
+  {
+    path: '/frontier',
+    name: 'FrontierCollectable',
+    component: FrontierCollectable,
+  },
+  {
+    path: '/frontier/collectable',
+    redirect: '/frontier',
+  },
+  {
+    path: '/frontier/studies',
+    name: 'FrontierStudies',
+    component: FrontierStudies,
   },
   {
     path: '/faq',

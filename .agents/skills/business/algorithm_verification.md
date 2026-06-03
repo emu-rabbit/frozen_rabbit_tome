@@ -154,9 +154,8 @@ WASM 路徑另需注意：
 
 ### 暫時不應宣稱第三方可完整驗證的內容
 
-- `Brazen` 隨機分布、檔位與取整順序。
+- `Brazen` 隨機分布與檔位機率；取整順序已確認為最後再 `floor`。
 - `Collector's High Standard` 觸發率。
-- `Collect / 收藏品採集` 是否消耗洞察 / 強化洞察狀態。
 - 精選 reduction reward model。
 - 宇宙探索 mission score 與 reward model。
 - 任何未由 `.agents/skills/business/gathering_math_formulas.md` 或可靠來源確認的推測公式。

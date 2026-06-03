@@ -6,6 +6,8 @@ export default {
   },
   common: {
     cancel: '取消',
+    close: '关闭',
+    done: '完成',
     backToSelection: '返回物品选择',
     exportJson: '导出 JSON',
     exportingJson: '正在导出 JSON',
@@ -108,13 +110,202 @@ export default {
     createGuide: '创建新秘籍',
     solver: '秘籍求解器',
     createExperiment: '创建新实验',
+    frontierCollectable: '建立开拓研究',
     favoriteItems: '最爱的物品',
     tomeLibrary: '秘籍藏书库',
     experimentDatabase: '实验数据库',
+    frontierStudies: '开拓研究库',
     faq: '常见问题',
     settings: '设置页面',
     github: 'GitHub 项目',
     sponsor: '赞助冷冻库电费'
+  },
+  frontier: {
+    disabled: {
+      title: '开拓研究模式尚未启用',
+      description: '开拓是进阶研究区，会根据你提供的概率假设分析策略；结果仅供研究参考。',
+      action: '前往设置启用'
+    },
+    collectable: {
+      title: '开拓研究',
+      description: '用自定义概率假设分析进阶采集策略，适合研究大胆提炼与强化洞察等尚待实证的采集情境。',
+      emptyTitle: '准备建立研究',
+      emptyDescription: '选定研究条件后，就能在这里整理策略假设、观察结果分布，并保留给日后回顾。'
+    },
+    studies: {
+      title: '研究案例',
+      description: '这里保存开拓研究案例，方便日后回顾同一组假设与策略。',
+      emptyTitle: '尚未保存研究案例',
+      emptyDescription: '保存后的研究案例会集中在这里，方便日后回顾与比较。',
+      emptySearchTitle: '没有找到研究案例',
+      emptySearchDescription: '换个名称或物品关键字再试一次。',
+      searchPlaceholder: '搜索研究案例',
+      updatedAt: '更新于 {time}',
+      rules: '策略规则',
+      open: '打开副本',
+      delete: '删除研究'
+    },
+    create: {
+      title: '选择研究物品',
+      description: '先选定采集物品，再由系统判断目前可用的开拓模型。',
+      searchPlaceholder: '搜索采集物品',
+      modelResult: '模型搜索结果',
+      dawntrailCollectableModel: '黄金遗产收藏品模型',
+      modelDescription: '此模型会使用你提供的概率假设分析收藏品策略。',
+      noModelTitle: '没有找到相符模型',
+      noModelDescription: '目前开拓研究只支持收藏品模型；一般采集品可以先使用既有秘籍或实验。',
+      startModel: '使用此模型',
+      states: {
+        loading: '正在搜索可采集物品...',
+        idle: '输入物品名称开始搜索。',
+        empty: '没有找到符合条件的物品。',
+        error: '搜索失败，请稍后再试。',
+        results: '搜索结果'
+      }
+    },
+    workspace: {
+      assumptionNote: '此研究只代表目前输入的概率假设，不代表正式游戏期望值。',
+      changeItem: '更换物品',
+      inputs: '研究条件',
+      inputsDesc: '玩家数值与采集点状态会搭配物品数据，用来分析这次研究。',
+      relicBonus: '套用收藏品遗物工具效果',
+      effectiveStats: '食物后数值'
+    },
+    profile: {
+      title: '研究假设',
+      description: '设置大胆提炼分布与强化洞察触发率；一般洞察使用已确认数据。',
+      standardRate: '洞察触发率',
+      standardFixed: '洞察触发率（固定）',
+      highStandardRate: '强化洞察触发率',
+      highStandardDescription: '输入强化洞察在提炼后出现的假设概率。',
+      brazenTitle: '大胆提炼分布',
+      brazenShortDescription: '选择大胆提炼的概率分布曲线。',
+      brazenDescription: '用离散 bucket 描述大胆提炼倍率与概率。这是研究假设，不代表官方分布。',
+      distribution: '分布',
+      curveLabel: '概率分布曲线',
+      granularityLabel: '大胆提炼精细程度',
+      granularityOption: '{count} 档',
+      granularityHint: '越精细，分析时的大胆提炼分支会越多。',
+      curves: {
+        uniform: {
+          label: '均匀分布',
+          description: '每个倍率同概率。'
+        },
+        triangular: {
+          label: '三角分布',
+          description: '中间较常见，两端较少。'
+        },
+        normal: {
+          label: '常态分布',
+          description: '钟形曲线近似。'
+        },
+        skewLow: {
+          label: '偏低分布',
+          description: '低倍率较常见。'
+        },
+        skewHigh: {
+          label: '偏高分布',
+          description: '高倍率较常见。'
+        },
+        uShape: {
+          label: 'U 型分布',
+          description: '两端较常见，中间较少。'
+        }
+      },
+      editBrazen: '编辑分布',
+      bucketCount: '档数',
+      totalRate: '总概率',
+      average: '平均',
+      addBucket: '新增',
+      applyTemplate: '套用模板',
+      normalize: '归一化',
+      clear: '清空',
+      invalidTotal: '大胆提炼概率总和必须等于 100%。',
+      multiplier: '倍率 %',
+      probability: '概率 %',
+      removeBucket: '移除 bucket'
+    },
+    branches: {
+      highStandardProc: '触发强化洞察'
+    },
+    strategy: {
+      title: '策略规则',
+      description: '依序比对规则，符合条件后执行动作串；没有规则覆盖的状态会停止。',
+      addRule: '新增规则',
+      newRule: '新规则',
+      ruleName: '规则名称',
+      enabled: '启用',
+      removeRule: '删除规则',
+      conditions: '条件',
+      actions: '动作',
+      all: '全部符合',
+      any: '任一符合',
+      addCondition: '新增条件',
+      removeCondition: '移除条件',
+      addAction: '加入动作',
+      noActions: '尚未加入动作',
+      ruleOrder: '第 {index} 条规则，会依序比对。',
+      boolean: {
+        true: '是',
+        false: '否'
+      },
+      standardModes: {
+        none: '无洞察',
+        standard: '洞察',
+        highStandard: '强化洞察'
+      },
+      fields: {
+        gp: 'GP',
+        integrity: '耐久',
+        collectability: '收藏价值',
+        scrutinyActive: '集中检查',
+        collectorsFocusActive: '价值瞩目',
+        primingTouchActive: '预备碰触',
+        standardMode: '洞察状态',
+        wiseToTheWorldActive: '理智同兴预备',
+        successBonus: '采集成功率补强',
+        nextCollectSuccessBonus: '下次采集成功补强',
+        hasUsedCollectableAction: '已用收藏品技能',
+        hasCollected: '已采集'
+      }
+    },
+    analysis: {
+      title: '分析结果',
+      description: '完整展开目前策略的结果分布，方便检查每种落点。',
+      run: '分析',
+      save: '保存',
+      invalidProfile: '请先让概率设置有效。',
+      noRewardTable: '找不到此物品的收藏品奖励数据。',
+      expectedScore: '期望分数',
+      minScore: '最低分数',
+      maxScore: '最高分数',
+      states: '状态 / 转移',
+      scoreDistribution: '分数分布',
+      limited: '分析达到状态上限，结果仅为受限摘要。'
+    },
+    save: {
+      title: '保存开拓研究',
+      description: '替这份研究取一个好认的名字，之后可在研究库再次开启。',
+      defaultName: '开拓研究',
+      confirm: '保存研究'
+    },
+    json: {
+      scenario: '开拓研究',
+      export: '导出开拓 JSON',
+      exported: '已导出',
+      import: '导入开拓 JSON',
+      importTitle: '导入开拓研究',
+      importDescription: '确认这份 JSON 的研究假设与策略后，可以存进开拓研究库。',
+      importConfirm: '保存研究',
+      errors: {
+        title: '无法导入开拓 JSON',
+        invalidJson: '这不是可解析的 JSON 文件。',
+        unsupportedScenario: '这份 JSON 不是开拓研究情境。',
+        missingItem: '这份 JSON 缺少物品信息。',
+        invalidContent: '这份 JSON 缺少必要研究内容。',
+        unknown: '导入时发生未预期的错误。'
+      }
+    }
   },
   faq: {
     title: '常见问题',
@@ -367,6 +558,10 @@ export default {
       max: '只看手法可达到的最高获得量，概率不会进入评分。',
       min: '只看手法最差情况下的最低获得量，适合想要保底的采集规划。'
     },
+    frontierTitle: '开拓研究模式',
+    frontierDesc: '启用后显示进阶研究入口。此模式会使用你提供的概率假设分析策略，结果仅供研究参考。',
+    frontierCollectable: '显示开拓研究',
+    frontierCollectableDesc: '在侧边栏显示开拓研究与开拓研究库入口。',
     debugTitle: '专家检查模式',
     debugDesc: '开启后，求解结果会显示公式、概率分布与搜索统计。',
     solverDebugMode: '显示求解器检查信息',
@@ -378,7 +573,7 @@ export default {
     version: '版本 {v}',
     latest: '最新',
     currentModelVersionsTitle: '当前模型版本',
-    currentModelVersionsDescription: '目前秘籍与实验会写入结果、藏书库快照与 JSON 导出的版本来源。',
+    currentModelVersionsDescription: '目前秘籍、实验与已启用的开拓功能会写入结果、快照与 JSON 导出的版本来源。',
     currentModelVersionsSummary: '{count} 个版本',
     modelVersionsButton: '查看当前模型版本',
     modelVersionsClose: '关闭模型版本窗口',
@@ -388,6 +583,7 @@ export default {
       tomeSolver: '秘籍推荐求解器',
       experimentSimulator: '实验模拟器',
       experimentAnalyzer: '实验分析器',
+      frontierResearch: '开拓研究',
       strategyCodec: '决策树/策略表无损转换'
     },
     modelVersionKeys: {
@@ -399,7 +595,9 @@ export default {
       regularAnalyzer: '一般采集分析模型',
       collectableSimulator: '收藏品策略模拟模型',
       collectableAnalyzer: '收藏品策略分析模型',
-      collectableStrategyCodec: '收藏品策略 codec'
+      collectableStrategyCodec: '收藏品策略 codec',
+      dawntrailCollectableSimulator: '黄金遗产收藏品模型（模拟器）',
+      dawntrailCollectableAnalyzer: '黄金遗产收藏品模型（分析器）'
     }
   },
   solver: {
@@ -908,7 +1106,7 @@ export default {
     treeKicker: '决策树覆盖',
     treeTitle: '当前展开状态',
     loadingBaseValues: '正在载入收藏品基础值。',
-    calculatingTree: '正在展开策略树，画面会保持可操作。',
+    calculatingTree: '正在展开策略树，请稍候。',
     collectableLevelLockedTitle: '收藏品采集尚未开放',
     collectableLevelLockedDesc: '收藏品采集需要等级 {level}。当前等级不足时，实验区不会展开决策树或执行分析。',
     actionLevelRequirement: '需要等级 {level}',
@@ -933,6 +1131,7 @@ export default {
       collectSuccessRate: '采集成功率',
       valueIncreaseRate: '价值提升率',
       meticulousSaveRate: '慎重提炼不耗耐久率',
+      noneHasBuff: '没有 {buff}',
       someHasBuff: '部分有 {buff}',
       allHasBuff: '全部有 {buff}'
     },
@@ -1025,6 +1224,7 @@ export default {
       effectPreviewUnavailable: '此技能在当前展开节点中不会被施展。',
       appliedStateRange: '套用后节点状态范围',
       appliedStateRangeDescription: '只统计这条策略目前纳管的节点；会反复套用本策略，直到状态不再纳管或分支结束。',
+      appliedStateRangeLimited: '这条策略的分支很多，这里先显示目前可整理的状态范围。',
       appliedCompleteBranches: 'Complete：{complete}/{total} 分支',
       appliedAllComplete: '所有分支都已结束',
       effectMetrics: {
@@ -1056,6 +1256,8 @@ export default {
       collectorsFocusActive: '价值瞩目',
       primingTouchActive: '预备碰触',
       standardActive: '洞察',
+      highStandardActive: '强化洞察',
+      anyStandardActive: '洞察或强化洞察',
       hasUsedCollectableAction: '已用收藏品技能',
       hasCollected: '已采集过',
       successBonus: '采集成功率加成',
@@ -1073,6 +1275,8 @@ export default {
       collectorsFocusActive: '价值瞩目是否已启用。启用后会提高下一次提炼类技能的价值提升概率，提炼后消耗。',
       primingTouchActive: '预备碰触是否已启用。启用后只影响下一次慎重提炼的不消耗耐久概率。',
       standardActive: '洞察是否已触发。常用于让有洞察的分支改走慎重提炼或其他高价值判断。',
+      highStandardActive: '强化洞察是否已触发。常用于让强化洞察分支改走大胆提炼或其他高倍率判断。',
+      anyStandardActive: '一般洞察或强化洞察是否已触发。常用于让任何洞察分支共用同一条策略。',
       wiseToTheWorldActive: '理智同兴是否可用。通常用于在触发后立刻免费恢复 1 点耐久。',
       successIActive: '获得率 I 是否已套用。用于避免重复使用同阶成功率补强。',
       successIIActive: '获得率 II 是否已套用。用于避免重复使用同阶成功率补强。',

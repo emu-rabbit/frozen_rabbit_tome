@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'primevue/button';
 import type { MacroBuildResult, MacroPart } from '../utils/macroGenerator';
 import { copyTextToClipboard } from '../utils/clipboard';
+import { trackMacroCopied } from '../services/analytics';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -38,6 +39,15 @@ async function copyPart(part: MacroPart, groupKey?: string) {
   const copied = await copyTextToClipboard(part.text);
   copiedPartId.value = copied ? id : null;
   failedPartId.value = copied ? null : id;
+  const group = groupKey ? groups.value.find((entry) => entry.key === groupKey) : null;
+  trackMacroCopied({
+    success: copied,
+    lineCount: part.lines.length,
+    partIndex: part.index,
+    partCount: group?.macro.parts.length ?? parts.value.length,
+    hasGroups: hasGroups.value,
+    groupKey
+  });
   resetFeedbackLater();
 }
 

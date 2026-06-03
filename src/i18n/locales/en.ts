@@ -6,6 +6,8 @@ export default {
   },
   common: {
     cancel: 'Cancel',
+    close: 'Close',
+    done: 'Done',
     backToSelection: 'Back to Selection',
     exportJson: 'Export JSON',
     exportingJson: 'Exporting JSON',
@@ -108,13 +110,202 @@ export default {
     createGuide: 'Create New Tome',
     solver: 'Tome Solver',
     createExperiment: 'Create New Experiment',
+    frontierCollectable: 'Create Frontier Research',
     favoriteItems: 'Favorite Items',
     tomeLibrary: 'Tome Library',
     experimentDatabase: 'Experiment Database',
+    frontierStudies: 'Frontier Studies',
     faq: 'FAQ',
     settings: 'Settings',
     github: 'GitHub Project',
     sponsor: 'Sponsor the Freezer bill'
+  },
+  frontier: {
+    disabled: {
+      title: 'Frontier research mode is not enabled yet',
+      description: 'Frontier is an advanced research area for strategies under your own probability assumptions. Results are for research reference.',
+      action: 'Enable in Settings'
+    },
+    collectable: {
+      title: 'Frontier Research',
+      description: 'Analyze advanced gathering strategies with custom probability assumptions for situations such as Brazen actions and Collector\'s High Standard.',
+      emptyTitle: 'Ready to Start Research',
+      emptyDescription: 'Choose research conditions here to organize strategy assumptions, review outcome distributions, and keep studies for later.'
+    },
+    studies: {
+      title: 'Research Studies',
+      description: 'Save Frontier research studies here so the same assumptions and strategies are easy to revisit.',
+      emptyTitle: 'No studies saved yet',
+      emptyDescription: 'Saved research studies will be gathered here for later review and comparison.',
+      emptySearchTitle: 'No matching studies',
+      emptySearchDescription: 'Try another name or item keyword.',
+      searchPlaceholder: 'Search studies',
+      updatedAt: 'Updated {time}',
+      rules: 'Strategy rules',
+      open: 'Open Copy',
+      delete: 'Delete Study'
+    },
+    create: {
+      title: 'Choose a Research Item',
+      description: 'Pick a gatherable item first, then the app checks which Frontier model can handle it.',
+      searchPlaceholder: 'Search gatherable items',
+      modelResult: 'Model match',
+      dawntrailCollectableModel: 'Dawntrail Collectable Model',
+      modelDescription: 'This model analyzes collectable strategies using your probability assumptions.',
+      noModelTitle: 'No matching model',
+      noModelDescription: 'Frontier currently supports collectable research only. Regular items can use the existing Tome or Experiment flow.',
+      startModel: 'Use This Model',
+      states: {
+        loading: 'Searching gatherable items...',
+        idle: 'Type an item name to search.',
+        empty: 'No matching items found.',
+        error: 'Search failed. Please try again later.',
+        results: 'Search results'
+      }
+    },
+    workspace: {
+      assumptionNote: 'This study only represents the probability assumptions entered here, not official in-game expected value.',
+      changeItem: 'Change Item',
+      inputs: 'Research Inputs',
+      inputsDesc: 'Player stats and node state are combined with item data for this study.',
+      relicBonus: 'Apply collectable relic tool effect',
+      effectiveStats: 'Effective stats'
+    },
+    profile: {
+      title: 'Research Assumptions',
+      description: 'Set the Brazen distribution and how High Standard is split from the Collector\'s Intuition pool.',
+      standardRate: 'Collector\'s Intuition pool',
+      standardFixed: 'Collector\'s Intuition pool (fixed)',
+      highStandardRate: 'High Standard share',
+      highStandardDescription: 'Set how many percentage points of the Intuition pool become High Standard.',
+      brazenTitle: 'Brazen Distribution',
+      brazenShortDescription: 'Choose the Brazen probability curve.',
+      brazenDescription: 'Describe Brazen as discrete multiplier and probability buckets. This is a research assumption, not an official distribution.',
+      distribution: 'Distribution',
+      curveLabel: 'Probability curve',
+      granularityLabel: 'Brazen precision',
+      granularityOption: '{count} buckets',
+      granularityHint: 'Higher precision creates more Brazen branches during analysis.',
+      curves: {
+        uniform: {
+          label: 'Uniform',
+          description: 'Every multiplier has equal chance.'
+        },
+        triangular: {
+          label: 'Triangular',
+          description: 'Middle values are most common.'
+        },
+        normal: {
+          label: 'Normal',
+          description: 'A compact bell-curve approximation.'
+        },
+        skewLow: {
+          label: 'Skewed low',
+          description: 'Lower multipliers are more common.'
+        },
+        skewHigh: {
+          label: 'Skewed high',
+          description: 'Higher multipliers are more common.'
+        },
+        uShape: {
+          label: 'U-shaped',
+          description: 'Both ends are more common.'
+        }
+      },
+      editBrazen: 'Edit distribution',
+      bucketCount: 'Buckets',
+      totalRate: 'Total',
+      average: 'Average',
+      addBucket: 'Add',
+      applyTemplate: 'Template',
+      normalize: 'Normalize',
+      clear: 'Clear',
+      invalidTotal: 'Brazen probabilities must total 100%.',
+      multiplier: 'Multiplier %',
+      probability: 'Probability %',
+      removeBucket: 'Remove bucket'
+    },
+    branches: {
+      highStandardProc: 'High Standard proc'
+    },
+    strategy: {
+      title: 'Strategy Rules',
+      description: 'Rules are checked in order. Matching rules execute their action sequence; states without a matching rule stop there.',
+      addRule: 'Add Rule',
+      newRule: 'New Rule',
+      ruleName: 'Rule name',
+      enabled: 'Enabled',
+      removeRule: 'Remove rule',
+      conditions: 'Conditions',
+      actions: 'Actions',
+      all: 'All',
+      any: 'Any',
+      addCondition: 'Add condition',
+      removeCondition: 'Remove condition',
+      addAction: 'Add action',
+      noActions: 'No actions yet',
+      ruleOrder: 'Rule {index}, checked in order.',
+      boolean: {
+        true: 'Yes',
+        false: 'No'
+      },
+      standardModes: {
+        none: 'None',
+        standard: 'Standard',
+        highStandard: 'High Standard'
+      },
+      fields: {
+        gp: 'GP',
+        integrity: 'Integrity',
+        collectability: 'Collectability',
+        scrutinyActive: 'Scrutiny',
+        collectorsFocusActive: 'Collector\'s Focus',
+        primingTouchActive: 'Priming Touch',
+        standardMode: 'Standard state',
+        wiseToTheWorldActive: 'Wise ready',
+        successBonus: 'Success bonus',
+        nextCollectSuccessBonus: 'Next collect bonus',
+        hasUsedCollectableAction: 'Used collectable action',
+        hasCollected: 'Collected'
+      }
+    },
+    analysis: {
+      title: 'Analysis Result',
+      description: 'Expands the current strategy into a full outcome distribution for review.',
+      run: 'Analyze',
+      save: 'Save',
+      invalidProfile: 'Make the probability profile valid first.',
+      noRewardTable: 'No collectable reward table was found for this item.',
+      expectedScore: 'Expected score',
+      minScore: 'Min score',
+      maxScore: 'Max score',
+      states: 'States / transitions',
+      scoreDistribution: 'Score distribution',
+      limited: 'The analysis reached a state guard; this is a limited summary.'
+    },
+    save: {
+      title: 'Save Frontier Study',
+      description: 'Name this study so it is easy to find in the library later.',
+      defaultName: 'Frontier Study',
+      confirm: 'Save Study'
+    },
+    json: {
+      scenario: 'Frontier Research',
+      export: 'Export Frontier JSON',
+      exported: 'Exported',
+      import: 'Import Frontier JSON',
+      importTitle: 'Import Frontier Study',
+      importDescription: 'Review the assumptions and strategy, then save this JSON into the study library.',
+      importConfirm: 'Save Study',
+      errors: {
+        title: 'Cannot import Frontier JSON',
+        invalidJson: 'This is not parseable JSON.',
+        unsupportedScenario: 'This JSON is not a Frontier research scenario.',
+        missingItem: 'This JSON is missing item data.',
+        invalidContent: 'This JSON is missing required research content.',
+        unknown: 'An unexpected import error occurred.'
+      }
+    }
   },
   faq: {
     title: 'FAQ',
@@ -367,6 +558,10 @@ export default {
       max: 'Scores only by the highest possible yield. Probability does not affect scoring.',
       min: 'Scores only by the lowest possible yield for more conservative planning.'
     },
+    frontierTitle: 'Frontier Research Mode',
+    frontierDesc: 'When enabled, advanced research entries are shown. This mode analyzes strategies using your probability assumptions, and results are for research reference.',
+    frontierCollectable: 'Show Frontier research',
+    frontierCollectableDesc: 'Show Frontier Research and Frontier Study Library entries in the sidebar.',
     debugTitle: 'Expert Check Mode',
     debugDesc: 'When enabled, solved results show formulas, probability distributions, and search statistics.',
     solverDebugMode: 'Show solver check info',
@@ -378,7 +573,7 @@ export default {
     version: 'Version {v}',
     latest: 'Latest',
     currentModelVersionsTitle: 'Current Model Versions',
-    currentModelVersionsDescription: 'The version sources currently written into Tome and Experiment results, library snapshots, and JSON exports.',
+    currentModelVersionsDescription: 'The version sources currently written into Tome, Experiment, and enabled Frontier results, snapshots, and JSON exports.',
     currentModelVersionsSummary: '{count} versions',
     modelVersionsButton: 'View current model versions',
     modelVersionsClose: 'Close model versions window',
@@ -388,6 +583,7 @@ export default {
       tomeSolver: 'Tome recommendation solvers',
       experimentSimulator: 'Experiment simulators',
       experimentAnalyzer: 'Experiment analyzers',
+      frontierResearch: 'Frontier Research',
       strategyCodec: 'Lossless decision tree / strategy table conversion'
     },
     modelVersionKeys: {
@@ -399,7 +595,9 @@ export default {
       regularAnalyzer: 'Regular gathering analysis model',
       collectableSimulator: 'Collectable strategy simulation model',
       collectableAnalyzer: 'Collectable strategy analysis model',
-      collectableStrategyCodec: 'Collectable strategy codec'
+      collectableStrategyCodec: 'Collectable strategy codec',
+      dawntrailCollectableSimulator: 'Dawntrail collectable model (simulator)',
+      dawntrailCollectableAnalyzer: 'Dawntrail collectable model (analyzer)'
     }
   },
   solver: {
@@ -436,7 +634,7 @@ export default {
       yieldCount: 'Yield +',
       extraRate: 'Extra Rate +',
       collectableRelicToolBonus: 'Relic Tool Effect',
-      collectableRelicToolBonusDesc: 'Collectable value increase rate +20%.',
+      collectableRelicToolBonusDesc: 'Collector\'s Intuition rate +20%.',
       enabled: 'Yes',
       disabled: 'No',
     },
@@ -714,8 +912,8 @@ export default {
       applied: 'Applied',
       collectSuccess: 'Collect succeeded',
       collectFailed: 'Collect failed',
-      valueNormal: 'No collectability increase',
-      valueIncreased: 'Collectability increase',
+      valueNormal: 'No Collector\'s Intuition',
+      valueIncreased: 'Collector\'s Intuition',
       meticulousSaved: 'Meticulous saved integrity',
       meticulousConsumed: 'Meticulous consumed integrity',
       integrityConsumed: 'Integrity consumed',
@@ -731,7 +929,7 @@ export default {
       always: 'The action was applied and moves to the next state.',
       collectSuccess: 'Successful Collect receives the current reward tier.',
       collectFailed: 'Failed Collect gives no reward but still consumes integrity.',
-      refineOutcome: 'Moves by collectability increase and integrity outcome.',
+      refineOutcome: 'Moves by Collector\'s Intuition and integrity outcome.',
       integrityRestored: 'Restores 1 integrity, capped by the current node integrity maximum.',
       wiseProc: 'After Solid Reason or Ageless Words restores integrity, there is a 50% chance to gain a free Wise to the World restore.',
       wiseNoProc: 'After Solid Reason or Ageless Words restores integrity, Wise to the World did not proc.',
@@ -832,7 +1030,7 @@ export default {
       formulas: 'Formula Inputs',
       success: 'Collect Success Rate',
       collectableFormula: 'Collectable Formula',
-      valueIncreaseRate: 'Collectability Increase Rate',
+      valueIncreaseRate: 'Collector\'s Intuition Rate',
       relicToolBonus: 'Relic tool bonus',
       meticulousRate: 'Meticulous Save Rate',
       scrutiny: 'Scrutiny',
@@ -875,8 +1073,8 @@ export default {
         gp: 'Current remaining GP.',
         integrity: 'Remaining integrity, meaning how many more integrity-spending actions are possible.',
         collectability: 'Current collectability, which affects reward tiers and whether further refining is worthwhile.',
-        scrutinyActive: 'Whether Scrutiny is active, affecting the next collectability increase.',
-        collectorsFocusActive: 'Whether Collector\'s Focus is active, affecting value increase rate.',
+        scrutinyActive: 'Whether Scrutiny is active, affecting the next refine gain.',
+        collectorsFocusActive: 'Whether Collector\'s Focus is active, affecting Collector\'s Intuition rate.',
         primingTouchActive: 'Whether Priming Touch is active, affecting Meticulous integrity-save chance.',
         standardActive: 'Whether Collector\'s Standard is active for the related follow-up effect.',
         hasUsedCollectableAction: 'Whether a refine or Collect action has already been used, for state and limitation checks.',
@@ -930,7 +1128,7 @@ export default {
     treeKicker: 'Decision Tree Coverage',
     treeTitle: 'Current Expanded State',
     loadingBaseValues: 'Loading collectable base values.',
-    calculatingTree: 'Expanding the strategy tree while keeping the page responsive.',
+    calculatingTree: 'Expanding the strategy tree. Please wait.',
     collectableLevelLockedTitle: 'Collectables are not unlocked yet',
     collectableLevelLockedDesc: 'Collectable gathering requires level {level}. Until then, the lab will not expand a decision tree or run analysis.',
     actionLevelRequirement: 'Requires level {level}',
@@ -953,8 +1151,9 @@ export default {
       rangesTitle: 'State ranges',
       buffTitle: 'Buff overview',
       collectSuccessRate: 'Collect success rate',
-      valueIncreaseRate: 'Value increase rate',
+      valueIncreaseRate: 'Intuition rate',
       meticulousSaveRate: 'Meticulous Save Rate',
+      noneHasBuff: 'None has {buff}',
       someHasBuff: 'Some has {buff}',
       allHasBuff: 'All has {buff}'
     },
@@ -1047,13 +1246,14 @@ export default {
       effectPreviewUnavailable: 'This action will not be cast in the currently expanded nodes.',
       appliedStateRange: 'Post-Apply Node State Range',
       appliedStateRangeDescription: 'Only counts nodes currently managed by this strategy, then repeats this strategy until the state is no longer managed or the branch ends.',
+      appliedStateRangeLimited: 'This strategy creates many branches, so this preview shows the state range that can be summarized right now.',
       appliedCompleteBranches: 'Complete: {complete}/{total} branches',
       appliedAllComplete: 'All branches have ended.',
       effectMetrics: {
         collectabilityGain: 'Collectability {range}',
         integrityDelta: 'Integrity {range}',
         scrutinyBonus: 'Refine value bonus {value}',
-        valueIncreaseRate: 'Value-increase rate {from} → {to} ({delta}, ×1.75)',
+        valueIncreaseRate: 'Intuition rate {from} → {to} ({delta}, ×1.75)',
         meticulousSaveRate: 'Meticulous integrity-save rate {from} → {to} ({delta})',
         collectSuccessBonus: 'Collect success rate {value}',
         nextCollectSuccessBonus: 'Next collect success rate {value}',
@@ -1078,6 +1278,8 @@ export default {
       collectorsFocusActive: "Collector's Focus",
       primingTouchActive: 'Priming Touch',
       standardActive: "Collector's Standard",
+      highStandardActive: "Collector's High Standard",
+      anyStandardActive: 'Any Standard',
       hasUsedCollectableAction: 'Used collectable action',
       hasCollected: 'Collected already',
       successBonus: 'Collect success bonus',
@@ -1092,9 +1294,11 @@ export default {
       integrity: 'Current remaining integrity. Use it to decide whether to finish, keep refining, or restore integrity first.',
       gp: 'Current remaining GP. Use it to gate GP-cost actions such as Scrutiny, Collector\'s Focus, Priming Touch, and integrity recovery.',
       scrutinyActive: 'Whether Scrutiny is active. It strengthens the next refine action, then is consumed.',
-      collectorsFocusActive: 'Whether Collector\'s Focus is active. It raises the value-increase chance for the next refine action, then is consumed.',
+      collectorsFocusActive: 'Whether Collector\'s Focus is active. It raises Collector\'s Intuition chance for the next refine action, then is consumed.',
       primingTouchActive: 'Whether Priming Touch is active. It only affects the next Meticulous integrity-save chance.',
       standardActive: 'Whether Collector\'s Standard is active. Use it to route Standard branches toward Meticulous or another high-tier choice.',
+      highStandardActive: 'Whether Collector\'s High Standard is active. Use it to route High Standard branches toward Brazen or another high-multiplier choice.',
+      anyStandardActive: 'Whether either Collector\'s Standard or High Standard is active. Use it when both insight states should share one strategy.',
       wiseToTheWorldActive: 'Whether Wise to the World is available. Usually used to immediately restore 1 integrity for free after it procs.',
       successIActive: 'Whether Gathering Rate I has been applied. Use it to avoid repeating the same success-rate buff tier.',
       successIIActive: 'Whether Gathering Rate II has been applied. Use it to avoid repeating the same success-rate buff tier.',
@@ -1210,7 +1414,7 @@ export default {
       currentGp: 'Current GP',
       maxGp: 'Equipment GP Cap',
       relic: 'Relic Tool Effect',
-      relicDesc: 'Only affects collectable value increase in the collectable system.'
+      relicDesc: 'Only affects Collector\'s Intuition rate in the collectable system.'
     },
     picker: {
       title: 'Load Gear Profile',

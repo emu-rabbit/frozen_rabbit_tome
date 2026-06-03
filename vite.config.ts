@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue';
 import path from 'path';
 
 export default defineConfig({
-  base: '/frozen_rabbit_tome/',
+  base: process.env.VITE_BASE_PATH || '/frozen_rabbit_tome/',
   plugins: [vue()],
   resolve: {
     alias: {

@@ -78,7 +78,7 @@
 - `Brazen + Collector's High Standard + Scrutiny = Floor(Scour * 150 / 100) + ScrutinyBonus`
 - 價值提升效果另加 `Floor(Scour * 50 / 100)`；最大值 case 中 `Scrutiny + Meticulous` 為 `400 / 500`，不是 `400 / 550`。
 
-`BrazenRawGain` 是依 `Brazen` 未確認隨機倍率算出的單次基礎提升量；目前僅確認倍率範圍為 `Scour * 50%` 到 `Scour * 150%`，實際 bucket 與機率分布仍待實證或使用者輸入。2026-05-29 使用者提供遊戲畫面確認最大值裝備 case：
+`BrazenRawGain` 是依 `Brazen` 未確認隨機倍率算出的單次基礎提升量；目前已確認倍率範圍為 `Scour * 50%` 到 `Scour * 150%`，且取整順序為倍率、`Scrutiny` 與價值提升等加成全部計算完後最後再 `floor`。實際 bucket 與機率分布仍待實證或使用者輸入。2026-05-29 使用者提供遊戲畫面確認最大值裝備 case：
 
 - `Scour = 200`
 - `ScrutinyBonus = 250`
@@ -117,7 +117,7 @@
   - `Meticulous` 不耗耐久率額外 +40 percentage points，且此 +40 不受 `Priming Touch` 翻倍。
   - `Brazen` 固定為 `Scour * 150%`；最大值 case 實測為 `300`。
   - 不會改變價值提升機率；最大值 case 仍為 40%，使用 `Collector's Focus` 後變為 70%。
-- `Scour`、`Brazen`、`Meticulous` 都會消耗洞察 / 強化洞察狀態；使用後回到無洞察狀態。
+- `Scour`、`Brazen`、`Meticulous` 與 `Collect` 都會消耗洞察 / 強化洞察狀態；使用後回到無洞察狀態。
 - 觸發限制：
   - 剛開節點不能立即觸發，必須先使用一次收藏品技能。
   - 收藏價值達 1000 時不能觸發。
@@ -147,9 +147,8 @@
 
 目前仍不可自行補模型的項目：
 
-- `Brazen / 大膽提煉`：隨機分布、檔位、各檔機率與取整順序尚未確認；不要放進秘笈推薦。
+- `Brazen / 大膽提煉`：隨機分布、檔位與各檔機率尚未確認；已確認取整順序為最後再 `floor`。不要放進秘笈推薦。
 - `Collector's High Standard / 強化洞察`：效果模型已由 2026-05-29 畫面確認如上，但觸發率未知；不要放進秘笈推薦。
-- `Collect / 收藏品採集` 是否消耗洞察 / 強化洞察狀態仍待確認；已確認 `Scour`、`Brazen`、`Meticulous` 會消耗。
 - 目前沒有需要納入的「節點特殊效果提高慎重不耗耐久率」模型；Frontier 第一版不應為此新增節點 bonus 欄位。
 - 精選 reward model 與宇宙探索 score/reward model 不可沿用目前一般收藏品 reward table。
 
