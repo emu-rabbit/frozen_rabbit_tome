@@ -10,7 +10,7 @@ describe('modelVersions', () => {
     expect(buildModelVersionsForScenario('tome.regular')).toEqual({
       exportSchema: 1,
       app: TOME_MODEL_VERSION_CATALOG.app.version,
-      regularSolver: 'regular-solver-v1'
+      regularSolver: 'regular-solver-v2'
     });
     expect(buildModelVersionsForScenario('tome.collectable')).toEqual({
       exportSchema: 1,
