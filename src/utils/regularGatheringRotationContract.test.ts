@@ -177,7 +177,7 @@ describe('regular gathering rotation shape contract', () => {
     });
   });
 
-  it('min 與 max 模式在同分時會保留短 rotation', () => {
+  it('min 與 max 模式在同分時不會額外消耗 GP', () => {
     for (const objectiveMode of ['min', 'max'] as const) {
       const result = solveGatheringRotation(createRequest({
         stats: {

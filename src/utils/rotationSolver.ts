@@ -8,8 +8,10 @@ import {
   createInitialRegularGatheringMechanicsState,
   createRegularGatheringMechanicsContext,
   gpPerGather,
+  regularGatheringActionGpCost,
   regularGatheringStateKey,
   type RegularGatheringActionKind,
+  type RegularGatheringActionTransition,
   type RegularGatheringMechanicsContext,
   type RegularGatheringMechanicsState
 } from './regularGatheringMechanics';
@@ -20,6 +22,7 @@ interface SolverResult {
   expectedYield: number;
   rotation: string[];
   outcomes: Map<number, number>;
+  gpSpent: number;
   habitScore: number;
 }
 
@@ -28,6 +31,7 @@ type SearchState = RegularGatheringMechanicsState;
 interface ActionOption {
   name: string;
   priority: number;
+  gpCost: number;
   apply: (state: SearchState, solve: (state: SearchState) => SolverResult) => SolverResult;
 }
 
@@ -160,7 +164,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
   function solve(state: SearchState): SolverResult {
     if (state.integrity <= 0) {
       activeSearchStats && (activeSearchStats.terminalStates += 1);
-      return { expectedYield: 0, rotation: [], outcomes: new Map([[0, 1]]), habitScore: 0 };
+      return { expectedYield: 0, rotation: [], outcomes: new Map([[0, 1]]), gpSpent: 0, habitScore: 0 };
     }
 
     const memoKey = buildMemoKey(state);
@@ -182,6 +186,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
         expectedYield: result.expectedYield,
         rotation: [action.name, ...result.rotation],
         outcomes: result.outcomes,
+        gpSpent: action.gpCost + result.gpSpent,
         habitScore: result.habitScore
       };
 
@@ -204,13 +209,14 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     branches.forEach((branch, index) => {
       addShiftedOutcomes(outcomes, results[index].outcomes, branch.yieldDelta, branch.probability);
     });
-    const preferredHabitScore = results.reduce((score, result) => Math.max(score, result.habitScore), 0);
+    const representativeHabitScore = results[0]?.habitScore ?? 0;
 
     return {
       expectedYield: expectedValue(outcomes),
       rotation: [GATHER_ACTION, ...results[0].rotation],
       outcomes,
-      habitScore: preferredHabitScore
+      gpSpent: weightedResultValue(branches, results, 'gpSpent'),
+      habitScore: representativeHabitScore
     };
   }
 
@@ -311,6 +317,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       actions.push({
         name: names.restore,
         priority: 90,
+        gpCost: 300,
         apply: (current, nextSolve) => {
           const branches = applyRegularGatheringAction('restore', current, mechanics);
           const procBranch = branches.find((branch) => branch.state.wiseReady);
@@ -332,6 +339,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
               { outcomes: noProc.outcomes, weight: 0.5 },
               { outcomes: proc.outcomes, weight: 0.5 }
             ]),
+            gpSpent: noProc.gpSpent * 0.5 + proc.gpSpent * 0.5,
             habitScore: preferredBranch.habitScore + restoreIntegrityHabitScore(current)
           };
         }
@@ -344,6 +352,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     actions.push({
       name: names.restore,
       priority: 90,
+      gpCost: 300,
       apply: (current, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
         const [branch] = applyRegularGatheringAction('restore', current, mechanics);
@@ -370,6 +379,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return {
       name: WISE_TO_THE_WORLD_ACTION,
       priority: 0,
+      gpCost: 0,
       apply: (current, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
         const [branch] = applyRegularGatheringAction('wise', current, mechanics);
@@ -395,6 +405,7 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
     return {
       name,
       priority,
+      gpCost: regularGatheringActionGpCost(kind),
       apply: (state, nextSolve) => {
         activeSearchStats && (activeSearchStats.branchCount += 1);
         const [branch] = applyRegularGatheringAction(kind, state, mechanics);
@@ -409,20 +420,22 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
 
     if (candidateScore > currentScore + EV_EPSILON) return true;
     if (candidateScore < currentScore - EV_EPSILON) return false;
-
-    if (objectiveMode !== 'expected' && candidate.rotation.length !== current.rotation.length) {
-      return candidate.rotation.length < current.rotation.length;
-    }
+    if (candidate.gpSpent < current.gpSpent - EV_EPSILON) return true;
+    if (candidate.gpSpent > current.gpSpent + EV_EPSILON) return false;
 
     if (candidate.habitScore !== current.habitScore) {
       return candidate.habitScore > current.habitScore;
     }
 
-    if (candidate.rotation.length !== current.rotation.length) {
-      return candidate.rotation.length < current.rotation.length;
-    }
-
     return rotationPreferenceScore(candidate.rotation) > rotationPreferenceScore(current.rotation);
+  }
+
+  function weightedResultValue(
+    branches: RegularGatheringActionTransition[],
+    results: SolverResult[],
+    field: 'gpSpent'
+  ): number {
+    return results.reduce((total, result, index) => total + result[field] * branches[index].probability, 0);
   }
 
   function scoreResult(result: SolverResult): number {

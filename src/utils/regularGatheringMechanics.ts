@@ -223,7 +223,7 @@ export function applyRegularGatheringAction(
     state: {
       ...state,
       ...getBuffPatch(action, state, context),
-      gp: state.gp - getActionGpCost(action)
+      gp: state.gp - regularGatheringActionGpCost(action)
     },
     probability: 1,
     yieldDelta: 0,
@@ -331,7 +331,7 @@ function getBuffPatch(
   return {};
 }
 
-function getActionGpCost(action: RegularGatheringActionKind): number {
+export function regularGatheringActionGpCost(action: RegularGatheringActionKind): number {
   if (action === 'successI' || action === 'giftI' || action === 'clearVision') return 50;
   if (action === 'successII' || action === 'giftII' || action === 'bountifulI' || action === 'bountifulII') return 100;
   if (action === 'tidings') return 200;

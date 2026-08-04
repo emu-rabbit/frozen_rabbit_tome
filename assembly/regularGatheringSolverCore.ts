@@ -48,6 +48,7 @@ let objectiveScores = new StaticArray<f64>(1);
 let expectedYields = new StaticArray<f64>(1);
 let minYields = new StaticArray<i32>(1);
 let maxYields = new StaticArray<i32>(1);
+let gpSpents = new StaticArray<f64>(1);
 let habitScores = new StaticArray<i32>(1);
 let actionCounts = new StaticArray<i32>(1);
 let firstGatherIndexes = new StaticArray<i32>(1);
@@ -78,6 +79,7 @@ let resultObjectiveScore: f64 = 0.0;
 let resultExpectedYield: f64 = 0.0;
 let resultMinYield: i32 = 0;
 let resultMaxYield: i32 = 0;
+let resultGpSpent: f64 = 0.0;
 let resultHabitScore: i32 = 0;
 let resultActionCount: i32 = 0;
 let resultFirstGatherIndex: i32 = 0;
@@ -95,6 +97,7 @@ let candidateObjectiveScore: f64 = 0.0;
 let candidateExpectedYield: f64 = 0.0;
 let candidateMinYield: i32 = 0;
 let candidateMaxYield: i32 = 0;
+let candidateGpSpent: f64 = 0.0;
 let candidateHabitScore: i32 = 0;
 let candidateActionCount: i32 = 0;
 let candidateFirstGatherIndex: i32 = 0;
@@ -127,6 +130,7 @@ function resetMemo(nextCapacity: i32): void {
     expectedYields = new StaticArray<f64>(capacity);
     minYields = new StaticArray<i32>(capacity);
     maxYields = new StaticArray<i32>(capacity);
+    gpSpents = new StaticArray<f64>(capacity);
     habitScores = new StaticArray<i32>(capacity);
     actionCounts = new StaticArray<i32>(capacity);
     firstGatherIndexes = new StaticArray<i32>(capacity);
@@ -254,6 +258,7 @@ function memoLoad(key: i64): bool {
   resultExpectedYield = unchecked(expectedYields[index]);
   resultMinYield = unchecked(minYields[index]);
   resultMaxYield = unchecked(maxYields[index]);
+  resultGpSpent = unchecked(gpSpents[index]);
   resultHabitScore = unchecked(habitScores[index]);
   resultActionCount = unchecked(actionCounts[index]);
   resultFirstGatherIndex = unchecked(firstGatherIndexes[index]);
@@ -275,6 +280,7 @@ function memoSet(
   expectedYield: f64,
   minYield: i32,
   maxYield: i32,
+  gpSpent: f64,
   habitScore: i32,
   actionCount: i32,
   firstGatherIndex: i32,
@@ -302,6 +308,7 @@ function memoSet(
       unchecked(expectedYields[index] = expectedYield);
       unchecked(minYields[index] = minYield);
       unchecked(maxYields[index] = maxYield);
+      unchecked(gpSpents[index] = gpSpent);
       unchecked(habitScores[index] = habitScore);
       unchecked(actionCounts[index] = actionCount);
       unchecked(firstGatherIndexes[index] = firstGatherIndex);
@@ -331,6 +338,7 @@ function memoSet(
   unchecked(expectedYields[index] = expectedYield);
   unchecked(minYields[index] = minYield);
   unchecked(maxYields[index] = maxYield);
+  unchecked(gpSpents[index] = gpSpent);
   unchecked(habitScores[index] = habitScore);
   unchecked(actionCounts[index] = actionCount);
   unchecked(firstGatherIndexes[index] = firstGatherIndex);
@@ -347,6 +355,17 @@ function memoSet(
 
 function gpPerGather(): i32 {
   return level >= 70 ? 6 : 5;
+}
+
+function actionGpCost(action: i32): i32 {
+  if (action == ACTION_SUCCESS_I || action == ACTION_GIFT_I || action == ACTION_CLEAR_VISION) return 50;
+  if (action == ACTION_SUCCESS_II || action == ACTION_GIFT_II || action == ACTION_BOUNTIFUL_I || action == ACTION_BOUNTIFUL_II) return 100;
+  if (action == ACTION_TIDINGS) return 200;
+  if (action == ACTION_SUCCESS_III) return 250;
+  if (action == ACTION_RESTORE) return 300;
+  if (action == ACTION_KING_I) return 400;
+  if (action == ACTION_KING_II) return 500;
+  return 0;
 }
 
 function canRaiseSuccess(successBonus: i32): bool {
@@ -430,6 +449,7 @@ function loadTerminal(): void {
   resultExpectedYield = 0.0;
   resultMinYield = 0;
   resultMaxYield = 0;
+  resultGpSpent = 0.0;
   resultHabitScore = 0;
   resultActionCount = 0;
   resultFirstGatherIndex = 0;
@@ -552,6 +572,7 @@ function solve(
       candidateExpectedYield,
       candidateMinYield,
       candidateMaxYield,
+      candidateGpSpent,
       candidateHabitScore,
       candidateActionCount,
       candidateFirstGatherIndex,
@@ -570,6 +591,7 @@ function solve(
       candidateExpectedYield,
       candidateMinYield,
       candidateMaxYield,
+      candidateGpSpent,
       candidateHabitScore,
       candidateActionCount,
       candidateFirstGatherIndex,
@@ -591,6 +613,7 @@ function solve(
   let bestExpectedYield = candidateExpectedYield;
   let bestMinYield = candidateMinYield;
   let bestMaxYield = candidateMaxYield;
+  let bestGpSpent = candidateGpSpent;
   let bestHabitScore = candidateHabitScore;
   let bestActionCount = candidateActionCount;
   let bestFirstGatherIndex = candidateFirstGatherIndex;
@@ -631,20 +654,19 @@ function solve(
 
     if (preferredResult(
       candidateObjectiveScore,
+      candidateGpSpent,
       candidateHabitScore,
-      candidateActionCount,
       candidateRotationPreferenceScore,
-      action,
       bestObjectiveScore,
+      bestGpSpent,
       bestHabitScore,
-      bestActionCount,
-      bestRotationPreferenceScore,
-      bestAction
+      bestRotationPreferenceScore
     )) {
       bestObjectiveScore = candidateObjectiveScore;
       bestExpectedYield = candidateExpectedYield;
       bestMinYield = candidateMinYield;
       bestMaxYield = candidateMaxYield;
+      bestGpSpent = candidateGpSpent;
       bestHabitScore = candidateHabitScore;
       bestActionCount = candidateActionCount;
       bestFirstGatherIndex = candidateFirstGatherIndex;
@@ -666,6 +688,7 @@ function solve(
     bestExpectedYield,
     bestMinYield,
     bestMaxYield,
+    bestGpSpent,
     bestHabitScore,
     bestActionCount,
     bestFirstGatherIndex,
@@ -684,6 +707,7 @@ function solve(
     bestExpectedYield,
     bestMinYield,
     bestMaxYield,
+    bestGpSpent,
     bestHabitScore,
     bestActionCount,
     bestFirstGatherIndex,
@@ -704,6 +728,7 @@ function loadMemoResult(
   expectedYield: f64,
   minYield: i32,
   maxYield: i32,
+  gpSpent: f64,
   habitScore: i32,
   actionCount: i32,
   firstGatherIndex: i32,
@@ -721,6 +746,7 @@ function loadMemoResult(
   resultExpectedYield = expectedYield;
   resultMinYield = minYield;
   resultMaxYield = maxYield;
+  resultGpSpent = gpSpent;
   resultHabitScore = habitScore;
   resultActionCount = actionCount;
   resultFirstGatherIndex = firstGatherIndex;
@@ -737,21 +763,19 @@ function loadMemoResult(
 
 function preferredResult(
   candidateScore: f64,
+  candidateGpSpent: f64,
   candidateHabit: i32,
-  candidateLength: i32,
   candidatePreference: i32,
-  candidateAction: i32,
   currentScore: f64,
+  currentGpSpent: f64,
   currentHabit: i32,
-  currentLength: i32,
-  currentPreference: i32,
-  currentAction: i32
+  currentPreference: i32
 ): bool {
   if (candidateScore > currentScore + EV_EPSILON) return true;
   if (candidateScore < currentScore - EV_EPSILON) return false;
-  if (objectiveMode != OBJECTIVE_EXPECTED && candidateLength != currentLength) return candidateLength < currentLength;
+  if (candidateGpSpent < currentGpSpent - EV_EPSILON) return true;
+  if (candidateGpSpent > currentGpSpent + EV_EPSILON) return false;
   if (candidateHabit != currentHabit) return candidateHabit > currentHabit;
-  if (candidateLength != currentLength) return candidateLength < currentLength;
   if (candidatePreference != currentPreference) return candidatePreference > currentPreference;
   return false;
 }
@@ -795,6 +819,7 @@ function evaluateCandidate(
     candidateExpectedYield = resultExpectedYield;
     candidateMinYield = resultMinYield;
     candidateMaxYield = resultMaxYield;
+    candidateGpSpent = resultGpSpent;
     candidateHabitScore = resultHabitScore + 250;
     loadCandidateMetadataFromResult(action);
     branchCount += 1;
@@ -847,6 +872,7 @@ function evaluateCandidate(
   candidateExpectedYield = resultExpectedYield;
   candidateMinYield = resultMinYield;
   candidateMaxYield = resultMaxYield;
+  candidateGpSpent = resultGpSpent + <f64>actionGpCost(action);
   candidateHabitScore = resultHabitScore;
   loadCandidateMetadataFromResult(action);
 }
@@ -869,9 +895,10 @@ function evaluateGather(
   const successGp = minI32(maxGp, gp + gpPerGather());
   const nextIntegrity = integrity - 1;
   let expected = 0.0;
+  let gpSpent = 0.0;
   let minYield = 2147483647;
   let maxYield = -2147483648;
-  let habitScore = -2147483648;
+  let habitScore = 0;
   let firstActionCount = -1;
   let firstFirstGatherIndex = 0;
   let firstFirstNextOnlyIndex = -1;
@@ -888,10 +915,11 @@ function evaluateGather(
     solve(gp, nextIntegrity, baseFlags, successBonus, boonBonus, allYieldBonus, 0, 0);
     const probability = 1.0 - successRate;
     expected += probability * resultExpectedYield;
+    gpSpent += probability * resultGpSpent;
     minYield = minI32(minYield, resultMinYield);
     maxYield = maxI32(maxYield, resultMaxYield);
-    habitScore = maxI32(habitScore, resultHabitScore);
     if (!hasFirstBranch) {
+      habitScore = resultHabitScore;
       firstActionCount = resultActionCount;
       firstFirstGatherIndex = resultFirstGatherIndex;
       firstFirstNextOnlyIndex = resultFirstNextOnlyIndex;
@@ -910,10 +938,11 @@ function evaluateGather(
     solve(successGp, nextIntegrity, baseFlags, successBonus, boonBonus, allYieldBonus, 0, 0);
     const probability = successRate * (1.0 - boonChance);
     expected += probability * (<f64>baseYield + resultExpectedYield);
+    gpSpent += probability * resultGpSpent;
     minYield = minI32(minYield, baseYield + resultMinYield);
     maxYield = maxI32(maxYield, baseYield + resultMaxYield);
-    habitScore = maxI32(habitScore, resultHabitScore);
     if (!hasFirstBranch) {
+      habitScore = resultHabitScore;
       firstActionCount = resultActionCount;
       firstFirstGatherIndex = resultFirstGatherIndex;
       firstFirstNextOnlyIndex = resultFirstNextOnlyIndex;
@@ -933,10 +962,11 @@ function evaluateGather(
     const yieldDelta = baseYield + boonYield;
     const probability = successRate * boonChance;
     expected += probability * (<f64>yieldDelta + resultExpectedYield);
+    gpSpent += probability * resultGpSpent;
     minYield = minI32(minYield, yieldDelta + resultMinYield);
     maxYield = maxI32(maxYield, yieldDelta + resultMaxYield);
-    habitScore = maxI32(habitScore, resultHabitScore);
     if (!hasFirstBranch) {
+      habitScore = resultHabitScore;
       firstActionCount = resultActionCount;
       firstFirstGatherIndex = resultFirstGatherIndex;
       firstFirstNextOnlyIndex = resultFirstNextOnlyIndex;
@@ -952,12 +982,12 @@ function evaluateGather(
 
   if (minYield == 2147483647) minYield = 0;
   if (maxYield == -2147483648) maxYield = 0;
-  if (habitScore == -2147483648) habitScore = 0;
 
   candidateExpectedYield = expected;
   candidateMinYield = minYield;
   candidateMaxYield = maxYield;
   candidateObjectiveScore = scoreFromOutcome(expected, minYield, maxYield);
+  candidateGpSpent = gpSpent;
   candidateHabitScore = habitScore;
   loadCandidateMetadataFromChild(
     ACTION_GATHER,
@@ -994,6 +1024,7 @@ function evaluateRestore(
     candidateMinYield = resultMinYield;
     candidateMaxYield = resultMaxYield;
     candidateObjectiveScore = resultObjectiveScore;
+    candidateGpSpent = resultGpSpent + 300.0;
     candidateHabitScore = resultHabitScore + restoreHabit;
     loadCandidateMetadataFromResult(ACTION_RESTORE);
     return;
@@ -1004,6 +1035,7 @@ function evaluateRestore(
   const procExpected = resultExpectedYield;
   const procMin = resultMinYield;
   const procMax = resultMaxYield;
+  const procGpSpent = resultGpSpent;
   const procHabit = resultHabitScore;
   const procActionCount = resultActionCount;
   const procFirstGatherIndex = resultFirstGatherIndex;
@@ -1019,6 +1051,7 @@ function evaluateRestore(
   const noProcExpected = resultExpectedYield;
   const noProcMin = resultMinYield;
   const noProcMax = resultMaxYield;
+  const noProcGpSpent = resultGpSpent;
   const noProcHabit = resultHabitScore;
   const noProcActionCount = resultActionCount;
   const noProcFirstGatherIndex = resultFirstGatherIndex;
@@ -1034,6 +1067,7 @@ function evaluateRestore(
   candidateMinYield = minI32(noProcMin, procMin);
   candidateMaxYield = maxI32(noProcMax, procMax);
   candidateObjectiveScore = scoreFromOutcome(candidateExpectedYield, candidateMinYield, candidateMaxYield);
+  candidateGpSpent = 300.0 + noProcGpSpent * 0.5 + procGpSpent * 0.5;
 
   if (procExpected >= noProcExpected) {
     candidateHabitScore = procHabit + restoreHabit;
