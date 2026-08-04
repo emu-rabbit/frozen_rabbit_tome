@@ -72,5 +72,33 @@ describe('useGearProfiles', () => {
 
     expect(profiles.profilesForJob('miner')).toContainEqual(created);
     expect(profiles.profilesForJob('botanist')).toContainEqual(created);
+    expect(created.currentGp).toBe(930);
+  });
+
+  it('有 GP 食物時允許當前 GP 保存到食物後有效上限', async () => {
+    const { calculateProfileEffectiveMaxGp, useGearProfiles } = await import('./useGearProfiles');
+    const profiles = useGearProfiles();
+    const stats = {
+      level: 100,
+      gathering: 5233,
+      perception: 5173,
+      gp: 931
+    };
+    const food = { foodId: 44103, quality: 'hq' as const };
+
+    expect(calculateProfileEffectiveMaxGp(stats, food)).toBe(963);
+
+    const created = profiles.createProfile({
+      name: 'Food GP',
+      jobs: ['miner'],
+      ...stats,
+      currentGp: 963,
+      maxGp: stats.gp,
+      food,
+      collectableRelicToolBonus: false
+    });
+
+    expect(created.currentGp).toBe(963);
+    expect(created.maxGp).toBe(931);
   });
 });

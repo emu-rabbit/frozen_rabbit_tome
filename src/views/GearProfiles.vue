@@ -9,7 +9,7 @@ import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import FoodAutoComplete from '../components/FoodAutoComplete.vue';
 import type { FoodQuality, GearStatProfile, GatheringJob } from '../types/game';
-import { isDefaultGearProfile, useGearProfiles } from '../composables/useGearProfiles';
+import { calculateProfileEffectiveMaxGp, isDefaultGearProfile, useGearProfiles } from '../composables/useGearProfiles';
 import { getGatheringFood } from '../services/foodData';
 import { buildFoodOption, formatFoodLabel, type FoodOption } from '../services/foodOptions';
 import { PLAYER_INPUT_LIMITS, clampIntegerInput, normalizePlayerStats } from '../config/inputLimits';
@@ -50,11 +50,17 @@ const listPanelStyle = computed(() => (
     ? { '--gear-editor-height': `${measuredEditorHeight.value}px` }
     : {}
 ));
-const currentGpMax = computed(() => clampIntegerInput(
-  draft.value.maxGp,
-  PLAYER_INPUT_LIMITS.gp.min,
-  PLAYER_INPUT_LIMITS.gp.max,
-  PLAYER_INPUT_LIMITS.gp.max
+const currentGpMax = computed(() => calculateProfileEffectiveMaxGp(
+  normalizePlayerStats({
+    level: draft.value.level,
+    gathering: draft.value.gathering,
+    perception: draft.value.perception,
+    gp: draft.value.maxGp
+  }),
+  {
+    foodId: draft.value.foodId,
+    quality: draft.value.foodQuality
+  }
 ));
 
 const selectedFoodModel = computed<FoodOption | null>({
@@ -145,7 +151,17 @@ function saveDraft() {
     gp: draft.value.maxGp
   });
   const maxGp = stats.gp;
-  const currentGp = clampIntegerInput(draft.value.currentGp, PLAYER_INPUT_LIMITS.gp.min, maxGp, maxGp);
+  const food = {
+    foodId: draft.value.foodId,
+    quality: draft.value.foodQuality
+  };
+  const effectiveMaxGp = calculateProfileEffectiveMaxGp(stats, food);
+  const currentGp = clampIntegerInput(
+    draft.value.currentGp,
+    PLAYER_INPUT_LIMITS.gp.min,
+    effectiveMaxGp,
+    effectiveMaxGp
+  );
   const payload = {
     name: draft.value.name.trim(),
     jobs: [...draft.value.jobs],
@@ -154,10 +170,7 @@ function saveDraft() {
     perception: stats.perception,
     currentGp,
     maxGp,
-    food: {
-      foodId: draft.value.foodId,
-      quality: draft.value.foodQuality
-    },
+    food,
     collectableRelicToolBonus: draft.value.collectableRelicToolBonus
   };
 

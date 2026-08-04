@@ -418,6 +418,10 @@ export function solveGatheringRotation(request: SolverRequest): SolverResponse {
       return candidate.habitScore > current.habitScore;
     }
 
+    if (candidate.rotation.length !== current.rotation.length) {
+      return candidate.rotation.length < current.rotation.length;
+    }
+
     return rotationPreferenceScore(candidate.rotation) > rotationPreferenceScore(current.rotation);
   }
 

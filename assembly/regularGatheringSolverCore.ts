@@ -751,6 +751,7 @@ function preferredResult(
   if (candidateScore < currentScore - EV_EPSILON) return false;
   if (objectiveMode != OBJECTIVE_EXPECTED && candidateLength != currentLength) return candidateLength < currentLength;
   if (candidateHabit != currentHabit) return candidateHabit > currentHabit;
+  if (candidateLength != currentLength) return candidateLength < currentLength;
   if (candidatePreference != currentPreference) return candidatePreference > currentPreference;
   return false;
 }

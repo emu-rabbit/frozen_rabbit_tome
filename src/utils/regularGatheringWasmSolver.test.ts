@@ -728,6 +728,22 @@ describe('regular gathering WASM solver core POC', () => {
       }),
       baseRequest({
         stats: {
+          level: 100,
+          gathering: 1200,
+          perception: 950,
+          gp: 931
+        },
+        nodeBonuses: {
+          baseIntegrity: 6,
+          gatheringCount: 0,
+          yieldCount: 0,
+          extraRate: 40
+        },
+        temporaryGp: 931,
+        jobType: 'botanist'
+      }),
+      baseRequest({
+        stats: {
           level: 10,
           gathering: 280,
           perception: 1000,

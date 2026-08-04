@@ -102,6 +102,28 @@ describe('solveGatheringRotation', () => {
     expect(new Set(giftBuffs).size).toBe(giftBuffs.length);
   });
 
+  it('基礎與節點額外率已有 70% 時，不會為了同分排序多開沃土的饋贈 I', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 1200,
+        perception: 950,
+        gp: 931
+      },
+      nodeBonuses: {
+        baseIntegrity: 6,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 40
+      },
+      temporaryGp: 931,
+      jobType: 'botanist'
+    }));
+
+    expect(result.bestRotation).toContain('沃土的饋贈II');
+    expect(result.bestRotation).not.toContain('沃土的饋贈I');
+  });
+
   it('90 級以上會在耐久缺 2 點後把理智同興視為 0 GP 條件動作', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {

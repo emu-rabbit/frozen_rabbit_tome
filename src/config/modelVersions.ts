@@ -64,7 +64,7 @@ export const TOME_MODEL_VERSION_CATALOG = {
     key: 'regularSolver',
     category: 'solver',
     label: 'Regular gathering recommendation model',
-    version: 'regular-solver-v1',
+    version: 'regular-solver-v2',
     visibility: ['external', 'internal']
   },
   collectableSolver: {
