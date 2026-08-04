@@ -124,6 +124,72 @@ describe('solveGatheringRotation', () => {
     expect(result.bestRotation).not.toContain('沃土的饋贈I');
   });
 
+  it('不同階成功率技能都能封頂時，會保留 GP 消耗較少的技能', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 10,
+        gathering: 760,
+        perception: 1000,
+        gp: 250
+      },
+      itemLevel: 10,
+      nodeBonuses: {
+        baseIntegrity: 2,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 250
+    }));
+
+    expect(result.bestRotation).toContain('敏銳視野');
+    expect(result.bestRotation).not.toEqual(expect.arrayContaining(['敏銳視野II', '敏銳視野III']));
+  });
+
+  it('不同類技能產生相同期望值時，會先保留 GP 消耗較少的手法', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 50,
+        gathering: 800,
+        perception: 1500,
+        gp: 100
+      },
+      itemLevel: 50,
+      nodeBonuses: {
+        baseIntegrity: 10,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 30
+      },
+      temporaryGp: 100
+    }));
+
+    expect(result.expectedYield).toBe(20);
+    expect(result.bestRotation).toContain('富礦的饋贈I');
+    expect(result.bestRotation).not.toContain('高產');
+  });
+
+  it('採集成功率為 0 時，不會為 habit 分數施放零收益的恢復耐久技能', () => {
+    const result = solveGatheringRotation(createRequest({
+      stats: {
+        level: 100,
+        gathering: 0,
+        perception: 500,
+        gp: 600
+      },
+      nodeBonuses: {
+        baseIntegrity: 4,
+        gatheringCount: 0,
+        yieldCount: 0,
+        extraRate: 0
+      },
+      temporaryGp: 600
+    }));
+
+    expect(result.expectedYield).toBe(0);
+    expect(result.bestRotation).toEqual(['採集', '採集', '採集', '採集']);
+  });
+
   it('90 級以上會在耐久缺 2 點後把理智同興視為 0 GP 條件動作', () => {
     const result = solveGatheringRotation(createRequest({
       stats: {

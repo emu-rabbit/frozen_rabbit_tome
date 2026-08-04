@@ -745,6 +745,53 @@ describe('regular gathering WASM solver core POC', () => {
       baseRequest({
         stats: {
           level: 10,
+          gathering: 760,
+          perception: 1000,
+          gp: 250
+        },
+        itemLevel: 10,
+        nodeBonuses: {
+          baseIntegrity: 2,
+          gatheringCount: 0,
+          yieldCount: 0,
+          extraRate: 0
+        },
+        temporaryGp: 250
+      }),
+      baseRequest({
+        stats: {
+          level: 50,
+          gathering: 800,
+          perception: 1500,
+          gp: 100
+        },
+        itemLevel: 50,
+        nodeBonuses: {
+          baseIntegrity: 10,
+          gatheringCount: 0,
+          yieldCount: 0,
+          extraRate: 30
+        },
+        temporaryGp: 100
+      }),
+      baseRequest({
+        stats: {
+          level: 100,
+          gathering: 0,
+          perception: 500,
+          gp: 600
+        },
+        nodeBonuses: {
+          baseIntegrity: 4,
+          gatheringCount: 0,
+          yieldCount: 0,
+          extraRate: 0
+        },
+        temporaryGp: 600
+      }),
+      baseRequest({
+        stats: {
+          level: 10,
           gathering: 280,
           perception: 1000,
           gp: 250
