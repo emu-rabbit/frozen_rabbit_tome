@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 
 defineProps<{
   visible: boolean;
@@ -45,7 +46,7 @@ const confirmSelection = () => {
       <div class="relative w-full min-w-0 max-w-md max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-2xl border border-soft-green-100 bg-white shadow-2xl transition-all transform dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl">
         <div class="p-5 sm:p-6">
           <div class="flex min-w-0 items-center gap-4">
-            <img src="/logo.png" class="h-12 w-12 shrink-0 rounded-2xl shadow-md" alt="Logo" />
+            <img :src="logoUrl" class="h-12 w-12 shrink-0 rounded-2xl shadow-md" alt="Logo" />
             <div class="min-w-0">
               <h2 class="max-w-full break-words text-[1.35rem] font-black leading-tight text-soft-green-900 dark:text-soft-green-400 sm:text-2xl">
                 {{ t('welcomeModal.title') }}

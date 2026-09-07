@@ -11,6 +11,10 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: pages-${{ github.event_name == 'push' && 'deploy' || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # 整合階段：安裝、單元測試、建置
   build-and-test:
@@ -46,6 +50,24 @@ jobs:
         env:
           VITE_TEAMCRAFT_BRANCH: ${{ vars.VITE_TEAMCRAFT_BRANCH || 'staging' }}
 
+      - name: Verify production artifact
+        run: node scripts/verify-deployment.mjs
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify production browser flows
+        run: npm run test:e2e -- --workers 2
+
+      - name: Build and verify staging
+        run: |
+          npm run build
+          node scripts/verify-deployment.mjs
+          npm run test:e2e -- --workers 2
+        env:
+          VITE_BASE_PATH: /staging/
+          VITE_TEAMCRAFT_BRANCH: ${{ vars.VITE_TEAMCRAFT_BRANCH || 'staging' }}
+
   # 部署階段：僅在建置成功且為 push 時執行
   deploy:
     name: Deploy to Pages
@@ -54,8 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      SITE_BASE_PATH: /frozen_rabbit_tome/
-      STAGING_BASE_PATH: /frozen_rabbit_tome/staging/
+      SITE_BASE_PATH: /
+      STAGING_BASE_PATH: /staging/
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -104,6 +126,7 @@ jobs:
           npm ci
           VITE_BASE_PATH="${SITE_BASE_PATH}" VITE_TEAMCRAFT_BRANCH="${TEAMCRAFT_BRANCH}" npm run build
           popd
+          VITE_BASE_PATH="${SITE_BASE_PATH}" node scripts/verify-deployment.mjs ../production-site/dist
           cp -a ../production-site/dist/. ../pages-site/
 
           if [ "${HAS_STAGING}" = "true" ]; then
@@ -112,6 +135,7 @@ jobs:
             npm ci
             VITE_BASE_PATH="${STAGING_BASE_PATH}" VITE_TEAMCRAFT_BRANCH="${TEAMCRAFT_BRANCH}" npm run build
             popd
+            VITE_BASE_PATH="${STAGING_BASE_PATH}" node scripts/verify-deployment.mjs ../staging-site/dist
             mkdir -p ../pages-site/staging
             cp -a ../staging-site/dist/. ../pages-site/staging/
           fi

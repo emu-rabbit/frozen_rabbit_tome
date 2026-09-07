@@ -13,7 +13,9 @@
 
 Instead of asking you to compare every possible action branch by hand, the Tome lets you enter your character stats and node conditions, then calculates recommended strategies within the currently supported model. When you already have a plan in mind, the Experiment tools can simulate it, summarize the result, and help you compare tradeoffs with a little less spreadsheet smoke.
 
-Live site: [https://emu-rabbit.github.io/frozen_rabbit_tome/](https://emu-rabbit.github.io/frozen_rabbit_tome/)
+Live site: [https://tome.frozenrabbit.com/](https://tome.frozenrabbit.com/)
+
+Deployment and domain cutover: [domain migration checklist](docs/domain-migration.md).
 
 ## Core Features
 
@@ -123,7 +125,9 @@ Final Fantasy XIV is owned by Square Enix. This project is a fan-made community 
 
 如果你已經有想測試的手法，也可以到實驗區自行組合技能，讓系統替你模擬結果、整理期望值與風險，方便比較不同流派的取捨。
 
-網站連結：[https://emu-rabbit.github.io/frozen_rabbit_tome/](https://emu-rabbit.github.io/frozen_rabbit_tome/)
+網站連結：[https://tome.frozenrabbit.com/](https://tome.frozenrabbit.com/)
+
+部署與網域切換：[網域遷移說明](docs/domain-migration.md)。
 
 ## 核心功能
 

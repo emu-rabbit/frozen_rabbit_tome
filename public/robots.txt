@@ -1,7 +1,7 @@
 # robots.txt for Frozen Rabbit Tome
-# https://emu-rabbit.github.io/frozen_rabbit_tome/
+# https://tome.frozenrabbit.com/
 
 User-agent: *
 Allow: /
 
-Sitemap: https://emu-rabbit.github.io/frozen_rabbit_tome/sitemap.xml
+Sitemap: https://tome.frozenrabbit.com/sitemap.xml
