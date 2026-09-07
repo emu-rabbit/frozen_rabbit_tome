@@ -162,3 +162,4 @@ scratch/collectable-audit-report/
 scratch/collectable-solver-core.wat
 scratch/regular-gathering-solver-core.wat
 src/__scratch__/
+scratch/migration-playwright/

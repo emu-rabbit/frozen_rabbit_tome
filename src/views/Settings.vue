@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSettings } from '../composables/useSettings';
 import SelectButton from 'primevue/selectbutton';
 import InputNumber from 'primevue/inputnumber';
+import MigrationImport from '../components/MigrationImport.vue';
 import { useI18n } from 'vue-i18n';
 import type { SolverObjectiveMode } from '../types/game';
 
@@ -204,6 +205,14 @@ function goGearProfiles() {
               </div>
           </div>
       </div>
+
+      <section aria-labelledby="migration-heading" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-3 text-soft-green-900 dark:text-soft-green-400 mb-4">
+          <i class="pi pi-home text-xl" aria-hidden="true"></i>
+          <h3 id="migration-heading" class="text-lg font-bold">{{ t('migration.settingsTitle') }}</h3>
+        </div>
+        <MigrationImport />
+      </section>
 
       <!-- About & Credits Section -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-soft-green-100 dark:border-slate-800 p-5 md:p-8 hover:shadow-md transition-shadow">

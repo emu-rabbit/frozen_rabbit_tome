@@ -5,6 +5,8 @@ import { useRoute } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import LanguageModal from './components/LanguageModal.vue';
 import SponsorModal from './components/SponsorModal.vue';
+import MigrationModal from './components/MigrationModal.vue';
+import { MIGRATION_DISMISSED_KEY } from './services/migration';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner.vue';
 import { useSettings } from './composables/useSettings';
 import { useGearProfiles } from './composables/useGearProfiles';
@@ -18,6 +20,10 @@ const isSponsorModalOpen = ref(false);
 const { isDarkMode, language, initialized, solverSettings, macroSettings, frontierSettings } = useSettings();
 const { orderedProfiles } = useGearProfiles();
 const isLanguageModalOpen = ref(!initialized.value);
+const isMigrationOpen = ref((() => {
+  try { return localStorage.getItem(MIGRATION_DISMISSED_KEY) !== 'true'; }
+  catch { return true; }
+})());
 
 // 同步語系
 watch(language, (newLang) => {
@@ -138,13 +144,15 @@ const handleLanguageSelect = (lang: string) => {
     </main>
 
     <!-- Global Modals -->
-    <SponsorModal v-model:visible="isSponsorModalOpen" />
+    <MigrationModal v-model:visible="isMigrationOpen" />
+    <SponsorModal v-if="!isMigrationOpen" v-model:visible="isSponsorModalOpen" />
     <LanguageModal
+      v-if="!isMigrationOpen"
       v-model:visible="isLanguageModalOpen"
       @preview-language="handleLanguageUpdate"
       @select="handleLanguageSelect"
     />
-    <AnalyticsConsentBanner :paused="isLanguageModalOpen" />
+    <AnalyticsConsentBanner :paused="isMigrationOpen || isLanguageModalOpen" />
   </div>
 </template>
 
