@@ -10,7 +10,6 @@ export default {
   "policy": "{conflicts} 件の内容が異なります。どちらを残しますか？",
   "keep": "現在のサイトのデータを保持",
   "backup": "バックアップのデータを使用",
-  "reloadWarning": "未保存の編集や計算結果は失われます。",
   "import": "読み込んで再読み込み",
   "dismiss": "今後表示しない",
   "later": "あとで",

@@ -10,7 +10,6 @@ export default {
   "policy": "{conflicts} entries differ. Which copy should we keep?",
   "keep": "Keep data on this site",
   "backup": "Use backup data",
-  "reloadWarning": "Unsaved edits and calculation results will be lost.",
   "import": "Import and reload",
   "dismiss": "Don't show again",
   "later": "Maybe later",
