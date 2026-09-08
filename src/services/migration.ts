@@ -1,3 +1,5 @@
+import { DEFAULT_PLAYER_STATS } from '../config/inputLimits'
+
 export const GLEANER_URL = 'https://emu-rabbit.github.io/gleaner/'
 export const MIGRATION_DISMISSED_KEY = 'frozen-rabbit-tome-migration-dismissed'
 export const MAX_BACKUP_BYTES = 10 * 1024 * 1024
@@ -130,6 +132,50 @@ export function parseBackup(text: string): BackupData {
   return data
 }
 
+// Match startup values without importing composables that write to localStorage.
+const defaultSettings: Record<string, unknown> = {
+  lang: 'tw',
+  'dark-mode': false,
+  'library-display-mode': 'detailed',
+  'experiment-database-display-mode': 'detailed',
+  'frontier-studies-display-mode': 'detailed',
+  'macro-settings': { secondsPerGather: 4, bufferSeconds: 2 },
+  'solver-settings': { objectiveMode: 'expected', collectableRelicToolBonus: false },
+  'frontier-settings': { enabled: false },
+  'favorite-item-filters': { text: '', glvMin: '', glvMax: '', jobs: [], systems: [] },
+  'solver-stats': { level: 100, gathering: 5345, perception: 5137, gp: 930 },
+  'selected-food': { foodId: null, quality: 'hq' },
+  'node-bonuses': { baseIntegrity: 4, gatheringCount: 0, yieldCount: 0, extraRate: 0 }
+}
+
+function equivalent(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => equivalent(v, b[i]))
+  if (!object(a) || !object(b)) return false
+  return Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(k => Object.hasOwn(b, k) && equivalent(a[k], b[k]))
+}
+
+function isDefaultSetting(key: string, raw: string): boolean {
+  const suffix = key.slice(prefix.length)
+  if (!Object.hasOwn(defaultSettings, suffix)) return false
+  let value: unknown = raw
+  try { value = JSON.parse(raw) } catch { /* Language and display modes are raw strings. */ }
+  return equivalent(value, defaultSettings[suffix])
+}
+
+function isDefaultGear(profile: RecordValue): boolean {
+  const job = profile.id === 'default-miner' ? 'miner' : profile.id === 'default-botanist' ? 'botanist' : null
+  if (!job) return false
+  const { createdAt, updatedAt, ...value } = profile
+  return equivalent(value, {
+    id: `default-${job}`, kind: `default-${job}`, name: '', jobs: [job],
+    level: DEFAULT_PLAYER_STATS.level, gathering: DEFAULT_PLAYER_STATS.gathering,
+    perception: DEFAULT_PLAYER_STATS.perception, currentGp: DEFAULT_PLAYER_STATS.gp,
+    maxGp: DEFAULT_PLAYER_STATS.gp, food: { foodId: null, quality: 'hq' },
+    collectableRelicToolBonus: false
+  })
+}
+
 export function prepareImport(data: BackupData, storage: Storage, policy: ConflictPolicy) {
   const before: Record<string, string | null> = {}
   const writes: BackupData = {}
@@ -161,7 +207,7 @@ export function prepareImport(data: BackupData, storage: Storage, policy: Confli
       const identity = (entry: RecordValue) => key === prefix + 'favorite-items' ? entry.itemId : entry.id
       const merged = new Map(current.map(note => [identity(note), note]))
       for (const note of incoming) {
-        if (merged.has(identity(note))) {
+        if (merged.has(identity(note)) && !(key === prefix + 'gear-profiles' && isDefaultGear(merged.get(identity(note))!))) {
           if (JSON.stringify(merged.get(identity(note))) !== JSON.stringify(note)) counts.conflicts++
           if (policy === 'keep') continue
         }
@@ -170,8 +216,9 @@ export function prepareImport(data: BackupData, storage: Storage, policy: Confli
       writes[key] = JSON.stringify([...merged.values()])
     } else {
       counts.settings++
-      if (existing !== null && existing !== raw) counts.conflicts++
-      writes[key] = policy === 'keep' && existing !== null ? existing : raw
+      const hasCurrentValue = existing !== null && !isDefaultSetting(key, existing)
+      if (hasCurrentValue && existing !== raw) counts.conflicts++
+      writes[key] = policy === 'keep' && hasCurrentValue ? existing! : raw
     }
   }
   // Imported settings complete onboarding; privacy consent remains independent.

@@ -34,7 +34,7 @@ test('imports, reloads and allows repeat import from settings', async ({ page })
   const dialog = page.getByRole('dialog', { name: '我們搬家了' });
   await dialog.locator('input[type=file]').setInputFiles(file);
   await expect(dialog.getByRole('status')).toContainText('收藏 1 筆');
-  await dialog.getByRole('combobox').selectOption('backup');
+  await expect(dialog.getByRole('combobox')).toBeHidden();
   await dialog.getByRole('button', { name: '匯入並重新載入' }).click();
   await expect(dialog).toBeHidden();
   await page.goto('./#/settings');

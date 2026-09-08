@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_PLAYER_STATS } from '../config/inputLimits';
 import { commitImport, MAX_BACKUP_BYTES, MIGRATION_DISMISSED_KEY, parseBackup, prepareImport } from './migration';
 
 const prefix = 'frozen-rabbit-tome-';
@@ -17,6 +18,56 @@ function storage(initial: Record<string, string> = {}): Storage {
 }
 
 describe('Gleaner Tome v1 migration', () => {
+  it.each([
+    ['lang', 'tw', 'ja'],
+    ['dark-mode', 'false', 'true'],
+    ['library-display-mode', 'detailed', 'compact'],
+    ['experiment-database-display-mode', 'detailed', 'compact'],
+    ['frontier-studies-display-mode', 'detailed', 'compact'],
+    ['selected-food', { foodId: null, quality: 'hq' }, { foodId: 123, quality: 'hq' }],
+    ['node-bonuses', { baseIntegrity: 4, gatheringCount: 0, yieldCount: 0, extraRate: 0 }, { baseIntegrity: 4, gatheringCount: 1, yieldCount: 0, extraRate: 0 }],
+    ['favorite-item-filters', { text: '', glvMin: '', glvMax: '', jobs: [], systems: [] }, { text: 'ore', glvMin: '', glvMax: '', jobs: [], systems: [] }]
+  ])('restores %s over its startup default', (key, initial, incoming) => {
+    const name = String(key);
+    const store = storage({ [prefix + name]: typeof initial === 'string' ? initial : JSON.stringify(initial) });
+    const data = backup({ [name]: incoming });
+    const plan = prepareImport(data, store, 'keep');
+    expect(plan.counts.conflicts).toBe(0);
+    commitImport(plan, store);
+    expect(store.getItem(prefix + name)).toBe(data[prefix + name]);
+  });
+  it('replaces startup defaults without conflicts even when keeping current data', () => {
+    const defaults = ['miner', 'botanist'].map(job => ({
+      id: `default-${job}`, kind: `default-${job}`, name: '', jobs: [job],
+      level: DEFAULT_PLAYER_STATS.level, gathering: DEFAULT_PLAYER_STATS.gathering,
+      perception: DEFAULT_PLAYER_STATS.perception, currentGp: DEFAULT_PLAYER_STATS.gp,
+      maxGp: DEFAULT_PLAYER_STATS.gp, food, collectableRelicToolBonus: false,
+      createdAt: stamp, updatedAt: stamp
+    }));
+    const incoming = defaults.map(p => ({ ...p, gathering: 5233, maxGp: 931, currentGp: 931, collectableRelicToolBonus: true, createdAt: '2026-05-01T00:00:00.000Z' }));
+    const store = storage({
+      [prefix + 'gear-profiles']: JSON.stringify(defaults),
+      [prefix + 'macro-settings']: '{ "bufferSeconds": 2, "secondsPerGather": 4 }',
+      [prefix + 'solver-settings']: JSON.stringify({ objectiveMode: 'expected', collectableRelicToolBonus: false }),
+      [prefix + 'frontier-settings']: '{"enabled":false}',
+      [prefix + 'solver-stats']: JSON.stringify({ level: 100, gathering: 5345, perception: 5137, gp: 930 })
+    });
+    const data = backup({ 'gear-profiles': incoming, 'macro-settings': { secondsPerGather: 3, bufferSeconds: 1 }, 'solver-settings': { objectiveMode: 'expected', collectableRelicToolBonus: true }, 'frontier-settings': { enabled: true }, 'solver-stats': stats });
+    const plan = prepareImport(data, store, 'keep');
+    expect(plan.counts.conflicts).toBe(0);
+    commitImport(plan, store);
+    for (const [key, value] of Object.entries(data)) expect(store.getItem(key)).toBe(value);
+
+    // Real edits and custom profiles must still be protected.
+    const edited = incoming.map(p => ({ ...p, name: 'My gear' }));
+    store.setItem(prefix + 'gear-profiles', JSON.stringify(edited));
+    store.setItem(prefix + 'macro-settings', '{"secondsPerGather":5,"bufferSeconds":1}');
+    const keep = prepareImport(data, store, 'keep');
+    expect(keep.counts.conflicts).toBe(3);
+    commitImport(keep, store);
+    expect(JSON.parse(store.getItem(prefix + 'gear-profiles')!)).toEqual(edited);
+    expect(JSON.parse(store.getItem(prefix + 'macro-settings')!).secondsPerGather).toBe(5);
+  });
   it('preserves all five collections and settings through repeated imports', () => {
     const experiment = { ...tome, strategy: { kind: 'collectable', rules: [], hasRelicToolBonus: true } };
     const study = { ...tome, kind: 'frontier.collectable', strategy: [], probabilityProfile: { brazenBuckets: [], standardProcRatePercent: 20, highStandardProcRatePercent: null } };
